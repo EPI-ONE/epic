@@ -7,6 +7,9 @@
 #include "net/peer_manager.h"
 #include "net/net_address.h"
 #include "utils/cpptoml.h"
+
+// here the path should be "../". I didn't use create dir function because the header file
+// is different between Windows and Unix
 void Use_FileLogger(const std::string& path,const std::string& filename){
     try
     {

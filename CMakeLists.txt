@@ -11,7 +11,7 @@ set(MAIN src/main.cpp)
 
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
-
+include_directories(src)
 
 set(CODES
         ${NET_SRCS}
