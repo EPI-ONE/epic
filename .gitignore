@@ -45,3 +45,6 @@ _deps
 cmake-build-*
 .idea/*
 
+# LOG
+logs/*
+
