@@ -47,4 +47,5 @@ cmake-build-*
 
 # LOG
 logs/*
+*.log
 
