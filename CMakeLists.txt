@@ -6,17 +6,13 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 set(NET_DIR src/net)
 set(UTIL_DIR src/utils)
-set(LOG_DIR src/spdlog)
+set(MAIN src/main.cpp)
 
 
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 
-include_directories(${NET_DIR} ${UTIL_DIR} ${LOG_DIR})
 
-
-
-set(MAIN src/main.cpp)
 set(CODES
         ${NET_SRCS}
         ${UTIL_SRCS}
