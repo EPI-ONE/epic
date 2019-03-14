@@ -13,12 +13,15 @@ aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 include_directories(src)
 
+#find_package(GTest)
+
+
 set(CODES
         ${NET_SRCS}
         ${UTIL_SRCS}
         ${MAIN}
         )
 
-
 add_executable(epic ${CODES})
+target_link_libraries(epic GTest)
 

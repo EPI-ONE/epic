@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstring>
 #include "net_address.h"
 
 static const unsigned char pchIPv4[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
@@ -31,7 +32,10 @@ unsigned char *IPAddress::GetIP() const {
 std::string IPAddress::ToStringIP() const {
     if (IsIPv4()) {
         return strprintf("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
+    } else {
+        return "non IPv4 address";
     }
+
 }
 
 std::string IPAddress::ToString() const {
@@ -64,7 +68,9 @@ bool IPAddress::setIP(const std::string &ip_string) {
 
 std::string NetAddress::ToString() const {
     if (IsIPv4()) {
-        return "[" + ToStringIP() + ":" + ToStringPort()+"]";
+        return "[" + ToStringIP() + ":" + ToStringPort() + "]";
+    } else {
+        return "non IPv4 address";
     }
 }
 
@@ -78,6 +84,6 @@ std::string NetAddress::ToStringPort() const {
 
 NetAddress::NetAddress(std::string address_string) {
     int index = address_string.find(':');
-    setIP(address_string.substr(0,index));
-    port = (uint16_t)std::stoi(address_string.substr(index+1));
+    setIP(address_string.substr(0, index));
+    port = (uint16_t) std::stoi(address_string.substr(index + 1));
 }
