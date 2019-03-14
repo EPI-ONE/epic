@@ -34,9 +34,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-add_dependencies(epic event_core event_extra)
-
 add_executable(epic ${CODES})
+add_dependencies(epic event_core event_extra)
 
 target_link_libraries(epic libevent_core.a libevent_extra.a)
 
