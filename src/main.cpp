@@ -7,6 +7,8 @@
 #include "net/peer_manager.h"
 #include "net/net_address.h"
 #include "utils/cpptoml.h"
+//#include <gtest/gtest.h>
+
 
 // here the path should be "../". I didn't use create dir function because the header file
 // is different between Windows and Unix
@@ -23,7 +25,7 @@ void Use_FileLogger(const std::string& path,const std::string& filename){
 }
 
 void Load_Config_File(){
-    auto config = cpptoml::parse_file("../config.toml");
+    auto config = cpptoml::parse_file("config.toml");
     auto log_config = config->get_table("logs");
     auto use_file_logger = log_config->get_as<bool>("use_file_logger");
     if(use_file_logger){

@@ -23,6 +23,7 @@ link_directories(
     ${CMAKE_BINARY_DIR}/src/libevent/lib
 )
 
+
 set(CODES
     ${NET_SRCS}
     ${UTIL_SRCS}
@@ -34,6 +35,9 @@ set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_dependencies(epic event_core event_extra)
+
 add_executable(epic ${CODES})
 
 target_link_libraries(epic libevent_core.a libevent_extra.a)
+
+
