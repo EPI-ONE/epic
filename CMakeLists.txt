@@ -19,7 +19,7 @@ set(MAIN src/main.cpp)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 include_directories(src)
-link_directories(
+link_directories(``````````````````````````````````````````````````````````````````````````````````````````````````````````````
     ${CMAKE_BINARY_DIR}/src/libevent/lib
 )
 
@@ -36,7 +36,10 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_executable(epic ${CODES})
 add_dependencies(epic event_core event_extra)
-
-target_link_libraries(epic libevent_core.a libevent_extra.a)
+if (WIN32)
+    target_link_libraries(epic event_core.lib event_extra.lib)
+else()
+    target_link_libraries(epic livevent_core.a libevnet_extra.a)
+endif ()
 
 
