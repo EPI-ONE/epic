@@ -9,37 +9,13 @@ set(EVENT__DISABLE_BENCHMARK ON CACHE BOOL "")
 set(EVENT__DISABLE_TESTS ON CACHE BOOL "")
 set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
-add_subdirectory(src/libevent)
 
-set(NET_DIR src/net)
-set(UTIL_DIR src/utils)
-set(MAIN src/main.cpp)
-
-
-aux_source_directory(${NET_DIR} NET_SRCS)
-aux_source_directory(${UTIL_DIR} UTIL_SRCS)
-include_directories(src)
-link_directories(``````````````````````````````````````````````````````````````````````````````````````````````````````````````
-    ${CMAKE_BINARY_DIR}/src/libevent/lib
-)
-
-
-set(CODES
-    ${NET_SRCS}
-    ${UTIL_SRCS}
-    ${MAIN}
-)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-add_executable(epic ${CODES})
-add_dependencies(epic event_core event_extra)
-if (WIN32)
-    target_link_libraries(epic event_core.lib event_extra.lib)
-else()
-    target_link_libraries(epic livevent_core.a libevnet_extra.a)
-endif ()
+add_subdirectory(src)
+add_subdirectory(test)
 
 
