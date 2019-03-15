@@ -1,3 +1,15 @@
 cmake_minimum_required(VERSION 3.11.1)
+
+project(epic)
+
+set(CMAKE_CXX_STANDARD 11)
+
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+
+set(CMAKE_CXX_FLAGS "-pthread")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 add_subdirectory(src)
 add_subdirectory(test)

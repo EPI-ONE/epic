@@ -7,7 +7,6 @@
 #include "net/peer_manager.h"
 #include "net/net_address.h"
 #include "utils/cpptoml.h"
-//#include <gtest/gtest.h>
 
 
 // here the path should be "../". I didn't use create dir function because the header file
