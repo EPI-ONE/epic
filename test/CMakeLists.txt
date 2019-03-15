@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(MAIN main.cpp)
 
-find_package(gtest REQUIRED)
+find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 set(CODES
@@ -16,7 +16,13 @@ set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_executable(epictest ${CODES})
-
-target_link_libraries(epictest gtest)
+if (GTEST_FOUND)
+    message("Find Gtest lib in: ${GTEST_LIBRARY}")
+endif ()
+if (WIN32)
+    target_link_libraries(epictest GTest)
+else()
+    target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
+endif ()
 
 

@@ -38,7 +38,7 @@ add_dependencies(epic event_core event_extra)
 if (WIN32)
     target_link_libraries(epic event_core.lib event_extra.lib)
 else()
-    target_link_libraries(epic livevent_core.a libevnet_extra.a)
+    target_link_libraries(epic libevent_core.a libevent_extra.a)
 endif ()
 
 
