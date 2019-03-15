@@ -5,7 +5,6 @@
 #include <string>
 #include <sstream>
 
-#include "../utils/tinyformat.h"
 
 enum NetworkType {
     NET_UNROUTABLE = 0,

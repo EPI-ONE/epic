@@ -1,12 +1,8 @@
 #include <gtest/gtest.h>
-#include <stdio.h>
-#include <gtest/gtest.h>
 
-TEST(FooTest, HandleNoneZeroInput)
+int main(int argc, char **argv)
 {
-    EXPECT_EQ(2, 2);
-    EXPECT_EQ(6, 4);
-}
-int main(){
-    printf("hello epic test\n");
+    testing::InitGoogleTest(&argc,argv);
+    RUN_ALL_TESTS();
+    return 0;
 }

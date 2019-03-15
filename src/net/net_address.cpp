@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
-#include "net_address.h"
+#include <net_address.h>
+#include <tinyformat.h>
 
 static const unsigned char pchIPv4[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
 
