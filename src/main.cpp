@@ -36,6 +36,7 @@ void Load_Config_File(){
 
 
 int main(){
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
     Load_Config_File();
     spdlog::info("Welcome to epic, enjoy your time!");
     std::string ip_s = "192.168.0.1:7877";
