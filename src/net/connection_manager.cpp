@@ -1,7 +1,12 @@
 
-#include <arpa/inet.h>
+
 #include <string.h>
-#include "connection_manager.h"
+#include <connection_manager.h>
+#include <iostream>
+
+#ifndef WIN32
+#include <arpa/inet.h>
+#endif
 
 static new_connection_callback_t new_connection_callback = nullptr;
 
@@ -51,21 +56,23 @@ static void AcceptCallback(struct evconnlistener *listener, evutil_socket_t fd, 
 
 
 ConnectionManager::ConnectionManager() {
+    evthread_use_pthreads();
     base = event_base_new();
 }
 
 ConnectionManager::~ConnectionManager() {
-    if (!listener) {
+
+    if (listener) {
         evconnlistener_free(listener);
     }
 
-    if (!base) {
+    if (base) {
         event_base_free(base);
     }
 
 }
 
-int ConnectionManager::Listen(uint32_t port, new_connection_callback_t callback_func, uint32_t bindAddress) {
+int ConnectionManager::Listen(uint32_t port, uint32_t bindAddress) {
 
     if(port > 65535) {
         return -1;
@@ -74,8 +81,6 @@ int ConnectionManager::Listen(uint32_t port, new_connection_callback_t callback_
     if(!base) {
         return -1;
     }
-
-    setNewConnectonCallback(callback_func);
 
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
@@ -95,14 +100,27 @@ int ConnectionManager::Listen(uint32_t port, new_connection_callback_t callback_
         return -1;
     }
 
-    event_base_dispatch(base);
-
     return 0;
 }
 
 //TODO
 int ConnectionManager::Connect(uint32_t address, uint32_t port) {
     return 0;
+}
+
+void ConnectionManager::Stop() {
+    if (base) {
+        event_base_loopexit(base, nullptr);
+        thread_event.join();
+    }
+}
+
+void ConnectionManager::Start() {
+    thread_event = std::thread(event_base_dispatch,base);
+}
+
+void ConnectionManager::RegisterNewConnectionCallback(new_connection_callback_t callback_func) {
+    setNewConnectonCallback(callback_func);
 }
 
 
