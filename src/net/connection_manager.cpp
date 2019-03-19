@@ -1,11 +1,16 @@
-
+#ifndef WIN32
 #include <arpa/inet.h>
-#include <string.h>
+#else
+#include <WS2tcpip.h>
+#include <ws2def.h>
+#include <winsock.h>
+#endif
+#include <event2/thread.h>
 #include "connection_manager.h"
-
+#include <pthread.h>
 static new_connection_callback_t new_connection_callback = nullptr;
 
-static void setNewConnectonCallback(new_connection_callback_t func) {
+static void setNewConnectionCallback(new_connection_callback_t func) {
     new_connection_callback = std::move(func);
 }
 
@@ -16,7 +21,6 @@ static void ReadCallback(struct bufferevent *bev, void *ctx) {
 
 //TODO
 static void WriteCallback(struct bufferevent *bev, void *ctx) {
-
 }
 
 //TODO
@@ -75,7 +79,7 @@ int ConnectionManager::Listen(uint32_t port, new_connection_callback_t callback_
         return -1;
     }
 
-    setNewConnectonCallback(callback_func);
+    setNewConnectionCallback(callback_func);
 
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));

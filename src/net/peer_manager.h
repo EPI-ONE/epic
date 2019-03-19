@@ -3,7 +3,7 @@
 
 #include <map>
 #include <functional>
-
+#include <event2/util.h>
 #include <peer.h>
 #include <net_address.h>
 
@@ -11,15 +11,15 @@ class PeerManager {
 
     private:
         std::map<long, Peer*> peer_map_;
-        Peer* createPeer(long socket_id, NetAddress address);
+        Peer* createPeer(evutil_socket_t socket_id, NetAddress address);
     public:
         PeerManager();
 
         ~PeerManager();
 
-        void onConnectionCreated(long socket_id, NetAddress address);
+        void onConnectionCreated(evutil_socket_t socket_id, std::string address);
 
-        void onConnectionClosed(long socket_id);
+        void onConnectionClosed(evutil_socket_t socket_id);
 };
 
 
