@@ -27,6 +27,7 @@ bin/*
 *.exe
 *.out
 *.app
+*bin/
 
 # CMake
 CMakeLists.txt.user
@@ -49,3 +50,6 @@ cmake-build-*
 logs/*
 *.log
 
+# Misc
+.ycm_extra_conf.py
+dev_notes

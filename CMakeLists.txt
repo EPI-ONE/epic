@@ -26,6 +26,8 @@ endif ()
 
 # libevent
 add_subdirectory(src/libevent)
+include_directories(src/libevent/include)
+include_directories(${CMAKE_BINARY_DIR}/src/libevent/include)
 link_directories(
         ${CMAKE_BINARY_DIR}/src/libevent/lib
 )
