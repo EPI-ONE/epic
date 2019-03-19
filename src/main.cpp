@@ -27,7 +27,7 @@ void Load_Config_File(){
     auto config = cpptoml::parse_file("config.toml");
     auto log_config = config->get_table("logs");
     auto use_file_logger = log_config->get_as<bool>("use_file_logger");
-    if(use_file_logger){
+    if(*use_file_logger){
         auto path = log_config->get_as<std::string>("path");
         auto filename = log_config->get_as<std::string>("filename");
         Use_FileLogger(*path,*filename);

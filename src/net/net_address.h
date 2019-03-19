@@ -18,6 +18,7 @@ enum NetworkType {
 
 class IPAddress {
     protected:
+        // Serialize
         unsigned char ip[16];
 
     public:
@@ -48,6 +49,7 @@ class IPAddress {
 
 class NetAddress : public IPAddress {
     protected:
+        // Serialize
         uint16_t port;
 
     public:

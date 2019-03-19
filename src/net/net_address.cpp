@@ -3,6 +3,7 @@
 #include <net_address.h>
 #include <tinyformat.h>
 
+// for IPv4 address (4 bytes) expressed in 16 bytes, the first 12 bytes should be set to the value below
 static const unsigned char pchIPv4[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
 
 IPAddress::IPAddress(const std::string &ip_string) {
@@ -14,6 +15,7 @@ bool IPAddress::IsIPv4() const {
 }
 
 unsigned char IPAddress::GetByte(int index) const {
+    assert(index >= 0 && index <= 15);
     return ip[15 - index];
 }
 
@@ -36,7 +38,6 @@ std::string IPAddress::ToStringIP() const {
     } else {
         return "non IPv4 address";
     }
-
 }
 
 std::string IPAddress::ToString() const {
