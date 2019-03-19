@@ -21,6 +21,10 @@ public:
 TEST_F(TestConnectionManager, Listen) {
     ConnectionManager cm;
     new_connection_callback_t ncb = std::bind(&TestConnectionManager::test_accept_cb,this,std::placeholders::_1,std::placeholders::_2);
-    int result = cm.Listen(7777, ncb);
+    cm.RegisterNewConnectionCallback(ncb);
+    int result = cm.Listen(7777);
     EXPECT_EQ(result,0);
+    cm.Start();
+    sleep(1);
+    cm.Stop();
 }
