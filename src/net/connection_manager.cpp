@@ -1,13 +1,13 @@
-
-
-#include <string.h>
-#include <connection_manager.h>
-#include <iostream>
-
 #ifndef WIN32
 #include <arpa/inet.h>
+#else
+#include <WS2tcpip.h>
+#include <ws2def.h>
+#include <winsock.h>
 #endif
-
+#include <event2/thread.h>
+#include "connection_manager.h"
+#include <pthread.h>
 static new_connection_callback_t new_connection_callback = nullptr;
 
 static void setNewConnectionCallback(new_connection_callback_t func) {
@@ -57,7 +57,11 @@ static void AcceptCallback(struct evconnlistener *listener, evutil_socket_t fd, 
 
 
 ConnectionManager::ConnectionManager() {
+#ifdef WIN32
+    evthread_use_windows_threads();
+#else
     evthread_use_pthreads();
+#endif
     base = event_base_new();
 }
 

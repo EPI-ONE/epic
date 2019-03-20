@@ -56,7 +56,7 @@ set(TEST_MAIN test/main.cpp)
 
 
 # generate executable
-add_executable(epic ${SRC_CODE} ${SRC_MAIN})
+add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
 add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
 
 
@@ -64,9 +64,11 @@ add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
 add_dependencies(epic event_core event_extra)
 add_dependencies(epictest event_core event_extra)
 
+
 if (WIN32)
     target_link_libraries(epic event_core.lib event_extra.lib)
     target_link_libraries(epictest event_core.lib event_extra.lib)
+    target_link_libraries(epic ws2_32.lib)
 else()
     target_link_libraries(epic libevent_core.a libevent_extra.a)
     target_link_libraries(epictest libevent_core.a libevent_extra.a)
