@@ -10,12 +10,15 @@
 
 static new_connection_callback_t new_connection_callback = nullptr;
 
-static void setNewConnectonCallback(new_connection_callback_t func) {
+static void setNewConnectionCallback(new_connection_callback_t func) {
     new_connection_callback = std::move(func);
 }
 
 //TODO
 static void ReadCallback(struct bufferevent *bev, void *ctx) {
+    evutil_socket_t socket_id = bufferevent_getfd(bev);
+
+
 
 }
 
@@ -44,12 +47,10 @@ static void AcceptCallback(struct evconnlistener *listener, evutil_socket_t fd, 
 
 
     if (new_connection_callback != nullptr) {
-        new_connection_callback(fd, Sockaddr2String(address));
+        new_connection_callback(fd, Sockaddr2String(address), true);
     }
 
-
-    bufferevent_setcb(bev, ReadCallback, WriteCallback, EventCallback, NULL);
-
+    bufferevent_setcb(bev, ReadCallback, WriteCallback, EventCallback, nullptr);
     bufferevent_enable(bev, EV_READ);
 
 }
@@ -109,18 +110,22 @@ int ConnectionManager::Connect(uint32_t address, uint32_t port) {
 }
 
 void ConnectionManager::Stop() {
+
     if (base) {
         event_base_loopexit(base, nullptr);
-        thread_event.join();
+    }
+
+    if (threadEvent.joinable()) {
+        threadEvent.join();
     }
 }
 
 void ConnectionManager::Start() {
-    thread_event = std::thread(event_base_dispatch,base);
+    threadEvent = std::thread(event_base_dispatch,base);
 }
 
 void ConnectionManager::RegisterNewConnectionCallback(new_connection_callback_t callback_func) {
-    setNewConnectonCallback(callback_func);
+    setNewConnectionCallback(callback_func);
 }
 
 

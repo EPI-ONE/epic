@@ -12,7 +12,7 @@
 #include <string>
 #include <thread>
 
-typedef std::function<void(evutil_socket_t socket_id, std::string address)> new_connection_callback_t;
+typedef std::function<void(evutil_socket_t socket_id, std::string address, bool inbound)> new_connection_callback_t;
 typedef std::function<void(evutil_socket_t socket_id)> delete_connection_callback_t;
 
 class ConnectionManager {
@@ -21,7 +21,7 @@ private:
     struct event_base *base = nullptr;
     struct evconnlistener *listener = nullptr;
 
-    std::thread thread_event;
+    std::thread threadEvent;
 
 public:
     ConnectionManager();
