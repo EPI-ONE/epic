@@ -11,7 +11,6 @@ class Block;
 class GetBlockTask;
 class GetDataTask;
 class Peer;
-class Type;
 
 class DAGManager {
 
@@ -48,7 +47,7 @@ class DAGManager {
         void assembleInv(GetBlockTask& task);
 
         // Called by batchSync to create a GetDataTask for a given hash.
-        GetDataTask requestData(uint256 hash, Type type, Peer& peer);
+        GetDataTask requestData(uint256 hash, GetDataTask::Type type, Peer& peer);
 
         // Called by Peer and sets a Bundle as the callback to the task.
         void getBundle(GetDataTask task);

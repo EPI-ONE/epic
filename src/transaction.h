@@ -17,13 +17,13 @@ class TxOutPoint {
         TxOutPoint(const uint256& fromBlock, uint32_t index): hash(fromBlock), index(index) {}
 
         // TODO: add serialization method
-        SERIALIZATION;
+        //SERIALIZATION;
 
         template <typename Stream, typename Operation>
             inline void Serialize(Stream& s, Operation action) {
                 // TODO: add readwrite method
-                READWRITE(hash);
-                READWRITE(index);
+                //READWRITE(hash);
+                //READWRITE(index);
             }
 };
 
@@ -37,13 +37,13 @@ class TxInput {
         TxInput(uint256 fromBlock, uint32_t index, Script scriptSig=Script());
 
         // TODO: add serialization method
-        SERIALIZATION;
+        //SERIALIZATION;
 
         template <typename Stream, typename Operation>
             inline void Serialize(Stream& s, Operation action) {
                 // TODO: add readwrite method
-                READWRITE(outpoint);
-                READWRITE(scriptSig);
+                //READWRITE(outpoint);
+                //READWRITE(scriptSig);
             }
 };
 
@@ -62,13 +62,13 @@ class TxOutput {
         TxOutput(const Coin& value, Script scriptPubKey);
 
         // TODO: add serialization method
-        SERIALIZATION;
+        //SERIALIZATION;
 
         template <typename Stream, typename Operation>
             inline void Serialize(Stream& s, Operation action) {
                 // TODO: add readwrite method
-                READWRITE(value);
-                READWRITE(scriptPubKey);
+                //READWRITE(value);
+                //READWRITE(scriptPubKey);
             }
 };
 
@@ -100,3 +100,5 @@ class Transaction {
             return isRegistration;
         }
 };
+
+#endif //__SRC_TRANSACTION_H__

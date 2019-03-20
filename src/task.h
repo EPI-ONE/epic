@@ -5,6 +5,11 @@ class Task {
 };
 
 class GetDataTask : public Task {
+    public:
+        enum Type {
+            PENDING,
+            LEVELSET,
+        };
 };
 
 class GetBlockTask : public Task {
