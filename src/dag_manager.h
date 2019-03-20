@@ -1,11 +1,12 @@
 #ifndef __SRC_DAG_MANAGER_H__
 #define __SRC_DAG_MANAGER_H__
 
-#include<list>
+#include <list>
+#include <atomic>
 
-#include<utils/uint256.h>
-#include<chain.h>
-#include<task.h>
+#include <utils/uint256.h>
+#include <chain.h>
+#include <task.h>
 
 class Block;
 class GetBlockTask;
@@ -16,20 +17,20 @@ class DAGManager {
 
     public:
         // A list of hashes we've sent out in GetData requests.
-        // Operated by multi threads.
+        // It can be operated by multi threads.
         std::list<uint256> downloading;
 
         // A list of tasks we've prepared to deliver to a Peer.
         // Operated by multi threads.
         std::list<Task> preDownloading;
 
-        // A list of milestone chains, with index 0 being the main chain
+        // A list of milestone chains, with first element being the main chain
         // and others being forked chains.
         std::list<Chain> milestoneChains;
 
         // Indicator of whether we are synching with some peer.
         // Needs atomic set and get operations since is accessible by multiple threads.
-        bool isBatchSynching;
+        std::atomic_flag isBatchSynching;
 
         // The peer we are synching with. Null if isBatchSynching is false.
         //Peer& syncingPeer;
@@ -38,10 +39,10 @@ class DAGManager {
 
         void init();
 
-        // Called by Cat when a block is found not solid. Do nothing if isBatchSynching
+        // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
         // and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
         // sending queue according to the BlockLocator constructed by peer.
-        void requestInv(uint256 fromHash, uint32_t length, Peer peer);
+        void requestInv(uint256 fromHash, size_t length, Peer& peer);
 
         // Called by Peer and sets a list of inventory as the callback to the task.
         void assembleInv(GetBlockTask& task);
@@ -53,12 +54,12 @@ class DAGManager {
         void getBundle(GetDataTask task);
 
         // Adds a newly received block that has past syntax checking to the corresponding chain.
-        void addBlockToPending();
+        void addBlockToPending(const Block& pblock);
 
         // Topological sort the blocks that have past syntax checking to the corresponding chain.
-        void addBlocksToPending();
+        void addBlocksToPending(const std::list<const Block&> graph);
 
-        uint32_t getBestMilestoneHeight();
+        size_t getBestMilestoneHeight();
 
         // Guarded by lock
         void startBatchSync(Peer& peer) {

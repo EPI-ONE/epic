@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.11.1)
 project(epic)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_COMPILER "clang++")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 set(UTIL_DIR src/utils)
