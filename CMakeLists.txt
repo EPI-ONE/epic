@@ -14,7 +14,7 @@ set(CORE src)
 set(MAIN src/main.cpp)
 
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
-include_directories(src)
+include_directories(src src/utils)
 
 set(CODES
     ${UTIL_SRCS}
