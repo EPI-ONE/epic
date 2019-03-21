@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <list>
-#include <utils/uint256.h>
+#include <uint256.h>
 
 class Block;
 class Milestone;

@@ -4,8 +4,8 @@
 #include <vector>
 #include <unordered_map>
 #include <utility>
-#include <utils/uint256.h>
-#include <utils/stdint.h>
+#include <uint256.h>
+#include <stdint.h>
 
 class Block;
 class TxOutput;
@@ -19,12 +19,12 @@ class Milestone {
 
         // a vector consists of blocks with its offset w.r.t this level set of
         // this milestone
-        std::vector<std::pair<Block, int> > vblockstore_;
+        std::vector<std::pair<std::shared_ptr<Block>, uint64_t> > vblockstore_;
 
-        uint32_t nbits_milestone_target_;
-        uint32_t nbits_block_target_;
+        uint32_t nbitsMilestoneTarget_;
+        uint32_t nbitsBlockTarget_;
 
-        std::unordered_map<uint256, uint256> pubkey_snapshot_;
+        std::unordered_map<uint256, uint256> pubkeySnapshot_;
 
     public:
         Milestone()=default;

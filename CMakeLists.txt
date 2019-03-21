@@ -4,6 +4,7 @@ project(epic)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER "clang++")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(UTIL_DIR src/utils)
 set(CRYPTO src/crypto)

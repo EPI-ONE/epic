@@ -7,22 +7,24 @@ class Block;
 
 class Bundle {
     public:
-        std::vector<Block> blocks;
+        std::vector<std::shared_ptr<const Block> > vblocks;
         std::vector<uint256> hashes;
-        long nonce;
-        int size;
-        char type;
+        uint32_t nonce;
+        size_t size;
+        uint8_t type;
 
     public:
         Bundle();
-        Bundle(const std::vector<Block>& blocks);
+        Bundle(std::vector<std::shared_ptr<const Block> >&& vblocks): 
+            vblocks(std::move(vblocks)) {}
+        ~Bundle();
 
-        void AddBlock(Block& block);
+        void AddBlock(std::shared_ptr<const Block> pblock);
+        // Get the first hash of the block vector which should be the milestone
+        // block.
         uint256 GetFirstHash();
 
         // TODO: add serialization methods
-
-        ~Bundle();
 };
 
 #endif // __SRC_BUNDLE_H__

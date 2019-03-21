@@ -2,7 +2,7 @@
 #define __SRC_CATERPILLAR_H__
 
 #include <vector>
-#include <utils/uint256.h>
+#include <uint256.h>
 
 class Block;
 

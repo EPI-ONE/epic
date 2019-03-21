@@ -1,7 +1,7 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include <utils/uint256.h>
+#include <uint256.h>
 #include <script/script.h>
 #include <coin.h>
 

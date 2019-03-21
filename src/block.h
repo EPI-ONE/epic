@@ -2,7 +2,7 @@
 #define __SRC_BLOCK_H__
 
 #include <stdint.h>
-#include <utils/uint256.h>
+#include <uint256.h>
 #include <transaction.h>
 
 class Block {

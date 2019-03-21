@@ -4,7 +4,7 @@
 #include <list>
 #include <atomic>
 
-#include <utils/uint256.h>
+#include <uint256.h>
 #include <chain.h>
 #include <task.h>
 
