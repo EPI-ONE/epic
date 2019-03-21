@@ -30,7 +30,7 @@ class DAGManager {
 
         // Indicator of whether we are synching with some peer.
         // Needs atomic set and get operations since is accessible by multiple threads.
-        std::atomic_flag isBatchSynching;
+        std::atomic_flag isBatchSynching = ATOMIC_FLAG_INIT;
 
         // The peer we are synching with. Null if isBatchSynching is false.
         //Peer& syncingPeer;
@@ -56,25 +56,21 @@ class DAGManager {
         // Adds a newly received block that has past syntax checking to the corresponding chain.
         void addBlockToPending(const Block& pblock);
 
-        // Topological sort the blocks that have past syntax checking to the corresponding chain.
+        // Topological sort the blocks and then check their syntax. If all past the checking,
+        // add them to the corresponding chain.
         void addBlocksToPending(const std::list<const Block&> graph);
 
         size_t getBestMilestoneHeight();
 
-        // Guarded by lock
         void startBatchSync(Peer& peer) {
-            if (isBatchSynching == false) {
-                isBatchSynching = true;
+            if (isBatchSynching.test_and_set()) {
                 //syncingPeer = peer;
             }
         }
 
-        // Guarded by lock
         void completeBatchSync() {
-            if (isBatchSynching == true) {
-                isBatchSynching = false;
-                //syncingPeer = NULL;
-            }
+            isBatchSynching.clear();
+            //syncingPeer = NULL;
         }
 
     private:
