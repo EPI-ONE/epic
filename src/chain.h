@@ -4,10 +4,10 @@
 #include <vector>
 #include <unordered_map>
 #include <list>
-#include <uint256.h>
 
-class Block;
-class Milestone;
+#include <block.h>
+#include <milestone.h>
+#include <uint256.h>
 
 class Chain {
     public:

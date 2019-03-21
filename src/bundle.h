@@ -1,9 +1,10 @@
 #ifndef __SRC_BUNDLE_H__
 #define __SRC_BUNDLE_H__
 
-#include <block.h>
+#include <vector>
 
-class Block;
+#include <block.h>
+#include <uint256.h>
 
 class Bundle {
     public:
@@ -13,9 +14,8 @@ class Bundle {
         size_t size;
         uint8_t type;
 
-    public:
         Bundle();
-        Bundle(std::vector<std::shared_ptr<const Block> >&& vblocks): 
+        Bundle(std::vector<std::shared_ptr<const Block> >&& vblocks):
             vblocks(std::move(vblocks)) {}
         ~Bundle();
 
