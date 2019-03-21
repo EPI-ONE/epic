@@ -33,10 +33,9 @@ class DAGManager {
         std::atomic_flag isBatchSynching = ATOMIC_FLAG_INIT;
 
         // The peer we are synching with. Null if isBatchSynching is false.
-        //Peer& syncingPeer;
+        Peer& syncingPeer;
 
         DAGManager();
-
         void init();
 
         // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
@@ -62,16 +61,11 @@ class DAGManager {
 
         size_t getBestMilestoneHeight();
 
-        void startBatchSync(Peer& peer) {
-            if (isBatchSynching.test_and_set()) {
-                //syncingPeer = peer;
-            }
-        }
-
-        void completeBatchSync() {
-            isBatchSynching.clear();
-            //syncingPeer = NULL;
-        }
+        // Methods are called when the synchronization status is changed: 
+        // on to off and off to on.
+        // And they are also guarded by lock
+        void startBatchSync(Peer& peer);
+        void completeBatchSync();
 
     private:
         // Start a new thread and create a list of GetData tasks that is either added
