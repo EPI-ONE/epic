@@ -21,6 +21,7 @@
 *.la
 *.a
 *.lib
+bin/*
 
 # Executables
 *.exe
@@ -42,5 +43,8 @@ CTestTestfile.cmake
 _deps
 
 # Misc
+dev_notes/
 .ycm_extra_conf.py
-dev_notes
+*.swp
+.DS_Store
+.project
