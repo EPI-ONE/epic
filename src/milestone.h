@@ -2,13 +2,13 @@
 #define __SRC_MILESTONE_H__
 
 #include <vector>
+#include <stdint.h>
 #include <unordered_map>
 #include <utility>
-#include <uint256.h>
-#include <stdint.h>
 
-class Block;
-class TxOutput;
+#include <block.h>
+#include <transaction.h>
+#include <uint256.h>
 
 class Milestone {
     private:

@@ -2,8 +2,9 @@
 #define __SRC_BLOCK_H__
 
 #include <stdint.h>
-#include <uint256.h>
+
 #include <transaction.h>
+#include <uint256.h>
 
 class Block {
     public:
@@ -36,6 +37,14 @@ class Block {
 
         // content
         std::shared_ptr<Transaction> ptx_;
+};
+
+struct BlockIndex {
+    // Only one of ptr_block and file_descriptor (together with offset)
+    // should be assigned a value
+    Block* ptr_block;
+    int file_descriptor;
+    uint32_t offset; // offset in file
 };
 
 #endif
