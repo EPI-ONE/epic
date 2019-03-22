@@ -63,4 +63,3 @@ gtest_add_tests(
 
 # install
 install(TARGETS epic DESTINATION bin)
-
