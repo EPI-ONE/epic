@@ -19,12 +19,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # gtest
 find_package(GTest REQUIRED)
-if (GTEST_FOUND)
-    message("Find Gtest lib in: ${GTEST_BOTH_LIBRARIES}")
-    include_directories(${GTEST_INCLUDE_DIRS})
-else()
-    message("Gtest not found")
-endif ()
+include_directories(${GTEST_INCLUDE_DIRS})
 
 
 # src codes
@@ -65,4 +60,7 @@ gtest_add_tests(
         TEST_SUFFIX .noArgs
         TEST_LIST   noArgsTests
 )
+
+# install
+install(TARGETS epic DESTINATION bin)
 
