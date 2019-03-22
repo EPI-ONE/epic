@@ -24,7 +24,24 @@ class Bundle {
         // block.
         uint256 GetFirstHash();
 
-        // TODO: add serialization methods
+        decltype(auto) get() const {
+            if constexpr (N == 0) return vblocks;
+            else if constexpr (N == 1) return hashes;
+            else if constexpr (N == 2) return nonce;
+            else if constexpr (N == 3) return size;
+            else if constexpr (N == 4) return type;
+        }
 };
+
+namespace std {
+    // Bundle 
+    template<>
+    struct tuple_size<Bundle> : std::integral_constant<std::size_t, 5> {};
+
+    template<std::size_t N>
+    struct tuple_element<N, Bundle> {
+        using type = decltype(std::declval<Bundle>().get<N>());
+    };
+}
 
 #endif // __SRC_BUNDLE_H__

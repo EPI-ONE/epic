@@ -34,6 +34,19 @@ class Block {
         void AddTransaction(const Transaction& t);
 
         // get & set methods
+        template<std::size_t N>
+        decltype(auto) get() const {
+            if constexpr (N == 0) return nVersion_;
+            else if constexpr (N == 1) return hashMilestoneBlock_;
+            else if constexpr (N == 2) return hashPrevBlock_;
+            else if constexpr (N == 3) return hashTipBlock_;
+            else if constexpr (N == 4) return hashTransaction_;
+            else if constexpr (N == 5) return nTime_;
+            else if constexpr (N == 6) return nBits_;
+            else if constexpr (N == 7) return nNonce_;
+            else if constexpr (N == 8) return ptx_;
+        }
+
 
     private:
         // header
@@ -57,5 +70,16 @@ struct BlockIndex {
     int file_descriptor;
     uint32_t offset; // offset in file
 };
+
+namespace std {
+    // Block 
+    template<>
+    struct tuple_size<Block> : std::integral_constant<std::size_t, 9> {};
+  
+    template<std::size_t N>
+    struct tuple_element<N, Block> {
+        using type = decltype(std::declval<Block>().get<N>());
+    };
+}
 
 #endif
