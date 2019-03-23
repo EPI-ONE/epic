@@ -1,9 +1,10 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include <uint256.h>
-#include <script/script.h>
-#include <coin.h>
+#include "block.h"
+#include "coin.h"
+#include "script/script.h"
+#include "uint256.h"
 
 /**
  * Outpoint of a transaction, which points to an input in a previous block
@@ -14,7 +15,9 @@ class TxOutPoint {
         uint32_t index;
 
         TxOutPoint(): index((uint32_t) -1) {}
-        TxOutPoint(const uint256& fromBlock, uint32_t index): hash(fromBlock), index(index) {}
+
+        //TODO: search for the pointer of BlockIndex in Cat
+        TxOutPoint(const uint256 fromBlock, uint32_t index): hash(fromBlock), index(index) {}
 
         // TODO: add serialization method
         //SERIALIZATION;
@@ -25,6 +28,10 @@ class TxOutPoint {
                 //READWRITE(hash);
                 //READWRITE(index);
             }
+        std::string ToString() const;
+
+    private:
+        struct BlockIndex* block;
 };
 
 class TxInput {
@@ -45,6 +52,12 @@ class TxInput {
                 //READWRITE(outpoint);
                 //READWRITE(scriptSig);
             }
+
+        bool IsRegistration() { return isRegistration; }
+        std::string ToString() const;
+
+    private:
+        bool isRegistration;
 };
 
 class TxOutput {
@@ -59,7 +72,7 @@ class TxOutput {
             scriptPubKey.clear();
         }
 
-        TxOutput(const Coin& value, Script scriptPubKey);
+        TxOutput(const Coin value, Script scriptPubKey);
 
         // TODO: add serialization method
         //SERIALIZATION;
@@ -70,24 +83,26 @@ class TxOutput {
                 //READWRITE(value);
                 //READWRITE(scriptPubKey);
             }
+
+        std::string ToString() const;
 };
 
 class Transaction {
     public:
         std::vector<TxInput> inputs;
         std::vector<TxOutput> outputs;
-        const uint32_t version;
+        uint32_t version;
         bool isValid = false;
 
     private:
-        const uint256 hash;
+        uint256 hash;
         bool isRegistration;
         Coin fee;
 
     public:
         Transaction();
         explicit Transaction(const Transaction& tx);
-        Transaction(std::vector<TxInput>& inputs, std::vector<TxOutput>& outputs);
+        Transaction(const std::vector<TxInput>& inputs, const std::vector<TxOutput>& outputs);
         Transaction(uint32_t version);
 
         // TODO: add serialization methods
@@ -95,10 +110,9 @@ class Transaction {
         void AddInput(TxInput& input);
         void AddOutput(TxOutput& output);
         uint256 GetHash() const;
-        bool IsRegistration() const
-        {
-            return isRegistration;
-        }
+        bool IsRegistration() const { return isRegistration; }
+
+        std::string ToString() const;
 };
 
 #endif //__SRC_TRANSACTION_H__
