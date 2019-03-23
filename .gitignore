@@ -48,3 +48,10 @@ dev_notes/
 *.swp
 .DS_Store
 .project
+
+# IDE
+cmake-build-*
+.idea/*
+
+# LOG
+*.log
