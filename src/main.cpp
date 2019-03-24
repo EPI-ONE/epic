@@ -1,10 +1,13 @@
 #include <string>
 #include <iostream>
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <utils/cpptoml.h>
-#include <file_utils.h>
+#include "file_utils.h"
+#include "sha256.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/spdlog.h"
+#include "tinyformat.h"
+#include "transaction.h"
+#include "utils/cpptoml.h"
 
 enum {
     LOG_INIT_FAILURE = 1,
@@ -59,4 +62,14 @@ int main() {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
 
     spdlog::info("Welcome to epic, enjoy your time!");
+
+    uint256 zeros = uint256S(new char[256]());
+    TxOutPoint outpoint = TxOutPoint(zeros, 1);
+    TxInput input = TxInput(outpoint, Script());
+    TxOutput output = TxOutput(100, Script());
+    Transaction tx = Transaction(1);
+    tx.AddInput(input);
+    tx.AddOutput(output);
+
+    std::cout << strprintf("A transaction: \n %s", tx.ToString()) << std::endl;
 }

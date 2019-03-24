@@ -14,6 +14,7 @@ set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 set(CMAKE_CXX_FLAGS "-pthread")
+set(CMAKE_CXX_FLAGS $ENV{CXXFLAGS})
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 
@@ -30,11 +31,14 @@ set(SCRYPT_DIR src/script)
 set(CORE_DIR src)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
+aux_source_directory(${CORE_DIR} CORE_SRCS)
+list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 include_directories(src ${UTIL_DIR} ${CRYPTO_DIR} ${COMPAT_DIR} ${SCRYPT_DIR} ${CORE_DIR} )
 
 set(SRC_CODE
         ${UTIL_SRCS}
         ${CRYPTO_SRCS}
+        ${CORE_SRCS}
         )
 set(SRC_MAIN src/main.cpp)
 

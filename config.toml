@@ -2,5 +2,5 @@ title = "EPIC Default Config"
 
 [logs]
 use_file_logger = true
-path = "../logs/"
+path = "./logs/"
 filename = "Debug.log"

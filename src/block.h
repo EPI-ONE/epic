@@ -1,10 +1,12 @@
 #ifndef __SRC_BLOCK_H__
 #define __SRC_BLOCK_H__
 
-#include <stdint.h>
+#include <cstdint>
 
-#include <transaction.h>
-#include <uint256.h>
+#include "transaction.h"
+#include "uint256.h"
+
+class Transaction;
 
 class Block {
     public:
@@ -13,7 +15,16 @@ class Block {
         // constructor and destructor
         Block()=default;
         Block(const Block&) = default;
-        ~Block() {};
+
+        // Initialize with all the header fields
+        Block(uint32_t version, uint256 milestoneHash, uint256 prevBlockHash,
+              uint256 tipBlockHash, uint256 contentHash, uint32_t time,
+              uint32_t difficultyTarget, uint32_t nonce)
+            : nVersion_(version), hashMilestoneBlock_(milestoneHash),
+              hashPrevBlock_(prevBlockHash), hashTipBlock_(tipBlockHash),
+              hashTransaction_(contentHash), nTime_(time),
+              nBits_(difficultyTarget), nNonce_(nonce) {}
+        ~Block(){};
 
         // daily utils
         // solve the block maht puzzle
