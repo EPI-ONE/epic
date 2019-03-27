@@ -3,12 +3,13 @@
 
 #include <cstdint>
 
-#include "transaction.h"
+#include "coin.h"
+#include "milestone.h"
 #include "uint256.h"
 
 class Transaction;
 
-static constexpr uint32_t HEADER_SIZE = 144;
+static constexpr int HEADER_SIZE = 144;
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 static constexpr uint32_t GENESIS_BLOCK_HEIGHT = 0;
@@ -22,15 +23,16 @@ class Block {
         Block()=default;
 
         Block(const Block&) = default;
+        Block(uint32_t version);
 
         // Initialize with all the header fields
         Block(uint32_t version, uint256 milestoneHash, uint256 prevBlockHash,
               uint256 tipBlockHash, uint256 contentHash, uint32_t time,
               uint32_t difficultyTarget, uint32_t nonce) :
-            nVersion_(version), hashMilestoneBlock_(milestoneHash),
-            hashPrevBlock_(prevBlockHash), hashTipBlock_(tipBlockHash),
-            hashTransaction_(contentHash), nTime_(time),
-            nBits_(difficultyTarget), nNonce_(nonce) {}
+            version_(version), milestoneBlockHash_(milestoneHash),
+            prevBlockHash_(prevBlockHash), tipBlockHash_(tipBlockHash),
+            contentHash_(contentHash), time_(time),
+            diffTarget_(difficultyTarget), nonce_(nonce) {}
 
         ~Block(){};
 
@@ -45,14 +47,20 @@ class Block {
 
     private:
         // header
-        int32_t nVersion_;
-        uint256 hashMilestoneBlock_;
-        uint256 hashPrevBlock_;
-        uint256 hashTipBlock_;
-        uint256 hashTransaction_;
-        uint32_t nTime_;
-        uint32_t nBits_; // difficultyTarget
-        uint32_t nNonce_;
+        uint32_t version_;
+        uint256 milestoneBlockHash_;
+        uint256 prevBlockHash_;
+        uint256 tipBlockHash_;
+        uint256 contentHash_;
+        uint32_t time_;
+        uint32_t diffTarget_;
+        uint32_t nonce_;
+
+        // info to be stored in db
+        Coin cumulativeReward_;
+        uint64_t minerChainHeight_;
+        Milestone milestoneInstance_;
+        bool isMilestone_;
 
         // content
         std::shared_ptr<Transaction> ptx_;

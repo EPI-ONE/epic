@@ -1,23 +1,22 @@
-#include <string>
 #include <iostream>
+#include <string>
+#include <unordered_map>
 
-#include "hash.h"
+#include "arith_uint256.h"
 #include "block.h"
-#include "file_utils.h"
 #include "crypto/sha256.h"
+#include "file_utils.h"
+#include "hash.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/spdlog.h"
 #include "tinyformat.h"
 #include "transaction.h"
 #include "utils/cpptoml.h"
-#include "arith_uint256.h"
-
 
 class uint256;
-//class arith_uint256;
 
 enum {
-    LOG_INIT_FAILURE = 1,
+  LOG_INIT_FAILURE = 1,
 };
 
 void UseFileLogger(const cpptoml::option<std::string> &path, const cpptoml::option<std::string> &filename) {
@@ -70,16 +69,17 @@ int main() {
 
     spdlog::info("Welcome to epic, enjoy your time!");
 
-    uint256 zeros = uint256S(new char[256]());
-    TxOutPoint outpoint = TxOutPoint(zeros, 1);
+    TxOutPoint outpoint = TxOutPoint(ZERO_HASH, 1);
     TxInput input = TxInput(outpoint, Script());
     TxOutput output = TxOutput(100, Script());
     Transaction tx = Transaction(1);
     tx.AddInput(input);
     tx.AddOutput(output);
 
-    arith_uint256 zeroos = UintToArith256(zeros);
-    std::cout << strprintf("A null sha: \n %s", zeroos.ToString()) << std::endl;
-
+    arith_uint256 zeros = UintToArith256(ZERO_HASH);
+    std::cout << strprintf("ZERO_HASH: \n %s", zeros.ToString()) << std::endl;
     std::cout << strprintf("A transaction: \n %s", tx.ToString()) << std::endl;
+
+    std::unordered_map<uint256, uint256> testMap = {{ZERO_HASH, ZERO_HASH}};
+    std::cout << strprintf("An unordered_map: \n %s", testMap) << std::endl;
 }
