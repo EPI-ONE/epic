@@ -14,10 +14,15 @@ namespace sinks {
 class sink
 {
 public:
-    sink() = default;
+    sink()
+        : level_(level::trace)
+        , formatter_(new pattern_formatter())
+    {
+    }
 
-    explicit sink(std::unique_ptr<spdlog::formatter> formatter)
-        : formatter_{std::move(formatter)}
+    explicit sink(std::unique_ptr<spdlog::pattern_formatter> formatter)
+        : level_(level::trace)
+        , formatter_(std::move(formatter))
     {
     }
 
@@ -44,10 +49,10 @@ public:
 
 protected:
     // sink log level - default is all
-    level_t level_{level::trace};
+    level_t level_;
 
     // sink formatter - default is full format
-    std::unique_ptr<spdlog::formatter> formatter_{details::make_unique<spdlog::pattern_formatter>()};
+    std::unique_ptr<spdlog::formatter> formatter_;
 };
 
 } // namespace sinks

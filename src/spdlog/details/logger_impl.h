@@ -102,12 +102,6 @@ inline void spdlog::logger::log(level::level_enum lvl, const char *msg)
     log(source_loc{}, lvl, msg);
 }
 
-template<class T>
-inline void spdlog::logger::log(level::level_enum lvl, const T &msg)
-{
-    log(source_loc{}, lvl, msg);
-}
-
 template<class T, typename std::enable_if<std::is_convertible<T, spdlog::string_view_t>::value, T>::type *>
 inline void spdlog::logger::log(source_loc source, level::level_enum lvl, const T &msg)
 {
@@ -121,6 +115,12 @@ inline void spdlog::logger::log(source_loc source, level::level_enum lvl, const 
         sink_it_(log_msg);
     }
     SPDLOG_CATCH_AND_HANDLE
+}
+
+template<class T, typename std::enable_if<std::is_convertible<T, spdlog::string_view_t>::value, T>::type *>
+inline void spdlog::logger::log(level::level_enum lvl, const T &msg)
+{
+    log(source_loc{}, lvl, msg);
 }
 
 template<class T, typename std::enable_if<!std::is_convertible<T, spdlog::string_view_t>::value, T>::type *>
@@ -139,6 +139,12 @@ inline void spdlog::logger::log(source_loc source, level::level_enum lvl, const 
         sink_it_(log_msg);
     }
     SPDLOG_CATCH_AND_HANDLE
+}
+
+template<class T, typename std::enable_if<!std::is_convertible<T, spdlog::string_view_t>::value, T>::type *>
+inline void spdlog::logger::log(level::level_enum lvl, const T &msg)
+{
+    log(source_loc{}, lvl, msg);
 }
 
 template<typename... Args>
