@@ -8,22 +8,30 @@
 
 class Transaction;
 
+static constexpr uint32_t HEADER_SIZE = 144;
+static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
+static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
+static constexpr uint32_t GENESIS_BLOCK_HEIGHT = 0;
+static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
+
 class Block {
     public:
         // parameter restrictions
 
         // constructor and destructor
         Block()=default;
+
         Block(const Block&) = default;
 
         // Initialize with all the header fields
         Block(uint32_t version, uint256 milestoneHash, uint256 prevBlockHash,
               uint256 tipBlockHash, uint256 contentHash, uint32_t time,
-              uint32_t difficultyTarget, uint32_t nonce)
-            : nVersion_(version), hashMilestoneBlock_(milestoneHash),
-              hashPrevBlock_(prevBlockHash), hashTipBlock_(tipBlockHash),
-              hashTransaction_(contentHash), nTime_(time),
-              nBits_(difficultyTarget), nNonce_(nonce) {}
+              uint32_t difficultyTarget, uint32_t nonce) :
+            nVersion_(version), hashMilestoneBlock_(milestoneHash),
+            hashPrevBlock_(prevBlockHash), hashTipBlock_(tipBlockHash),
+            hashTransaction_(contentHash), nTime_(time),
+            nBits_(difficultyTarget), nNonce_(nonce) {}
+
         ~Block(){};
 
         // daily utils
