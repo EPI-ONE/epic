@@ -17,20 +17,18 @@ inline uint256 Hash(const T1 pbegin, const T1 pend) {
     sha.Write((pbegin == pend) ? emptyByte : (const unsigned char*) &pbegin[0],
         (pend - pbegin) * sizeof(pbegin[0]));
     sha.Finalize((unsigned char*) &hash);
-
 #pragma clang loop unroll_count(R)
     for (size_t i = 1; i < R; i++) {
         sha.Reset();
         sha.Write((unsigned char*) &hash, 32);
         sha.Finalize((unsigned char*) &hash);
     }
-
     return hash;
 }
 
 /* R: number of hashing rounds e.g 1 = single hash; 2 = double hash */
 template <std::size_t R>
-uint256 Hash(VStream& data) {
+uint256 Hash(const VStream& data) {
     return Hash<R>(data.cbegin(), data.cend());
 }
 
@@ -41,8 +39,13 @@ inline uint160 Hash160(const T1 pbegin, const T1 pend) {
 }
 
 /** Compute the 160-bit hash of a vector. */
-inline uint160 Hash160(VStream& vch) {
+inline uint160 Hash160(const VStream& vch) {
     return Hash160(vch.cbegin(), vch.cend());
+}
+
+namespace Hash {
+    static const uint256 ZERO_HASH = Hash<1>(VStream());
+    static const uint256 ZERO_HASH_DOUBLE = Hash<2>(VStream());
 }
 
 #endif

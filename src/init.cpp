@@ -35,8 +35,8 @@ void SetupCommandline(cxxopts::Options& options) {
 
 void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     auto result = options.parse(argc, argv);
-    // since these two params have been set default values, there is no need to call result.count()
-    // to detect if they have values
+    // since these two params have been set default values, there is no need to
+    // call result.count() to detect if they have values
     config->setConfigFilePath(result["configpath"].as<std::string>());
     if (result.count("bindip") > 0) {
         config->setBindAddress(result["bindip"].as<std::string>());
@@ -49,7 +49,9 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
 void LoadConfigFile() {
     std::string config_path = config->getConfigFilePath();
     if (!CheckFileExist(config_path)) {
-        std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
+        std::cerr << "config.toml not found in current directory, will use the "
+                     "default config"
+                  << std::endl;
         return;
     }
     auto configContent = cpptoml::parse_file(config_path);

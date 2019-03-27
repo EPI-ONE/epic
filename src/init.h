@@ -1,12 +1,11 @@
 #ifndef EPIC_INIT_H
 #define EPIC_INIT_H
 
-#include "spdlog/sinks/basic_file_sink.h"
-#include "utils/cpptoml.h"
-#include "utils/cxxopts.hpp"
-
 #include "config.h"
-#include "utils/file_utils.h"
+#include "cpptoml.h"
+#include "cxxopts.hpp"
+#include "file_utils.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 enum {
     COMMANDLINE_INIT_FAILURE = 1,

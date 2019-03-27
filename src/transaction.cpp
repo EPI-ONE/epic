@@ -9,86 +9,81 @@ std::string TxOutPoint::ToString() const {
     return str;
 }
 
-TxInput::TxInput(TxOutPoint outpointToPrev, Script script) {
+TxInput::TxInput(const TxOutPoint& outpointToPrev, const Script& script) {
     outpoint  = outpointToPrev;
     scriptSig = script;
 }
 
-TxInput::TxInput() {
+TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Script& script) {
+    outpoint  = TxOutPoint(fromBlockHash, indexNum);
+    scriptSig = script;
 }
 
-TxInput::TxInput(uint256 fromBlockHash, uint32_t indexNum, Script script) {
-    outpoint  = TxOutPoint(fromBlockHash, indexNum);
+TxInput::TxInput(const Script& script) {
+    outpoint  = TxOutPoint(Hash::ZERO_HASH, NEGATIVE_ONE);
     scriptSig = script;
 }
 
 std::string TxInput::ToString() const {
     std::string str;
-    str += "TxInput( ";
-    if (isRegistration) {
+    str += "TxInput{ ";
+    if (IsRegistration()) {
         str += "REGISTRATION";
     } else {
         str += strprintf("outpoint=%s, scriptSig=%s", outpoint.ToString(), scriptSig.ToString());
     }
-    str += " )";
+    str += " }";
     return str;
 }
 
-TxOutput::TxOutput(const Coin coinValue, Script script) {
+TxOutput::TxOutput(const Coin& coinValue, const Script& script) {
     value        = coinValue;
     scriptPubKey = script;
 }
 
 std::string TxOutput::ToString() const {
     std::string str;
-    str += "TxOut( ";
+    str += "TxOut{ ";
     str += strprintf("value=%d, scriptPubKey=%s", value, scriptPubKey.ToString());
-    str += " )";
+    str += " }";
     return str;
-}
-
-Transaction::Transaction() {
 }
 
 Transaction::Transaction(const Transaction& tx) {
-    inputs  = tx.inputs;
-    outputs = tx.outputs;
-    version = tx.version;
+    hash_.SetNull();
+    inputs       = tx.inputs;
+    outputs      = tx.outputs;
+    fee_         = tx.fee_;
+    parentBlock_ = tx.parentBlock_;
+    status_      = tx.status_;
 }
 
-Transaction::Transaction(const std::vector<TxInput>& txInputs, const std::vector<TxOutput>& txOutputs) {
-    version = 1;
-    inputs  = txInputs;
-    outputs = txOutputs;
+void Transaction::AddInput(TxInput&& txin) {
+    hash_.SetNull();
+    txin.SetParent(*this);
+    inputs.push_back(txin);
 }
 
-Transaction::Transaction(uint32_t versionNum) {
-    version = versionNum;
-    inputs  = std::vector<TxInput>();
-    outputs = std::vector<TxOutput>();
+void Transaction::AddOutput(TxOutput&& txout) {
+    hash_.SetNull();
+    txout.SetParent(*this);
+    outputs.push_back(txout);
 }
 
-void Transaction::AddInput(TxInput& in) {
-    inputs.push_back(in);
-}
-
-void Transaction::AddOutput(TxOutput& out) {
-    outputs.push_back(out);
-}
-
-std::string Transaction::ToString() const {
-    std::string str;
-    str += "Transaction( \n";
+std::string Transaction::ToString() {
+    std::string s;
+    s += "Transaction { \n";
+    s += strprintf("   hash: %s \n", GetHash().ToString());
     for (int i = 0; i < inputs.size(); ++i) {
-        str += "   ";
-        str += inputs.at(i).ToString();
-        str += "\n";
+        s += "   ";
+        s += inputs.at(i).ToString();
+        s += "\n";
     }
     for (int j = 0; j < outputs.size(); ++j) {
-        str += "   ";
-        str += outputs.at(j).ToString();
-        str += "\n";
+        s += "   ";
+        s += outputs.at(j).ToString();
+        s += "\n";
     }
-    str += " )";
-    return str;
+    s += " }\n";
+    return s;
 }

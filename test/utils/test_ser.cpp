@@ -8,11 +8,13 @@
 class TestSer : public testing::Test {
 protected:
     uint256 rand1;
+    uint256 rand2;
+    uint256 zeros;
     void SetUp() {
         rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
     }
-    void TearDown() {
-    }
+
+    void TearDown() {}
 };
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
@@ -125,6 +127,47 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 
     VStream soutput;
     soutput << blockFromDeserialization;
+
+    EXPECT_EQ(s, soutput.str());
+}
+
+TEST_F(TestSer, SerializeEqDeserializeBlockTODB) {
+    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
+
+    // Add a tx into the block
+    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    Transaction tx      = Transaction();
+    tx.AddInput(TxInput(outpoint, Script()));
+    tx.AddOutput(TxOutput(100, Script()));
+    block.AddTransaction(tx);
+    tx.Validate();
+
+    // Set extra info
+    block.SetMinerChainHeight(100);
+    block.ResetReward();
+
+    // Link a ms instance
+    Milestone ms;
+    ms.height           = 100;
+    ms.chainwork        = arith_uint256(0X3E8);
+    ms.lastUpdateTime_  = time(nullptr);
+    ms.milestoneTarget_ = arith_uint256(0X3E8).GetCompact();
+    ms.blockTarget_     = arith_uint256(0).GetCompact();
+    ms.hashRate_        = 100000;
+    block.SetMilestoneInstance(ms);
+
+    // Make it a fake milestone
+    block.InvalidateMilestone();
+
+    VStream sinput;
+    block.SerializeToDB(sinput);
+    std::string s = sinput.str();
+
+    Block blockFromUnserialization;
+    blockFromUnserialization.UnserializeFromDB(sinput);
+
+    VStream soutput;
+    blockFromUnserialization.SerializeToDB(soutput);
 
     EXPECT_EQ(s, soutput.str());
 }

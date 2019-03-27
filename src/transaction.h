@@ -1,26 +1,27 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include "block.h"
+#include "caterpillar.h"
 #include "coin.h"
-#include "script/script.h"
+#include "hash.h"
+#include "script.h"
+#include "serialize.h"
 #include "uint256.h"
-#include "utils/serialize.h"
+#include <sstream>
 
-/**
- * Outpoint of a transaction, which points to an input in a previous block
- */
+static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
+
+class Block;
+class Transaction;
 class TxOutPoint {
 public:
     uint256 hash;
     uint32_t index;
 
-    TxOutPoint() : index((uint32_t) -1) {
-    }
+    TxOutPoint() : index((uint32_t) -1) {}
 
     // TODO: search for the pointer of BlockIndex in Cat
-    TxOutPoint(const uint256 fromBlock, uint32_t index) : hash(fromBlock), index(index) {
-    }
+    TxOutPoint(const uint256 fromBlock, const uint32_t index) : hash(fromBlock), index(index) {}
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -28,7 +29,6 @@ public:
         READWRITE(hash);
         READWRITE(index);
     }
-
     std::string ToString() const;
 
 private:
@@ -40,9 +40,10 @@ public:
     TxOutPoint outpoint;
     Script scriptSig;
 
-    TxInput();
-    explicit TxInput(TxOutPoint outpoint, Script scriptSig = Script());
-    TxInput(uint256 fromBlock, uint32_t index, Script scriptSig = Script());
+    TxInput(){};
+    explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+    TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
+    TxInput(const Script& script);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -51,13 +52,19 @@ public:
         READWRITE(scriptSig);
     }
 
-    bool IsRegistration() {
-        return isRegistration;
+    bool IsRegistration() const {
+        return (outpoint.index & NEGATIVE_ONE) == NEGATIVE_ONE;
+    }
+    bool IsFirstRegistration() const {
+        return outpoint.hash == Hash::ZERO_HASH && IsRegistration();
     }
     std::string ToString() const;
+    void SetParent(const Transaction& tx) {
+        parentTx_ = std::make_shared<Transaction>(tx);
+    };
 
 private:
-    bool isRegistration;
+    std::shared_ptr<Transaction> parentTx_;
 };
 
 class TxOutput {
@@ -67,11 +74,14 @@ public:
     Script scriptPubKey;
 
     TxOutput() {
-        value = -1;
+        value = NEGATIVE_ONE;
         scriptPubKey.clear();
     }
 
-    TxOutput(const Coin value, Script scriptPubKey);
+    TxOutput(const Coin& value, const Script& scriptPubKey);
+    void SetParent(const Transaction& tx) {
+        parentTx_ = std::make_shared<Transaction>(tx);
+    }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -81,43 +91,80 @@ public:
     }
 
     std::string ToString() const;
+
+private:
+    std::shared_ptr<Transaction> parentTx_;
 };
 
 class Transaction {
 public:
-    std::vector<TxInput> inputs;
-    std::vector<TxOutput> outputs;
-    uint32_t version;
-    bool isValid = false;
+    enum Validity : uint8_t {
+        UNKNOWN = 0,
+        VALID   = 1,
+        INVALID = 2,
+    };
 
-private:
-    uint256 hash;
-    bool isRegistration;
-    Coin fee;
-
-public:
-    Transaction();
+    Transaction() {
+        inputs  = std::vector<TxInput>();
+        outputs = std::vector<TxOutput>();
+        status_ = UNKNOWN;
+    };
     explicit Transaction(const Transaction& tx);
-    Transaction(const std::vector<TxInput>& inputs, const std::vector<TxOutput>& outputs);
-    Transaction(uint32_t version);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(version);
         READWRITE(inputs);
         READWRITE(outputs);
     }
 
+    void AddInput(TxInput&& input);
+    void AddOutput(TxOutput&& output);
+    void SetParent(const Block& blk) {
+        parentBlock_ = std::make_shared<Block>(blk);
+    };
 
-    void AddInput(TxInput& input);
-    void AddOutput(TxOutput& output);
-    uint256 GetHash() const;
-    bool IsRegistration() const {
-        return isRegistration;
+    // TODO:
+    uint256& GetHash() {
+        if (!hash_.IsNull()) {
+            return hash_;
+        }
+        hash_ = Hash<1>(VStream(*this));
+        return hash_;
     }
 
-    std::string ToString() const;
+    bool IsRegistration() const {
+        return inputs.size() == 1 && inputs.front().IsRegistration();
+    }
+    bool IsFirstRegistration() const {
+        return inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
+    }
+    // TODO:
+    bool Verify() const {
+        return true;
+    }
+    void Validate() {
+        status_ = VALID;
+    }
+    void Invalidate() {
+        status_ = INVALID;
+    }
+    Validity GetStatus() const {
+        return status_;
+    }
+    void SetStatus(enum Validity s) {
+        status_ = s;
+    }
+    std::string ToString();
+
+private:
+    std::vector<TxInput> inputs;
+    std::vector<TxOutput> outputs;
+
+    uint256 hash_;
+    Coin fee_;
+    std::shared_ptr<Block> parentBlock_;
+    Validity status_;
 };
 
 #endif //__SRC_TRANSACTION_H__

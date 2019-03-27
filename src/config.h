@@ -1,5 +1,6 @@
 #ifndef EPIC_CONFIG_H
 #define EPIC_CONFIG_H
+
 #include <memory>
 #include <sstream>
 #include <string>

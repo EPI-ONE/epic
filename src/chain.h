@@ -1,13 +1,12 @@
 #ifndef __SRC_CHAIN_H__
 #define __SRC_CHAIN_H__
 
+#include "block.h"
+#include "milestone.h"
+#include "uint256.h"
 #include <list>
 #include <unordered_map>
 #include <vector>
-
-#include <block.h>
-#include <milestone.h>
-#include <uint256.h>
 
 class Chain {
 public:

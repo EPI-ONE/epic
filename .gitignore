@@ -42,6 +42,14 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+# IDE
+cmake-build-*
+.idea/*
+epic.cpb
+
+# LOG
+*.log
+
 # Misc
 dev_notes/
 *.swp

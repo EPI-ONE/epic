@@ -1,11 +1,10 @@
 #ifndef __SRC_CATERPILLAR_H__
 #define __SRC_CATERPILLAR_H__
 
+#include "block.h"
+#include "uint256.h"
 #include <list>
 #include <vector>
-
-#include <block.h>
-#include <uint256.h>
 
 class Caterpillar {
 public:
@@ -20,6 +19,14 @@ public:
 
 private:
     std::list<Block&> TopologicalSort(const std::list<const Block&> graph);
+};
+
+struct BlockIndex {
+    // Only one of ptr_block and file_descriptor (together with offset)
+    // should be assigned a value
+    Block* ptr_block;
+    int file_descriptor;
+    uint32_t offset; // offset in file
 };
 
 #endif // __SRC_CATERPILLAR_H__

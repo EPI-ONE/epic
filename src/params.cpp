@@ -1,23 +1,23 @@
-#ifndef __SRC_PARAMS_CPP__
-#define __SRC_PARAMS_CPP__ 
-
 #include "params.h"
+#include "utilstrencodings.h"
 
-class TestNetParams : public Params {
-    public:
-    const static Params& GetParams() {
-        //static const auto instance = std::make_unique<Params>();
-        static const TestNetParams instance;
-        return instance;
-    }
-    protected: 
-        TestNetParams() {
-            targetTimespan = TARGET_TIMESPAN;
-            timeInterval = TIME_INTERVAL;
-            interval = INTERVAL;
-            targetTPS = 100;
-            puntualityThre = PUNTUALITY_THRESHOLD;
-        }
-};
+void TestNetParams::CreateGenesis() {
+    genesisBlock   = Block(GENESIS_BLOCK_VERSION);
+    Transaction tx = Transaction();
+    // Construct a script containing the difficulty bits and the following
+    // message:
+    std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
+                       "4656e20696e20746865206576656e696e6720616e64207765206172"
+                       "65207374696c6c20776f726b696e6721");
+    // Convert the string to bytes
+    auto vs = VStream(ParseHex(hexStr));
+    tx.AddInput(TxInput(Script(vs)));
 
-#endif // __SRC_PARAMS_CPP__
+    // TODO: add output
+
+    genesisBlock.AddTransaction(tx);
+    genesisBlock.SetMinerChainHeight(0);
+    genesisBlock.ResetReward();
+
+    genesisBlockHash = genesisBlock.GetHash();
+}

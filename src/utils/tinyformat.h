@@ -137,6 +137,7 @@ namespace tfm = tinyformat;
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_map>
 
 #ifndef TINYFORMAT_ERROR
 #define TINYFORMAT_ERROR(reason) assert(0 && reason)
@@ -1055,6 +1056,23 @@ std::string format(const std::string& fmt, const Args&... args) {
 }
 
 } // namespace tinyformat
+
+/** Serializes elements {K, V} of an unordered_map */
+template<typename K, typename V>
+std::ostream& operator<<(std::ostream& os, const std::unordered_map<K,V> &m) {
+    for (const std::pair<K,V>& p: m) {
+        os << "{" << p.first.ToString() << ": " << p.second.ToString() << "}\n";
+    }
+    return os;
+}
+
+/** Serialize elements in a vector */
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T> &m) {
+    for (auto i = m.begin(); i != m.end(); ++i)
+        std::cout << *i << " ";
+    return os;
+}
 
 #define strprintf tfm::format
 

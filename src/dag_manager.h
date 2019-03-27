@@ -1,14 +1,13 @@
 #ifndef __SRC_DAG_MANAGER_H__
 #define __SRC_DAG_MANAGER_H__
 
+#include "block.h"
+#include "chain.h"
+#include "peer.h"
+#include "task.h"
+#include "uint256.h"
 #include <atomic>
 #include <list>
-
-#include <block.h>
-#include <chain.h>
-#include <peer.h>
-#include <task.h>
-#include <uint256.h>
 
 class DAGManager {
 public:
@@ -57,6 +56,7 @@ public:
     // on to off and off to on. Modifies the atomic_flag isBatchSynching.
     void StartBatchSync(Peer& peer);
     void CompleteBatchSync();
+
 
 private:
     // Start a new thread and create a list of GetData tasks that is either added
