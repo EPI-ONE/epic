@@ -18,8 +18,7 @@ class uint256;
 
 class uint_error : public std::runtime_error {
 public:
-    explicit uint_error(const std::string& str) : std::runtime_error(str) {
-    }
+    explicit uint_error(const std::string& str) : std::runtime_error(str) {}
 };
 
 // Template base class for unsigned big integers
@@ -187,6 +186,7 @@ public:
     int CompareTo(const base_uint& b) const;
     bool EqualTo(uint64_t b) const;
 
+<<<<<<< HEAD
     friend inline const base_uint operator+(const base_uint& a, const base_uint& b) {
         return base_uint(a) += b;
     }
@@ -206,6 +206,27 @@ public:
         return base_uint(a) &= b;
     }
     friend inline const base_uint operator^(const base_uint& a, const base_uint& b) {
+=======
+    friend inline const base_uint operator+(const base_uint& a, const base_uint& b) {
+        return base_uint(a) += b;
+    }
+    friend inline const base_uint operator-(const base_uint& a, const base_uint& b) {
+        return base_uint(a) -= b;
+    }
+    friend inline const base_uint operator*(const base_uint& a, const base_uint& b) {
+        return base_uint(a) *= b;
+    }
+    friend inline const base_uint operator/(const base_uint& a, const base_uint& b) {
+        return base_uint(a) /= b;
+    }
+    friend inline const base_uint operator|(const base_uint& a, const base_uint& b) {
+        return base_uint(a) |= b;
+    }
+    friend inline const base_uint operator&(const base_uint& a, const base_uint& b) {
+        return base_uint(a) &= b;
+    }
+    friend inline const base_uint operator^(const base_uint& a, const base_uint& b) {
+>>>>>>> add arith_uint256 and hash functions from bitcoin
         return base_uint(a) ^= b;
     }
     friend inline const base_uint operator>>(const base_uint& a, int shift) {
@@ -266,14 +287,10 @@ public:
 /** 256-bit unsigned big integer. */
 class arith_uint256 : public base_uint<256> {
 public:
-    arith_uint256() {
-    }
-    arith_uint256(const base_uint<256>& b) : base_uint<256>(b) {
-    }
-    arith_uint256(uint64_t b) : base_uint<256>(b) {
-    }
-    explicit arith_uint256(const std::string& str) : base_uint<256>(str) {
-    }
+    arith_uint256() {}
+    arith_uint256(const base_uint<256>& b) : base_uint<256>(b) {}
+    arith_uint256(uint64_t b) : base_uint<256>(b) {}
+    explicit arith_uint256(const std::string& str) : base_uint<256>(str) {}
 
     /**
      * The "compact" format is a representation of a whole

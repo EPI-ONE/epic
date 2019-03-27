@@ -7,11 +7,11 @@
 
 #include <compat/byteswap.h>
 
-#include <stdint.h>
+#include <cstdint>
 
-//#if defined(HAVE_ENDIAN_H)
-//#include <endian.h>
-//#endif
+#if defined(HAVE_ENDIAN_H)
+#include <endian.h>
+#endif
 
 #ifndef HAVE_CONFIG_H
 // While not technically a supported configuration, defaulting to defining these
