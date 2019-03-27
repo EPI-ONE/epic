@@ -9,6 +9,12 @@
 
 class Transaction;
 
+static constexpr uint32_t HEADER_SIZE = 144;
+static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
+static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
+static constexpr uint32_t GENESIS_BLOCK_HEIGHT = 0;
+static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
+
 class Block {
    public:
     // parameter restrictions
