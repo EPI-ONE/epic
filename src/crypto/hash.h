@@ -14,6 +14,12 @@
 #include <vector>
 
 typedef uint256 ChainCode;
+//uint256 Hash(const unsigned char bytes[], size_t size);
+template<typename T1>
+inline uint256 Hash(const T1 pbegin, const T1 pend);
+
+static const unsigned char *EMPTY_BYTE = new unsigned char[32]();
+static const uint256 ZERO_HASH = Hash(EMPTY_BYTE, EMPTY_BYTE + 32);
 
 /** A hasher class for Bitcoin's 256-bit hash (double SHA-256). */
 class CHash256 {
@@ -38,6 +44,11 @@ public:
         return *this;
     }
 };
+
+/** Compute the hash of a byte array. */
+inline uint256 Hash(const unsigned char bytes[], size_t size) {
+    return Hash(bytes, *bytes + size);
+}
 
 /** Compute the 256-bit hash of an object. */
 template<typename T1>
