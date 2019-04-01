@@ -15,7 +15,7 @@ set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "-pthread $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -36,39 +36,47 @@ include_directories(${LIBEVENT_INCLUDE_DIRS})
 find_package(rocksdb REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIRS})
 
+# secp256k1
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+find_package(Secp256k1 REQUIRED)
+include_directories(${Secp256k1_INCLUDE_DIR})
+
 # src codes
 set(NET_DIR src/net)
 set(UTIL_DIR src/utils)
 set(SUPPORT_DIR src/support)
 set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
-set(SCRYPT_DIR src/script)
+set(SCRIPT_DIR src/script)
+set(SUPPORT_DIR src/support)
 set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
+aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
 include_directories(src
-    ${NET_DIR}
-    ${UTIL_DIR}
-    ${CRYPTO_DIR}
-    ${COMPAT_DIR}
-    ${SCRYPT_DIR}
-    ${CORE_DIR}
-    ${SPDLOG_DIR}
-    ${SUPPORT_DIR}
-    )
+        ${NET_DIR}
+        ${UTIL_DIR}
+        ${CRYPTO_DIR}
+        ${COMPAT_DIR}
+        ${SCRIPT_DIR}
+        ${CORE_DIR}
+        ${SPDLOG_DIR}
+        ${SUPPORT_DIR}
+        )
 
 set(SRC_CODE
         ${NET_SRCS}
         ${UTIL_SRCS}
-        #${SUPPORT_SRCS}
         ${CRYPTO_SRCS}
         ${CORE_SRCS}
+        ${SUPPORT_DIR}
         )
+
 set(SRC_MAIN src/main.cpp)
 
 
@@ -84,20 +92,22 @@ set(TEST_CODE
 set(TEST_MAIN test/main.cpp)
 
 # generate executable
-add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
-add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
+add_executable(epic ${SRC_CODE} ${SRC_MAIN})
+add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE})
 
 target_link_libraries(epic ${LIBEVENT_LIBRARIES})
 target_link_libraries(epic ${ROCKSDB_LIBRARIES})
+target_link_libraries(epic ${Secp256k1_LIBRARY})
 target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
+target_link_libraries(epictest ${Secp256k1_LIBRARY})
 
 # add test
 gtest_add_tests(
         TARGET epictest
         TEST_SUFFIX .noArgs
-        TEST_LIST   noArgsTests
+        TEST_LIST noArgsTests
 )
 
 # install

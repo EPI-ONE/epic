@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "block.h"
+#include "key.h"
+#include "pubkey.h"
 #include "stream.h"
 #include "transaction.h"
 
@@ -12,6 +14,21 @@ class TestSer : public testing::Test {
     }
     void TearDown() {}
 };
+
+TEST_F(TestSer, SerializeEqDeserializePublicKey) {
+    ECC_Start();
+    CKey seckey = CKey();
+    seckey.MakeNewKey(true);
+    CPubKey pubkey = seckey.GetPubKey();
+    
+    VStream vstream;
+    vstream << pubkey;
+    CPubKey outPubkey;
+    vstream >> outPubkey;
+
+    ASSERT_EQ(pubkey, outPubkey);
+    ECC_Stop();
+}
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);

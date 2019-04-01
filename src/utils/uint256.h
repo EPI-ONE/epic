@@ -125,8 +125,11 @@ public:
      * appropriate when the value can easily be influenced from outside as e.g.
      * a network adversary could provide values to trigger worst-case behavior.
      */
-    uint64_t GetCheapHash() const {
-        return ReadLE64(data);
+    uint64_t GetCheapHash() const { return ReadLE64(data); }
+
+    uint160 GetUint160() const {
+        std::vector<unsigned char> vch(data, data + 20);
+        return uint160(vch);
     }
 };
 
@@ -157,5 +160,6 @@ struct std::hash<uint256> {
         return x.GetCheapHash();
     }
 };
+
 
 #endif // BITCOIN_UINT256_H
