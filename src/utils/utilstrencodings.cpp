@@ -103,13 +103,14 @@ void SplitHostPort(std::string in, int &portOut, std::string &hostOut) {
     bool fHaveColon = colon != in.npos;
     bool fBracketed = fHaveColon && (in[0]=='[' && in[colon-1]==']'); // if there is a colon, and in[0]=='[', colon is not 0, so in[colon-1] is safe
     bool fMultiColon = fHaveColon && (in.find_last_of(':',colon-1) != in.npos);
+    portOut = -1;
     if (fHaveColon && (colon==0 || fBracketed || !fMultiColon)) {
         int32_t n;
         if (ParseInt32(in.substr(colon + 1), &n) && n > 0 && n < 0x10000) {
             in = in.substr(0, colon);
             portOut = n;
         }
-    }
+    } 
     if (in.size()>0 && in[0] == '[' && in[in.size()-1] == ']')
         hostOut = in.substr(1, in.size()-2);
     else
