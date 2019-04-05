@@ -9,11 +9,11 @@
 //#include <config/bitcoin-config.h>
 //#endif
 
-#include <cstdint>
+#include <stdint.h>
 
-//#if defined(HAVE_BYTESWAP_H)
-//#include <byteswap.h>
-//#endif
+#if defined(HAVE_BYTESWAP_H)
+#include <byteswap.h>
+#endif
 
 #if defined(MAC_OSX)
 

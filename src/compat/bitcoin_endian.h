@@ -7,7 +7,7 @@
 
 #include <compat/byteswap.h>
 
-#include <cstdint>
+#include <stdint.h>
 
 //#if defined(HAVE_ENDIAN_H)
 //#include <endian.h>

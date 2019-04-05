@@ -12,7 +12,7 @@ set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug")
+set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "-pthread $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -46,7 +46,16 @@ aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
-include_directories(src ${NET_DIR} ${UTIL_DIR} ${CRYPTO_DIR} ${COMPAT_DIR} ${SCRYPT_DIR} ${CORE_DIR} ${SPDLOG_DIR})
+
+include_directories(src
+    ${NET_DIR}
+    ${UTIL_DIR}
+    ${CRYPTO_DIR}
+    ${COMPAT_DIR}
+    ${SCRYPT_DIR}
+    ${CORE_DIR}
+    ${SPDLOG_DIR}
+    )
 
 set(SRC_CODE
         ${NET_SRCS}
@@ -56,18 +65,16 @@ set(SRC_CODE
         )
 set(SRC_MAIN src/main.cpp)
 
-
 # test codes
-aux_source_directory(test/demo TEST_DEMO_SRCS)
 aux_source_directory(test/net TEST_NET_SRCS)
 aux_source_directory(test/utils TEST_UTILS_SRCS)
+aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 set(TEST_CODE
-        ${TEST_DEMO_SRCS}
         ${TEST_NET_SRCS}
         ${TEST_UTILS_SRCS}
+        ${TEST_CRYPTO_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
-
 
 # generate executable
 add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
@@ -78,7 +85,6 @@ target_link_libraries(epic ${ROCKSDB_LIBRARIES})
 target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
-
 
 # add test
 gtest_add_tests(
