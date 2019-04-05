@@ -1,141 +1,32 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2018 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+#ifndef __SRC_CRYPTO_HASH__
+#define __SRC_CRYPTO_HASH__
 
-#ifndef BITCOIN_HASH_H
-#define BITCOIN_HASH_H
-
-// TODO: add supports to ripemd160, serialization and parameter
-#include "crypto/common.h"
 #include "crypto/sha256.h"
 #include "uint256.h"
 
 #include <vector>
 
-typedef uint256 ChainCode;
-//uint256 Hash(const unsigned char bytes[], size_t size);
-template<typename T1>
-inline uint256 Hash(const T1 pbegin, const T1 pend);
-
-static const unsigned char *EMPTY_BYTE = new unsigned char[32]();
-static const uint256 ZERO_HASH = Hash(EMPTY_BYTE, EMPTY_BYTE + 32);
-
-/** A hasher class for Bitcoin's 256-bit hash (double SHA-256). */
-class CHash256 {
-private:
+/* R: number of hashing rounds e.g 1 = single hash; 2 = double hash */
+template<std::size_t R>
+uint256 Hash(std::vector<unsigned char> &data) {
+    uint256 hash;
     CSHA256 sha;
-public:
-    static const size_t OUTPUT_SIZE = CSHA256::OUTPUT_SIZE;
 
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) {
-        unsigned char buf[CSHA256::OUTPUT_SIZE];
-        sha.Finalize(buf);
-        sha.Reset().Write(buf, CSHA256::OUTPUT_SIZE).Finalize(hash);
+    if (data.empty()) {
+        return hash;
     }
 
-    CHash256& Write(const unsigned char *data, size_t len) {
-        sha.Write(data, len);
-        return *this;
-    }
+    sha.Write(data.data(), data.size());
+    sha.Finalize((unsigned char*)&hash);
 
-    CHash256& Reset() {
+    #pragma clang loop unroll_count(R)
+    for (size_t i = 1; i < R; i++) {
         sha.Reset();
-        return *this;
+        sha.Write((unsigned char*)&hash, 32);
+        sha.Finalize((unsigned char*)&hash);
     }
-};
 
-/** Compute the hash of a byte array. */
-inline uint256 Hash(const unsigned char bytes[], size_t size) {
-    return Hash(bytes, *bytes + size);
+    return hash;
 }
 
-/** Compute the 256-bit hash of an object. */
-template<typename T1>
-inline uint256 Hash(const T1 pbegin, const T1 pend)
-{
-    static const unsigned char pblank[1] = {};
-    uint256 result;
-    CHash256().Write(pbegin == pend ? pblank : (const unsigned char*)&pbegin[0], (pend - pbegin) * sizeof(pbegin[0]))
-              .Finalize((unsigned char*)&result);
-    return result;
-}
-
-/** Compute the 256-bit hash of the concatenation of two objects. */
-template<typename T1, typename T2>
-inline uint256 Hash(const T1 p1begin, const T1 p1end,
-                    const T2 p2begin, const T2 p2end) {
-    static const unsigned char pblank[1] = {};
-    uint256 result;
-    CHash256().Write(p1begin == p1end ? pblank : (const unsigned char*)&p1begin[0], (p1end - p1begin) * sizeof(p1begin[0]))
-              .Write(p2begin == p2end ? pblank : (const unsigned char*)&p2begin[0], (p2end - p2begin) * sizeof(p2begin[0]))
-              .Finalize((unsigned char*)&result);
-    return result;
-}
-
-/** A writer stream (for serialization) that computes a 256-bit hash. */
-class CHashWriter
-{
-private:
-    CHash256 ctx;
-
-    const int nType;
-    const int nVersion;
-public:
-
-    CHashWriter(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {}
-
-    int GetType() const { return nType; }
-    int GetVersion() const { return nVersion; }
-
-    void write(const char *pch, size_t size) {
-        ctx.Write((const unsigned char*)pch, size);
-    }
-
-    // invalidates the object
-    uint256 GetHash() {
-        uint256 result;
-        ctx.Finalize((unsigned char*)&result);
-        return result;
-    }
-
-    /**
-     * Returns the first 64 bits from the resulting hash.
-     */
-    inline uint64_t GetCheapHash() {
-        unsigned char result[CHash256::OUTPUT_SIZE];
-        ctx.Finalize(result);
-        return ReadLE64(result);
-    }
-
-};
-
-/** Reads data from an underlying stream, while hashing the read data. */
-template<typename Source>
-class CHashVerifier : public CHashWriter
-{
-private:
-    Source* source;
-
-public:
-    explicit CHashVerifier(Source* source_) : CHashWriter(source_->GetType(), source_->GetVersion()), source(source_) {}
-
-    void read(char* pch, size_t nSize)
-    {
-        source->read(pch, nSize);
-        this->write(pch, nSize);
-    }
-
-    void ignore(size_t nSize)
-    {
-        char data[1024];
-        while (nSize > 0) {
-            size_t now = std::min<size_t>(nSize, 1024);
-            read(data, now);
-            nSize -= now;
-        }
-    }
-
-};
-
-#endif // BITCOIN_HASH_H
+#endif
