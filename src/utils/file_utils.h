@@ -1,5 +1,6 @@
 #ifndef EPIC_FILE_UTILS_H
 #define EPIC_FILE_UTILS_H
+
 #include <fstream>
 #include <iostream>
 #include <sys/types.h>
@@ -21,8 +22,9 @@ bool CheckFileExist(const std::string &filePath) {
 // used c like way to implement this
 // TODO later can try to use c++17 std::filesystem to implement this
 bool Mkdir_recursive(const std::string &path) {
-    char pathArray[PATH_MAX];
+    char pathArray[256];
     errno = 0;
+
     if (path.length() > sizeof(pathArray) - 1) {
         errno = ENAMETOOLONG;
         return false;
@@ -47,4 +49,5 @@ bool Mkdir_recursive(const std::string &path) {
     }
     return true;
 }
+
 #endif //EPIC_FILE_UTILS_H
