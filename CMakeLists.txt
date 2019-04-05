@@ -32,7 +32,13 @@ aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
-include_directories(src ${UTIL_DIR} ${CRYPTO_DIR} ${COMPAT_DIR} ${SCRYPT_DIR} ${CORE_DIR} )
+include_directories(src
+    ${UTIL_DIR}
+    ${CRYPTO_DIR}
+    ${COMPAT_DIR}
+    ${SCRYPT_DIR}
+    ${CORE_DIR}
+    )
 
 set(SRC_CODE
         ${UTIL_SRCS}
