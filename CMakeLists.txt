@@ -48,9 +48,10 @@ set(SRC_CODE
 set(SRC_MAIN src/main.cpp)
 
 # test codes
-aux_source_directory(test/demo TEST_DEMO_SRCS)
+aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 set(TEST_CODE
         ${TEST_DEMO_SRCS}
+        ${TEST_CRYPTO_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
 

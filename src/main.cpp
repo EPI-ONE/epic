@@ -4,7 +4,6 @@
 
 #include "arith_uint256.h"
 #include "block.h"
-#include "crypto/sha256.h"
 #include "file_utils.h"
 #include "hash.h"
 #include "spdlog/sinks/basic_file_sink.h"
