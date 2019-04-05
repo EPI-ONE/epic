@@ -12,16 +12,14 @@ set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
+set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug -fsanitize=address")
 set(CMAKE_CXX_FLAGS "-pthread")
 set(CMAKE_CXX_FLAGS $ENV{CXXFLAGS})
-set(CMAKE_VERBOSE_MAKEFILE ON)
-
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 # gtest
-find_package(GTest REQUIRED)
+find_package(gtest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
-
 
 # src codes
 set(UTIL_DIR src/utils)
@@ -43,7 +41,6 @@ set(SRC_CODE
         )
 set(SRC_MAIN src/main.cpp)
 
-
 # test codes
 aux_source_directory(test/demo TEST_DEMO_SRCS)
 set(TEST_CODE
@@ -51,13 +48,10 @@ set(TEST_CODE
         )
 set(TEST_MAIN test/main.cpp)
 
-
 # generate executable
 add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
 add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
-
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
-
 
 # add test
 gtest_add_tests(
