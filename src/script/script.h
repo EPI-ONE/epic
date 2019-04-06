@@ -1,5 +1,6 @@
 #include <vector>
 #include "utilstrencodings.h"
+#include "utils/serialize.h"
 
 typedef std::vector<unsigned char> Bytes;
 
@@ -12,6 +13,12 @@ class Script {
 
         void clear() {
             bytes.clear();
+        }
+
+        ADD_SERIALIZE_METHODS;
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(bytes);
         }
 
         std::string ToString() const {
