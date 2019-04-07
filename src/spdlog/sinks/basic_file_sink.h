@@ -30,11 +30,6 @@ public:
         file_helper_.open(filename, truncate);
     }
 
-    const filename_t &filename() const
-    {
-        return file_helper_.filename();
-    }
-
 protected:
     void sink_it_(const details::log_msg &msg) override
     {

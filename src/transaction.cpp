@@ -14,6 +14,8 @@ TxInput::TxInput(TxOutPoint outpointToPrev, Script script) {
     scriptSig = script;
 }
 
+TxInput::TxInput() {}
+
 TxInput::TxInput(uint256 fromBlockHash, uint32_t indexNum, Script script) {
     outpoint = TxOutPoint(fromBlockHash, indexNum);
     scriptSig = script;
@@ -43,6 +45,8 @@ std::string TxOutput::ToString() const {
     str += " )";
     return str;
 }
+
+Transaction::Transaction() {}
 
 Transaction::Transaction(const Transaction& tx) {
     inputs = tx.inputs;

@@ -5,6 +5,7 @@
 #include "coin.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "utils/serialize.h"
 
 /**
  * Outpoint of a transaction, which points to an input in a previous block
@@ -19,15 +20,13 @@ class TxOutPoint {
         //TODO: search for the pointer of BlockIndex in Cat
         TxOutPoint(const uint256 fromBlock, uint32_t index): hash(fromBlock), index(index) {}
 
-        // TODO: add serialization method
-        //SERIALIZATION;
-
+        ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>
-            inline void Serialize(Stream& s, Operation action) {
-                // TODO: add readwrite method
-                //READWRITE(hash);
-                //READWRITE(index);
-            }
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(hash);
+            READWRITE(index);
+        }
+
         std::string ToString() const;
 
     private:
@@ -43,15 +42,12 @@ class TxInput {
         explicit TxInput(TxOutPoint outpoint, Script scriptSig=Script());
         TxInput(uint256 fromBlock, uint32_t index, Script scriptSig=Script());
 
-        // TODO: add serialization method
-        //SERIALIZATION;
-
+        ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>
-            inline void Serialize(Stream& s, Operation action) {
-                // TODO: add readwrite method
-                //READWRITE(outpoint);
-                //READWRITE(scriptSig);
-            }
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(outpoint);
+            READWRITE(scriptSig);
+        }
 
         bool IsRegistration() { return isRegistration; }
         std::string ToString() const;
@@ -74,15 +70,12 @@ class TxOutput {
 
         TxOutput(const Coin value, Script scriptPubKey);
 
-        // TODO: add serialization method
-        //SERIALIZATION;
-
+        ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>
-            inline void Serialize(Stream& s, Operation action) {
-                // TODO: add readwrite method
-                //READWRITE(value);
-                //READWRITE(scriptPubKey);
-            }
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(value);
+            READWRITE(scriptPubKey);
+        }
 
         std::string ToString() const;
 };
@@ -105,7 +98,14 @@ class Transaction {
         Transaction(const std::vector<TxInput>& inputs, const std::vector<TxOutput>& outputs);
         Transaction(uint32_t version);
 
-        // TODO: add serialization methods
+        ADD_SERIALIZE_METHODS;
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(version);
+            READWRITE(inputs);
+            READWRITE(outputs);
+        }
+
 
         void AddInput(TxInput& input);
         void AddOutput(TxOutput& output);

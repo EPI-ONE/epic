@@ -23,12 +23,19 @@ set(DEFAULT_BUILD_TYPE "Debug")
 find_package(gtest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
+# libevent
+find_package(libevent 2.1.8 EXACT REQUIRED)
+include_directories(${LIBEVENT_INCLUDE_DIRS})
+
 # src codes
+set(NET_DIR src/net)
 set(UTIL_DIR src/utils)
 set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
 set(SCRYPT_DIR src/script)
+set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
+aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
@@ -43,6 +50,7 @@ include_directories(src
     )
 
 set(SRC_CODE
+        ${NET_SRCS}
         ${UTIL_SRCS}
         ${CRYPTO_SRCS}
         ${CORE_SRCS}
@@ -50,9 +58,14 @@ set(SRC_CODE
 set(SRC_MAIN src/main.cpp)
 
 # test codes
+aux_source_directory(test/demo TEST_DEMO_SRCS)
+aux_source_directory(test/net TEST_NET_SRCS)
+aux_source_directory(test/utils TEST_UTILS_SRCS)
 aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 set(TEST_CODE
         ${TEST_DEMO_SRCS}
+        ${TEST_NET_SRCS}
+        ${TEST_UTILS_SRCS}
         ${TEST_CRYPTO_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
@@ -60,6 +73,9 @@ set(TEST_MAIN test/main.cpp)
 # generate executable
 add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
 add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
+
+target_link_libraries(epic ${LIBEVENT_LIBRARIES})
+target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 
 # add test

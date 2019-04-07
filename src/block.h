@@ -6,6 +6,7 @@
 #include "coin.h"
 #include "milestone.h"
 #include "uint256.h"
+#include "serialize.h"
 
 class Transaction;
 
@@ -43,6 +44,21 @@ class Block {
         bool Verify();
         void AddTransaction(const Transaction& t);
 
+        ADD_SERIALIZE_METHODS;
+
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(nVersion_);
+            READWRITE(hashMilestoneBlock_);
+            READWRITE(hashPrevBlock_);
+            READWRITE(hashTipBlock_);
+            // READWRITE(?); content hash
+            READWRITE(nTime_);
+            READWRITE(nBits_);
+            READWRITE(nNonce_);
+            READWRITE(tx_);
+        }
+
         // get & set methods
 
     private:
@@ -63,7 +79,7 @@ class Block {
         bool isMilestone_;
 
         // content
-        std::shared_ptr<Transaction> ptx_;
+        std::vector<Transaction> tx_;
 };
 
 struct BlockIndex {
