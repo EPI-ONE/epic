@@ -14,8 +14,10 @@ set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug -fsanitize=address")
 set(CMAKE_CXX_FLAGS "-pthread")
-set(CMAKE_CXX_FLAGS $ENV{CXXFLAGS})
 set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+# default bulid type
+set(DEFAULT_BUILD_TYPE "Debug")
 
 # gtest
 find_package(gtest REQUIRED)
