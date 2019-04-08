@@ -5,7 +5,9 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <time.h>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "address_manager.h"
 #include "connection_manager.h"
@@ -57,7 +59,7 @@ public:
      * @param address
      * @param inbound
      */
-    void OnConnectionCreated(void* connection_handle, std::string address, bool inbound);
+    void OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound);
 
     /**
      * the callback function for connection manager to call when disconnect event happens
@@ -71,6 +73,18 @@ public:
      */
     size_t GetConnectedPeerSize();
 
+    /**
+     * send a message to specified peer
+     * @param message
+     */
+    void SendMessage(NetMessage& message);
+
+    /**
+     * send a message to specified peer
+     * @param message
+     */
+    void SendMessage(NetMessage&& message);
+
 private:
     /**
      * create a peer after a new connection is setup
@@ -79,7 +93,7 @@ private:
      * @param inbound
      * @return
      */
-    Peer* CreatePeer(void* connection_handle, NetAddress address, bool inbound);
+    Peer* CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
 
     /**
      * release resources of a peer and then delete it
@@ -87,6 +101,42 @@ private:
      */
     void DeletePeer(Peer* peer);
 
+    /**
+     * check if we have connected to the ip address
+     * @return
+     */
+    bool HasConnectedTo(const IPAddress& address);
+
+    /**
+     * get the pointer of peer via the connection handle
+     * @param connection_handle
+     * @return
+     */
+    Peer* GetPeer(const void* connection_handle);
+
+    /**
+     * add a peer into peer map
+     * @param handle
+     * @param peer
+     */
+    void AddPeer(const void* handle, Peer* peer);
+
+    /**
+     * add a connected address
+     * @param address
+     */
+    void AddAddr(const NetAddress& address);
+
+    /**
+     * remove a connected address
+     * @param address
+     */
+    void RemoveAddr(const NetAddress& address);
+
+    /**
+     * a while loop function to receive and process messages
+     */
+    void HandleMessage();
 
     /**
      * default network parameter based on the protocol
@@ -108,13 +158,25 @@ private:
     std::mutex peerLock_;
 
     // a map to save all peers
-    std::unordered_map<void*, Peer*> peerMap_;
+    std::unordered_map<const void*, Peer*> peerMap_;
 
-    // connection manager
-    ConnectionManager* connectionManager_;
+    // lock of connected address set
+    std::mutex addressLock_;
+
+    // a set to save connected addresses
+    std::unordered_set<IPAddress> connectedAddress_;
 
     // address manager
     AddressManager* addressManager_;
+
+    // connection manager
+    ConnectionManager* connectionManager_;
+    /**
+     * threads
+     */
+    // handle message
+    std::atomic_bool interrupt = false;
+    std::thread handleMessageTask;
 };
 
 extern std::unique_ptr<PeerManager> peerManager;

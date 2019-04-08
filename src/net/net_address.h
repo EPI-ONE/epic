@@ -56,6 +56,14 @@ public:
     uint32_t GetIpInt() const;
 };
 
+namespace std{
+    template <>
+    struct hash<IPAddress>{
+        size_t operator()(const IPAddress&f) const { return f.GetIpInt();}
+    };
+}
+
+
 class NetAddress : public IPAddress {
 protected:
     // Serialize

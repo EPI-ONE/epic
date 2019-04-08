@@ -1,10 +1,23 @@
 #ifndef EPIC_PEER_H
 #define EPIC_PEER_H
 
-#include "blocking_queue.h"
-#include "net_address.h"
-#include "version_message.h"
 #include <atomic>
+
+#include "address_manager.h"
+#include "address_message.h"
+#include "block.h"
+#include "blocking_queue.h"
+#include "bundle.h"
+#include "connection_manager.h"
+#include "getaddr_message.h"
+#include "message_type.h"
+#include "net_address.h"
+#include "ping.h"
+#include "pong.h"
+#include "protocol_exception.h"
+#include "spdlog/spdlog.h"
+#include "version_ack.h"
+#include "version_message.h"
 
 class Peer {
 public:
@@ -15,9 +28,20 @@ public:
      * @param inbound
      * @param isSeedPeer, if the peer address is a seed
      */
-    Peer(const NetAddress& netAddress, const void* handle, bool inbound, bool isSeedPeer);
+    Peer(NetAddress& netAddress,
+        const void* handle,
+        bool inbound,
+        bool isSeedPeer,
+        ConnectionManager* connectionManager,
+        AddressManager* addressManager);
 
     ~Peer();
+
+    void ProcessMessage(NetMessage& message);
+
+    void SendMessage(NetMessage& message);
+
+    void SendMessage(NetMessage&& message);
 
     /**
      * basic information of peer
@@ -36,9 +60,42 @@ public:
     const bool isInbound;
 
     // version message
-    VersionMessage versionMessage;
+    VersionMessage* versionMessage = nullptr;
+
+    // a peer is fully connected when we receive his version message and version ack
+    std::atomic_bool isFullyConnected;
+
+    // if we will disconnect the peer
+    std::atomic_bool disconnect;
 
 private:
+    /**
+     * read the nonce and send back pong message
+     * @param ping
+     * @param from
+     */
+    void ProcessPing(const Ping& ping);
+
+    /**
+     * update ping statistic of the peer
+     * @param pong
+     * @param from
+     */
+    void ProcessPong(const Pong& pong);
+
+    /**
+     * process version message
+     * @param versionMessage
+     * @param from
+     */
+    void ProcessVersionMessage(VersionMessage& versionMessage_);
+
+    /**
+     * process version ack message
+     * @param from
+     */
+    void ProcessVersionACK();
+
     /**
      * Parameters of network setting
      */
@@ -64,6 +121,9 @@ private:
     // The default timeout between when a connection attempt begins and version message exchange completes
     const static int kConnectionSetupTimeout = 10 * 1000;
 
+    // the lowest version number we're willing to accept. Lower than this will result in an immediate disconnect
+    const int kMinProtocolVersion = 0; // TODO to be set
+
     /**
      * statistic of peer status
      */
@@ -83,12 +143,6 @@ private:
     // last time of sending addresses
     long lastSendAddressTime;
 
-    // a peer is fully connected when we receive his version message and version ack
-    bool isFullyConnected;
-
-    // if we will disconnect the peer
-    bool disconnect;
-
     // if we have reply GetAddr to this peer
     bool haveReplyGetAddr;
 
@@ -99,6 +153,14 @@ private:
     /**
      * Synchronization information
      */
+
+
+    /**
+     * pointer from outside
+     */
+
+    ConnectionManager* connectionManager_;
+    AddressManager* addressManager_;
 };
 
 #endif // EPIC_PEER_H
