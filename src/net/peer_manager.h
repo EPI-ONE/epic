@@ -54,7 +54,8 @@ public:
     bool ConnectTo(const std::string& connectTo);
 
     /**
-     * the callback function for connection manager to call when connect() or accept() event happens
+     * the callback function for connection manager to call when connect() or
+     * accept() event happens
      * @param connection_handle
      * @param address
      * @param inbound
@@ -62,7 +63,8 @@ public:
     void OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound);
 
     /**
-     * the callback function for connection manager to call when disconnect event happens
+     * the callback function for connection manager to call when disconnect
+     * event happens
      * @param connection_handle
      */
     void OnConnectionClosed(void* connection_handle);

@@ -1,8 +1,9 @@
 #include "init.h"
 
-std::unique_ptr<Config> config = std::make_unique<Config>();
+std::unique_ptr<Config> config;
 
 void Init(int argc, char* argv[]) {
+    config = std::make_unique<Config>();
     // setup and parse the command line
     cxxopts::Options options("epic", "welcome to epic, enjoy your time!");
     try {
@@ -19,11 +20,17 @@ void Init(int argc, char* argv[]) {
 
     // init logger
     InitLogger();
+
+    config->showConfig();
 }
 
 void SetupCommandline(cxxopts::Options& options) {
-    options.add_options()(
-        "c,configpath", "specified config path", cxxopts::value<std::string>()->default_value("config.toml"));
+    // clang-format off
+    options.add_options()
+    ("c,configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
+    ("b,bindip", "bind ip address",cxxopts::value<std::string>())
+    ("p,bindport", "bind port", cxxopts::value<uint16_t>());
+    // clang-format on
 }
 
 void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
@@ -31,6 +38,12 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     // since these two params have been set default values, there is no need to call result.count()
     // to detect if they have values
     config->setConfigFilePath(result["configpath"].as<std::string>());
+    if (result.count("bindip") > 0) {
+        config->setBindAddress(result["bindip"].as<std::string>());
+    }
+    if (result.count("bindport") > 0) {
+        config->setBindPort(result["bindport"].as<uint16_t>());
+    }
 }
 
 void LoadConfigFile() {
@@ -39,18 +52,60 @@ void LoadConfigFile() {
         std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
         return;
     }
-    auto configContent   = cpptoml::parse_file(config_path);
-    auto log_config      = configContent->get_table("logs");
-    auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
-    config->setUseFileLogger(use_file_logger);
-    if (use_file_logger) {
-        auto path     = log_config->get_as<std::string>("path").value_or("./");
-        auto filename = log_config->get_as<std::string>("filename").value_or("Debug.log");
-        if (path[path.length() - 1] != '/') {
-            path.append("/");
+    auto configContent = cpptoml::parse_file(config_path);
+
+    // logger
+    auto log_config = configContent->get_table("logs");
+    if (log_config) {
+        auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
+        config->setUseFileLogger(use_file_logger);
+        if (use_file_logger) {
+            auto path     = log_config->get_as<std::string>("path").value_or("./");
+            auto filename = log_config->get_as<std::string>("filename").value_or("Debug.log");
+            if (path[path.length() - 1] != '/') {
+                path.append("/");
+            }
+            config->setLoggerFilename(filename);
+            config->setLoggerPath(path);
         }
-        config->setLoggerFilename(filename);
-        config->setLoggerPath(path);
+    }
+
+    // address manager
+    auto address_config = configContent->get_table("address");
+    if (address_config) {
+        auto path     = address_config->get_as<std::string>("path").value_or("");
+        auto filename = address_config->get_as<std::string>("filename").value_or("address.toml");
+        auto interval = address_config->get_as<uint>("interval").value_or(15 * 60);
+        config->setAddressPath(path);
+        config->setAddressFilename(filename);
+        config->setSaveInterval(interval);
+    }
+
+    // network config
+    auto network_config = configContent->get_table("network");
+    if (network_config) {
+        auto ip   = network_config->get_as<std::string>("ip");
+        auto port = network_config->get_as<uint16_t>("port");
+        if (ip && config->getBindAddress() == config->defaultIP) {
+            config->setBindAddress(*ip);
+        } else {
+            spdlog::info("bind ip has been specified in the command line, discard the ip in the config file");
+        }
+        if (port && config->getBindPort() == config->defaultPort) {
+            config->setBindPort(*port);
+        } else {
+            spdlog::info("bind port has been specified in the command line, discard the port in the config file");
+        }
+    }
+
+    // seeds
+    auto seeds = configContent->get_table_array("seeds");
+    for (const auto& seed : *seeds) {
+        auto ip   = seed->get_as<std::string>("ip");
+        auto port = seed->get_as<uint16_t>("port");
+        if (ip && port) {
+            config->addSeeds(*ip, *port);
+        }
     }
 }
 
@@ -65,9 +120,6 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
     try {
         if (!CheckDirExist(path)) {
             std::cerr << "The logger dir \"" << path << "\" not found, try to create the directory..." << std::endl;
-            if (CheckFileExist(path)) {
-                throw spdlog::spdlog_ex("File \"" + path + "\" existed");
-            }
             if (Mkdir_recursive(path)) {
                 std::cerr << path << " has been created" << std::endl;
             } else {

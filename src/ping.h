@@ -1,5 +1,6 @@
 #ifndef EPIC_PING_H
 #define EPIC_PING_H
+#include "net_message.h"
 #include "serialize.h"
 
 class Ping {

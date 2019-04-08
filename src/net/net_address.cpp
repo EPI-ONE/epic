@@ -84,6 +84,98 @@ uint32_t IPAddress::GetIpInt() const {
     return GetByte(3) << 24 | GetByte(2) << 16 | GetByte(1) << 8 | GetByte(0);
 }
 
+bool IPAddress::IsRFC1918() const {
+    return IsIPv4() && (GetByte(3) == 10 || (GetByte(3) == 192 && GetByte(2) == 168) ||
+                           (GetByte(3) == 172 && (GetByte(2) >= 16 && GetByte(2) <= 31)));
+}
+
+bool IPAddress::IsRFC2544() const {
+    return IsIPv4() && GetByte(3) == 198 && (GetByte(2) == 18 || GetByte(2) == 19);
+}
+
+bool IPAddress::IsRFC6598() const {
+    return IsIPv4() && GetByte(3) == 100 && GetByte(2) >= 64 && GetByte(2) <= 127;
+}
+
+bool IPAddress::IsRFC5737() const {
+    return IsIPv4() && ((GetByte(3) == 192 && GetByte(2) == 0 && GetByte(1) == 2) ||
+                           (GetByte(3) == 198 && GetByte(2) == 51 && GetByte(1) == 100) ||
+                           (GetByte(3) == 203 && GetByte(2) == 0 && GetByte(1) == 113));
+}
+
+bool IPAddress::IsRFC3849() const {
+    return GetByte(15) == 0x20 && GetByte(14) == 0x01 && GetByte(13) == 0x0D && GetByte(12) == 0xB8;
+}
+
+bool IPAddress::IsRFC3927() const {
+    return IsIPv4() && (GetByte(3) == 169 && GetByte(2) == 254);
+}
+
+bool IPAddress::IsRFC3964() const {
+    return (GetByte(15) == 0x20 && GetByte(14) == 0x02);
+}
+
+bool IPAddress::IsRFC4380() const {
+    return (GetByte(15) == 0x20 && GetByte(14) == 0x01 && GetByte(13) == 0 && GetByte(12) == 0);
+}
+
+bool IPAddress::IsRFC4843() const {
+    return (GetByte(15) == 0x20 && GetByte(14) == 0x01 && GetByte(13) == 0x00 && (GetByte(12) & 0xF0) == 0x10);
+}
+
+bool IPAddress::IsRFC4862() const {
+    static const unsigned char pchRFC4862[] = {0xFE, 0x80, 0, 0, 0, 0, 0, 0};
+    return (memcmp(ip, pchRFC4862, sizeof(pchRFC4862)) == 0);
+}
+
+bool IPAddress::IsRFC6052() const {
+    static const unsigned char pchRFC6052[] = {0, 0x64, 0xFF, 0x9B, 0, 0, 0, 0, 0, 0, 0, 0};
+    return (memcmp(ip, pchRFC6052, sizeof(pchRFC6052)) == 0);
+}
+
+bool IPAddress::IsRFC6145() const {
+    static const unsigned char pchRFC6145[] = {0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 0, 0};
+    return (memcmp(ip, pchRFC6145, sizeof(pchRFC6145)) == 0);
+}
+
+bool IPAddress::IsRoutable() const {
+    return IsValid() && !(IsRFC1918() || IsRFC2544() || IsRFC3927() || IsRFC4862() || IsRFC6598() || IsRFC5737() ||
+                            IsRFC4843() || IsLocal());
+}
+
+bool IPAddress::IsValid() const {
+    // unspecified IPv6 address (::/128)
+    unsigned char ipNone6[16] = {};
+    if (memcmp(ip, ipNone6, 16) == 0)
+        return false;
+
+    // documentation IPv6 address
+    if (IsRFC3849())
+        return false;
+
+    if (IsIPv4()) {
+        // INADDR_NONE
+        uint32_t ipNone = INADDR_NONE;
+        if (memcmp(ip + 12, &ipNone, 4) == 0)
+            return false;
+
+        // 0
+        ipNone = 0;
+        if (memcmp(ip + 12, &ipNone, 4) == 0)
+            return false;
+    }
+    return true;
+}
+
+bool IPAddress::IsLocal() const {
+    // IPv4 loopback (127.0.0.0/8 or 0.0.0.0/8)
+    if (IsIPv4() && (GetByte(3) == 127 || GetByte(3) == 0))
+        return true;
+
+    // IPv6 loopback (::1/128)
+    static const unsigned char pchLocal[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+    return memcmp(ip, pchLocal, 16) == 0;
+}
 
 NetAddress::NetAddress(const IPAddress& ip, uint16_t port) : IPAddress(ip), port_(port) {
 }
@@ -103,6 +195,14 @@ std::optional<NetAddress> NetAddress::StringToNetAddress(const std::string& neta
         if (ipAddress.has_value()) {
             return NetAddress(*ipAddress, port);
         }
+    }
+    return {};
+}
+
+std::optional<NetAddress> NetAddress::StringToNetAddress(const std::string& ip, const uint16_t& port) {
+    std::optional<IPAddress> ipAddress = IPAddress::StringToIP(ip);
+    if (ipAddress.has_value()) {
+        return NetAddress(*ipAddress, port);
     }
     return {};
 }

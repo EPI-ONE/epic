@@ -1,20 +1,31 @@
-#include <gtest/gtest.h>
+#include "init.h"
 #include "peer_manager.h"
+#include <gtest/gtest.h>
 
 class TestPeerManager : public testing::Test {
-    public:
-        PeerManager server;
-        PeerManager client;
+public:
+    PeerManager server;
+    PeerManager client;
 
-        void SetUp() {
-            server.Start();
-            client.Start();
-        }
+    static void SetUpTestCase() {
+        char** s = new char*[1];
+        s[0]     = new char[5];
+        strcpy(s[0], "epic");
+        Init(1, s);
 
-        void TearDown() {
-            server.Stop();
-            client.Stop();
-        }
+        delete[] s[0];
+        delete[] s;
+    }
+
+    void SetUp() {
+        server.Start();
+        client.Start();
+    }
+
+    void TearDown() {
+        server.Stop();
+        client.Stop();
+    }
 };
 
 TEST_F(TestPeerManager, CallBack) {
@@ -38,4 +49,3 @@ TEST_F(TestPeerManager, CheckHaveConnectedSameIP) {
     EXPECT_EQ(same_ip_client.GetConnectedPeerSize(), 0);
     same_ip_client.Stop();
 }
-

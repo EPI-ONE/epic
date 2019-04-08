@@ -1,18 +1,18 @@
-#include <gtest/gtest.h>
 #include "block.h"
 #include "key.h"
 #include "pubkey.h"
 #include "stream.h"
 #include "transaction.h"
+#include <gtest/gtest.h>
 
 class TestSer : public testing::Test {
-   protected:
+protected:
     uint256 rand1;
     void SetUp() {
-        rand1 = uint256S(
-            "9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
+        rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
     }
-    void TearDown() {}
+    void TearDown() {
+    }
 };
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
@@ -20,7 +20,7 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     CKey seckey = CKey();
     seckey.MakeNewKey(true);
     CPubKey pubkey = seckey.GetPubKey();
-    
+
     VStream vstream;
     vstream << pubkey;
     CPubKey outPubkey;
@@ -47,7 +47,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
 
 TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input = TxInput(outpoint, Script());
+    TxInput input       = TxInput(outpoint, Script());
     VStream sinput;
     sinput << input;
     std::string s = sinput.str();
@@ -78,9 +78,9 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input = TxInput(outpoint, Script());
-    TxOutput output = TxOutput(100, Script());
-    Transaction tx = Transaction(1);
+    TxInput input       = TxInput(outpoint, Script());
+    TxOutput output     = TxOutput(100, Script());
+    Transaction tx      = Transaction(1);
     tx.AddInput(input);
     tx.AddOutput(output);
 
@@ -99,21 +99,19 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
     auto emptyChar = new char[256]();
-    uint256 zeros = uint256S(emptyChar);
+    uint256 zeros  = uint256S(emptyChar);
     delete[] emptyChar;
 
-    uint256 rand2 = uint256S(
-        "e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
-    uint256 rand3 = uint256S(
-        "84a01628cd9f0f715a9a611d99ea1f20bd7d823d04f41194aa49e03957d7e22e");
+    uint256 rand2 = uint256S("e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
+    uint256 rand3 = uint256S("84a01628cd9f0f715a9a611d99ea1f20bd7d823d04f41194aa49e03957d7e22e");
 
     Block block = Block(1, rand1, zeros, rand2, rand3, 1, 1, 1);
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input = TxInput(outpoint, Script());
-    TxOutput output = TxOutput(100, Script());
-    Transaction tx = Transaction(1);
+    TxInput input       = TxInput(outpoint, Script());
+    TxOutput output     = TxOutput(100, Script());
+    Transaction tx      = Transaction(1);
     tx.AddInput(input);
     tx.AddOutput(output);
     block.AddTransaction(tx);

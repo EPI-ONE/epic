@@ -40,6 +40,16 @@ void Peer::ProcessMessage(NetMessage& msg) {
             ProcessVersionACK();
             break;
         }
+        case GET_ADDR: {
+            ProcessGetAddrMessage();
+            break;
+        }
+        case ADDR: {
+            AddressMessage addressMessage;
+            msg.payload >> addressMessage;
+            ProcessAddressMessage(addressMessage);
+            break;
+        }
         }
     } catch (ProtocolException& exception) {
         spdlog::warn(exception.ToString());
@@ -88,7 +98,7 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
     }
 
     versionMessage  = new VersionMessage();
-    *versionMessage = std::move(versionMessage_);
+    *versionMessage = versionMessage_;
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
     spdlog::info("{}: Got version = {}, services = {}, time = {}, height = {}", address.ToString(),
@@ -108,9 +118,53 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
     // send version ack
     SendMessage(NetMessage(connection_handle, VERSION_ACK, VStream()));
 
+    // add the score of the our local address as reported by the peer
+    addressManager_->SeenLocalAddress(versionMessage_.address_you);
     if (!isInbound) {
-        // TODO handle address
+        // send local address
+        AddressMessage addressMessage;
+        IPAddress localAddress = addressManager_->GetBestLocalAddress();
+        addressMessage.AddAddress(NetAddress(localAddress, config->getBindPort()));
+        SendMessage(NetMessage(connection_handle, ADDR, VStream(addressMessage)));
+        spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
+
+        // ask for addresses
+        SendMessage(NetMessage(connection_handle, GET_ADDR, VStream()));
+
+        addressManager_->MarkOld(address);
     }
+}
+
+void Peer::ProcessAddressMessage(AddressMessage& addressMessage) {
+    if (addressMessage.addressList.size() > AddressMessage::kMaxAddressSize) {
+        spdlog::warn("Received too many addresses, abort them");
+    } else {
+        spdlog::info("Received addresses from peer {}", address.ToString());
+        for (const auto& addr : addressMessage.addressList) {
+            spdlog::info("Received address {} ", addr.ToString());
+            // TODO relay
+
+            // save addresses
+            if (addr.IsRoutable()) {
+                addressManager_->AddNewAddress(addr);
+            }
+        }
+    }
+
+    // disconnect the connection after we get the addresses if the peer is a seed
+    if (isSeed) {
+        disconnect = true;
+    }
+}
+
+void Peer::ProcessGetAddrMessage() {
+    if (!isInbound || haveReplyGetAddr) {
+        return;
+    }
+    std::vector<NetAddress> addresses = addressManager_->GetAddresses();
+    AddressMessage msg(addresses);
+    SendMessage(NetMessage(connection_handle, ADDR, VStream(msg)));
+    haveReplyGetAddr = true;
 }
 
 void Peer::SendMessage(NetMessage& message) {
