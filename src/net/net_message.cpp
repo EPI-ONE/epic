@@ -1,6 +1,6 @@
 #include "net_message.h"
 
-void* NetMessage::getConnectionHandle() {
+const void *NetMessage::getConnectionHandle() {
     return connection_handle_;
 }
 
@@ -9,5 +9,5 @@ bool NetMessage::VerifyChecksum() {
         return true;
     }
 
-    return getCrc32(payload.data(), payload.size()) == header.checksum;
+    return getCrc32((unsigned char *) payload.data(), payload.size()) == header.checksum;
 }
