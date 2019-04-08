@@ -12,16 +12,23 @@ set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
 set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
+set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -fstandalone-debug")
 set(CMAKE_CXX_FLAGS "-pthread $ENV{CXXFLAGS}")
-set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # gtest
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
+#libevent
 find_package(libevent 2.1.8 EXACT REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIRS})
+
+# rocksdb
+find_package(rocksdb REQUIRED)
+include_directories(${ROCKSDB_INCLUDE_DIRS})
 
 # src codes
 set(NET_DIR src/net)
@@ -64,8 +71,10 @@ add_executable(epic ${SRC_CODE} ${SRC_MAIN} )
 add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE} )
 
 target_link_libraries(epic ${LIBEVENT_LIBRARIES})
+target_link_libraries(epic ${ROCKSDB_LIBRARIES})
 target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
 
 
 # add test

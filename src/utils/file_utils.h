@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <errno.h>
+#include <cerrno>
 
 bool CheckDirExist(const std::string &dirPath);
 
