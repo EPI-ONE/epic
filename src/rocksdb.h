@@ -21,11 +21,13 @@ class RocksDBStore {
    public:
     RocksDBStore(string dbPath) {
         this->DBPATH = dbPath;
+        // Make directory DBPATH if missing
         if (!CheckDirExist(DBPATH)) {
             Mkdir_recursive(DBPATH);
         }
 
         // Create column families
+        vector<ColumnFamilyDescriptor> descriptors;
         for (string columnName : COLUMN_NAMES) {
             ColumnFamilyOptions cOptions;
             if (columnName == kDefaultColumnFamilyName) {
@@ -46,6 +48,7 @@ class RocksDBStore {
         }
         initHandleMap(handles);
         handles.clear();
+        descriptors.clear();
     }
 
     const string Get(const string& column, const string& key) {
@@ -85,7 +88,6 @@ class RocksDBStore {
     }
 
    private:
-    vector<ColumnFamilyDescriptor> descriptors;
     unordered_map<string, ColumnFamilyHandle*> handleMap;
     DB* db;
     string DBPATH;
