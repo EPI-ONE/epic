@@ -1,6 +1,7 @@
 #ifndef EPIC_PEER_H
 #define EPIC_PEER_H
 
+#include <atomic>
 #include "blocking_queue.h"
 #include "net_address.h"
 #include "version_message.h"
@@ -64,7 +65,6 @@ class Peer {
         // The default timeout between when a connection attempt begins and version message exchange completes
         const static int kConnectionSetupTimeout = 10 * 1000;
 
-    private:
         /**
          * statistic of peer status
          */

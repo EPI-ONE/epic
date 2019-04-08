@@ -7,6 +7,7 @@
 #define BITCOIN_SERIALIZE_H
 
 #include "compat/bitcoin_endian.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>

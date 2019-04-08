@@ -1,32 +1,36 @@
 #include "peer_manager.h"
 
 PeerManager::PeerManager() {
-    connectionManager = new ConnectionManager();
-    addressManager = new AddressManager();
+    connectionManager_ = new ConnectionManager();
+    addressManager_ = new AddressManager();
 }
 
 PeerManager::~PeerManager() {
-    delete connectionManager;
-    delete addressManager;
+    delete connectionManager_;
+    delete addressManager_;
 }
 
 void PeerManager::Start() {
     spdlog::info("Starting the Peer Manager...");
-    connectionManager->RegisterNewConnectionCallback(std::bind(&PeerManager::OnConnectionCreated, this,
-                                                               std::placeholders::_1,
-                                                               std::placeholders::_2,
-                                                               std::placeholders::_3));
-    connectionManager->RegisterDeleteConnectionCallBack(std::bind(&PeerManager::OnConnectionClosed, this,
-                                                                  std::placeholders::_1));
-    connectionManager->Start();
+    connectionManager_->RegisterNewConnectionCallback(std::bind(&PeerManager::OnConnectionCreated, this,
+                                                                std::placeholders::_1,
+                                                                std::placeholders::_2,
+                                                                std::placeholders::_3));
+    connectionManager_->RegisterDeleteConnectionCallBack(std::bind(&PeerManager::OnConnectionClosed, this,
+                                                                   std::placeholders::_1));
+    connectionManager_->Start();
 }
 
 void PeerManager::Stop() {
     spdlog::info("Stopping the Peer Manager...");
-    connectionManager->Stop();
-    for (auto peer_entry:peerMap_) {
-        delete peer_entry.second;
+    connectionManager_->Stop();
+    {
+        std::lock_guard<std::mutex> lock(peerLock_);
+        for (auto peer_entry:peerMap_) {
+            delete peer_entry.second;
+        }
     }
+
 }
 
 void PeerManager::OnConnectionCreated(void *connection_handle, std::string address, bool inbound) {
@@ -34,17 +38,17 @@ void PeerManager::OnConnectionCreated(void *connection_handle, std::string addre
     assert(net_address);
     Peer *peer = CreatePeer(connection_handle, *net_address, inbound);
     {
-        std::lock_guard<std::mutex> lk(peerLock);
+        std::lock_guard<std::mutex> lk(peerLock_);
         peerMap_.insert(std::make_pair(connection_handle, peer));
     }
-    spdlog::info("{} {}   ({} connected)", inbound ? "Accept" : "Connect to", address, peerMap_.size());
+    spdlog::info("{} {}   ({} connected)", inbound ? "Accept" : "Connect to", address, GetConnectedPeerSize());
     // TODO version handshake
 }
 
 void PeerManager::OnConnectionClosed(void *connection_handle) {
     Peer *p = nullptr;
     {
-        std::lock_guard<std::mutex> lk(peerLock);
+        std::lock_guard<std::mutex> lk(peerLock_);
         auto peer = peerMap_.find(connection_handle)->second;
         if (peer) {
             p = peer;
@@ -57,18 +61,18 @@ void PeerManager::OnConnectionClosed(void *connection_handle) {
 }
 
 Peer *PeerManager::CreatePeer(void *connection_handle, NetAddress address, bool inbound) {
-    Peer *peer = new Peer(address, connection_handle, inbound, addressManager->isSeedAddress(address));
+    Peer *peer = new Peer(address, connection_handle, inbound, addressManager_->isSeedAddress(address));
     return peer;
 }
 
 void PeerManager::DeletePeer(Peer *peer) {
-    spdlog::info("{} Peer died,  ({} connected)", peer->address.ToString(), peerMap_.size());
+    spdlog::info("{} Peer died,  ({} connected)", peer->address.ToString(), GetConnectedPeerSize());
     //TODO remove some tasks or data from peer
     delete peer;
 }
 
 bool PeerManager::Bind(NetAddress &bindAddress) {
-    return connectionManager->Listen(bindAddress.GetPort(), bindAddress.GetIpInt()) == 0;
+    return connectionManager_->Listen(bindAddress.GetPort(), bindAddress.GetIpInt()) == 0;
 }
 
 bool PeerManager::Bind(const std::string &bindAddress) {
@@ -77,7 +81,7 @@ bool PeerManager::Bind(const std::string &bindAddress) {
 }
 
 bool PeerManager::ConnectTo(NetAddress &connectTo) {
-    return connectionManager->Connect(connectTo.GetIpInt(), connectTo.GetPort()) == 0;
+    return connectionManager_->Connect(connectTo.GetIpInt(), connectTo.GetPort()) == 0;
 }
 
 bool PeerManager::ConnectTo(const std::string &connectTo) {
@@ -86,6 +90,6 @@ bool PeerManager::ConnectTo(const std::string &connectTo) {
 }
 
 size_t PeerManager::GetConnectedPeerSize() {
-    std::lock_guard<std::mutex> lk(peerLock);
+    std::lock_guard<std::mutex> lk(peerLock_);
     return peerMap_.size();
 }

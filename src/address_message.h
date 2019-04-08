@@ -7,22 +7,22 @@
 
 class AddressMessage {
     public:
-        static const long MAX_ADDRESSES_SIZE = 1024;
+        static const long kMaxAddressSize = 1024;
 
-        std::vector<NetAddress> address_list_;
+        std::vector<NetAddress> addressList;
 
         AddressMessage() = default;
 
-        explicit AddressMessage(std::vector<NetAddress> &&address_list) : address_list_(address_list) {}
+        explicit AddressMessage(std::vector<NetAddress> &address_list) : addressList(std::move(address_list)) {}
 
         ~AddressMessage() {
-            address_list_.clear();
+            addressList.clear();
         }
 
         ADD_SERIALIZE_METHODS;
         template<typename Stream, typename Operation>
         inline void SerializationOp(Stream &s, Operation ser_action) {
-            READWRITE(address_list_);
+            READWRITE(addressList);
         }
 };
 

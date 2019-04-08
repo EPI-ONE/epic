@@ -5,6 +5,7 @@
 #include <functional>
 #include <optional>
 #include <mutex>
+#include <shared_mutex>
 
 #include "spdlog.h"
 #include "peer.h"
@@ -71,7 +72,6 @@ class PeerManager {
          */
         size_t GetConnectedPeerSize();
 
-
     private:
         /**
          * create a peer after a new connection is setup
@@ -93,15 +93,6 @@ class PeerManager {
          * default network parameter based on the protocol
          */
 
-//        // default normal number of active connections
-//        const static uint kNormalConnections = 20;
-//
-//        // default normal max outbound active connections
-//        const static uint kNormalMaxInbound = 10;
-//
-//        // default max number of active connections
-//        const static uint kMaxConnections = 1000;
-
         // possibility of relaying a block to a peer
         constexpr static float kAlpha = 0.5;
 
@@ -109,29 +100,22 @@ class PeerManager {
          * current local network status
          */
 
-//        // current max connection size
-//        uint currentMaxConnection;
-//
-//        // current size of inbound peer
-//        uint currentInbound;
-//
-//        // current size of outbound peer
-//        uint currentOutbound;
+        // TODO
 
         /**
          * internal data structures
          */
-        // peerLock
-        std::mutex peerLock;
+        // peers' lock
+        std::mutex peerLock_;
 
         // a map to save all peers
         std::unordered_map<void *, Peer *> peerMap_;
 
         // connection manager
-        ConnectionManager *connectionManager;
+        ConnectionManager *connectionManager_;
 
         // address manager
-        AddressManager *addressManager;
+        AddressManager *addressManager_;
 
 };
 

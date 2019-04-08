@@ -23,30 +23,30 @@ TEST_F(TestNetMsg, Ping) {
 
     Ping ping1;
     ping1.Unserialize(os);
-    EXPECT_EQ(ping.nonce_, ping1.nonce_);
+    EXPECT_EQ(ping.nonce, ping1.nonce);
 }
 
-TEST(TestNetMsg, Pong) {
+TEST_F(TestNetMsg, Pong) {
     Pong pong(8245);
     std::stringstream os;
     pong.Serialize(os);
 
     Pong pong1;
     pong1.Unserialize(os);
-    EXPECT_EQ(pong.nonce_, pong1.nonce_);
+    EXPECT_EQ(pong.nonce, pong1.nonce);
 }
 
 TEST_F(TestNetMsg, AddressMessage) {
     std::vector<NetAddress> lists{a1, a2};
-    AddressMessage addressMessage(std::move(lists));
+    AddressMessage addressMessage(lists);
     std::stringstream os;
     addressMessage.Serialize(os);
 
     AddressMessage addressMessage1;
     addressMessage1.Unserialize(os);
-    EXPECT_EQ(addressMessage.address_list_.size(), addressMessage1.address_list_.size());
-    for (int i = 0; i < addressMessage.address_list_.size(); i++) {
-        EXPECT_EQ(addressMessage.address_list_[i], addressMessage1.address_list_[i]);
+    EXPECT_EQ(addressMessage.addressList.size(), addressMessage1.addressList.size());
+    for (int i = 0; i < addressMessage.addressList.size(); i++) {
+        EXPECT_EQ(addressMessage.addressList[i], addressMessage1.addressList[i]);
     }
 }
 
@@ -57,11 +57,11 @@ TEST_F(TestNetMsg, VersionMessage) {
 
     VersionMessage versionMessage1;
     versionMessage1.Unserialize(os);
-    EXPECT_EQ(versionMessage.current_height_,versionMessage1.current_height_);
-    EXPECT_EQ(versionMessage.address_me_,versionMessage1.address_me_);
-    EXPECT_EQ(versionMessage.address_you_,versionMessage1.address_you_);
-    EXPECT_EQ(versionMessage.nTime_,versionMessage1.nTime_);
-    EXPECT_EQ(versionMessage.local_service_,versionMessage1.local_service_);
-    EXPECT_EQ(versionMessage.client_version_,versionMessage1.client_version_);
+    EXPECT_EQ(versionMessage.current_height, versionMessage1.current_height);
+    EXPECT_EQ(versionMessage.address_me, versionMessage1.address_me);
+    EXPECT_EQ(versionMessage.address_you, versionMessage1.address_you);
+    EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);
+    EXPECT_EQ(versionMessage.local_service, versionMessage1.local_service);
+    EXPECT_EQ(versionMessage.client_version, versionMessage1.client_version);
 
 }
