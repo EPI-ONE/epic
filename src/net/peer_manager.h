@@ -1,6 +1,14 @@
 #ifndef EPIC_PEER_MANAGER_H
 #define EPIC_PEER_MANAGER_H
 
+#if defined(__SUPPORT_TS_ANNOTATION__) || defined(__clang__)
+#define THREAD_ANNOTATION_ATTRIBUTE__(x)   __attribute__((x))
+#else
+#define THREAD_ANNOTATION_ATTRIBUTE__(x)   // no-op
+#endif
+
+#define GUARDED_BY(x) THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
+//#include "a.h"
 #include <unordered_map>
 #include <functional>
 #include <optional>
@@ -109,7 +117,7 @@ class PeerManager {
         std::mutex peerLock_;
 
         // a map to save all peers
-        std::unordered_map<void *, Peer *> peerMap_;
+        std::unordered_map<void *, Peer *> peerMap_ GUARDED_BY(peerLock_);
 
         // connection manager
         ConnectionManager *connectionManager_;
