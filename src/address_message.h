@@ -20,6 +20,14 @@ public:
         addressList.clear();
     }
 
+    void AddAddress(NetAddress& addr) {
+        addressList.push_back(addr);
+    }
+
+    void AddAddress(NetAddress&& addr) {
+        addressList.push_back(addr);
+    }
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {

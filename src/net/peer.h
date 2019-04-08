@@ -96,6 +96,17 @@ private:
     void ProcessVersionACK();
 
     /**
+     * process address message, check, relay and save addresses
+     * @param addressMessage
+     */
+    void ProcessAddressMessage(AddressMessage& addressMessage);
+
+    /**
+     * send addresses to the peer
+     */
+    void ProcessGetAddrMessage();
+
+    /**
      * Parameters of network setting
      */
 

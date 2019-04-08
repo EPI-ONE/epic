@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "peer_manager.h"
 
 PeerManager::PeerManager() {
@@ -14,6 +12,7 @@ PeerManager::~PeerManager() {
 
 void PeerManager::Start() {
     spdlog::info("Starting the Peer Manager...");
+    addressManager_->Init();
     connectionManager_->RegisterNewConnectionCallback(std::bind(
         &PeerManager::OnConnectionCreated, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     connectionManager_->RegisterDeleteConnectionCallBack(
@@ -80,7 +79,7 @@ void PeerManager::OnConnectionClosed(void* connection_handle) {
 }
 
 Peer* PeerManager::CreatePeer(void* connection_handle, NetAddress& address, bool inbound) {
-    Peer* peer = new Peer(address, connection_handle, inbound, addressManager_->isSeedAddress(address),
+    Peer* peer = new Peer(address, connection_handle, inbound, addressManager_->IsSeedAddress(address),
         connectionManager_, addressManager_);
     return peer;
 }

@@ -34,10 +34,10 @@ public:
         test_address = address;
     }
 
-    void TestDisconnectCallback(void *connection_handle) {
-        std::cout << "disconnect handle:" << connection_handle << std::endl;
-        test_disconnect_run = true;
-    }
+        void TestDisconnectCallback(void *connection_handle) {
+            std::cout << "disconnect handle:" << connection_handle << std::endl;
+            test_disconnect_run = true;
+        }
 
     void TestMultiClientNewCallback(void *connection_handle, std::string &address, bool inbound) {
         handle_vector.push_back(connection_handle);

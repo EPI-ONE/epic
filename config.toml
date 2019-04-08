@@ -4,3 +4,16 @@ title = "EPIC Default Config"
 use_file_logger = true
 path = "logs/"
 filename = "Debug.log"
+
+[address]
+path = ""
+filename = "address.toml"
+interval = 900
+
+[network]
+ip = "127.0.0.1"
+port = 7877
+
+[[seeds]]
+ip = "143.89.21.231"
+port = 7877

@@ -42,6 +42,36 @@ public:
 
     std::string ToStringIP() const;
 
+    bool IsRFC1918() const; // IPv4 private networks (10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12)
+
+    bool IsRFC2544() const; // IPv4 inter-network communications (192.18.0.0/15)
+
+    bool IsRFC6598() const; // IPv4 ISP-level NAT (100.64.0.0/10)
+
+    bool IsRFC5737() const; // IPv4 documentation addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24)
+
+    bool IsRFC3849() const; // IPv6 documentation address (2001:0DB8::/32)
+
+    bool IsRFC3927() const; // IPv4 autoconfig (169.254.0.0/16)
+
+    bool IsRFC3964() const; // IPv6 6to4 tunnelling (2002::/16)
+
+    bool IsRFC4380() const; // IPv6 Teredo tunnelling (2001::/32)
+
+    bool IsRFC4843() const; // IPv6 ORCHID (2001:10::/28)
+
+    bool IsRFC4862() const; // IPv6 autoconfig (FE80::/64)
+
+    bool IsRFC6052() const; // IPv6 well-known prefix (64:FF9B::/96)
+
+    bool IsRFC6145() const; // IPv6 IPv4-translated address (::FFFF:0:0:0/96)
+
+    bool IsRoutable() const;
+
+    bool IsLocal() const;
+
+    bool IsValid() const;
+
     virtual std::string ToString() const;
 
     uint8_t GetByte(int n) const;
@@ -56,12 +86,14 @@ public:
     uint32_t GetIpInt() const;
 };
 
-namespace std{
-    template <>
-    struct hash<IPAddress>{
-        size_t operator()(const IPAddress&f) const { return f.GetIpInt();}
-    };
-}
+namespace std {
+template <>
+struct hash<IPAddress> {
+    size_t operator()(const IPAddress& f) const {
+        return f.GetIpInt();
+    }
+};
+} // namespace std
 
 
 class NetAddress : public IPAddress {
@@ -71,6 +103,8 @@ protected:
 
 public:
     static std::optional<NetAddress> StringToNetAddress(const std::string& netaddr_string);
+
+    static std::optional<NetAddress> StringToNetAddress(const std::string& ip, const uint16_t& port);
 
     NetAddress() = default;
 
@@ -97,5 +131,14 @@ public:
         READWRITE(port_);
     }
 };
+
+namespace std {
+template <>
+struct hash<NetAddress> {
+    size_t operator()(const NetAddress& f) const {
+        return f.GetIpInt() * f.GetPort();
+    }
+};
+} // namespace std
 
 #endif // EPIC_NET_ADDRESS_H

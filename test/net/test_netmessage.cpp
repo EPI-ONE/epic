@@ -4,16 +4,16 @@
 
 #include "address_message.h"
 #include "getaddr_message.h"
+#include "net_message.h"
 #include "ping.h"
 #include "pong.h"
 #include "version_ack.h"
 #include "version_message.h"
-#include "net_message.h"
 
 class TestNetMsg : public testing::Test {
-    public:
-        NetAddress a1 = *NetAddress::StringToNetAddress("127.0.0.1:7877");
-        NetAddress a2 = *NetAddress::StringToNetAddress("127.0.0.1:8245");
+public:
+    NetAddress a1 = *NetAddress::StringToNetAddress("127.0.0.1:7877");
+    NetAddress a2 = *NetAddress::StringToNetAddress("127.0.0.1:8245");
 };
 
 TEST_F(TestNetMsg, Ping) {
@@ -51,17 +51,15 @@ TEST_F(TestNetMsg, AddressMessage) {
 }
 
 TEST_F(TestNetMsg, VersionMessage) {
-    VersionMessage versionMessage(1, 0, time(0), a1, a2, 0);
+    VersionMessage versionMessage(1, 0, time(0), a1, 0);
     std::stringstream os;
     versionMessage.Serialize(os);
 
     VersionMessage versionMessage1;
     versionMessage1.Unserialize(os);
     EXPECT_EQ(versionMessage.current_height, versionMessage1.current_height);
-    EXPECT_EQ(versionMessage.address_me, versionMessage1.address_me);
     EXPECT_EQ(versionMessage.address_you, versionMessage1.address_you);
     EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);
     EXPECT_EQ(versionMessage.local_service, versionMessage1.local_service);
     EXPECT_EQ(versionMessage.client_version, versionMessage1.client_version);
-
 }
