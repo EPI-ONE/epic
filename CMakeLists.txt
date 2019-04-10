@@ -18,12 +18,15 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
+# default bulid type
+set(DEFAULT_BUILD_TYPE "Debug")
+
 # gtest
-find_package(GTest REQUIRED)
+find_package(GTest 1.8.1 EXACT REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 #libevent
-find_package(libevent 2.1.8 EXACT REQUIRED)
+find_package(Libevent 2.1.8 EXACT REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 # rocksdb

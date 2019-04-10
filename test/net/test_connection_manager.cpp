@@ -197,10 +197,10 @@ TEST_F(TestConnectionManager, MultiClient) {
     uint32_t message_type = 100;
 
     for (int i = 0; i< client_num;i++) {
-        std::vector<unsigned char> payload(data_len, 'A'+i);
+        std::vector<unsigned char> payload(data_len, 'A' + i);
         NetMessage send_message(handle_vector.at(i), message_type, payload);
         client[i].SendMessage(send_message);
-
+        sleep(1);
     }
 
     for (int i = 0; i< client_num;i++) {
@@ -210,7 +210,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         EXPECT_EQ(receive_message.header.type, message_type);
         EXPECT_EQ(receive_message.header.payload_length, data_len);
         for (int j=0; j< receive_message.payload.size(); j++) {
-            EXPECT_EQ(receive_message.payload.at(j), 'A'+ i);
+            EXPECT_EQ(receive_message.payload.at(j), 'A' + i);
         }
     }
 
