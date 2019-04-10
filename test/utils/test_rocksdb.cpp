@@ -21,6 +21,12 @@ class TestRocksDB : public testing::Test {
         filename = PREFIX + os.str();
         db = new RocksDBStore(filename);
     }
+
+    // legacy version for gtest 1.8
+    static void SetUpTestCase() {
+        SetUpTestSuite();
+    }
+
     void SetUp() {}
     void TearDown() {}
 
@@ -31,6 +37,11 @@ class TestRocksDB : public testing::Test {
         system(cmd.c_str());
         delete db;
         db = NULL;
+    }
+
+    // legacy version for gtest 1.8
+    static void TearDownTestCase() {
+        TearDownTestSuite();
     }
 
     // Creates a random string using numbers and alphabet with given length

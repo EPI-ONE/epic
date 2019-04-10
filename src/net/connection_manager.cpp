@@ -240,12 +240,11 @@ struct bufferevent* ConnectionManager::CreateBufferevent(struct event_base *base
 void ConnectionManager::FreeBufferevent(struct bufferevent *bev) {
     bufferevent_map.erase(bev);
     bufferevent_free(bev);
-
 }
 
 void ConnectionManager::FreeAllBufferevent_() {
-    for(auto iter : bufferevent_map) {
-        FreeBufferevent(iter.first);
+    while (!bufferevent_map.empty()) {
+        FreeBufferevent(bufferevent_map.begin()->first);
     }
 }
 

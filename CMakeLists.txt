@@ -18,8 +18,11 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
+# default bulid type
+set(DEFAULT_BUILD_TYPE "Debug")
+
 # gtest
-find_package(GTest REQUIRED)
+find_package(gtest 1.8.1 EXACT REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 #libevent
