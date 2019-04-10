@@ -13,7 +13,7 @@ class TestRocksDB : public testing::Test {
     static RocksDBStore *db;
 
     // One set up before all test cases
-    static void SetUpTestSuite() {
+    static void SetUpTestCase() {
         std::string filename;
         // Get the current time and make into a temp file name
         std::ostringstream os;
@@ -22,26 +22,16 @@ class TestRocksDB : public testing::Test {
         db = new RocksDBStore(filename);
     }
 
-    // legacy version for gtest 1.8
-    static void SetUpTestCase() {
-        SetUpTestSuite();
-    }
-
     void SetUp() {}
     void TearDown() {}
 
     // One tear down after all test cases
-    static void TearDownTestSuite() {
+    static void TearDownTestCase() {
         // Remove the temporary db folder
         std::string cmd = "exec rm -r " + PREFIX;
         system(cmd.c_str());
         delete db;
         db = NULL;
-    }
-
-    // legacy version for gtest 1.8
-    static void TearDownTestCase() {
-        TearDownTestSuite();
     }
 
     // Creates a random string using numbers and alphabet with given length
