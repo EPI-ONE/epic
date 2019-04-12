@@ -39,7 +39,9 @@ class Block {
     void Solve();
     // verify block content syntactically
     bool Verify();
-    void AddTransaction(const Transaction& t);
+    void AddTransaction(const Transaction& t) {
+        tx_.push_back(t);
+    }
 
     ADD_SERIALIZE_METHODS;
 
