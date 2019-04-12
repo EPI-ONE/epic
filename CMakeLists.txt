@@ -44,7 +44,6 @@ set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
-#aux_source_directory(${SUPPORT_DIR} SUPPORT_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
@@ -68,6 +67,7 @@ set(SRC_CODE
         ${CORE_SRCS}
         )
 set(SRC_MAIN src/main.cpp)
+
 
 # test codes
 aux_source_directory(test/net TEST_NET_SRCS)
