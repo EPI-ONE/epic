@@ -40,7 +40,7 @@ class TestRocksDB : public testing::Test {
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz";
-        char s[len];
+        char s[len + 1];
         for (int i = 0; i < len; ++i) {
             s[i] = alph[rand() % (sizeof(alph) - 1)];
         }
@@ -69,7 +69,7 @@ TEST_F(TestRocksDB, batch_insertion) {
     std::map<std::string, std::string> batch = {};
     for (int i = 0; i < 1000; ++i) {
         auto key = RandomString(32);
-        auto value = RandomString(21000);
+        auto value = RandomString(500);
         batch[key] = value;
     }
     db->WriteBatch(column, batch);
