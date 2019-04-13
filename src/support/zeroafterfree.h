@@ -7,7 +7,6 @@
 #ifndef BITCOIN_SUPPORT_ALLOCATORS_ZEROAFTERFREE_H
 #define BITCOIN_SUPPORT_ALLOCATORS_ZEROAFTERFREE_H
 
-#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -34,9 +33,13 @@ struct zero_after_free_allocator : public std::allocator<T> {
     };
 
     void deallocate(T* p, std::size_t n) {
-        if (p != nullptr) memset_s(p, sizeof(T) * n, 0, sizeof(T) * n);
+        if (p != nullptr) {
+            std::memset(p, 0, sizeof(T) * n);
+            // To break the optimization that might eliminate memset.
+            __asm__ __volatile__("" : : "r"(p) : "memory");
+        }
         std::allocator<T>::deallocate(p, n);
     }
 };
 
-#endif  // BITCOIN_SUPPORT_ALLOCATORS_ZEROAFTERFREE_H
+#endif // BITCOIN_SUPPORT_ALLOCATORS_ZEROAFTERFREE_H
