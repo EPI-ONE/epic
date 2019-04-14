@@ -1,13 +1,10 @@
 #ifndef __SRC_BLOCK_H__
 #define __SRC_BLOCK_H__
 
-#include <cstdint>
-
-#include "transaction.h"
-#include "uint256.h"
 #include "serialize.h"
 #include "transaction.h"
 #include "uint256.h"
+#include <cstdint>
 
 class Transaction;
 
@@ -39,9 +36,7 @@ class Block {
     void Solve();
     // verify block content syntactically
     bool Verify();
-    void AddTransaction(const Transaction& t) {
-        tx_.push_back(t);
-    }
+    void AddTransaction(const Transaction& t) { tx_.push_back(t); }
 
     ADD_SERIALIZE_METHODS;
 
