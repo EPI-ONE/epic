@@ -3,29 +3,25 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <uint256.h>
-
-#include <utilstrencodings.h>
-
-#include <stdio.h>
-#include <string.h>
+#include "uint256.h"
+#include "utilstrencodings.h"
+#include <cstdio>
+#include <cstring>
 
 template <unsigned int BITS>
-base_blob<BITS>::base_blob(const std::vector<unsigned char>& vch)
-{
+base_blob<BITS>::base_blob(const std::vector<unsigned char>& vch) {
     assert(vch.size() == sizeof(data));
     memcpy(data, vch.data(), sizeof(data));
 }
 
 template <unsigned int BITS>
-std::string base_blob<BITS>::GetHex() const
-{
-    return HexStr(std::reverse_iterator<const uint8_t*>(data + sizeof(data)), std::reverse_iterator<const uint8_t*>(data));
+std::string base_blob<BITS>::GetHex() const {
+    return HexStr(std::reverse_iterator<const uint8_t*>(data + sizeof(data)),
+        std::reverse_iterator<const uint8_t*>(data));
 }
 
 template <unsigned int BITS>
-void base_blob<BITS>::SetHex(const char* psz)
-{
+void base_blob<BITS>::SetHex(const char* psz) {
     memset(data, 0, sizeof(data));
 
     // skip leading spaces
@@ -41,26 +37,24 @@ void base_blob<BITS>::SetHex(const char* psz)
     while (::HexDigit(*psz) != -1)
         psz++;
     psz--;
-    unsigned char* p1 = (unsigned char*)data;
+    unsigned char* p1   = (unsigned char*) data;
     unsigned char* pend = p1 + WIDTH;
     while (psz >= pbegin && p1 < pend) {
         *p1 = ::HexDigit(*psz--);
         if (psz >= pbegin) {
-            *p1 |= ((unsigned char)::HexDigit(*psz--) << 4);
+            *p1 |= ((unsigned char) ::HexDigit(*psz--) << 4);
             p1++;
         }
     }
 }
 
 template <unsigned int BITS>
-void base_blob<BITS>::SetHex(const std::string& str)
-{
+void base_blob<BITS>::SetHex(const std::string& str) {
     SetHex(str.c_str());
 }
 
 template <unsigned int BITS>
-std::string base_blob<BITS>::ToString() const
-{
+std::string base_blob<BITS>::ToString() const {
     return (GetHex());
 }
 

@@ -36,6 +36,7 @@ include_directories(${ROCKSDB_INCLUDE_DIRS})
 # src codes
 set(NET_DIR src/net)
 set(UTIL_DIR src/utils)
+set(SUPPORT_DIR src/support)
 set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
 set(SCRYPT_DIR src/script)
@@ -43,6 +44,7 @@ set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
+#aux_source_directory(${SUPPORT_DIR} SUPPORT_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
@@ -55,11 +57,13 @@ include_directories(src
     ${SCRYPT_DIR}
     ${CORE_DIR}
     ${SPDLOG_DIR}
+    ${SUPPORT_DIR}
     )
 
 set(SRC_CODE
         ${NET_SRCS}
         ${UTIL_SRCS}
+        #${SUPPORT_SRCS}
         ${CRYPTO_SRCS}
         ${CORE_SRCS}
         )

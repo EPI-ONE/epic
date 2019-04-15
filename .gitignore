@@ -44,7 +44,6 @@ _deps
 
 # Misc
 dev_notes/
-.ycm_extra_conf.py
 *.swp
 .DS_Store
 .project
