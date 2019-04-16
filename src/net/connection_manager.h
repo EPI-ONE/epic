@@ -16,7 +16,7 @@
 #include "net_message.h"
 #include "blocking_queue.h"
 
-typedef std::function<void(void* connection_handle, std::string address, bool inbound)> new_connection_callback_t;
+typedef std::function<void(void* connection_handle, std::string& address, bool inbound)> new_connection_callback_t;
 typedef std::function<void(void* connection_handle)> delete_connection_callback_t;
 typedef std::unordered_map<struct bufferevent*, size_t>::iterator bufferevent_map_iter_t;
 
@@ -139,7 +139,7 @@ public:
      * @param address string format ip:port
      * @param inbound true if in connection, false if out connection
      */
-    void NewConnectionCallback(void* connection_handle, std::string address, bool inbound);
+    void NewConnectionCallback(void* connection_handle, std::string& address, bool inbound);
 
     /**
      * the internal event callback function called by bufferevent

@@ -29,15 +29,15 @@ static std::string Address2String(struct sockaddr *addr) {
 }
 
 /**
- * get a address string from bufferevent
+ * get the remote socket address string from bufferevent
  * @param bev bufferevent pointer
  * @return string format ip:port
  */
-static std::string getAddress(struct bufferevent *bev) {
+static std::string getRemoteAddress(struct bufferevent *bev) {
     evutil_socket_t socket_id = bufferevent_getfd(bev);
     struct sockaddr addr;
     socklen_t len = sizeof(sockaddr);
-    getsockname(socket_id, &addr, &len);
+    getpeername(socket_id, &addr, &len);
 
     return Address2String(&addr);
 }
@@ -61,21 +61,22 @@ static void EventCallback(struct bufferevent *bev, short events, void *ctx) {
 
     /* socket connect success */
     if (events & BEV_EVENT_CONNECTED) {
-        spdlog::info("[net] Socket connected: {}", getAddress(bev));
+        std::string remote_address = getRemoteAddress(bev);
+        spdlog::info("[net] Socket connected: {}", remote_address);
         bufferevent_enable(bev, EV_READ);
-        ((ConnectionManager*)ctx)->NewConnectionCallback((void*)bev, getAddress(bev), false);
+        ((ConnectionManager*)ctx)->NewConnectionCallback((void*)bev, remote_address, false);
     }
 
 
     /* socket unrecoverable error. for example failed to connect to remote */
     if (events & BEV_EVENT_ERROR) {
-        spdlog::info("[net] Socket error: {} {}", getAddress(bev), evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
+        spdlog::info("[net] Socket error: {}", evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
         ((ConnectionManager*)ctx)->FreeBufferevent(bev);
     }
 
     /* remote disconnect the socket or socket read and write error */
     if (events & (BEV_EVENT_EOF | BEV_EVENT_READING | BEV_EVENT_WRITING)) {
-        spdlog::info("[net] Socket disconnected: {}", getAddress(bev));
+        spdlog::info("[net] Socket disconnected: {}", getRemoteAddress(bev));
         ((ConnectionManager*)ctx)->DeleteConnectionCallback((void*)bev);
         ((ConnectionManager*)ctx)->FreeBufferevent(bev);
     }
@@ -171,7 +172,7 @@ int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
 void ConnectionManager::Disconnect(void* connection_handle) {
     if (isExist_((bufferevent*)connection_handle)) {
         FreeBufferevent((bufferevent*)connection_handle);
-        spdlog::info("[net] Active disconnect: {}", getAddress((struct bufferevent*)connection_handle));
+        spdlog::info("[net] Active disconnect: {}", getRemoteAddress((struct bufferevent *) connection_handle));
     } else {
         spdlog::info("[net] Not found connection handle {}", connection_handle);
     }
@@ -214,7 +215,7 @@ void ConnectionManager::RegisterNewConnectionCallback(new_connection_callback_t 
     new_connection_callback = std::move(callback_func);
 }
 
-void ConnectionManager::NewConnectionCallback(void *connection_handle, std::string address, bool inbound) {
+void ConnectionManager::NewConnectionCallback(void *connection_handle, std::string& address, bool inbound) {
     if (new_connection_callback != nullptr) {
         new_connection_callback(connection_handle, address, inbound);
     }
