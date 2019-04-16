@@ -50,10 +50,12 @@ set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
 set(SCRIPT_DIR src/script)
 set(SUPPORT_DIR src/support)
+set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
+aux_source_directory(${TASM_DIR} TASM_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
@@ -66,6 +68,7 @@ include_directories(src
         ${COMPAT_DIR}
         ${SCRIPT_DIR}
         ${CORE_DIR}
+        ${TASM_DIR}
         ${SPDLOG_DIR}
         ${SUPPORT_DIR}
         )
@@ -84,10 +87,12 @@ set(SRC_MAIN src/main.cpp)
 # test codes
 aux_source_directory(test/net TEST_NET_SRCS)
 aux_source_directory(test/utils TEST_UTILS_SRCS)
+aux_source_directory(test/tasm TEST_TASM_SRCS)
 aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 set(TEST_CODE
         ${TEST_NET_SRCS}
         ${TEST_UTILS_SRCS}
+        ${TEST_TASM_SRCS}
         ${TEST_CRYPTO_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
