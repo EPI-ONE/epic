@@ -138,6 +138,7 @@ namespace tfm = tinyformat;
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 #ifndef TINYFORMAT_ERROR
 #define TINYFORMAT_ERROR(reason) assert(0 && reason)

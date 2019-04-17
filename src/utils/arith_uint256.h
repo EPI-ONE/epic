@@ -186,7 +186,6 @@ public:
     int CompareTo(const base_uint& b) const;
     bool EqualTo(uint64_t b) const;
 
-<<<<<<< HEAD
     friend inline const base_uint operator+(const base_uint& a, const base_uint& b) {
         return base_uint(a) += b;
     }
@@ -206,27 +205,6 @@ public:
         return base_uint(a) &= b;
     }
     friend inline const base_uint operator^(const base_uint& a, const base_uint& b) {
-=======
-    friend inline const base_uint operator+(const base_uint& a, const base_uint& b) {
-        return base_uint(a) += b;
-    }
-    friend inline const base_uint operator-(const base_uint& a, const base_uint& b) {
-        return base_uint(a) -= b;
-    }
-    friend inline const base_uint operator*(const base_uint& a, const base_uint& b) {
-        return base_uint(a) *= b;
-    }
-    friend inline const base_uint operator/(const base_uint& a, const base_uint& b) {
-        return base_uint(a) /= b;
-    }
-    friend inline const base_uint operator|(const base_uint& a, const base_uint& b) {
-        return base_uint(a) |= b;
-    }
-    friend inline const base_uint operator&(const base_uint& a, const base_uint& b) {
-        return base_uint(a) &= b;
-    }
-    friend inline const base_uint operator^(const base_uint& a, const base_uint& b) {
->>>>>>> add arith_uint256 and hash functions from bitcoin
         return base_uint(a) ^= b;
     }
     friend inline const base_uint operator>>(const base_uint& a, int shift) {
