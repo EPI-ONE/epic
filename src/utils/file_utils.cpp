@@ -15,7 +15,7 @@ bool CheckFileExist(const std::string &filePath) {
 // used c like way to implement this
 // TODO later can try to use c++17 std::filesystem to implement this
 bool Mkdir_recursive(const std::string &path) {
-    char pathArray[PATH_MAX];
+    char pathArray[1024];
     errno = 0;
     if (path.length() > sizeof(pathArray) - 1) {
         errno = ENAMETOOLONG;

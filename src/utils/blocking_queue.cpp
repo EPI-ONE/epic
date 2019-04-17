@@ -1,5 +1,6 @@
 #include "blocking_queue.h"
 #include "net_message.h"
+#include "net_address.h"
 
 template<typename T>
 void BlockingQueue<T>::Put(T& element){
@@ -47,3 +48,4 @@ void BlockingQueue<T>::Quit() {
 }
 
 template class BlockingQueue<NetMessage>;
+template class BlockingQueue<NetAddress>;
