@@ -8,7 +8,7 @@
 #include "message_header.h"
 #include "spdlog.h"
 
-#define MAKE_SOCKADDR_IN(var,address,port)    \
+#define MAKE_SOCKADDR_IN(var, address, port)    \
       struct sockaddr_in var;                 \
       memset(&var, 0, sizeof(var));           \
       var.sin_family = AF_INET;               \
@@ -22,10 +22,10 @@
  */
 static std::string Address2String(struct sockaddr *addr) {
     char buf[64];
-    memset(buf, 0 , sizeof(buf));
-    struct sockaddr_in *sin = (struct sockaddr_in*)addr;
+    memset(buf, 0, sizeof(buf));
+    struct sockaddr_in *sin = (struct sockaddr_in *) addr;
     evutil_inet_ntop(sin->sin_family, &sin->sin_addr, buf, sizeof(buf));
-    return std::string(buf)+":"+ std::to_string(ntohs(sin->sin_port));
+    return std::string(buf) + ":" + std::to_string(ntohs(sin->sin_port));
 }
 
 /**
@@ -102,9 +102,8 @@ static void AcceptCallback(struct evconnlistener *listener, evutil_socket_t fd, 
     bufferevent_setcb(bev, ReadCallback, nullptr, EventCallback, ctx);
     bufferevent_enable(bev, EV_READ);
 
-    ((ConnectionManager*)ctx)->NewConnectionCallback((void*)bev, address, true);
+    ((ConnectionManager *) ctx)->NewConnectionCallback((void *) bev, address, true);
 }
-
 
 ConnectionManager::ConnectionManager() {
     evthread_use_pthreads();
@@ -129,7 +128,7 @@ ConnectionManager::~ConnectionManager() {
 
 int ConnectionManager::Listen(uint32_t port, uint32_t local_bind_address) {
 
-    if(port > 65535) {
+    if (port > 65535) {
         return -1;
     }
 
@@ -140,14 +139,14 @@ int ConnectionManager::Listen(uint32_t port, uint32_t local_bind_address) {
         return -1;
     }
 
-    spdlog::info("[net] Start listen on {}", Address2String((struct sockaddr*)&sock_addr_in));
+    spdlog::info("[net] Start listen on {}", Address2String((struct sockaddr *) &sock_addr_in));
 
     return 0;
 }
 
 int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
 
-    if(port > 65535) {
+    if (port > 65535) {
         return -1;
     }
 
@@ -156,15 +155,15 @@ int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
     bev = CreateBufferevent(base, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
     bufferevent_setcb(bev, ReadCallback, nullptr, EventCallback, this);
 
-    MAKE_SOCKADDR_IN(sock_addr_in,remote,port);
+    MAKE_SOCKADDR_IN(sock_addr_in, remote, port);
 
-    if (bufferevent_socket_connect(bev, (struct sockaddr *)&sock_addr_in, sizeof(sock_addr_in)) != 0) {
-        spdlog::info("[net] Fail to connect: {}", Address2String((struct sockaddr*)&sock_addr_in));
+    if (bufferevent_socket_connect(bev, (struct sockaddr *) &sock_addr_in, sizeof(sock_addr_in)) != 0) {
+        spdlog::info("[net] Fail to connect: {}", Address2String((struct sockaddr *) &sock_addr_in));
         FreeBufferevent(bev);
         return -1;
     }
 
-    spdlog::info("[net] Try to connect: {}", Address2String((struct sockaddr*)&sock_addr_in));
+    spdlog::info("[net] Try to connect: {}", Address2String((struct sockaddr *) &sock_addr_in));
 
     return 0;
 }
@@ -183,7 +182,7 @@ void ConnectionManager::Start() {
     thread_event_base = std::thread(event_base_loop, base, EVLOOP_NO_EXIT_ON_EMPTY);
 
     /* thread for send message from the queue */
-    thread_send_message = std::thread(&ConnectionManager::ThreadSendMessage_,this);
+    thread_send_message = std::thread(&ConnectionManager::ThreadSendMessage_, this);
     spdlog::info("[net] Connection manager start");
 }
 
@@ -210,8 +209,7 @@ void ConnectionManager::Stop() {
 
 }
 
-
-void ConnectionManager::RegisterNewConnectionCallback(new_connection_callback_t && callback_func) {
+void ConnectionManager::RegisterNewConnectionCallback(new_connection_callback_t &&callback_func) {
     new_connection_callback = std::move(callback_func);
 }
 
@@ -221,7 +219,7 @@ void ConnectionManager::NewConnectionCallback(void *connection_handle, std::stri
     }
 }
 
-void ConnectionManager::RegisterDeleteConnectionCallBack(delete_connection_callback_t && callback_func) {
+void ConnectionManager::RegisterDeleteConnectionCallBack(delete_connection_callback_t &&callback_func) {
     delete_connection_callback = std::move(callback_func);
 }
 
@@ -231,10 +229,10 @@ void ConnectionManager::DeleteConnectionCallback(void *connection_handle) {
     }
 }
 
-struct bufferevent* ConnectionManager::CreateBufferevent(struct event_base *base, evutil_socket_t fd, int options) {
+struct bufferevent *ConnectionManager::CreateBufferevent(struct event_base *base, evutil_socket_t fd, int options) {
     struct bufferevent *bev;
     bev = bufferevent_socket_new(base, fd, options);
-    bufferevent_map.insert(std::pair<struct bufferevent*, uint32_t>(bev, 0));
+    bufferevent_map.insert(std::pair<struct bufferevent *, uint32_t>(bev, 0));
     return bev;
 }
 
@@ -258,7 +256,6 @@ bool ConnectionManager::isExist_(struct bufferevent *bev) {
     return false;
 }
 
-
 void ConnectionManager::SendMessage(NetMessage &message) {
     send_message_queue.Put(message);
 }
@@ -271,15 +268,14 @@ void ConnectionManager::ThreadSendMessage_() {
 
     while (!interrupt_send_message_) {
         NetMessage message;
-        if(send_message_queue.Take(message)) {
+        if (send_message_queue.Take(message)) {
             WriteOneMessage_(message);
         }
     }
-
 }
 
 void ConnectionManager::WriteOneMessage_(NetMessage &message) {
-    bufferevent* bev = (bufferevent*)message.getConnectionHandle();
+    bufferevent *bev = (bufferevent *) message.getConnectionHandle();
     if (!isExist_(bev)) {
         return;
     }
@@ -290,7 +286,7 @@ void ConnectionManager::WriteOneMessage_(NetMessage &message) {
     evbuffer_add(send_buffer, &message.header, sizeof(message_header_t));
 
     /* write message payload bytes */
-    if(message.header.payload_length != 0) {
+    if (message.header.payload_length != 0) {
         evbuffer_add(send_buffer, message.payload.data(), message.header.payload_length);
     }
 
@@ -302,8 +298,6 @@ void ConnectionManager::ReadMessages(struct bufferevent *bev) {
     while (ReadOneMessage_(bev, bufferevent_map.at(bev))) {}
 }
 
-
-
 bool ConnectionManager::SeekMagicNumber_(struct evbuffer *buf) {
     size_t data_length = evbuffer_get_length(buf);
     uint32_t magic_number = getMagicNumber();
@@ -313,7 +307,7 @@ bool ConnectionManager::SeekMagicNumber_(struct evbuffer *buf) {
     }
 
     struct evbuffer_ptr magic_number_pos;
-    magic_number_pos = evbuffer_search(buf, (char*)&magic_number , sizeof(uint32_t), nullptr);
+    magic_number_pos = evbuffer_search(buf, (char *) &magic_number, sizeof(uint32_t), nullptr);
 
     /* not found, remain the last 4 bytes and release the else memory ,
      * maybe the 4 bytes include part of magic number, magic number will complete when receive more bytes */
@@ -329,7 +323,7 @@ bool ConnectionManager::SeekMagicNumber_(struct evbuffer *buf) {
 
 size_t ConnectionManager::SeekMessagePayloadLength_(struct evbuffer *buf) {
     struct evbuffer_ptr message_length_pos;
-    evbuffer_ptr_set(buf, &message_length_pos, MESSAGE_MAGIC_NUMBER_LENGTH+MESSAGE_COMMAND_LENGTH,EVBUFFER_PTR_SET);
+    evbuffer_ptr_set(buf, &message_length_pos, MESSAGE_MAGIC_NUMBER_LENGTH + MESSAGE_COMMAND_LENGTH, EVBUFFER_PTR_SET);
 
     uint32_t message_length = 0;
     evbuffer_copyout_from(buf, &message_length_pos, &message_length, sizeof(message_length));
@@ -339,7 +333,7 @@ size_t ConnectionManager::SeekMessagePayloadLength_(struct evbuffer *buf) {
 size_t ConnectionManager::SeekNextMessageLength_(struct evbuffer *buf) {
 
     /* magic number is not found, wait more bytes*/
-    if(!SeekMagicNumber_(buf)) {
+    if (!SeekMagicNumber_(buf)) {
         return 0;
     }
 
@@ -381,10 +375,11 @@ bool ConnectionManager::ReadOneMessage_(struct bufferevent *bev, size_t &next_me
 
             bufferevent_read(bev, &header, sizeof(header));
 
-            std::vector<unsigned char> payload(header.payload_length);
+            VStream payload;
+            payload.resize(header.payload_length);
             bufferevent_read(bev, payload.data(), header.payload_length);
 
-            NetMessage message((void*)bev, header, payload);
+            NetMessage message((void *) bev, header, payload);
 
             /* check message checksum ,discard the message if failed*/
             if (message.VerifyChecksum()) {

@@ -15,7 +15,7 @@ class Peer {
          * @param inbound
          * @param isSeedPeer, if the peer address is a seed
          */
-        Peer(const NetAddress &netAddress, const void *handle, bool inbound, bool isSeedPeer);
+        Peer(NetAddress &netAddress, const void *handle, bool inbound, bool isSeedPeer);
 
         ~Peer();
 
@@ -36,7 +36,19 @@ class Peer {
         const bool isInbound;
 
         // version message
-        VersionMessage versionMessage;
+        VersionMessage *versionMessage = nullptr;
+
+        // a peer is fully connected when we receive his version message and version ack
+        std::atomic_bool isFullyConnected;
+
+        // if we will disconnect the peer
+        std::atomic_bool disconnect;
+
+        /**
+         * called when receive a ping message
+         * @param nonce
+         */
+        void UpdatePingStatic(long nonce);
 
     private:
 
@@ -83,12 +95,6 @@ class Peer {
 
         // last time of sending addresses
         long lastSendAddressTime;
-
-        // a peer is fully connected when we receive his version message and version ack
-        bool isFullyConnected;
-
-        // if we will disconnect the peer
-        bool disconnect;
 
         // if we have reply GetAddr to this peer
         bool haveReplyGetAddr;

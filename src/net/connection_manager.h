@@ -15,6 +15,7 @@
 
 #include "net_message.h"
 #include "blocking_queue.h"
+#include "stream.h"
 
 typedef std::function<void(void* connection_handle, std::string& address, bool inbound)> new_connection_callback_t;
 typedef std::function<void(void* connection_handle)> delete_connection_callback_t;
