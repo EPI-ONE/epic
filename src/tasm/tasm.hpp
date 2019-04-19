@@ -14,9 +14,9 @@ class tasm {
                 std::vector<uint8_t> program;
                 std::vector<uint64_t> data;
                 listing() = default;
-                listing(std::vector<uint8_t> &p, std::vector<uint64_t> &d) : 
+                listing(std::vector<uint8_t> &p, std::vector<uint64_t> &d) :
                     program(p), data(d) {};
-                listing(std::vector<uint8_t> p, std::vector<uint64_t> d) : 
+                listing(std::vector<uint8_t> p, std::vector<uint64_t> d) :
                     program(p), data(d) {};
 
 
@@ -42,7 +42,7 @@ class tasm {
             );
         }
 
-        std::vector<uint8_t> preprocessor(const std::vector<uint8_t> program_) {
+        std::vector<uint8_t> preprocessor(const std::vector<uint8_t>& program_) {
             std::vector<uint8_t> program = program_;
             if (program.back() != 0) {
                 program.push_back(0);
