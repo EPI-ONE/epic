@@ -28,8 +28,8 @@ class tasm {
                 }
         };
 
-        explicit tasm(std::array<instruction, 256> is_) {
-            is = is_;
+        explicit tasm(std::array<instruction, 256> is) {
+            is_ = is;
         };
 
         instruction yield_instruction(const std::vector<uint8_t> program) {
@@ -60,14 +60,14 @@ class tasm {
         }
 
         void set_op(uint8_t ip, instruction i) {
-            is[ip] = i;
+            is_[ip] = i;
         }
 
         void compile_set_op(uint8_t ip, std::vector<uint8_t> op, bool debug = false) {
-            is[ip] = debug ? yield_debug_instruction(op) : yield_instruction(op);
+            is_[ip] = debug ? yield_debug_instruction(op) : yield_instruction(op);
         }
     private:
-        std::array<instruction, 256> is;
+        std::array<instruction, 256> is_;
 
         instruction yield_instruction_n_channel(const std::vector<uint8_t> program) {
             return [=](std::vector<uint64_t>& data, std::size_t ip) {
@@ -76,7 +76,7 @@ class tasm {
 
                 do {
                     op = program[ip_p];
-                    ip_p = is[op](data, ip_p);
+                    ip_p = is_[op](data, ip_p);
                 } while (op != 0);
 
                 return ip + 1;
@@ -95,7 +95,7 @@ class tasm {
                 do {
                     iuc(data, 0);
                     op = program[ip_p];
-                    ip_p = is[op](data, ip_p);
+                    ip_p = is_[op](data, ip_p);
                     luc(data, 0);
                 } while (op != 0);
 
