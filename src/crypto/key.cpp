@@ -11,6 +11,7 @@
 #include "base58.h"
 #include "cleanse.h"
 
+#include <limits.h>
 #include <random>
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
@@ -162,7 +163,6 @@ void CKey::MakeNewKey(bool fCompressedIn) {
     do {
         GetRandBytes(keydata);
     } while (!Check(keydata.data()));
-    std::cout << "Success making a new key!\n";
     fValid = true;
     fCompressed = fCompressedIn;
 }
