@@ -78,7 +78,8 @@ static void EventCallback(struct bufferevent *bev, short events, void *ctx) {
     if (events & (BEV_EVENT_EOF | BEV_EVENT_READING | BEV_EVENT_WRITING)) {
         spdlog::info("[net] Socket disconnected: {}", getRemoteAddress(bev));
         ((ConnectionManager *) ctx)->DeleteConnectionCallback((void *) bev);
-        ((ConnectionManager *) ctx)->FreeBufferevent(bev);
+        std::thread t(&ConnectionManager::FreeBufferevent, (ConnectionManager *) ctx, bev);
+        t.detach();
     }
 
 }
@@ -205,11 +206,11 @@ void ConnectionManager::Stop() {
     }
 
     if (thread_send_message.joinable()) {
-        //thread_send_message.join();
+        thread_send_message.join();
     }
 
     if (thread_event_base.joinable()) {
-        //thread_event_base.join();
+        thread_event_base.join();
     }
 
     spdlog::info("[net] Connection manager stop");

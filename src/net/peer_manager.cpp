@@ -8,6 +8,7 @@ PeerManager::PeerManager() {
 }
 
 PeerManager::~PeerManager() {
+    delete connectionManager_;
     delete addressManager_;
 }
 

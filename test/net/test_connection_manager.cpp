@@ -3,45 +3,45 @@
 
 class TestConnectionManager : public testing::Test {
 
-    public:
+public:
 
-        ConnectionManager server;
-        ConnectionManager client;
-        bool test_connect_run = false;
-        bool test_connect_inbound;
-        void *test_connect_handle = nullptr;
-        bool test_disconnect_run = false;
-        std::vector<void *> handle_vector;
-        std::string test_address;
+    ConnectionManager server;
+    ConnectionManager client;
+    bool test_connect_run = false;
+    bool test_connect_inbound;
+    void *test_connect_handle = nullptr;
+    bool test_disconnect_run = false;
+    std::vector<void *> handle_vector;
+    std::string test_address;
 
-        void SetUp() {
-            server.Start();
-            client.Start();
-        }
+    void SetUp() {
+        server.Start();
+        client.Start();
+    }
 
-        void TearDown() {
-            server.Stop();
-            client.Stop();
-        }
+    void TearDown() {
+        server.Stop();
+        client.Stop();
+    }
 
-        void TestNewConnectionCallback(void *connection_handle, std::string &address, bool inbound) {
-            std::string direction = inbound ? "inbound" : "outbound";
-            std::cout << "new connection handle:" << connection_handle << " " << address << " " << direction
-                      << std::endl;
-            test_connect_handle = connection_handle;
-            test_connect_run = true;
-            test_connect_inbound = inbound;
-            test_address = address;
-        }
+    void TestNewConnectionCallback(void *connection_handle, std::string &address, bool inbound) {
+        std::string direction = inbound ? "inbound" : "outbound";
+        std::cout << "new connection handle:" << connection_handle << " " << address << " " << direction
+                  << std::endl;
+        test_connect_handle = connection_handle;
+        test_connect_run = true;
+        test_connect_inbound = inbound;
+        test_address = address;
+    }
 
-        void TestDisconnectCallback(void *connection_handle) {
-            std::cout << "disconnect handle:" << connection_handle << std::endl;
-            test_disconnect_run = true;
-        }
+    void TestDisconnectCallback(void *connection_handle) {
+        std::cout << "disconnect handle:" << connection_handle << std::endl;
+        test_disconnect_run = true;
+    }
 
-        void TestMultiClientNewCallback(void *connection_handle, std::string &address, bool inbound) {
-            handle_vector.push_back(connection_handle);
-        }
+    void TestMultiClientNewCallback(void *connection_handle, std::string &address, bool inbound) {
+        handle_vector.push_back(connection_handle);
+    }
 
 };
 
@@ -123,9 +123,9 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     int data_len = 4 * 1000 * 1000 - 24;
     uint32_t test_type = 0x55555555;
 
-    std::string s(data_len, 'A');
-    std::string scopy = s;
-    VStream payload(s);
+    VStream payload;
+    payload.resize(data_len);
+    memset(payload.data(), 'A', data_len);
 
     NetMessage send_message(test_connect_handle, test_type, payload);
     client.SendMessage(send_message);
@@ -135,11 +135,11 @@ TEST_F(TestConnectionManager, SendAndReceive) {
 
     EXPECT_EQ(receive_message.header.magic_number, getMagicNumber());
     EXPECT_EQ(receive_message.header.type, test_type);
-//    EXPECT_EQ(receive_message.header.payload_length, data_len);
+    EXPECT_EQ(receive_message.header.payload_length, data_len);
 
-    std::string exp;
-    receive_message.payload >> exp;
-    EXPECT_EQ(exp, scopy);
+    for (int i = 0; i < receive_message.payload.size(); i++) {
+        EXPECT_EQ(receive_message.payload[i], 'A');
+    }
 }
 
 TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
@@ -187,11 +187,14 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 
     while (!test_connect_run) {};
 
-    int data_len = 1;
-    int num = 100;
+    int data_len = 2000;
+    int num = 3;
 
     for (int i = 0; i < num; i++) {
-        VStream payload(char('A' + i));
+        VStream payload;
+        payload.resize(data_len);
+        memset(payload.data(), 'A' + i, data_len);
+
         NetMessage send_message(test_connect_handle, i, payload);
         client.SendMessage(send_message);
     }
@@ -204,9 +207,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
         EXPECT_EQ(receive_message.header.type, i);
         EXPECT_EQ(receive_message.header.payload_length, data_len);
         for (int j = 0; j < receive_message.payload.size(); j++) {
-            char c;
-            receive_message.payload >> c;
-            EXPECT_EQ(c, char('A' + i));
+            EXPECT_EQ(receive_message.payload[j], 'A' + i);
         }
     }
 
@@ -231,11 +232,14 @@ TEST_F(TestConnectionManager, MultiClient) {
 
     sleep(1);
 
-    int data_len = 1;
+    int data_len = 2000;
     uint32_t message_type = 100;
 
     for (int i = 0; i < client_num; i++) {
-        VStream payload(char('A' + i));
+        VStream payload;
+        payload.resize(data_len);
+        memset(payload.data(), 'A' + i, data_len);
+
         NetMessage send_message(handle_vector.at(i), message_type, payload);
         client[i].SendMessage(send_message);
         usleep(10000);
@@ -248,9 +252,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         EXPECT_EQ(receive_message.header.type, message_type);
         EXPECT_EQ(receive_message.header.payload_length, data_len);
         for (int j = 0; j < receive_message.payload.size(); j++) {
-            char c;
-            receive_message.payload >> c;
-            EXPECT_EQ(c, char('A' + i));
+            EXPECT_EQ(receive_message.payload[j], 'A' + i);
         }
     }
 

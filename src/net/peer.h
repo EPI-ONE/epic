@@ -22,11 +22,13 @@
 class Peer {
 public:
     /**
-     * construct a peer called by peer manager
+     *
      * @param netAddress
-     * @param handle , the libevent socket handle
+     * @param handle ,the libevent socket handle
      * @param inbound
      * @param isSeedPeer, if the peer address is a seed
+     * @param connectionManager
+     * @param addressManager
      */
     Peer(NetAddress& netAddress,
         const void* handle,
@@ -62,7 +64,8 @@ public:
     // version message
     VersionMessage* versionMessage = nullptr;
 
-    // a peer is fully connected when we receive his version message and version ack
+    // a peer is fully connected when we receive his version message and version
+    // ack
     std::atomic_bool isFullyConnected;
 
     // if we will disconnect the peer
@@ -72,27 +75,23 @@ private:
     /**
      * read the nonce and send back pong message
      * @param ping
-     * @param from
      */
     void ProcessPing(const Ping& ping);
 
     /**
      * update ping statistic of the peer
      * @param pong
-     * @param from
      */
     void ProcessPong(const Pong& pong);
 
     /**
      * process version message
      * @param versionMessage
-     * @param from
      */
     void ProcessVersionMessage(VersionMessage& versionMessage_);
 
     /**
      * process version ack message
-     * @param from
      */
     void ProcessVersionACK();
 
@@ -118,10 +117,12 @@ private:
     // record at most 2000 net addresses
     const static int kMaxAddress = 2000;
 
-    // The default timeout between when a connection attempt begins and version message exchange completes
+    // The default timeout between when a connection attempt begins and version
+    // message exchange completes
     const static int kConnectionSetupTimeout = 10 * 1000;
 
-    // the lowest version number we're willing to accept. Lower than this will result in an immediate disconnect
+    // the lowest version number we're willing to accept. Lower than this will
+    // result in an immediate disconnect
     const int kMinProtocolVersion = 0; // TODO to be set
 
     /**
@@ -153,7 +154,7 @@ private:
     /**
      * Synchronization information
      */
-
+    // TODO
 
     /**
      * pointer from outside
