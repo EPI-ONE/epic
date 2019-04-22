@@ -5,20 +5,20 @@
 
 #include <key.h>
 
-#include "hash.h"
-#include "uint256.h"
-#include "common.h"
 #include "base58.h"
 #include "cleanse.h"
+#include "common.h"
+#include "hash.h"
+#include "uint256.h"
 
+#include <cmath>
+#include <cstring>
+#include <immintrin.h>
 #include <limits.h>
-#include <random>
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
 static secp256k1_context* secp256k1_context_sign = nullptr;
-static std::independent_bits_engine< std::default_random_engine, CHAR_BIT, 
-    unsigned char> generator;
 
 /**
  * This parses a format loosely based on a DER encoding of the ECPrivateKey type from
@@ -158,7 +158,6 @@ bool CKey::Check(const unsigned char *vch) {
     return secp256k1_ec_seckey_verify(secp256k1_context_sign, vch);
 }
 
-// may have some problems
 void CKey::MakeNewKey(bool fCompressedIn) {
     do {
         GetRandBytes(keydata);
@@ -282,8 +281,6 @@ void ECC_Start() {
     assert(secp256k1_context_sign == nullptr);
 
     secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-    // TODO: we may add check to the generator
-    generator.seed(time(0));
 
     assert(ctx != nullptr);
 
@@ -308,8 +305,20 @@ void ECC_Stop() {
 }
 
 void GetRandBytes(CPrivKey& buf) {
-    std::generate(begin(buf), end(buf), std::ref(generator));
+    std::size_t n = buf.capacity();
+    std::size_t m = 8 * std::ceil(n / 8);
+
+    unsigned long long* x = new unsigned long long[m];
+    unsigned long long* y = x;
+
+    for (; y < x + m; y++) {
+        while(!_rdrand64_step(y));
+    }
+
+    std::memcpy(&(*buf.begin()), x, n);
+    delete[] x;
 }
+
 
 CKey DecodeSecret(const std::string& str) {
     CKey key;
@@ -342,8 +351,4 @@ std::string EncodeSecret(const CKey& key) {
     std::string ret = EncodeBase58Check(data);
     memory_cleanse(data.data(), data.size());
     return ret;
-}
-
-std::vector<unsigned char>& Base58Prefix(Type type) {
-    return base58Prefixes[type];
 }

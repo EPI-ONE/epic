@@ -11,6 +11,7 @@
 #include "serialize.h"
 #include "uint256.h"
 
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -61,7 +62,7 @@ class CPubKey {
     /**
      * need this handle to verify in public key 
      */
-    ECCVerifyHandle handle;
+    //ECCVerifyHandle handle;
 
     //! Compute the length of a pubkey with a given first byte.
     unsigned int static GetLen(unsigned char chHeader) {
@@ -179,5 +180,8 @@ class CPubKey {
     //! Turn this public key into an uncompressed public key.
     bool Decompress();
 };
+
+std::string EncodeAddress(const CKeyID& addr);
+std::optional<CKeyID> DecodeAddress(const std::string str);
 
 #endif  // BITCOIN_PUBKEY_H

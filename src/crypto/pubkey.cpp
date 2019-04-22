@@ -3,6 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "base58.h"
 #include "pubkey.h"
 
 #include <secp256k1.h>
@@ -222,6 +223,32 @@ bool CPubKey::Decompress() {
     secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED);
     Set(pub, pub + publen);
     return true;
+}
+
+std::string EncodeAddress(const CKeyID& addr) {
+    std::vector<unsigned char> data = Base58Prefix(Type::PUBKEY_ADDRESS);
+    data.insert(data.end(), addr.begin(), addr.end());
+    return EncodeBase58Check(data);
+}
+
+std::optional<CKeyID> DecodeAddress(const std::string str) {
+    std::vector<unsigned char> data;
+    uint160 hash;
+    if (DecodeBase58Check(str, data)) {
+        // base58-encoded Public-key-hash-addresses have version 0 
+        // The data vector contains SHA160(pubkey), where pubkey is
+        // the serialized public key.
+        const std::vector<unsigned char>& pubkey_prefix =
+            Base58Prefix(Type::PUBKEY_ADDRESS);
+        if (data.size() == hash.size() + pubkey_prefix.size() &&
+            std::equal(
+                pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
+            std::copy(
+                data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
+            return CKeyID(hash);
+        }
+    } 
+    return {};
 }
 
 /* static */ bool CPubKey::CheckLowS(const std::vector<unsigned char>& vchSig) {

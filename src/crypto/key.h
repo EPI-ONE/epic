@@ -64,6 +64,8 @@ class CKey {
                memcmp(a.keydata.data(), b.keydata.data(), a.size()) == 0;
     }
 
+    friend bool operator!=(const CKey& a, const CKey& b) { return !(a == b); }
+
     //! Initialize using begin and end iterators to byte data.
     template <typename T>
     void Set(const T pbegin, const T pend, bool fCompressedIn) {
@@ -143,20 +145,5 @@ void GetRandBytes(CPrivKey& buf);
 CKey DecodeSecret(const std::string& str);
 std::string EncodeSecret(const CKey& key);
 
-// TODO: move to DAG params later.
-enum Type {
-    PUBKEY_ADDRESS,
-    SECRET_KEY,
-
-    MAX_BASE58_TYPES
-};
-
-static std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES] = {
-    std::vector<unsigned char>(1, 0),   // base58Prefixes[PUBKEY_ADDRESS]
-    std::vector<unsigned char>(1, 128), // base58Prefixes[SECRET_KEY]
-};
-
-std::vector<unsigned char>& Base58Prefix(Type type);
-// end of TODO
 
 #endif // BITCOIN_KEY_H

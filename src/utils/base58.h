@@ -58,4 +58,20 @@ bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet);
  */
 bool DecodeBase58Check(const std::string& str, std::vector<unsigned char>& vchRet);
 
+// TODO: discuss whether to move to DAG params later.
+enum Type {
+    PUBKEY_ADDRESS,
+    SECRET_KEY,
+
+    MAX_BASE58_TYPES
+};
+
+static std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES] = {
+    std::vector<unsigned char>(1, 0),   // base58Prefixes[PUBKEY_ADDRESS]
+    std::vector<unsigned char>(1, 128), // base58Prefixes[SECRET_KEY]
+};
+
+std::vector<unsigned char>& Base58Prefix(Type type); 
+// end of TODO
+
 #endif // BITCOIN_BASE58_H
