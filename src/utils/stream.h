@@ -19,11 +19,11 @@ typedef std::vector<char, zero_after_free_allocator<char>> byte_vector;
  * take N^2 time.
  */
 class VStream {
-   protected:
+protected:
     byte_vector chars;
     unsigned int readPos;
 
-   public:
+public:
     typedef byte_vector::allocator_type allocator_type;
     typedef byte_vector::size_type size_type;
     typedef byte_vector::difference_type difference_type;
@@ -34,22 +34,23 @@ class VStream {
     typedef byte_vector::const_iterator const_iterator;
     typedef byte_vector::reverse_iterator reverse_iterator;
 
-    explicit VStream() : readPos(0) {}
+    explicit VStream() : readPos(0) {
+    }
 
-    VStream(const_iterator pbegin, const_iterator pend)
-        : chars(pbegin, pend), readPos(0) {}
+    VStream(const_iterator pbegin, const_iterator pend) : chars(pbegin, pend), readPos(0) {
+    }
 
-    VStream(const char* pbegin, const char* pend)
-        : chars(pbegin, pend), readPos(0) {}
+    VStream(const char* pbegin, const char* pend) : chars(pbegin, pend), readPos(0) {
+    }
 
-    VStream(const byte_vector& vchIn)
-        : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const byte_vector& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {
+    }
 
-    VStream(const std::vector<char>& vchIn)
-        : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const std::vector<char>& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {
+    }
 
-    VStream(const std::vector<unsigned char>& vchIn)
-        : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const std::vector<unsigned char>& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {
+    }
 
     template <typename... Args>
     VStream(Args&&... args) {
@@ -68,34 +69,64 @@ class VStream {
         return (ret);
     }
 
-    std::string str() const { return std::string(begin(), end()); }
+    std::string str() const {
+        return std::string(begin(), end());
+    }
 
     // Vector subset
 
-    const_iterator begin() const { return chars.begin() + readPos; }
-    iterator begin() { return chars.begin() + readPos; }
-    const_iterator end() const { return chars.end(); }
-    iterator end() { return chars.end(); }
-    size_type size() const { return chars.size() - readPos; }
-    bool empty() const { return chars.size() == readPos; }
-    void resize(size_type n, value_type c = 0) { chars.resize(n + readPos, c); }
-    void reserve(size_type n) { chars.reserve(n + readPos); }
+    const_iterator begin() const {
+        return chars.begin() + readPos;
+    }
+    iterator begin() {
+        return chars.begin() + readPos;
+    }
+    const_iterator end() const {
+        return chars.end();
+    }
+    iterator end() {
+        return chars.end();
+    }
+    size_type size() const {
+        return chars.size() - readPos;
+    }
+    bool empty() const {
+        return chars.size() == readPos;
+    }
+    void resize(size_type n, value_type c = 0) {
+        chars.resize(n + readPos, c);
+    }
+    void reserve(size_type n) {
+        chars.reserve(n + readPos);
+    }
     const_reference operator[](size_type pos) const {
         return chars[pos + readPos];
     }
-    reference operator[](size_type pos) { return chars[pos + readPos]; }
+    reference operator[](size_type pos) {
+        return chars[pos + readPos];
+    }
     void clear() {
         chars.clear();
         readPos = 0;
     }
-    value_type* data() { return chars.data() + readPos; }
-    const value_type* data() const { return chars.data() + readPos; }
+    value_type* data() {
+        return chars.data() + readPos;
+    }
+    const value_type* data() const {
+        return chars.data() + readPos;
+    }
 
     // Stream subset
 
-    bool eof() const { return size() == 0; }
-    VStream* rdbuf() { return this; }
-    int in_avail() const { return size(); }
+    bool eof() const {
+        return size() == 0;
+    }
+    VStream* rdbuf() {
+        return this;
+    }
+    int in_avail() const {
+        return size();
+    }
 
     void read(char* pch, size_t nSize) {
         if (nSize == 0)

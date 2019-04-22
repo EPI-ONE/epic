@@ -9,7 +9,7 @@
 class Transaction;
 
 class Block {
-   public:
+public:
     // parameter restrictions
 
     // constructor and destructor
@@ -25,10 +25,10 @@ class Block {
         uint32_t time,
         uint32_t difficultyTarget,
         uint32_t nonce)
-        : nVersion_(version), hashMilestoneBlock_(milestoneHash),
-          hashPrevBlock_(prevBlockHash), hashTipBlock_(tipBlockHash),
-          hashTransaction_(contentHash), nTime_(time), nBits_(difficultyTarget),
-          nNonce_(nonce) {}
+        : nVersion_(version), hashMilestoneBlock_(milestoneHash), hashPrevBlock_(prevBlockHash),
+          hashTipBlock_(tipBlockHash), hashTransaction_(contentHash), nTime_(time), nBits_(difficultyTarget),
+          nNonce_(nonce) {
+    }
     ~Block(){};
 
     // daily utils
@@ -36,7 +36,9 @@ class Block {
     void Solve();
     // verify block content syntactically
     bool Verify();
-    void AddTransaction(const Transaction& t) { tx_.push_back(t); }
+    void AddTransaction(const Transaction& t) {
+        tx_.push_back(t);
+    }
 
     ADD_SERIALIZE_METHODS;
 
@@ -55,7 +57,7 @@ class Block {
 
     // get & set methods
 
-   private:
+private:
     // header
     int32_t nVersion_;
     uint256 hashMilestoneBlock_;

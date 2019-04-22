@@ -8,16 +8,16 @@
 
 #include "arith_uint256.h"
 
+#include "crypto/common.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-#include "crypto/common.h"
 
 #include <cstdio>
 #include <cstring>
 
 template <unsigned int BITS>
 base_uint<BITS>::base_uint(const std::string& str) {
-    static_assert(BITS/32 > 0 && BITS%32 == 0, "Template parameter BITS must be a positive multiple of 32.");
+    static_assert(BITS / 32 > 0 && BITS % 32 == 0, "Template parameter BITS must be a positive multiple of 32.");
 
     SetHex(str);
 }
@@ -58,9 +58,9 @@ template <unsigned int BITS>
 base_uint<BITS>& base_uint<BITS>::operator*=(uint32_t b32) {
     uint64_t carry = 0;
     for (int i = 0; i < WIDTH; i++) {
-        uint64_t n = carry + (uint64_t)b32 * pn[i];
-        pn[i] = n & 0xffffffff;
-        carry = n >> 32;
+        uint64_t n = carry + (uint64_t) b32 * pn[i];
+        pn[i]      = n & 0xffffffff;
+        carry      = n >> 32;
     }
     return *this;
 }
@@ -71,9 +71,9 @@ base_uint<BITS>& base_uint<BITS>::operator*=(const base_uint& b) {
     for (int j = 0; j < WIDTH; j++) {
         uint64_t carry = 0;
         for (int i = 0; i + j < WIDTH; i++) {
-            uint64_t n = carry + a.pn[i + j] + (uint64_t)pn[j] * b.pn[i];
+            uint64_t n  = carry + a.pn[i + j] + (uint64_t) pn[j] * b.pn[i];
             a.pn[i + j] = n & 0xffffffff;
-            carry = n >> 32;
+            carry       = n >> 32;
         }
     }
     *this = a;
@@ -84,9 +84,9 @@ template <unsigned int BITS>
 base_uint<BITS>& base_uint<BITS>::operator/=(const base_uint& b) {
     base_uint<BITS> div = b;     // make a copy, so we can shift.
     base_uint<BITS> num = *this; // make a copy, so we can subtract.
-    *this = 0;                   // the quotient.
-    int num_bits = num.bits();
-    int div_bits = div.bits();
+    *this               = 0;     // the quotient.
+    int num_bits        = num.bits();
+    int div_bits        = div.bits();
     if (div_bits == 0)
         throw uint_error("Division by zero");
     if (div_bits > num_bits) // the result is certainly 0.
@@ -131,7 +131,7 @@ bool base_uint<BITS>::EqualTo(uint64_t b) const {
 
 template <unsigned int BITS>
 double base_uint<BITS>::getdouble() const {
-    double ret = 0.0;
+    double ret  = 0.0;
     double fact = 1.0;
     for (int i = 0; i < WIDTH; i++) {
         ret += fact * pn[i];
@@ -193,7 +193,7 @@ template unsigned int base_uint<256>::bits() const;
 // This implementation directly uses shifts instead of going
 // through an intermediate MPI representation.
 arith_uint256& arith_uint256::SetCompact(uint32_t nCompact, bool* pfNegative, bool* pfOverflow) {
-    int nSize = nCompact >> 24;
+    int nSize      = nCompact >> 24;
     uint32_t nWord = nCompact & 0x007fffff;
     if (nSize <= 3) {
         nWord >>= 8 * (3 - nSize);
@@ -205,20 +205,18 @@ arith_uint256& arith_uint256::SetCompact(uint32_t nCompact, bool* pfNegative, bo
     if (pfNegative)
         *pfNegative = nWord != 0 && (nCompact & 0x00800000) != 0;
     if (pfOverflow)
-        *pfOverflow = nWord != 0 && ((nSize > 34) ||
-                                     (nWord > 0xff && nSize > 33) ||
-                                     (nWord > 0xffff && nSize > 32));
+        *pfOverflow = nWord != 0 && ((nSize > 34) || (nWord > 0xff && nSize > 33) || (nWord > 0xffff && nSize > 32));
     return *this;
 }
 
 uint32_t arith_uint256::GetCompact(bool fNegative) const {
-    int nSize = (bits() + 7) / 8;
+    int nSize         = (bits() + 7) / 8;
     uint32_t nCompact = 0;
     if (nSize <= 3) {
         nCompact = GetLow64() << 8 * (3 - nSize);
     } else {
         arith_uint256 bn = *this >> 8 * (nSize - 3);
-        nCompact = bn.GetLow64();
+        nCompact         = bn.GetLow64();
     }
     // The 0x00800000 bit denotes the sign.
     // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
@@ -233,16 +231,16 @@ uint32_t arith_uint256::GetCompact(bool fNegative) const {
     return nCompact;
 }
 
-uint256 ArithToUint256(const arith_uint256 &a) {
+uint256 ArithToUint256(const arith_uint256& a) {
     uint256 b;
-    for(int x=0; x<a.WIDTH; ++x)
-        WriteLE32(b.begin() + x*4, a.pn[x]);
+    for (int x = 0; x < a.WIDTH; ++x)
+        WriteLE32(b.begin() + x * 4, a.pn[x]);
     return b;
 }
-arith_uint256 UintToArith256(const uint256 &a) {
+arith_uint256 UintToArith256(const uint256& a) {
     arith_uint256 b;
-    for(int x=0; x<b.WIDTH; ++x)
-        b.pn[x] = ReadLE32(a.begin() + x*4);
+    for (int x = 0; x < b.WIDTH; ++x)
+        b.pn[x] = ReadLE32(a.begin() + x * 4);
     return b;
 }
 

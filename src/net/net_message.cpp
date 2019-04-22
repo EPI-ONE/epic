@@ -5,7 +5,6 @@ void* NetMessage::getConnectionHandle() {
 }
 
 bool NetMessage::VerifyChecksum() {
-
     if (payload.empty()) {
         return true;
     }

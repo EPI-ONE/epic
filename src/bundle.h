@@ -7,24 +7,24 @@
 #include <uint256.h>
 
 class Bundle {
-    public:
-        std::vector<std::shared_ptr<const Block> > vblocks;
-        std::vector<uint256> hashes;
-        uint32_t nonce;
-        size_t size;
-        uint8_t type;
+public:
+    std::vector<std::shared_ptr<const Block>> vblocks;
+    std::vector<uint256> hashes;
+    uint32_t nonce;
+    size_t size;
+    uint8_t type;
 
-        Bundle();
-        Bundle(std::vector<std::shared_ptr<const Block> >&& vblocks):
-            vblocks(std::move(vblocks)) {}
-        ~Bundle();
+    Bundle();
+    Bundle(std::vector<std::shared_ptr<const Block>>&& vblocks) : vblocks(std::move(vblocks)) {
+    }
+    ~Bundle();
 
-        void AddBlock(std::shared_ptr<const Block> pblock);
-        // Get the first hash of the block vector which should be the milestone
-        // block.
-        uint256 GetFirstHash();
+    void AddBlock(std::shared_ptr<const Block> pblock);
+    // Get the first hash of the block vector which should be the milestone
+    // block.
+    uint256 GetFirstHash();
 
-        // TODO: add serialization methods
+    // TODO: add serialization methods
 };
 
 #endif // __SRC_BUNDLE_H__
