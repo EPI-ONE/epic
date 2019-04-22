@@ -9,7 +9,7 @@
 #### libevent
    - We specify the libevent version 2.1.8 for building a stable base network. You need to download the source code and compile it.  https://github.com/libevent/libevent/archive/release-2.1.8-stable.zip
 
-* ```shell
+ ```shell
   $ mkdir build && cd build
   $ cmake ..
   $ make
@@ -17,7 +17,7 @@
 #### libsecp256k1
    - This is a stand-alone library in the bitcoin-core project. Please clone the source code and compile it.
 
-*  ```shell
+  ```shell
    $ git clone https://github.com/bitcoin-core/secp256k1.git
    $ cd secp256k1
    $ ./autogen.sh
