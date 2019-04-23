@@ -54,7 +54,7 @@ public:
     }
 
     VStream& operator+=(const VStream& b) {
-        chars.insert(chars.end(), b.begin(), b.end());
+        chars.insert(chars.end(), b.cbegin(), b.cend());
         return *this;
     }
 
@@ -69,19 +69,19 @@ public:
     }
 
     std::string str() const {
-        return std::string(begin(), end());
+        return std::string(cbegin(), cend());
     }
 
     // Vector subset
 
-    const_iterator begin() const {
-        return chars.begin() + readPos;
+    const_iterator cbegin() const {
+        return chars.cbegin() + readPos;
     }
     iterator begin() {
         return chars.begin() + readPos;
     }
-    const_iterator end() const {
-        return chars.end();
+    const_iterator cend() const {
+        return chars.cend();
     }
     iterator end() {
         return chars.end();
