@@ -305,20 +305,17 @@ void ECC_Stop() {
 }
 
 void GetRandBytes(CPrivKey& buf) {
-    std::size_t n = buf.capacity();
-    std::size_t m = 8 * std::ceil(n / 8);
+    unsigned long long x;
+    uint_fast8_t j;
 
-    unsigned long long* x = new unsigned long long[m];
-    unsigned long long* y = x;
+    for (std::size_t i = 0; i < buf.size(); i++) {
+        j = i % 8;
+        if (j == 0)
+            while(!_rdrand64_step(&x));
 
-    for (; y < x + m; y++) {
-        while(!_rdrand64_step(y));
+        buf[i] = ((unsigned char*)&x)[j];
     }
-
-    std::memcpy(&(*buf.begin()), x, n);
-    delete[] x;
 }
-
 
 CKey DecodeSecret(const std::string& str) {
     CKey key;
