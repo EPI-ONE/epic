@@ -13,8 +13,7 @@ uint256 Hash(VStream& data) {
     CSHA256 sha;
 
     static const unsigned char emptyByte[0] = {};
-    sha.Write(data.empty() ? emptyByte : (const unsigned char*) data.data(),
-        data.size());
+    sha.Write(data.empty() ? emptyByte : (const unsigned char*) data.data(), data.size());
     sha.Finalize((unsigned char*) &hash);
 
 #pragma clang loop unroll_count(R)

@@ -18,7 +18,7 @@ static const vector<string> COLUMN_NAMES = {
     kDefaultColumnFamilyName, "msList", "UTXO", "selfChain", "regKeys", "info"};
 
 class RocksDBStore {
-   public:
+public:
     RocksDBStore(string dbPath) {
         this->DBPATH = dbPath;
         // Make directory DBPATH if missing
@@ -87,7 +87,7 @@ class RocksDBStore {
         delete db;
     }
 
-   private:
+private:
     unordered_map<string, ColumnFamilyHandle*> handleMap;
     DB* db;
     string DBPATH;

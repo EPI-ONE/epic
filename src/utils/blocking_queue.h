@@ -3,17 +3,18 @@
 #define EPIC_BLOCKING_QUEUE_H
 
 
-#include <iostream>
-#include <vector>
-#include <queue>
 #include <condition_variable>
+#include <iostream>
+#include <queue>
+#include <vector>
 
 #define DEFAULT_CAPACITY 65536
 
-template<typename T>
-class BlockingQueue{
+template <typename T>
+class BlockingQueue {
 public:
-    BlockingQueue() :mtx(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) { }
+    BlockingQueue() : mtx(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {
+    }
     void Put(T& element);
     bool Take(T& front);
     size_t Size();
@@ -31,4 +32,4 @@ private:
 };
 
 
-#endif //EPIC_BLOCKING_QUEUE_H
+#endif // EPIC_BLOCKING_QUEUE_H

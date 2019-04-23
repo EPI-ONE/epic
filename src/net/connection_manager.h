@@ -2,30 +2,29 @@
 #define EPIC_CONNECTION_MANAGER_H
 
 
+#include <atomic>
 #include <cstdint>
-#include <event2/listener.h>
-#include <event2/event.h>
-#include <event2/bufferevent.h>
 #include <event2/buffer.h>
+#include <event2/bufferevent.h>
+#include <event2/event.h>
+#include <event2/listener.h>
 #include <functional>
 #include <string>
 #include <thread>
 #include <unordered_map>
-#include <atomic>
 
-#include "net_message.h"
 #include "blocking_queue.h"
+#include "net_message.h"
 
 typedef std::function<void(void* connection_handle, std::string& address, bool inbound)> new_connection_callback_t;
 typedef std::function<void(void* connection_handle)> delete_connection_callback_t;
 typedef std::unordered_map<struct bufferevent*, size_t>::iterator bufferevent_map_iter_t;
 
 class ConnectionManager {
-
 private:
-    struct event_base *base = nullptr;
-    struct evconnlistener *listener = nullptr;
-    new_connection_callback_t new_connection_callback = nullptr;
+    struct event_base* base                                 = nullptr;
+    struct evconnlistener* listener                         = nullptr;
+    new_connection_callback_t new_connection_callback       = nullptr;
     delete_connection_callback_t delete_connection_callback = nullptr;
 
     std::atomic<bool> interrupt_send_message_;
@@ -41,14 +40,14 @@ private:
     BlockingQueue<NetMessage> send_message_queue;
 
     void FreeAllBufferevent_();
-    bool isExist_(struct bufferevent *bev);
+    bool isExist_(struct bufferevent* bev);
     void ThreadSendMessage_();
 
     /**
      * write message bytes to bufferevent output buffer
      * @param message
      */
-    void WriteOneMessage_(NetMessage &message);
+    void WriteOneMessage_(NetMessage& message);
 
     /**
      * read one message from the input buffer, if success then put the message into receive queue
@@ -56,28 +55,28 @@ private:
      * @param next_message_length
      * @return true if successful
      */
-    bool ReadOneMessage_(struct bufferevent *bev, size_t &next_message_length);
+    bool ReadOneMessage_(struct bufferevent* bev, size_t& next_message_length);
 
     /**
      * seek next message length in a buffer
      * @param buf evbuffer
      * @return the message length to be received
      */
-    size_t SeekNextMessageLength_(struct evbuffer *buf);
+    size_t SeekNextMessageLength_(struct evbuffer* buf);
 
     /**
      * seek magic number in a buffer
      * @param buf evbuffer
      * @return true if found and release the buffer before the magic number
      */
-    bool SeekMagicNumber_(struct evbuffer *buf);
+    bool SeekMagicNumber_(struct evbuffer* buf);
 
     /**
      * seek the payload length in a buffer which start with magic number
      * @param buf
      * @return the length of the message payload
      */
-    size_t SeekMessagePayloadLength_(struct evbuffer *buf);
+    size_t SeekMessagePayloadLength_(struct evbuffer* buf);
 
 
 public:
@@ -151,7 +150,7 @@ public:
      * the internal read callback function called by bufferevent
      * @param bev
      */
-    void ReadMessages(struct bufferevent *bev);
+    void ReadMessages(struct bufferevent* bev);
 
     /**
      * create a bufferevent and insert into the bufferevent map
@@ -160,15 +159,14 @@ public:
      * @param options
      * @return bufferevent pointer
      */
-    struct bufferevent* CreateBufferevent(struct event_base *base, evutil_socket_t fd, int options);
+    struct bufferevent* CreateBufferevent(struct event_base* base, evutil_socket_t fd, int options);
 
     /**
      * free the bufferevent memory and erase from the bufferevent map
      * @param bev
      */
-    void FreeBufferevent(struct bufferevent *bev);
-
+    void FreeBufferevent(struct bufferevent* bev);
 };
 
 
-#endif //EPIC_CONNECTION_MANAGER_H
+#endif // EPIC_CONNECTION_MANAGER_H
