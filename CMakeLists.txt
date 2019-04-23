@@ -39,6 +39,7 @@ include_directories(${ROCKSDB_INCLUDE_DIRS})
 # secp256k1
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 find_package(Secp256k1 REQUIRED)
+find_package(GMP REQUIRED)
 include_directories(${Secp256k1_INCLUDE_DIR})
 
 # src codes
@@ -98,10 +99,13 @@ add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE})
 target_link_libraries(epic ${LIBEVENT_LIBRARIES})
 target_link_libraries(epic ${ROCKSDB_LIBRARIES})
 target_link_libraries(epic ${Secp256k1_LIBRARY})
+target_link_libraries(epic ${GMP_LIBRARY})
+
 target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
 target_link_libraries(epictest ${Secp256k1_LIBRARY})
+target_link_libraries(epictest ${GMP_LIBRARY})
 
 # add test
 gtest_add_tests(
