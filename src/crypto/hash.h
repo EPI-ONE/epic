@@ -9,8 +9,7 @@
 
 /* Compute the 256-bit hash of an object. */
 template<std::size_t R, typename T1>
-inline uint256 Hash(const T1 pbegin, const T1 pend)
-{
+inline uint256 Hash(const T1 pbegin, const T1 pend) {
     uint256 hash;
     CSHA256 sha;
 
@@ -32,7 +31,7 @@ inline uint256 Hash(const T1 pbegin, const T1 pend)
 /* R: number of hashing rounds e.g 1 = single hash; 2 = double hash */
 template <std::size_t R>
 uint256 Hash(VStream& data) {
-    return Hash<R>(data.cbegin(), data.cend());
+    return Hash<R>(data.begin(), data.end());
 }
 
 /** Compute the 160-bit hash an object. */
@@ -43,7 +42,7 @@ inline uint160 Hash160(const T1 pbegin, const T1 pend) {
 
 /** Compute the 160-bit hash of a vector. */
 inline uint160 Hash160(VStream& vch) {
-    return Hash160(vch.cbegin(), vch.cend());
+    return Hash160(vch.begin(), vch.end());
 }
 
 #endif
