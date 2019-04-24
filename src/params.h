@@ -28,9 +28,13 @@ static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
 static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 // max block size
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
+// max number of signature verification OPs in a block TODO: determine the size
+static constexpr int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
+// max amount of money in one output
+static constexpr Coin MAX_MONEY = 9999999999L;
 
 class Params {
-   public:
+public:
     // consensus parameter setting
     uint32_t targetTimespan;
     uint32_t timeInterval;
@@ -38,25 +42,31 @@ class Params {
     uint32_t targetTPS;
     uint32_t punctualityThred;
     arith_uint256 maxTarget;
+    Coin maxMoney;
     Coin reward;
+    const Block& GetGenesisBlock() const {
+        return genesisBlock;
+    }
+    const uint256& GetGenesisBlockHash() const {
+        return genesisBlockHash;
+    }
 
-   protected:
+protected:
     Params(){};
     // genesis
     uint256 genesisBlockHash;
     Block genesisBlock;
     virtual void CreateGenesis() = 0;
-    const Block& GetGenesisBlock() { return genesisBlock; }
 };
 
 class TestNetParams : public Params {
-   public:
-    static Params& GetParams() {
-        static TestNetParams instance;
+public:
+    static const Params& GetParams() {
+        static const TestNetParams instance;
         return instance;
     }
 
-   protected:
+protected:
     TestNetParams() {
         targetTimespan          = TARGET_TIMESPAN;
         timeInterval            = TIME_INTERVAL;
@@ -64,8 +74,10 @@ class TestNetParams : public Params {
         targetTPS               = 100;
         punctualityThred        = PUNTUALITY_THRESHOLD;
         arith_uint256 maxTarget = arith_uint256().SetCompact(0x2100ffffL);
+        maxMoney                = MAX_MONEY;
         reward                  = 1;
         CreateGenesis();
+        genesisBlockHash = genesisBlock.GetHash();
     }
     void CreateGenesis();
 };

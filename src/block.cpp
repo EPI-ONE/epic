@@ -56,8 +56,7 @@ bool Block::CheckPOW(bool throwException) {
     arith_uint256 hash   = UintToArith256(GetHash());
     if (hash > target) {
         if (throwException) {
-            throw "Hash is higher than target: " + GetHash().ToString() +
-                " vs " + target.ToString();
+            throw "Hash is higher than target: " + GetHash().ToString() + " vs " + target.ToString();
         } else {
             return false;
         }
@@ -78,12 +77,21 @@ bool Block::Verify() {
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         return false;
     }
-    if (HasTransaction()) {
-    } else if (!transaction_.front().Verify()) {
+    if (HasTransaction() && !transaction_.front().Verify()) {
         return false;
     }
 
     // check the conditions of the first registration block
+    if (prevBlockHash_ == params.GetGenesisBlockHash()) {
+        // Must contain a tx
+        if (!HasTransaction()) {
+            return false;
+        }
+        // ... with input from ZERO hash and index -1 and output value 0
+        if (!transaction_.front().IsFirstRegistration()) {
+            return false;
+        }
+    }
     return true;
 }
 

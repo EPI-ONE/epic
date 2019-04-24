@@ -18,6 +18,4 @@ void TestNetParams::CreateGenesis() {
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetMinerChainHeight(0);
     genesisBlock.ResetReward();
-
-    genesisBlockHash = genesisBlock.GetHash();
 }

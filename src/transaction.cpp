@@ -1,11 +1,12 @@
 #include "transaction.h"
+#include "params.h"
 #include "tinyformat.h"
 
 // TODO: think carefully about where to use pointers
 
 std::string TxOutPoint::ToString() const {
     std::string str;
-    str += strprintf("%s:%d", hash.ToString(), index);
+    str += strprintf("%s:%d", bHash.ToString(), index);
     return str;
 }
 
@@ -68,6 +69,30 @@ void Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(*this);
     outputs.push_back(txout);
+}
+
+bool Transaction::Verify() const {
+    if (inputs.empty() || outputs.empty()) {
+        return false;
+    }
+    // Make sure no duplicated TxInput
+    std::unordered_set<TxOutPoint> outpoints = {};
+    for (const TxInput& input : inputs) {
+        if (outpoints.find(input.outpoint) != outpoints.end()) {
+            return false;
+        }
+        outpoints.insert(input.outpoint);
+    }
+    // Make sure that there aren't not too many sig verifications
+    // in the block to prevent the potential DDos attack.
+    int sigOps = 0;
+    for (const TxInput& input : inputs) {
+        sigOps += Script::GetSigOpCount(input.scriptSig);
+    }
+    if (sigOps > MAX_BLOCK_SIGOPS) {
+        return false;
+    }
+    return true;
 }
 
 std::string Transaction::ToString() {

@@ -10,5 +10,6 @@ int main(int argc, char* argv[]) {
     Init(argc, argv);
     AddressManager addressManager;
     addressManager.Init();
+
     return 0;
 }

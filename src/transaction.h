@@ -1,13 +1,15 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
+#include <sstream>
+#include <unordered_set>
+
 #include "caterpillar.h"
 #include "coin.h"
 #include "hash.h"
 #include "script.h"
 #include "serialize.h"
 #include "uint256.h"
-#include <sstream>
 
 static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
 
@@ -15,24 +17,39 @@ class Block;
 class Transaction;
 class TxOutPoint {
 public:
-    uint256 hash;
+    uint256 bHash;
     uint32_t index;
 
     TxOutPoint() : index((uint32_t) -1) {}
 
     // TODO: search for the pointer of BlockIndex in Cat
-    TxOutPoint(const uint256 fromBlock, const uint32_t index) : hash(fromBlock), index(index) {}
+    TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(hash);
+        READWRITE(bHash);
         READWRITE(index);
     }
     std::string ToString() const;
 
+    friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
+        if (&out1 == &out2) {
+            return true;
+        }
+        return out1.index == out2.index && out1.bHash == out2.bHash;
+    }
+
 private:
     struct BlockIndex* block;
+};
+
+/** Key hasher for unordered_set */
+template <>
+struct std::hash<TxOutPoint> {
+    size_t operator()(const TxOutPoint& x) const {
+        return std::hash<uint256>()(x.bHash) + (size_t) index;
+    }
 };
 
 class TxInput {
@@ -56,7 +73,7 @@ public:
         return (outpoint.index & NEGATIVE_ONE) == NEGATIVE_ONE;
     }
     bool IsFirstRegistration() const {
-        return outpoint.hash == Hash::ZERO_HASH && IsRegistration();
+        return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
     }
     std::string ToString() const;
     void SetParent(const Transaction& tx) {
@@ -111,20 +128,15 @@ public:
     };
     explicit Transaction(const Transaction& tx);
 
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(inputs);
-        READWRITE(outputs);
-    }
-
     void AddInput(TxInput&& input);
     void AddOutput(TxOutput&& output);
+    const TxOutput& GetOutput(size_t index) const {
+        return outputs[index];
+    }
     void SetParent(const Block& blk) {
         parentBlock_ = std::make_shared<Block>(blk);
     };
 
-    // TODO:
     uint256& GetHash() {
         if (!hash_.IsNull()) {
             return hash_;
@@ -139,10 +151,9 @@ public:
     bool IsFirstRegistration() const {
         return inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
     }
+
     // TODO:
-    bool Verify() const {
-        return true;
-    }
+    bool Verify() const;
     void Validate() {
         status_ = VALID;
     }
@@ -155,6 +166,14 @@ public:
     void SetStatus(enum Validity s) {
         status_ = s;
     }
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(inputs);
+        READWRITE(outputs);
+    }
+
     std::string ToString();
 
 private:

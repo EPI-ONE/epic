@@ -17,6 +17,13 @@ public:
     Script(const Bytes fromBytes) : bytes(fromBytes) {}
     Script(const std::vector<unsigned char>& scriptBytes) : bytes(VStream(scriptBytes)) {}
 
+    /**
+     * TODO: counts the number of OPs for sig verification
+     */
+    static int GetSigOpCount(Bytes program) {
+        return 0;
+    }
+
     void clear() {
         bytes.clear();
     }
