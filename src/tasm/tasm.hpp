@@ -41,14 +41,14 @@ class tasm {
 
         instruction yield_debug_instruction(const std::vector<uint8_t> program) {
             return yield_instruction_m_channel(
-                    preprocessor(program), { 0 }, { 0 }
+                    preprocessor(program), { RET }, { RET }
             );
         }
 
         std::vector<uint8_t> preprocessor(const std::vector<uint8_t>& program_) {
             std::vector<uint8_t> program = program_;
-            if (program.back() != 0) {
-                program.push_back(0);
+            if (program.back() != RET) {
+                program.push_back(RET);
             }
 
             return program;

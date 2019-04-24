@@ -7,6 +7,10 @@
 
 typedef std::function<size_t(std::vector<unsigned char>& data, std::size_t ip)> instruction;
 
+enum OPCODES {
+    RET = 0
+};
+
 static std::array<instruction, 256> functors = {
     // 000: exit lambda
     [](std::vector<unsigned char>& data, std::size_t ip) {

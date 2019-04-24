@@ -5,6 +5,6 @@ class TestTasm: public testing::Test {};
 
 TEST_F(TestTasm, simple_listing) {
     tasm t(functors);
-    tasm::listing l({ 0 }, { 0 });
+    tasm::listing l({ RET }, { 0 });
     EXPECT_TRUE(t.exec_listing(l));
 }
