@@ -12,14 +12,14 @@ class tasm {
         class listing {
             public:
                 std::vector<uint8_t> program;
-                std::vector<unsigned char> data;
+                VStream data;
 
                 listing() = default;
 
-                listing(std::vector<uint8_t> &p, std::vector<unsigned char> &d) :
+                listing(std::vector<uint8_t> &p, VStream& d) :
                     program(p), data(d) {};
 
-                listing(std::vector<uint8_t> p, std::vector<unsigned char> d) :
+                listing(std::vector<uint8_t> p, VStream d) :
                     program(p), data(d) {};
 
 
@@ -73,7 +73,7 @@ class tasm {
         std::array<instruction, 256> is_;
 
         instruction yield_instruction_n_channel(const std::vector<uint8_t> program) {
-            return [=](std::vector<unsigned char>& data, std::size_t ip) {
+            return [=](VStream& data, std::size_t ip) {
                 std::size_t ip_p = 0;
                 uint8_t op;
 
@@ -91,7 +91,7 @@ class tasm {
             instruction iuc = yield_instruction_n_channel(uchannel);
             instruction luc = yield_instruction_n_channel(lchannel);
 
-            return [=](std::vector<unsigned char>& data, std::size_t ip) {
+            return [=](VStream& data, std::size_t ip) {
                 std::size_t ip_p = 0;
                 uint8_t op;
 

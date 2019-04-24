@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <array>
 
-typedef std::function<size_t(std::vector<unsigned char>& data, std::size_t ip)> instruction;
+#include "../utils/stream.h"
+
+typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
 
 enum OPCODES {
     RET = 0
@@ -13,8 +15,8 @@ enum OPCODES {
 
 static std::array<instruction, 256> functors = {
     // 000: exit lambda
-    [](std::vector<unsigned char>& data, std::size_t ip) {
-                                        return ip + 1;
+    [](VStream& data, std::size_t ip) {
+        return ip + 1;
     }
 };
 
