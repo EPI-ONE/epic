@@ -5,11 +5,11 @@
 #include <unistd.h>
 #include <array>
 
-typedef std::function<size_t(std::vector<uint64_t>& data, std::size_t ip)> instruction;
+typedef std::function<size_t(std::vector<unsigned char>& data, std::size_t ip)> instruction;
 
 static std::array<instruction, 256> functors = {
     // 000: exit lambda
-    [](std::vector<uint64_t>& data, std::size_t ip) {
+    [](std::vector<unsigned char>& data, std::size_t ip) {
                                         return ip + 1;
     }
 };
