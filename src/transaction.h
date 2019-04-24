@@ -34,14 +34,8 @@ public:
     std::string ToString() const;
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
-        if (&out1 == &out2) {
-            return true;
-        }
         return out1.index == out2.index && out1.bHash == out2.bHash;
     }
-
-private:
-    struct BlockIndex* block;
 };
 
 /** Key hasher for unordered_set */
@@ -76,12 +70,12 @@ public:
         return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
     }
     std::string ToString() const;
-    void SetParent(const Transaction& tx) {
-        parentTx_ = std::make_shared<Transaction>(tx);
+    void SetParent(const Transaction* const tx) {
+        parentTx_ = tx;
     };
 
 private:
-    std::shared_ptr<Transaction> parentTx_;
+    Transaction* parentTx_;
 };
 
 class TxOutput {
@@ -96,8 +90,8 @@ public:
     }
 
     TxOutput(const Coin& value, const Script& scriptPubKey);
-    void SetParent(const Transaction& tx) {
-        parentTx_ = std::make_shared<Transaction>(tx);
+    void SetParent(const Transaction* const tx) {
+        parentTx_ = tx;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -110,7 +104,7 @@ public:
     std::string ToString() const;
 
 private:
-    std::shared_ptr<Transaction> parentTx_;
+    Transaction* parentTx_;
 };
 
 class Transaction {
@@ -133,8 +127,8 @@ public:
     const TxOutput& GetOutput(size_t index) const {
         return outputs[index];
     }
-    void SetParent(const Block& blk) {
-        parentBlock_ = std::make_shared<Block>(blk);
+    void SetParent(const Block* const blk) {
+        parentBlock_ = blk;
     };
 
     uint256& GetHash() {
@@ -152,7 +146,6 @@ public:
         return inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
     }
 
-    // TODO:
     bool Verify() const;
     void Validate() {
         status_ = VALID;
@@ -162,9 +155,6 @@ public:
     }
     Validity GetStatus() const {
         return status_;
-    }
-    void SetStatus(enum Validity s) {
-        status_ = s;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -182,7 +172,7 @@ private:
 
     uint256 hash_;
     Coin fee_;
-    std::shared_ptr<Block> parentBlock_;
+    Block* parentBlock_;
     Validity status_;
 };
 

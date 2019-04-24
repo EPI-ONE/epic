@@ -31,7 +31,7 @@ bool Block::IsFirstRegistration() const {
 void Block::AddTransaction(Transaction& tx) {
     // Invalidate cached hash to force recomputation
     hash_.SetNull();
-    tx.SetParent(*this);
+    tx.SetParent(this);
     transaction_.clear();
     transaction_.push_back(tx);
 }
@@ -126,7 +126,7 @@ void Block::UnserializeFromDB(VStream& s) {
     isMilestone_                = msFlag == IS_TRUE_MILESTONE;
     if (msFlag > 0) {
         // TODO: store the milestone object in some kind of cache
-        milestoneInstance_ = new Milestone();
+        milestoneInstance_ = std::make_shared<Milestone>();
         s >> *milestoneInstance_;
     }
 }

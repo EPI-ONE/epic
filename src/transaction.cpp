@@ -61,13 +61,13 @@ Transaction::Transaction(const Transaction& tx) {
 
 void Transaction::AddInput(TxInput&& txin) {
     hash_.SetNull();
-    txin.SetParent(*this);
+    txin.SetParent(this);
     inputs.push_back(txin);
 }
 
 void Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
-    txout.SetParent(*this);
+    txout.SetParent(this);
     outputs.push_back(txout);
 }
 
@@ -83,6 +83,7 @@ bool Transaction::Verify() const {
         }
         outpoints.insert(input.outpoint);
     }
+    outpoints.clear();
     // Make sure that there aren't not too many sig verifications
     // in the block to prevent the potential DDos attack.
     int sigOps = 0;

@@ -134,7 +134,7 @@ public:
         return hash_;
     }
     const uint256& GetTxHash();
-    // TODO:
+    // TODO
     size_t GetOptimalEncodingSize() const {
         return 0;
     }

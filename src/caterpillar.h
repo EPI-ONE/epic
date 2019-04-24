@@ -21,12 +21,12 @@ private:
     std::list<Block&> TopologicalSort(const std::list<const Block&> graph);
 };
 
-struct BlockIndex {
+typedef struct BlockIndex {
     // Only one of ptr_block and file_descriptor (together with offset)
     // should be assigned a value
-    Block* ptr_block;
-    int file_descriptor;
+    Block* ptrBlock;
+    int fileDescriptor;
     uint32_t offset; // offset in file
-};
+} BlockIndex;
 
 #endif // __SRC_CATERPILLAR_H__
