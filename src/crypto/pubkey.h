@@ -131,7 +131,7 @@ class CPubKey {
         s.write((char*)vch, len);
     }
     template <typename Stream>
-    void Unserialize(Stream& s) {
+    void Deserialize(Stream& s) {
         unsigned int len = ::ReadCompactSize(s);
         if (len <= PUBLIC_KEY_SIZE) {
             s.read((char*)vch, len);
