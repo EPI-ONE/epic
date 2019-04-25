@@ -1,11 +1,10 @@
 #ifndef __SRC_SCRIPT_SCRIPT_H__
 #define __SRC_SCRIPT_SCRIPT_H__
 
-#include <vector>
-
+#include "serialize.h"
 #include "stream.h"
-#include "utils/serialize.h"
 #include "utilstrencodings.h"
+#include <vector>
 
 typedef VStream Bytes;
 
@@ -40,13 +39,13 @@ public:
     void Unserialize(Stream& s) {
         size_t size;
         ::Unserialize(s, VARINT(size));
-        s.read((char*) bytes.data(), size * sizeof(char));
+        bytes = VStream(size);
+        s.read((char*) bytes.data(), size);
     }
-
 };
 
 namespace std {
-    string to_string(const Script& script);
+string to_string(const Script& script);
 }
 
 #endif /* ifndef __SRC_SCRIPT_SCRIPT_H__ */

@@ -1,15 +1,17 @@
+#include <gtest/gtest.h>
+
 #include "block.h"
 #include "key.h"
 #include "pubkey.h"
 #include "stream.h"
 #include "transaction.h"
-#include <gtest/gtest.h>
 
 class TestSer : public testing::Test {
 protected:
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
+    Script randomBytes;
     void SetUp() {
         rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
     }
@@ -49,7 +51,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
 
 TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
+    TxInput input       = TxInput(outpoint, randomBytes);
     VStream sinput;
     sinput << input;
     std::string s = sinput.str();
@@ -64,7 +66,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxInput) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
-    TxOutput output = TxOutput(100, Script());
+    TxOutput output = TxOutput(100, randomBytes);
     VStream sinput;
     sinput << output;
     std::string s = sinput.str();
@@ -137,8 +139,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlockTODB) {
     // Add a tx into the block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
-    tx.AddInput(TxInput(outpoint, Script()));
-    tx.AddOutput(TxOutput(100, Script()));
+    tx.AddInput(TxInput(outpoint, randomBytes));
+    tx.AddOutput(TxOutput(100, randomBytes));
     block.AddTransaction(tx);
     tx.Validate();
 
