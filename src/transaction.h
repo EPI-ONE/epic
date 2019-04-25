@@ -142,10 +142,9 @@ public:
     }
 
     uint256& GetHash() {
-        if (!hash_.IsNull()) {
-            return hash_;
-        }
-        hash_ = Hash<1>(VStream(*this));
+        if (hash_.IsNull())
+            hash_ = Hash<1>(VStream(*this));
+
         return hash_;
     }
 

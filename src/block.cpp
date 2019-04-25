@@ -36,10 +36,7 @@ void Block::AddTransaction(Transaction& tx) {
 }
 
 const uint256& Block::GetTxHash() {
-    if (HasTransaction()) {
-        return transaction_.front().GetHash();
-    }
-    return Hash::ZERO_HASH;
+    return HasTransaction() ? transaction_.front().GetHash() : Hash::ZERO_HASH;
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {

@@ -10,16 +10,22 @@
 #include "uint256.h"
 #include <cstdint>
 
+enum MilestoneStatus : uint_fast8_t {
+    IS_NOT_MILESTONE = 0,
+    IS_TRUE_MILESTONE,
+    IS_FAKE_MILESTONE,
+};
+
 class Block;
 namespace std {
-    /**
-     * Returns a multi-line string containing a description of the contents of
-     * the block. Use for debugging purposes only.
-     */
-    string to_string(Block& block);
+/**
+ * Returns a multi-line string containing a description of the contents of
+ * the block. Use for debugging purposes only.
+ */
+string to_string(Block& block);
 } // namespace std
 
-static constexpr int HEADER_SIZE = 112;
+static constexpr std::size_t HEADER_SIZE = 112;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
@@ -52,7 +58,7 @@ public:
     }
 
     bool IsNull() const {
-        return (time_ == 0);
+        return time_ == 0;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -80,50 +86,44 @@ protected:
     uint32_t nonce_;
 };
 
-enum MilestoneStatus : uint8_t {
-    IS_NOT_MILESTONE  = 0,
-    IS_TRUE_MILESTONE = 1,
-    IS_FAKE_MILESTONE = 2,
-};
 
 class Block : public BlockHeader {
 public:
-    // parameter restrictions
-
-    // constructor and destructor
     Block() {
         SetNull();
     }
 
     Block(const Block&) = default;
+    Block(uint32_t version);
     Block(const BlockHeader& header) {
         SetNull();
         *(static_cast<BlockHeader*>(this)) = header;
     }
-    Block(uint32_t version);
 
     void SetNull() {
         BlockHeader::SetNull();
         transaction_.clear();
     }
 
-    ~Block(){};
-
-    // verify block content syntactically
     bool Verify();
     void AddTransaction(Transaction& tx);
+
     bool HasTransaction() const {
         return !transaction_.empty();
     }
+
     void SetMinerChainHeight(uint32_t height) {
         minerChainHeight_ = height;
     }
+
     void ResetReward() {
         cumulativeReward_ = ZERO_COIN;
     }
+
     void InvalidateMilestone() {
         isMilestone_ = false;
     }
+
     void SetMilestoneInstance(Milestone& ms) {
         milestoneInstance_ = std::make_shared<Milestone>(ms);
         isMilestone_       = true;
@@ -142,21 +142,26 @@ public:
         hash_ = Hash<1>(s);
         return hash_;
     }
+
     const uint256& GetTxHash();
+
     // TODO
     size_t GetOptimalEncodingSize() const {
         return 0;
     }
-    /**
+
+    /*
      * Checks whether the block is a registration block.
      */
     bool IsRegistration() const;
-    /**
+
+    /*
      * Checks whether the block is the first registration block on some peer
      * chain.
      */
     bool IsFirstRegistration() const;
-    /**
+
+    /*
      * Returns the chainwork represented by this block, which is defined as
      * the number of tries needed to solve a block in the on average.
      * It is calculated by the largest possible hash divided by the difficulty
@@ -166,7 +171,8 @@ public:
         arith_uint256 target = GetTargetAsInteger();
         return LARGEST_HASH / (target + 1);
     }
-    /**
+
+    /*
      * Returns the difficulty target as a 256 bit value that can be compared
      * to a SHA-256 hash. Inside a block the target is represented using a
      * compact form. If this form decodes to a value that is out of bounds,
@@ -178,7 +184,8 @@ public:
      * difficulty target. For test purposes only.
      */
     void Solve();
-    /**
+
+    /*
      * Proves the block was as difficult to make as it claims to be.
      * Note that this function only checks the block hash is no greater than
      * the difficulty target contained in the header.
@@ -204,8 +211,6 @@ public:
     }
 
     friend std::string std::to_string(Block& block);
-
-    // get & set methods
 
 private:
     uint256 hash_;
