@@ -5,7 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
-#include <time.h>
+#include <ctime>
 #include <unordered_map>
 #include <unordered_set>
 

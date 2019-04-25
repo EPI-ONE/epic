@@ -4,9 +4,9 @@
 
 // TODO: think carefully about where to use pointers
 
-std::string TxOutPoint::ToString() const {
+std::string std::to_string(const TxOutPoint& outpoint) {
     std::string str;
-    str += strprintf("%s:%d", bHash.ToString(), index);
+    str += strprintf("%s:%d", std::to_string(outpoint.bHash), outpoint.index);
     return str;
 }
 
@@ -25,13 +25,13 @@ TxInput::TxInput(const Script& script) {
     scriptSig = script;
 }
 
-std::string TxInput::ToString() const {
+std::string std::to_string(const TxInput& input) {
     std::string str;
     str += "TxInput{ ";
-    if (IsRegistration()) {
+    if (input.IsRegistration()) {
         str += "REGISTRATION";
     } else {
-        str += strprintf("outpoint=%s, scriptSig=%s", outpoint.ToString(), scriptSig.ToString());
+        str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
     }
     str += " }";
     return str;
@@ -42,10 +42,10 @@ TxOutput::TxOutput(const Coin& coinValue, const Script& script) {
     scriptPubKey = script;
 }
 
-std::string TxOutput::ToString() const {
+std::string std::to_string(const TxOutput& output) {
     std::string str;
     str += "TxOut{ ";
-    str += strprintf("value=%d, scriptPubKey=%s", value, scriptPubKey.ToString());
+    str += strprintf("value=%d, scriptPubKey=%s", output.value, std::to_string(output.scriptPubKey));
     str += " }";
     return str;
 }
@@ -96,18 +96,18 @@ bool Transaction::Verify() const {
     return true;
 }
 
-std::string Transaction::ToString() {
+std::string std::to_string(Transaction& tx) {
     std::string s;
     s += "Transaction { \n";
-    s += strprintf("   hash: %s \n", GetHash().ToString());
-    for (int i = 0; i < inputs.size(); ++i) {
+    s += strprintf("   hash: %s \n", std::to_string(tx.GetHash()));
+    for (int i = 0; i < tx.GetInputs().size(); ++i) {
         s += "   ";
-        s += inputs.at(i).ToString();
+        s += std::to_string(tx.GetInputs()[i]);
         s += "\n";
     }
-    for (int j = 0; j < outputs.size(); ++j) {
+    for (int j = 0; j < tx.GetOutputs().size(); ++j) {
         s += "   ";
-        s += outputs.at(j).ToString();
+        s += std::to_string(tx.GetOutputs()[j]);
         s += "\n";
     }
     s += " }\n";

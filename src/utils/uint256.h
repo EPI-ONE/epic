@@ -57,7 +57,6 @@ public:
     std::string GetHex() const;
     void SetHex(const char* psz);
     void SetHex(const std::string& str);
-    std::string ToString() const;
 
     unsigned char* begin() {
         return &data[0];
@@ -96,6 +95,11 @@ public:
         s.read((char*) data, sizeof(data));
     }
 };
+
+namespace std {
+    template <unsigned int BITS>
+    string to_string(const base_blob<BITS>& uint);
+} // namespace std
 
 /** 160-bit opaque blob.
  * @note This type is called uint160 for historical reasons only. It is an

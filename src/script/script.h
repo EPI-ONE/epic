@@ -43,8 +43,10 @@ public:
         s.read((char*) bytes.data(), size * sizeof(char));
     }
 
-    std::string ToString() const {
-        return HexStr(bytes);
-    }
 };
+
+namespace std {
+    string to_string(const Script& script);
+}
+
 #endif /* ifndef __SRC_SCRIPT_SCRIPT_H__ */

@@ -10,6 +10,15 @@
 #include "uint256.h"
 #include <cstdint>
 
+class Block;
+namespace std {
+    /**
+     * Returns a multi-line string containing a description of the contents of
+     * the block. Use for debugging purposes only.
+     */
+    string to_string(Block& block);
+} // namespace std
+
 static constexpr int HEADER_SIZE = 112;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
@@ -116,7 +125,7 @@ public:
         isMilestone_ = false;
     }
     void SetMilestoneInstance(Milestone& ms) {
-        milestoneInstance_ = &ms;
+        milestoneInstance_ = std::make_shared<Milestone>(ms);
         isMilestone_       = true;
     }
 
@@ -177,11 +186,6 @@ public:
      * target which is not considered here.
      */
     bool CheckPOW(bool throwException);
-    /**
-     * Returns a multi-line string containing a description of the contents of
-     * the block. Use for debugging purposes only.
-     */
-    std::string ToString();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -199,6 +203,8 @@ public:
         GetTxHash().Serialize(s);
     }
 
+    friend std::string std::to_string(Block& block);
+
     // get & set methods
 
 private:
@@ -206,7 +212,7 @@ private:
     // to be serialized to db only
     Coin cumulativeReward_;
     uint64_t minerChainHeight_;
-    Milestone* milestoneInstance_;
+    std::shared_ptr<Milestone> milestoneInstance_;
     bool isMilestone_ = false;
 
     // content

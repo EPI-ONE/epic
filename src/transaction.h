@@ -15,6 +15,7 @@ static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
 
 class Block;
 class Transaction;
+
 class TxOutPoint {
 public:
     uint256 bHash;
@@ -31,7 +32,6 @@ public:
         READWRITE(bHash);
         READWRITE(index);
     }
-    std::string ToString() const;
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
         return out1.index == out2.index && out1.bHash == out2.bHash;
@@ -56,6 +56,13 @@ public:
     TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
     TxInput(const Script& script);
 
+    bool IsRegistration() const {
+        return (outpoint.index & NEGATIVE_ONE) == NEGATIVE_ONE;
+    }
+    bool IsFirstRegistration() const {
+        return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
+    }
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -63,19 +70,16 @@ public:
         READWRITE(scriptSig);
     }
 
-    bool IsRegistration() const {
-        return (outpoint.index & NEGATIVE_ONE) == NEGATIVE_ONE;
-    }
-    bool IsFirstRegistration() const {
-        return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
-    }
-    std::string ToString() const;
     void SetParent(const Transaction* const tx) {
         parentTx_ = tx;
     };
 
+    const Transaction* GetParentTx() {
+        return parentTx_;
+    }
+
 private:
-    Transaction* parentTx_;
+    const Transaction* parentTx_;
 };
 
 class TxOutput {
@@ -90,9 +94,6 @@ public:
     }
 
     TxOutput(const Coin& value, const Script& scriptPubKey);
-    void SetParent(const Transaction* const tx) {
-        parentTx_ = tx;
-    }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -101,10 +102,12 @@ public:
         READWRITE(scriptPubKey);
     }
 
-    std::string ToString() const;
+    void SetParent(const Transaction* const tx) {
+        parentTx_ = tx;
+    }
 
 private:
-    Transaction* parentTx_;
+    const Transaction* parentTx_;
 };
 
 class Transaction {
@@ -124,12 +127,19 @@ public:
 
     void AddInput(TxInput&& input);
     void AddOutput(TxOutput&& output);
+
+    const TxInput& GetInput(size_t index) const {
+        return inputs[index];
+    }
     const TxOutput& GetOutput(size_t index) const {
         return outputs[index];
     }
-    void SetParent(const Block* const blk) {
-        parentBlock_ = blk;
-    };
+    const std::vector<TxInput>& GetInputs() const {
+        return inputs;
+    }
+    const std::vector<TxOutput>& GetOutputs() const {
+        return outputs;
+    }
 
     uint256& GetHash() {
         if (!hash_.IsNull()) {
@@ -153,6 +163,9 @@ public:
     void Invalidate() {
         status_ = INVALID;
     }
+    void SetStatus(Validity&& status) {
+        status_ = status;
+    }
     Validity GetStatus() const {
         return status_;
     }
@@ -164,7 +177,9 @@ public:
         READWRITE(outputs);
     }
 
-    std::string ToString();
+    void SetParent(const Block* const blk) {
+        parentBlock_ = blk;
+    };
 
 private:
     std::vector<TxInput> inputs;
@@ -172,8 +187,16 @@ private:
 
     uint256 hash_;
     Coin fee_;
-    Block* parentBlock_;
     Validity status_;
+
+    const Block* parentBlock_;
 };
+
+namespace std {
+string to_string(const TxOutPoint& outpoint);
+string to_string(const TxInput& input);
+string to_string(const TxOutput& output);
+string to_string(Transaction& tx);
+} // namespace std
 
 #endif //__SRC_TRANSACTION_H__

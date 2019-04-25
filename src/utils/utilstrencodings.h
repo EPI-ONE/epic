@@ -137,7 +137,7 @@ std::string HexStr(const T itbegin, const T itend, bool fSpaces = false) {
 
 template <typename T>
 inline std::string HexStr(const T& vch, bool fSpaces = false) {
-    return HexStr(vch.begin(), vch.end(), fSpaces);
+    return HexStr(vch.cbegin(), vch.cend(), fSpaces);
 }
 
 /**

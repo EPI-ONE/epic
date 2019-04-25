@@ -244,7 +244,6 @@ public:
     std::string GetHex() const;
     void SetHex(const char* psz);
     void SetHex(const std::string& str);
-    std::string ToString() const;
 
     unsigned int size() const {
         return sizeof(pn);
@@ -261,6 +260,11 @@ public:
         return pn[0] | (uint64_t) pn[1] << 32;
     }
 };
+
+namespace std {
+template <unsigned int BITS>
+string to_string(const base_uint<BITS>& uint);
+}
 
 /** 256-bit unsigned big integer. */
 class arith_uint256 : public base_uint<256> {
