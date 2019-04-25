@@ -153,7 +153,7 @@ public:
         return inputs.size() == 1 && inputs.front().IsRegistration();
     }
     bool IsFirstRegistration() const {
-        return inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
+        return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
     }
 
     bool Verify() const;
