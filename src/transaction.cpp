@@ -21,7 +21,7 @@ TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Sc
 }
 
 TxInput::TxInput(const Script& script) {
-    outpoint  = TxOutPoint(Hash::ZERO_HASH, NEGATIVE_ONE);
+    outpoint  = TxOutPoint(Hash::ZERO_HASH, NOT_CONNECTED);
     scriptSig = script;
 }
 

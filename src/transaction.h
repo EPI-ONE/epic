@@ -1,6 +1,7 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
+#include <limits>
 #include <sstream>
 #include <unordered_set>
 
@@ -11,7 +12,7 @@
 #include "serialize.h"
 #include "uint256.h"
 
-static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
+static const uint32_t NOT_CONNECTED = UINT_LEAST32_MAX;
 
 class Block;
 class Transaction;
@@ -57,7 +58,7 @@ public:
     TxInput(const Script& script);
 
     bool IsRegistration() const {
-        return (outpoint.index & NEGATIVE_ONE) == NEGATIVE_ONE;
+        return outpoint.index == NOT_CONNECTED;
     }
     bool IsFirstRegistration() const {
         return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
@@ -89,7 +90,7 @@ public:
     Script scriptPubKey;
 
     TxOutput() {
-        value = NEGATIVE_ONE;
+        value = NOT_CONNECTED;
         scriptPubKey.clear();
     }
 
