@@ -2,8 +2,6 @@
 #include "params.h"
 #include "tinyformat.h"
 
-// TODO: think carefully about where to use pointers
-
 std::string std::to_string(const TxOutPoint& outpoint) {
     std::string str;
     str += strprintf("%s:%d", std::to_string(outpoint.bHash), outpoint.index);
