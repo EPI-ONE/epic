@@ -73,7 +73,7 @@ public:
 
     void SetParent(const Transaction* const tx) {
         parentTx_ = tx;
-    };
+    }
 
     const Transaction* GetParentTx() {
         return parentTx_;
@@ -115,29 +115,34 @@ class Transaction {
 public:
     enum Validity : uint8_t {
         UNKNOWN = 0,
-        VALID   = 1,
-        INVALID = 2,
+        VALID,
+        INVALID,
     };
 
     Transaction() {
         inputs  = std::vector<TxInput>();
         outputs = std::vector<TxOutput>();
         status_ = UNKNOWN;
-    };
+    }
+
     explicit Transaction(const Transaction& tx);
 
     void AddInput(TxInput&& input);
+
     void AddOutput(TxOutput&& output);
 
     const TxInput& GetInput(size_t index) const {
         return inputs[index];
     }
+
     const TxOutput& GetOutput(size_t index) const {
         return outputs[index];
     }
+
     const std::vector<TxInput>& GetInputs() const {
         return inputs;
     }
+
     const std::vector<TxOutput>& GetOutputs() const {
         return outputs;
     }
@@ -152,20 +157,25 @@ public:
     bool IsRegistration() const {
         return inputs.size() == 1 && inputs.front().IsRegistration();
     }
+
     bool IsFirstRegistration() const {
         return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
     }
 
     bool Verify() const;
+
     void Validate() {
         status_ = VALID;
     }
+
     void Invalidate() {
         status_ = INVALID;
     }
+
     void SetStatus(Validity&& status) {
         status_ = status;
     }
+
     Validity GetStatus() const {
         return status_;
     }
@@ -179,7 +189,7 @@ public:
 
     void SetParent(const Block* const blk) {
         parentBlock_ = blk;
-    };
+    }
 
 private:
     std::vector<TxInput> inputs;

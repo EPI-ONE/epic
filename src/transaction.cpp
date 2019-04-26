@@ -28,11 +28,13 @@ TxInput::TxInput(const Script& script) {
 std::string std::to_string(const TxInput& input) {
     std::string str;
     str += "TxInput{ ";
+
     if (input.IsRegistration()) {
         str += "REGISTRATION";
     } else {
         str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
     }
+
     str += " }";
     return str;
 }
@@ -75,6 +77,7 @@ bool Transaction::Verify() const {
     if (inputs.empty() || outputs.empty()) {
         return false;
     }
+
     // Make sure no duplicated TxInput
     std::unordered_set<TxOutPoint> outpoints = {};
     for (const TxInput& input : inputs) {
@@ -83,16 +86,20 @@ bool Transaction::Verify() const {
         }
         outpoints.insert(input.outpoint);
     }
+
     outpoints.clear();
+
     // Make sure that there aren't not too many sig verifications
     // in the block to prevent the potential DDos attack.
     int sigOps = 0;
     for (const TxInput& input : inputs) {
         sigOps += Script::GetSigOpCount(input.scriptSig);
     }
+
     if (sigOps > MAX_BLOCK_SIGOPS) {
         return false;
     }
+
     return true;
 }
 
@@ -100,16 +107,19 @@ std::string std::to_string(Transaction& tx) {
     std::string s;
     s += "Transaction { \n";
     s += strprintf("   hash: %s \n", std::to_string(tx.GetHash()));
+
     for (int i = 0; i < tx.GetInputs().size(); ++i) {
         s += "   ";
         s += std::to_string(tx.GetInputs()[i]);
         s += "\n";
     }
+
     for (int j = 0; j < tx.GetOutputs().size(); ++j) {
         s += "   ";
         s += std::to_string(tx.GetOutputs()[j]);
         s += "\n";
     }
+
     s += " }\n";
     return s;
 }
