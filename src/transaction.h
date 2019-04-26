@@ -1,7 +1,6 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-
 #include "coin.h"
 #include "hash.h"
 #include "script.h"
@@ -13,7 +12,6 @@
 #include <unordered_set>
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
-static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
 
 class Block;
 class Transaction;
@@ -60,7 +58,7 @@ public:
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
         return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
-    } 
+    }
 
     bool IsRegistration() const {
         return outpoint.index == UNCONNECTED;

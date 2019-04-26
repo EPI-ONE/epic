@@ -1063,8 +1063,8 @@ std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m) {
 }
 
 /** Serialize elements in a vector */
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const std::vector<T>& m) {
+template <typename T, typename U>
+std::ostream& operator<<(std::ostream& os, const std::vector<T, U>& m) {
     for (auto i = m.begin(); i != m.end(); ++i)
         os << std::to_string(*i) << " ";
     return os;

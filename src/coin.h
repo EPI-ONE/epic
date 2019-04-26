@@ -1,7 +1,6 @@
 #ifndef __SRC_COIN_H__
 #define __SRC_COIN_H__
 
-#include <climits>
 #include <cstdint>
 
 typedef uint64_t Coin;
