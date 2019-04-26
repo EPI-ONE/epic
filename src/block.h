@@ -106,6 +106,7 @@ public:
     }
 
     bool Verify();
+
     void AddTransaction(Transaction& tx);
 
     bool HasTransaction() const {
@@ -129,17 +130,17 @@ public:
         isMilestone_       = true;
     }
 
-    /**
+    /*
      * TODO: serialize the header and compute the hash of the block
      * Currently is only a placeholder.
      */
     const uint256& GetHash() {
-        if (!hash_.IsNull()) {
-            return hash_;
+        if (hash_.IsNull()) {
+            VStream s;
+            SerializeToHash(s);
+            hash_ = Hash<1>(s);
         }
-        VStream s;
-        SerializeToHash(s);
-        hash_ = Hash<1>(s);
+
         return hash_;
     }
 
@@ -179,7 +180,8 @@ public:
      * an exception is thrown.
      */
     arith_uint256 GetTargetAsInteger() const;
-    /**
+
+    /*
      * A simple solver for nonce that makes the blocks hash lower than the
      * difficulty target. For test purposes only.
      */
@@ -202,7 +204,8 @@ public:
     }
 
     void SerializeToDB(VStream& s) const;
-    void UnserializeFromDB(VStream& s);
+
+    void DeserializeFromDB(VStream& s);
 
     template <typename Stream>
     inline void SerializeToHash(Stream& s) {

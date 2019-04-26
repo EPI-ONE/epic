@@ -166,7 +166,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlockTODB) {
     std::string s = sinput.str();
 
     Block blockFromUnserialization;
-    blockFromUnserialization.UnserializeFromDB(sinput);
+    blockFromUnserialization.DeserializeFromDB(sinput);
 
     VStream soutput;
     blockFromUnserialization.SerializeToDB(soutput);

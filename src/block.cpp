@@ -110,7 +110,7 @@ void Block::SerializeToDB(VStream& s) const {
     }
 }
 
-void Block::UnserializeFromDB(VStream& s) {
+void Block::DeserializeFromDB(VStream& s) {
     s >> *this;
     s >> VARINT(cumulativeReward_);
     s >> VARINT(minerChainHeight_);
