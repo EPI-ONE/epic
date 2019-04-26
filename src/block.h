@@ -8,6 +8,7 @@
 #include "serialize.h"
 #include "transaction.h"
 #include "uint256.h"
+
 #include <cstdint>
 
 enum MilestoneStatus : uint_fast8_t {
@@ -17,6 +18,7 @@ enum MilestoneStatus : uint_fast8_t {
 };
 
 class Block;
+
 namespace std {
 /**
  * Returns a multi-line string containing a description of the contents of
@@ -25,11 +27,10 @@ namespace std {
 string to_string(Block& block);
 } // namespace std
 
-static constexpr std::size_t HEADER_SIZE = 112;
+static constexpr std::size_t HEADER_SIZE = 116;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
-class Transaction;
 class BlockHeader {
 public:
     BlockHeader() {
@@ -95,14 +96,13 @@ public:
 
     Block(const Block&) = default;
     Block(uint32_t version);
-    Block(const BlockHeader& header) {
+    Block(const BlockHeader& header) : BlockHeader(header) {
         SetNull();
-        *(static_cast<BlockHeader*>(this)) = header;
     }
 
     void SetNull() {
         BlockHeader::SetNull();
-        transaction_.clear();
+        transaction_.reset();
     }
 
     bool Verify();
@@ -110,7 +110,7 @@ public:
     void AddTransaction(Transaction& tx);
 
     bool HasTransaction() const {
-        return !transaction_.empty();
+        return transaction_.has_value();
     }
 
     void SetMinerChainHeight(uint32_t height) {
@@ -224,7 +224,7 @@ private:
     bool isMilestone_ = false;
 
     // content
-    std::vector<Transaction> transaction_;
+    std::optional<Transaction> transaction_;
 };
 
 #endif //__SRC_BLOCK_H__

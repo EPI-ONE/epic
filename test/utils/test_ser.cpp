@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <optional>
 
 #include "block.h"
 #include "key.h"
@@ -18,6 +19,17 @@ protected:
 
     void TearDown() {}
 };
+
+TEST_F(TestSer, SerializeOptional) {
+    std::optional<uint32_t> o1 = 4, o2;
+    VStream vstream;
+    vstream << o1 << o2;
+    std::optional<uint32_t> o3, o4 = 5;
+    vstream >> o3 >> o4;
+
+    ASSERT_EQ(o1, o3);
+    ASSERT_EQ(o2, o4);
+}
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     ECC_Start();
@@ -99,6 +111,16 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     soutput << txFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
+
+    Transaction txx(tx);
+    std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
+    VStream vs;
+    vs << ot;
+    vs >> ots;
+
+    ASSERT_TRUE(ot.has_value());
+    ASSERT_TRUE(ots.has_value());
+    EXPECT_EQ(ot, ots);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
@@ -133,7 +155,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     EXPECT_EQ(s, soutput.str());
 }
 
-TEST_F(TestSer, SerializeEqDeserializeBlockTODB) {
+TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
     Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
 
     // Add a tx into the block

@@ -17,6 +17,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -672,6 +673,14 @@ template <typename Stream, typename T>
 void Deserialize(Stream& os, std::unique_ptr<const T>& p);
 
 /**
+ * optional
+ */
+template <typename Stream, typename T>
+void Serialize(Stream& os, const std::optional<const T>& p);
+template <typename Stream, typename T>
+void Unserialize(Stream& os, std::optional<const T>& p);
+
+/**
  * If none of the specialized versions above matched, default to calling member
  * function.
  */
@@ -843,6 +852,32 @@ void Serialize(Stream& os, const std::shared_ptr<const T>& p) {
 template <typename Stream, typename T>
 void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
     p = std::make_shared<const T>(deserialize, is);
+}
+
+/**
+ * optional
+ */
+template <typename Stream, typename T>
+void Serialize(Stream& os, const std::optional<T>& p) {
+    if (p.has_value()) {
+        Serialize(os, true);
+        Serialize(os, *p);
+    } else {
+        Serialize(os, false);
+    }
+}
+
+template <typename Stream, typename T>
+void Unserialize(Stream& is, std::optional<T>& p) {
+    bool flag;
+    Unserialize(is, flag);
+    if (flag) {
+        T t;
+        Unserialize(is, t);
+        p = std::forward<T>(t);
+    } else {
+        p.reset();
+    }
 }
 
 /**

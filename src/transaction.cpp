@@ -59,16 +59,18 @@ Transaction::Transaction(const Transaction& tx) {
     status_      = tx.status_;
 }
 
-void Transaction::AddInput(TxInput&& txin) {
+Transaction& Transaction::AddInput(TxInput&& txin) {
     hash_.SetNull();
     txin.SetParent(this);
     inputs.push_back(txin);
+    return *this;
 }
 
-void Transaction::AddOutput(TxOutput&& txout) {
+Transaction& Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(this);
     outputs.push_back(txout);
+    return *this;
 }
 
 bool Transaction::Verify() const {

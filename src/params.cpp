@@ -11,7 +11,7 @@ void TestNetParams::CreateGenesis() {
                        "65207374696c6c20776f726b696e6721");
     // Convert the string to bytes
     auto vs = VStream(ParseHex(hexStr));
-    tx.AddInput(TxInput(Script(vs)));
+    tx.AddInput(TxInput(Script(vs))).FinalizeHash();
 
     // TODO: add output
 

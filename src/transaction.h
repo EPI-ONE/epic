@@ -1,18 +1,19 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include <limits>
-#include <sstream>
-#include <unordered_set>
 
-#include "caterpillar.h"
 #include "coin.h"
 #include "hash.h"
 #include "script.h"
 #include "serialize.h"
 #include "uint256.h"
 
+#include <limits>
+#include <sstream>
+#include <unordered_set>
+
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
+static const uint32_t NEGATIVE_ONE = 0xFFFFFFFF;
 
 class Block;
 class Transaction;
@@ -57,6 +58,10 @@ public:
     TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
     TxInput(const Script& script);
 
+    friend bool operator==(const TxInput& a, const TxInput& b) {
+        return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
+    } 
+
     bool IsRegistration() const {
         return outpoint.index == UNCONNECTED;
     }
@@ -96,6 +101,10 @@ public:
 
     TxOutput(const Coin& value, const Script& scriptPubKey);
 
+    friend bool operator==(const TxOutput& a, const TxOutput& b) {
+        return (a.value == b.value) && (a.scriptPubKey.bytes == b.scriptPubKey.bytes);
+    }
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -127,9 +136,13 @@ public:
 
     explicit Transaction(const Transaction& tx);
 
-    void AddInput(TxInput&& input);
+    Transaction& AddInput(TxInput&& input);
+    Transaction& AddOutput(TxOutput&& output);
 
-    void AddOutput(TxOutput&& output);
+    void FinalizeHash() {
+        if (!hash_.IsNull())
+            hash_ = Hash<1>(VStream(*this));
+    }
 
     const TxInput& GetInput(size_t index) const {
         return inputs[index];
@@ -147,11 +160,12 @@ public:
         return outputs;
     }
 
-    uint256& GetHash() {
-        if (hash_.IsNull())
-            hash_ = Hash<1>(VStream(*this));
-
+    const uint256& GetHash() const {
         return hash_;
+    }
+
+    friend bool operator==(const Transaction& a, const Transaction& b) {
+        return a.GetHash() == b.GetHash();
     }
 
     bool IsRegistration() const {

@@ -14,15 +14,15 @@ Block::Block(uint32_t versionNum) {
 }
 
 bool Block::IsRegistration() const {
-    if (transaction_.empty()) {
+    if (!HasTransaction()) {
         return false;
     }
-    return transaction_.front().IsRegistration();
+    return transaction_->IsRegistration();
 }
 
 bool Block::IsFirstRegistration() const {
     if (HasTransaction()) {
-        return transaction_.front().IsFirstRegistration();
+        return transaction_->IsFirstRegistration();
     }
     return false;
 }
@@ -31,12 +31,16 @@ void Block::AddTransaction(Transaction& tx) {
     // Invalidate cached hash to force recomputation
     hash_.SetNull();
     tx.SetParent(this);
-    transaction_.clear();
-    transaction_.push_back(tx);
+    transaction_.reset();
+    transaction_ = std::forward<Transaction>(tx);
 }
 
 const uint256& Block::GetTxHash() {
-    return HasTransaction() ? transaction_.front().GetHash() : Hash::ZERO_HASH;
+    if (HasTransaction()) {
+        transaction_->FinalizeHash();
+        return transaction_->GetHash();
+    }
+    return Hash::ZERO_HASH;
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
@@ -73,7 +77,7 @@ bool Block::Verify() {
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         return false;
     }
-    if (HasTransaction() && !transaction_.front().Verify()) {
+    if (HasTransaction() && !transaction_->Verify()) {
         return false;
     }
 
@@ -84,7 +88,7 @@ bool Block::Verify() {
             return false;
         }
         // ... with input from ZERO hash and index -1 and output value 0
-        if (!transaction_.front().IsFirstRegistration()) {
+        if (!transaction_->IsFirstRegistration()) {
             return false;
         }
     }
@@ -96,7 +100,7 @@ void Block::SerializeToDB(VStream& s) const {
     s << VARINT(cumulativeReward_);
     s << VARINT(minerChainHeight_);
     if (HasTransaction()) {
-        s << (uint8_t) transaction_.front().GetStatus();
+        s << (uint8_t) transaction_->GetStatus();
     }
     if (isMilestone_) {
         s << (uint8_t) IS_TRUE_MILESTONE;
@@ -115,7 +119,7 @@ void Block::DeserializeFromDB(VStream& s) {
     s >> VARINT(cumulativeReward_);
     s >> VARINT(minerChainHeight_);
     if (HasTransaction()) {
-        transaction_.front().SetStatus((Transaction::Validity) ser_readdata8(s));
+        transaction_->SetStatus((Transaction::Validity) ser_readdata8(s));
     }
     enum MilestoneStatus msFlag = (MilestoneStatus) ser_readdata8(s);
     isMilestone_                = msFlag == IS_TRUE_MILESTONE;
@@ -139,7 +143,7 @@ std::string std::to_string(Block& block) {
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
     if (block.HasTransaction()) {
         s += "   with transaction:\n";
-        s += std::to_string(block.transaction_.front());
+        s += std::to_string(*(block.transaction_));
     }
     return s;
 }
