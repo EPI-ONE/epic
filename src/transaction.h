@@ -12,7 +12,7 @@
 #include "serialize.h"
 #include "uint256.h"
 
-static const uint32_t NOT_CONNECTED = UINT_LEAST32_MAX;
+static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
 
 class Block;
 class Transaction;
@@ -22,7 +22,7 @@ public:
     uint256 bHash;
     uint32_t index;
 
-    TxOutPoint() : index((uint32_t) -1) {}
+    TxOutPoint() : index(UNCONNECTED) {}
 
     // TODO: search for the pointer of BlockIndex in Cat
     TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
@@ -58,7 +58,7 @@ public:
     TxInput(const Script& script);
 
     bool IsRegistration() const {
-        return outpoint.index == NOT_CONNECTED;
+        return outpoint.index == UNCONNECTED;
     }
     bool IsFirstRegistration() const {
         return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
@@ -90,7 +90,7 @@ public:
     Script scriptPubKey;
 
     TxOutput() {
-        value = NOT_CONNECTED;
+        value = IMPOSSIBLE_COIN;
         scriptPubKey.clear();
     }
 
