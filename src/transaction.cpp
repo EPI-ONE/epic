@@ -1,6 +1,5 @@
 #include "transaction.h"
 #include "params.h"
-#include "tinyformat.h"
 
 std::string std::to_string(const TxOutPoint& outpoint) {
     std::string str;

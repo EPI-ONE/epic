@@ -5,6 +5,7 @@
 #include "hash.h"
 #include "script.h"
 #include "serialize.h"
+#include "tinyformat.h"
 #include "uint256.h"
 
 #include <limits>
