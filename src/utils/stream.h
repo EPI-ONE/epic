@@ -5,6 +5,7 @@
 
 #ifndef __SRC_UTILS_STREAM_H__
 #define __SRC_UTILS_STREAM_H__
+
 #include <cstring>
 
 #include "serialize.h"
