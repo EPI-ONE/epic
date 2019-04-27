@@ -1,10 +1,10 @@
 #ifndef __SRC_SCRIPT_SCRIPT_H__
 #define __SRC_SCRIPT_SCRIPT_H__
 
-#include "serialize.h"
+#include <vector>
+
 #include "stream.h"
 #include "utilstrencodings.h"
-#include <vector>
 
 typedef VStream Bytes;
 
@@ -16,7 +16,7 @@ public:
     Script(const Bytes fromBytes) : bytes(fromBytes) {}
     Script(const std::vector<unsigned char>& scriptBytes) : bytes(VStream(scriptBytes)) {}
 
-    /**
+    /*
      * TODO: counts the number of OPs for sig verification
      */
     static int GetSigOpCount(Bytes program) {
