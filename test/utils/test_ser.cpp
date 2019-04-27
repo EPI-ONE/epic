@@ -15,11 +15,9 @@ protected:
     uint256 zeros;
 
     void SetUp() {
-        rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
-        rand2 = uint256S("e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
+        rand1.randomize();
+        rand2.randomize();
     }
-
-    void TearDown() {}
 };
 
 TEST_F(TestSer, SerializeOptional) {

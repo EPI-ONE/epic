@@ -6,14 +6,15 @@
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
-#include "crypto/common.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <immintrin.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "crypto/common.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template <unsigned int BITS>
@@ -83,6 +84,20 @@ public:
         return ((uint64_t) ptr[0]) | ((uint64_t) ptr[1]) << 8 | ((uint64_t) ptr[2]) << 16 | ((uint64_t) ptr[3]) << 24 |
                ((uint64_t) ptr[4]) << 32 | ((uint64_t) ptr[5]) << 40 | ((uint64_t) ptr[6]) << 48 |
                ((uint64_t) ptr[7]) << 56;
+    }
+
+    void randomize() {
+        unsigned long long x;
+        uint_fast8_t j;
+
+        for (std::size_t i = 0; i < WIDTH; i++) {
+            j = i % 8;
+            if (j == 0)
+                while (!_rdrand64_step(&x))
+                    ;
+
+            data[i] = ((uint8_t*) &x)[j];
+        }
     }
 
     template <typename Stream>
