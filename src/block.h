@@ -1,15 +1,19 @@
 #ifndef __SRC_BLOCK_H__
 #define __SRC_BLOCK_H__
 
+#include <cstdint>
+#include <ctime>
+
 #include "arith_uint256.h"
 #include "coin.h"
 #include "hash.h"
 #include "milestone.h"
-#include "serialize.h"
 #include "transaction.h"
 #include "uint256.h"
 
-#include <cstdint>
+static constexpr std::size_t HEADER_SIZE = 116;
+static const arith_uint256 LARGEST_HASH =
+    arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
 enum MilestoneStatus : uint_fast8_t {
     IS_NOT_MILESTONE = 0,
@@ -20,24 +24,17 @@ enum MilestoneStatus : uint_fast8_t {
 class Block;
 
 namespace std {
-/**
+/*
  * Returns a multi-line string containing a description of the contents of
  * the block. Use for debugging purposes only.
  */
 string to_string(Block& block);
 } // namespace std
 
-static constexpr std::size_t HEADER_SIZE = 116;
-static const arith_uint256 LARGEST_HASH =
-    arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
-
 class BlockHeader {
 public:
-    BlockHeader() {
-        SetNull();
-    }
+    BlockHeader();
 
-    // Initialize with all the header fields
     BlockHeader(uint32_t version,
         uint256 milestoneHash,
         uint256 prevBlockHash,
@@ -48,19 +45,9 @@ public:
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
           tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {}
 
-    void SetNull() {
-        version_ = 0;
-        milestoneBlockHash_.SetNull();
-        prevBlockHash_.SetNull();
-        tipBlockHash_.SetNull();
-        time_       = 0;
-        diffTarget_ = 0;
-        nonce_      = 0;
-    }
+    void SetNull();
 
-    bool IsNull() const {
-        return time_ == 0;
-    }
+    bool IsNull() const;
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -87,69 +74,37 @@ protected:
     uint32_t nonce_;
 };
 
-
 class Block : public BlockHeader {
 public:
-    Block() {
-        SetNull();
-    }
+    Block();
 
     Block(const Block&) = default;
-    Block(uint32_t version);
-    Block(const BlockHeader& header) : BlockHeader(header) {
-        SetNull();
-    }
 
-    void SetNull() {
-        BlockHeader::SetNull();
-        transaction_.reset();
-    }
+    Block(uint32_t version);
+
+    Block(const BlockHeader& header);
+
+    void SetNull();
 
     bool Verify();
 
     void AddTransaction(Transaction& tx);
 
-    bool HasTransaction() const {
-        return transaction_.has_value();
-    }
+    bool HasTransaction() const;
 
-    void SetMinerChainHeight(uint32_t height) {
-        minerChainHeight_ = height;
-    }
+    void SetMinerChainHeight(uint32_t height);
 
-    void ResetReward() {
-        cumulativeReward_ = ZERO_COIN;
-    }
+    void ResetReward();
 
-    void InvalidateMilestone() {
-        isMilestone_ = false;
-    }
+    void InvalidateMilestone();
 
-    void SetMilestoneInstance(Milestone& ms) {
-        milestoneInstance_ = std::make_shared<Milestone>(ms);
-        isMilestone_       = true;
-    }
+    void SetMilestoneInstance(Milestone& ms);
 
-    /*
-     * TODO: serialize the header and compute the hash of the block
-     * Currently is only a placeholder.
-     */
-    const uint256& GetHash() {
-        if (hash_.IsNull()) {
-            VStream s;
-            SerializeToHash(s);
-            hash_ = Hash<1>(s);
-        }
-
-        return hash_;
-    }
+    const uint256& GetHash();
 
     const uint256& GetTxHash();
 
-    // TODO
-    size_t GetOptimalEncodingSize() const {
-        return 0;
-    }
+    size_t GetOptimalEncodingSize() const;
 
     /*
      * Checks whether the block is a registration block.
@@ -168,10 +123,7 @@ public:
      * It is calculated by the largest possible hash divided by the difficulty
      * target.
      */
-    arith_uint256 GetChainWork() const {
-        arith_uint256 target = GetTargetAsInteger();
-        return LARGEST_HASH / (target + 1);
-    }
+    arith_uint256 GetChainWork() const;
 
     /*
      * Returns the difficulty target as a 256 bit value that can be compared
@@ -216,15 +168,14 @@ public:
     friend std::string std::to_string(Block& block);
 
 private:
-    uint256 hash_;
-    // to be serialized to db only
-    Coin cumulativeReward_;
-    uint64_t minerChainHeight_;
-    std::shared_ptr<Milestone> milestoneInstance_;
-    bool isMilestone_ = false;
-
-    // content
     std::optional<Transaction> transaction_;
+    Coin cumulativeReward_;
+    uint256 hash_;
+
+    std::shared_ptr<Milestone> milestoneInstance_;
+    uint64_t minerChainHeight_;
+    bool isMilestone_ = false;
 };
+
 
 #endif //__SRC_BLOCK_H__

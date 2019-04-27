@@ -1,8 +1,27 @@
 #include "block.h"
 #include "params.h"
-#include "tinyformat.h"
-#include <ctime>
-static const Params& params = TestNetParams::GetParams();
+
+BlockHeader::BlockHeader() {
+    SetNull();
+}
+
+void BlockHeader::SetNull() {
+    milestoneBlockHash_.SetNull();
+    prevBlockHash_.SetNull();
+    tipBlockHash_.SetNull();
+    version_    = 0;
+    time_       = 0;
+    diffTarget_ = 0;
+    nonce_      = 0;
+}
+
+bool BlockHeader::IsNull() const {
+    return time_ == 0;
+}
+
+Block::Block() {
+    SetNull();
+}
 
 Block::Block(uint32_t versionNum) {
     version_            = versionNum;
@@ -11,6 +30,63 @@ Block::Block(uint32_t versionNum) {
     milestoneBlockHash_ = Hash::ZERO_HASH;
     prevBlockHash_      = Hash::ZERO_HASH;
     tipBlockHash_       = Hash::ZERO_HASH;
+}
+
+Block::Block(const BlockHeader& header) : BlockHeader(header) {
+    SetNull();
+}
+
+void Block::SetNull() {
+    BlockHeader::SetNull();
+    transaction_.reset();
+}
+
+// void Block::AddTransaction(Transaction& tx) {
+//    // Invalidate cached hash to force recomputation
+//    hash_.SetNull();
+//    tx.SetParent(this);
+//    transaction_.clear();
+//    transaction_.push_back(tx);
+//}
+
+bool Block::HasTransaction() const {
+    return transaction_.has_value();
+}
+
+void Block::SetMinerChainHeight(uint32_t height) {
+    minerChainHeight_ = height;
+}
+
+void Block::ResetReward() {
+    cumulativeReward_ = ZERO_COIN;
+}
+
+void Block::InvalidateMilestone() {
+    isMilestone_ = false;
+}
+
+void Block::SetMilestoneInstance(Milestone& ms) {
+    milestoneInstance_ = std::make_shared<Milestone>(ms);
+    isMilestone_       = true;
+}
+
+/*
+ * TODO: serialize the header and compute the hash of the block
+ * Currently is only a placeholder.
+ */
+const uint256& Block::GetHash() {
+    if (hash_.IsNull()) {
+        VStream s;
+        SerializeToHash(s);
+        hash_ = Hash<1>(s);
+    }
+
+    return hash_;
+}
+
+// TODO
+size_t Block::GetOptimalEncodingSize() const {
+    return 0;
 }
 
 bool Block::IsRegistration() const {
@@ -40,7 +116,13 @@ const uint256& Block::GetTxHash() {
         transaction_->FinalizeHash();
         return transaction_->GetHash();
     }
+
     return Hash::ZERO_HASH;
+}
+
+arith_uint256 Block::GetChainWork() const {
+    arith_uint256 target = GetTargetAsInteger();
+    return LARGEST_HASH / (target + 1);
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
@@ -48,8 +130,13 @@ arith_uint256 Block::GetTargetAsInteger() const {
     if (target <= 0 || target > params.maxTarget) {
         throw "Bad difficulty target: " + std::to_string(target);
     }
+
     return target;
 }
+
+// const uint256& Block::GetTxHash() {
+//    return HasTransaction() ? transaction_.front().GetHash() : Hash::ZERO_HASH;
+//}
 
 bool Block::CheckPOW(bool throwException) {
     arith_uint256 target = GetTargetAsInteger();
@@ -69,14 +156,17 @@ bool Block::Verify() {
     if (!CheckPOW(false)) {
         return false;
     }
+
     // checks if the time of block is too far in the future
     if (time_ > std::time(nullptr) + ALLOWED_TIME_DRIFT) {
         return false;
     }
+
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         return false;
     }
+
     if (HasTransaction() && !transaction_->Verify()) {
         return false;
     }
@@ -87,11 +177,13 @@ bool Block::Verify() {
         if (!HasTransaction()) {
             return false;
         }
+
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
             return false;
         }
     }
+
     return true;
 }
 
