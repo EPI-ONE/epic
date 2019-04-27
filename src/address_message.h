@@ -1,9 +1,10 @@
-#ifndef EPIC_ADDRESS_MESSAGE_H
-#define EPIC_ADDRESS_MESSAGE_H
+#ifndef __SRC_ADDRESS_MESSAGE_H__
+#define __SRC_ADDRESS_MESSAGE_H__
 
-#include "serialize.h"
 #include <net_address.h>
 #include <vector>
+
+#include "serialize.h"
 
 class AddressMessage {
 public:
@@ -13,8 +14,7 @@ public:
 
     AddressMessage() = default;
 
-    explicit AddressMessage(std::vector<NetAddress>& address_list) : addressList(std::move(address_list)) {
-    }
+    explicit AddressMessage(std::vector<NetAddress>& address_list) : addressList(std::move(address_list)) {}
 
     ~AddressMessage() {
         addressList.clear();
@@ -35,4 +35,4 @@ public:
     }
 };
 
-#endif // EPIC_ADDRESS_MESSAGE_H
+#endif // __SRC_ADDRESS_MESSAGE_H__
