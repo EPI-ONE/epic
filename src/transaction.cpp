@@ -89,6 +89,39 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     return *this;
 }
 
+void Transaction::FinalizeHash() {
+    if (!hash_.IsNull())
+        hash_ = Hash<1>(VStream(*this));
+}
+
+const TxInput& Transaction::GetInput(size_t index) const {
+    return inputs[index];
+}
+
+const TxOutput& Transaction::GetOutput(size_t index) const {
+    return outputs[index];
+}
+
+const std::vector<TxInput>& Transaction::GetInputs() const {
+    return inputs;
+}
+
+const std::vector<TxOutput>& Transaction::GetOutputs() const {
+    return outputs;
+}
+
+const uint256& Transaction::GetHash() const {
+    return hash_;
+}
+
+bool Transaction::IsRegistration() const {
+    return inputs.size() == 1 && inputs.front().IsRegistration();
+}
+
+bool Transaction::IsFirstRegistration() const {
+    return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
+}
+
 bool Transaction::Verify() const {
     if (inputs.empty() || outputs.empty()) {
         return false;
@@ -117,6 +150,27 @@ bool Transaction::Verify() const {
     }
 
     return true;
+}
+
+void Transaction::Validate() {
+    status_ = VALID;
+}
+
+void Transaction::Invalidate() {
+    status_ = INVALID;
+}
+
+void Transaction::SetStatus(Transaction::Validity&& status) {
+    status_ = status;
+}
+
+Transaction::Validity Transaction::GetStatus() const {
+    return status_;
+}
+
+
+void Transaction::SetParent(const Block* const blk) {
+    parentBlock_ = blk;
 }
 
 /*

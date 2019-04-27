@@ -122,62 +122,36 @@ public:
     explicit Transaction(const Transaction& tx);
 
     Transaction& AddInput(TxInput&& input);
+
     Transaction& AddOutput(TxOutput&& output);
 
-    void FinalizeHash() {
-        if (!hash_.IsNull())
-            hash_ = Hash<1>(VStream(*this));
-    }
+    void FinalizeHash();
 
-    const TxInput& GetInput(size_t index) const {
-        return inputs[index];
-    }
+    const TxInput& GetInput(size_t index) const;
 
-    const TxOutput& GetOutput(size_t index) const {
-        return outputs[index];
-    }
+    const TxOutput& GetOutput(size_t index) const;
 
-    const std::vector<TxInput>& GetInputs() const {
-        return inputs;
-    }
+    const std::vector<TxInput>& GetInputs() const;
 
-    const std::vector<TxOutput>& GetOutputs() const {
-        return outputs;
-    }
+    const std::vector<TxOutput>& GetOutputs() const;
 
-    const uint256& GetHash() const {
-        return hash_;
-    }
+    const uint256& GetHash() const;
 
-    friend bool operator==(const Transaction& a, const Transaction& b) {
-        return a.GetHash() == b.GetHash();
-    }
+    bool IsRegistration() const;
 
-    bool IsRegistration() const {
-        return inputs.size() == 1 && inputs.front().IsRegistration();
-    }
-
-    bool IsFirstRegistration() const {
-        return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
-    }
+    bool IsFirstRegistration() const;
 
     bool Verify() const;
 
-    void Validate() {
-        status_ = VALID;
-    }
+    void Validate();
 
-    void Invalidate() {
-        status_ = INVALID;
-    }
+    void Invalidate();
 
-    void SetStatus(Validity&& status) {
-        status_ = status;
-    }
+    void SetStatus(Validity&& status);
 
-    Validity GetStatus() const {
-        return status_;
-    }
+    Validity GetStatus() const;
+
+    void SetParent(const Block* const blk);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -186,8 +160,8 @@ public:
         READWRITE(outputs);
     }
 
-    void SetParent(const Block* const blk) {
-        parentBlock_ = blk;
+    friend bool operator==(const Transaction& a, const Transaction& b) {
+        return a.GetHash() == b.GetHash();
     }
 
 private:
