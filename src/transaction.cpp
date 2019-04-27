@@ -1,11 +1,8 @@
 #include "transaction.h"
-#include "params.h"
 
-std::string std::to_string(const TxOutPoint& outpoint) {
-    std::string str;
-    str += strprintf("%s:%d", std::to_string(outpoint.bHash), outpoint.index);
-    return str;
-}
+/*
+ * TxInput class START
+ */
 
 TxInput::TxInput(const TxOutPoint& outpointToPrev, const Script& script) {
     outpoint  = outpointToPrev;
@@ -22,18 +19,31 @@ TxInput::TxInput(const Script& script) {
     scriptSig = script;
 }
 
-std::string std::to_string(const TxInput& input) {
-    std::string str;
-    str += "TxInput{ ";
+bool TxInput::IsRegistration() const {
+    return outpoint.index == UNCONNECTED;
+}
 
-    if (input.IsRegistration()) {
-        str += "REGISTRATION";
-    } else {
-        str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
-    }
+bool TxInput::IsFirstRegistration() const {
+    return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
+}
 
-    str += " }";
-    return str;
+
+void TxInput::SetParent(const Transaction* const tx) {
+    assert(tx != nullptr);
+    parentTx_ = tx;
+}
+
+const Transaction* TxInput::GetParentTx() {
+    return parentTx_;
+}
+
+/*
+ * TxOutput class START
+ */
+
+TxOutput::TxOutput() {
+    value = IMPOSSIBLE_COIN;
+    scriptPubKey.clear();
 }
 
 TxOutput::TxOutput(const Coin& coinValue, const Script& script) {
@@ -41,12 +51,19 @@ TxOutput::TxOutput(const Coin& coinValue, const Script& script) {
     scriptPubKey = script;
 }
 
-std::string std::to_string(const TxOutput& output) {
-    std::string str;
-    str += "TxOut{ ";
-    str += strprintf("value=%d, scriptPubKey=%s", output.value, std::to_string(output.scriptPubKey));
-    str += " }";
-    return str;
+void TxOutput::SetParent(const Transaction* const tx) {
+    assert(tx != nullptr);
+    parentTx_ = tx;
+}
+
+/*
+ * transaction class START
+ */
+
+Transaction::Transaction() {
+    inputs  = std::vector<TxInput>();
+    outputs = std::vector<TxOutput>();
+    status_ = UNKNOWN;
 }
 
 Transaction::Transaction(const Transaction& tx) {
@@ -100,6 +117,37 @@ bool Transaction::Verify() const {
     }
 
     return true;
+}
+
+/*
+ * to_string methods START
+ */
+
+std::string std::to_string(const TxOutPoint& outpoint) {
+    std::string str;
+    str += strprintf("%s:%d", std::to_string(outpoint.bHash), outpoint.index);
+    return str;
+}
+
+std::string std::to_string(const TxInput& input) {
+    std::string str;
+    str += "TxInput{ ";
+
+    if (input.IsRegistration()) {
+        str += "REGISTRATION";
+    } else {
+        str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
+    }
+
+    return str + " }";
+}
+
+std::string std::to_string(const TxOutput& output) {
+    std::string str;
+    str += "TxOut{ ";
+    str += strprintf("value=%d, scriptPubKey=%s", output.value, std::to_string(output.scriptPubKey));
+
+    return str += " }";
 }
 
 std::string std::to_string(Transaction& tx) {

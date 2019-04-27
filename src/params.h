@@ -4,8 +4,10 @@
 #include <iostream>
 #include <sstream>
 
-#include "block.h"
-#include "utilstrencodings.h"
+/* the inclusion below do not
+ * result into circular deps */
+#include "arith_uint256.h"
+#include "coin.h"
 
 // 1 day per diffculty cycle on average
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
@@ -46,17 +48,8 @@ public:
     Coin maxMoney;
     Coin reward;
 
-    const Block& GetGenesisBlock() const;
-    const uint256& GetGenesisBlockHash() const;
-
-
 protected:
-    Params(){};
-
-    // genesis
-    uint256 genesisBlockHash;
-    Block genesisBlock;
-    virtual void CreateGenesis() = 0;
+    Params() = default;
 };
 
 class TestNetParams : public Params {
@@ -65,8 +58,6 @@ public:
 
 protected:
     TestNetParams();
-
-    void CreateGenesis();
 };
 
 // instance of the parameters for usage throughout the project

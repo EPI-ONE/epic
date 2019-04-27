@@ -3,33 +3,57 @@
 
 #include <cstdint>
 #include <ctime>
+#include <unordered_map>
 
 #include "arith_uint256.h"
 #include "coin.h"
 #include "hash.h"
-#include "milestone.h"
+#include "params.h"
 #include "transaction.h"
-#include "uint256.h"
 
-static constexpr std::size_t HEADER_SIZE = 116;
-static const arith_uint256 LARGEST_HASH =
-    arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+namespace std {
+/* Returns a multi-line string containing a description of the contents of
+ * the block. Use for debugging purposes only.
+ */
+string to_string(Block& block);
+} // namespace std
 
-enum MilestoneStatus : uint_fast8_t {
+enum MilestoneStatus : uint8_t {
     IS_NOT_MILESTONE = 0,
     IS_TRUE_MILESTONE,
     IS_FAKE_MILESTONE,
 };
 
-class Block;
+struct Milestone {
+    uint64_t lastUpdateTime_;
+    uint64_t hashRate_;
+    uint64_t height_;
 
-namespace std {
-/*
- * Returns a multi-line string containing a description of the contents of
- * the block. Use for debugging purposes only.
- */
-string to_string(Block& block);
-} // namespace std
+    arith_uint256 milestoneTarget_;
+    arith_uint256 blockTarget_;
+    arith_uint256 chainwork_;
+
+    std::shared_ptr<Milestone> pprevious_;
+    std::shared_ptr<Milestone> pnext_;
+
+    // a vector consists of blocks with its offset w.r.t this level set of this milestone
+    std::vector<std::pair<std::shared_ptr<Block>, uint64_t>> vblockstore_;
+    std::unordered_map<uint256, uint256> pubkeySnapshot_;
+
+    /* deault constructor */
+    Milestone() = default;
+
+    /* standard constructor that only
+     * initializes the first six members */
+    Milestone(uint64_t lastUpdateTime,
+        uint64_t hashRate,
+        uint64_t height,
+        arith_uint256 milestoneTarget,
+        arith_uint256 blockTarget,
+        arith_uint256 chainwork)
+        : lastUpdateTime_(lastUpdateTime), hashRate_(hashRate), height_(height), milestoneTarget_(milestoneTarget),
+          blockTarget_(blockTarget), chainwork_(chainwork) {}
+};
 
 class BlockHeader {
 public:
@@ -175,15 +199,25 @@ public:
 
     friend std::string std::to_string(Block& block);
 
-private:
+    static void serializeMilestone(VStream& s, Milestone& milestone);
+    static void deserializeMilestone(VStream& s, Milestone& milestone);
+
+    static Block CreateGenesis();
+
+protected:
     std::optional<Transaction> transaction_;
     Coin cumulativeReward_;
     uint256 hash_;
 
-    std::shared_ptr<Milestone> milestoneInstance_;
+    std::shared_ptr<Milestone> milestone_;
     uint64_t minerChainHeight_;
     bool isMilestone_ = false;
 };
 
+static const uint256 genesisBlockHash    = Block::CreateGenesis().GetHash();
+static const Block genesisBlock          = Block::CreateGenesis();
+static constexpr std::size_t HEADER_SIZE = 116;
+static const arith_uint256 LARGEST_HASH =
+    arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
 #endif //__SRC_BLOCK_H__

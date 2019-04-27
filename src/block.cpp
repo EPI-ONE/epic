@@ -1,5 +1,4 @@
 #include "block.h"
-#include "params.h"
 
 BlockHeader::BlockHeader() {
     SetNull();
@@ -62,7 +61,7 @@ bool Block::Verify() {
     }
 
     // check the conditions of the first registration block
-    if (prevBlockHash_ == params.GetGenesisBlockHash()) {
+    if (prevBlockHash_ == genesisBlockHash) {
         // Must contain a tx
         if (!HasTransaction()) {
             return false;
@@ -115,11 +114,17 @@ void Block::SetNonce(uint32_t nonce) {
 
 void Block::InvalidateMilestone() {
     isMilestone_ = false;
+    milestone_.reset();
 }
 
 void Block::SetMilestoneInstance(Milestone& ms) {
-    milestoneInstance_ = std::make_shared<Milestone>(ms);
-    isMilestone_       = true;
+    if (milestone_.use_count() == 0) {
+        milestone_ = std::make_shared<Milestone>(ms);
+    } else {
+        milestone_.reset(&ms);
+    }
+
+    isMilestone_ = true;
 }
 
 /*
@@ -198,14 +203,14 @@ void Block::SerializeToDB(VStream& s) const {
 
     if (isMilestone_) {
         s << (uint8_t) IS_TRUE_MILESTONE;
-    } else if (milestoneInstance_ != nullptr) {
+    } else if (milestone_ != nullptr) {
         s << (uint8_t) IS_FAKE_MILESTONE;
     } else {
         s << (uint8_t) IS_NOT_MILESTONE;
     }
 
-    if (milestoneInstance_ != nullptr) {
-        s << *milestoneInstance_;
+    if (milestone_ != nullptr) {
+        serializeMilestone(s, *milestone_);
     }
 }
 
@@ -223,8 +228,9 @@ void Block::DeserializeFromDB(VStream& s) {
 
     if (msFlag > 0) {
         // TODO: store the milestone object in some kind of cache
-        milestoneInstance_ = std::make_shared<Milestone>();
-        s >> *milestoneInstance_;
+        milestone_ = std::make_shared<Milestone>();
+        // s >> *milestone_;
+        deserializeMilestone(s, *milestone_);
     }
 }
 
@@ -244,4 +250,44 @@ std::string std::to_string(Block& block) {
         s += std::to_string(*(block.transaction_));
     }
     return s;
+}
+
+void Block::serializeMilestone(VStream& s, Milestone& milestone) {
+    ::Serialize(s, VARINT(milestone.height_));
+    ::Serialize(s, milestone.chainwork_.GetCompact());
+    ::Serialize(s, milestone.lastUpdateTime_);
+    ::Serialize(s, milestone.milestoneTarget_.GetCompact());
+    ::Serialize(s, milestone.blockTarget_.GetCompact());
+    ::Serialize(s, VARINT(milestone.hashRate_));
+}
+
+void Block::deserializeMilestone(VStream& s, Milestone& milestone) {
+    ::Unserialize(s, VARINT(milestone.height_));
+    milestone.chainwork_.SetCompact(ser_readdata32(s));
+    milestone.lastUpdateTime_ = ser_readdata64(s);
+    milestone.milestoneTarget_.SetCompact(ser_readdata32(s));
+    milestone.blockTarget_.SetCompact(ser_readdata32(s));
+    ::Unserialize(s, VARINT(milestone.hashRate_));
+}
+
+Block Block::CreateGenesis() {
+    Block genesis(GENESIS_BLOCK_VERSION);
+    Transaction tx = Transaction();
+
+    // Construct a script containing the difficulty bits and the following
+    // message:
+    std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
+                       "4656e20696e20746865206576656e696e6720616e64207765206172"
+                       "65207374696c6c20776f726b696e6721");
+
+    // Convert the string to bytes
+    auto vs = VStream(ParseHex(hexStr));
+    tx.AddInput(TxInput(Script(vs))).FinalizeHash();
+
+    // TODO: add output
+    genesis.AddTransaction(tx);
+    genesis.SetMinerChainHeight(0);
+    genesis.ResetReward();
+
+    return genesis;
 }

@@ -162,13 +162,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
     block.ResetReward();
 
     // Link a ms instance
-    Milestone ms;
-    ms.height           = 100;
-    ms.chainwork        = arith_uint256(0X3E8);
-    ms.lastUpdateTime_  = time(nullptr);
-    ms.milestoneTarget_ = arith_uint256(0X3E8).GetCompact();
-    ms.blockTarget_     = arith_uint256(0).GetCompact();
-    ms.hashRate_        = 100000;
+    Milestone ms(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
+        arith_uint256(0X3E8));
     block.SetMilestoneInstance(ms);
 
     // Make it a fake milestone

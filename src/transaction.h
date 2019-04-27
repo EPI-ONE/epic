@@ -3,10 +3,12 @@
 
 #include "coin.h"
 #include "hash.h"
+#include "params.h"
 #include "script.h"
 #include "serialize.h"
 #include "tinyformat.h"
 
+#include <cassert>
 #include <limits>
 #include <sstream>
 #include <unordered_set>
@@ -26,15 +28,15 @@ public:
     // TODO: search for the pointer of BlockIndex in Cat
     TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
 
+    friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
+        return out1.index == out2.index && out1.bHash == out2.bHash;
+    }
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(bHash);
         READWRITE(index);
-    }
-
-    friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
-        return out1.index == out2.index && out1.bHash == out2.bHash;
     }
 };
 
@@ -51,20 +53,24 @@ public:
     TxOutPoint outpoint;
     Script scriptSig;
 
-    TxInput(){};
+    TxInput() = default;
+
     explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+
     TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
+
     TxInput(const Script& script);
+
+    bool IsRegistration() const;
+
+    bool IsFirstRegistration() const;
+
+    void SetParent(const Transaction* const tx);
+
+    const Transaction* GetParentTx();
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
         return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
-    }
-
-    bool IsRegistration() const {
-        return outpoint.index == UNCONNECTED;
-    }
-    bool IsFirstRegistration() const {
-        return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
     }
 
     ADD_SERIALIZE_METHODS;
@@ -72,14 +78,6 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(outpoint);
         READWRITE(scriptSig);
-    }
-
-    void SetParent(const Transaction* const tx) {
-        parentTx_ = tx;
-    }
-
-    const Transaction* GetParentTx() {
-        return parentTx_;
     }
 
 private:
@@ -92,12 +90,11 @@ public:
     Coin value;
     Script scriptPubKey;
 
-    TxOutput() {
-        value = IMPOSSIBLE_COIN;
-        scriptPubKey.clear();
-    }
+    TxOutput();
 
     TxOutput(const Coin& value, const Script& scriptPubKey);
+
+    void SetParent(const Transaction* const tx);
 
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
         return (a.value == b.value) && (a.scriptPubKey.bytes == b.scriptPubKey.bytes);
@@ -108,10 +105,6 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(value);
         READWRITE(scriptPubKey);
-    }
-
-    void SetParent(const Transaction* const tx) {
-        parentTx_ = tx;
     }
 
 private:
@@ -126,11 +119,7 @@ public:
         INVALID,
     };
 
-    Transaction() {
-        inputs  = std::vector<TxInput>();
-        outputs = std::vector<TxOutput>();
-        status_ = UNKNOWN;
-    }
+    Transaction();
 
     explicit Transaction(const Transaction& tx);
 

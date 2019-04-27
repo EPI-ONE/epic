@@ -6,7 +6,6 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
-#include "compat/bitcoin_endian.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -22,6 +21,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "compat/bitcoin_endian.h"
 
 static const unsigned int MAX_SIZE = 0x02000000;
 
@@ -495,10 +496,10 @@ I ReadVarInt(Stream& is) {
 
 template <VarIntMode Mode, typename I>
 class VarInt {
-   protected:
+protected:
     I& n;
 
-   public:
+public:
     explicit VarInt(I& nIn) : n(nIn) {}
 
     template <typename Stream>
@@ -550,8 +551,7 @@ protected:
     uint64_t& n;
 
 public:
-    explicit CCompactSize(uint64_t& nIn) : n(nIn) {
-    }
+    explicit CCompactSize(uint64_t& nIn) : n(nIn) {}
 
     template <typename Stream>
     void Serialize(Stream& s) const {
@@ -570,8 +570,7 @@ protected:
     std::string& string;
 
 public:
-    explicit LimitedString(std::string& _string) : string(_string) {
-    }
+    explicit LimitedString(std::string& _string) : string(_string) {}
 
     template <typename Stream>
     void Deserialize(Stream& s) {
@@ -912,8 +911,7 @@ protected:
     const int nVersion;
 
 public:
-    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {
-    }
+    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {}
 
     void write(const char* psz, size_t _nSize) {
         this->nSize += _nSize;
@@ -940,8 +938,7 @@ public:
 };
 
 template <typename Stream>
-void SerializeMany(Stream& s) {
-}
+void SerializeMany(Stream& s) {}
 
 template <typename Stream, typename Arg, typename... Args>
 void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
@@ -950,8 +947,7 @@ void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
 }
 
 template <typename Stream>
-inline void DeserializeMany(Stream& s) {
-}
+inline void DeserializeMany(Stream& s) {}
 
 template <typename Stream, typename Arg, typename... Args>
 inline void DeserializeMany(Stream& s, Arg&& arg, Args&&... args) {
