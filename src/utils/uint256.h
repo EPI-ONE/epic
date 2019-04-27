@@ -91,7 +91,7 @@ public:
     }
 
     template <typename Stream>
-    void Unserialize(Stream& s) {
+    void Deserialize(Stream& s) {
         s.read((char*) data, sizeof(data));
     }
 };

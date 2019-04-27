@@ -22,7 +22,7 @@ TEST_F(TestNetMsg, Ping) {
     ping.Serialize(os);
 
     Ping ping1;
-    ping1.Unserialize(os);
+    ping1.Deserialize(os);
     EXPECT_EQ(ping.nonce, ping1.nonce);
 }
 
@@ -32,7 +32,7 @@ TEST_F(TestNetMsg, Pong) {
     pong.Serialize(os);
 
     Pong pong1;
-    pong1.Unserialize(os);
+    pong1.Deserialize(os);
     EXPECT_EQ(pong.nonce, pong1.nonce);
 }
 
@@ -43,7 +43,7 @@ TEST_F(TestNetMsg, AddressMessage) {
     addressMessage.Serialize(os);
 
     AddressMessage addressMessage1;
-    addressMessage1.Unserialize(os);
+    addressMessage1.Deserialize(os);
     EXPECT_EQ(addressMessage.addressList.size(), addressMessage1.addressList.size());
     for (int i = 0; i < addressMessage.addressList.size(); i++) {
         EXPECT_EQ(addressMessage.addressList[i], addressMessage1.addressList[i]);
@@ -56,7 +56,7 @@ TEST_F(TestNetMsg, VersionMessage) {
     versionMessage.Serialize(os);
 
     VersionMessage versionMessage1;
-    versionMessage1.Unserialize(os);
+    versionMessage1.Deserialize(os);
     EXPECT_EQ(versionMessage.current_height, versionMessage1.current_height);
     EXPECT_EQ(versionMessage.address_you, versionMessage1.address_you);
     EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);

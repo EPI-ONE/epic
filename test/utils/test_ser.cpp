@@ -36,11 +36,11 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
     sinput << outpoint;
     std::string s = sinput.str();
 
-    TxOutPoint outpointFromUnserialization;
-    sinput >> outpointFromUnserialization;
+    TxOutPoint outpointFromDeserialization;
+    sinput >> outpointFromDeserialization;
 
     VStream soutput;
-    soutput << outpointFromUnserialization;
+    soutput << outpointFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
@@ -52,11 +52,11 @@ TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     sinput << input;
     std::string s = sinput.str();
 
-    TxInput inputFromUnserialization;
-    sinput >> inputFromUnserialization;
+    TxInput inputFromDeserialization;
+    sinput >> inputFromDeserialization;
 
     VStream soutput;
-    soutput << inputFromUnserialization;
+    soutput << inputFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
@@ -67,11 +67,11 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
     sinput << output;
     std::string s = sinput.str();
 
-    TxOutput outputFromUnserialization;
-    sinput >> outputFromUnserialization;
+    TxOutput outputFromDeserialization;
+    sinput >> outputFromDeserialization;
 
     VStream soutput;
-    soutput << outputFromUnserialization;
+    soutput << outputFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
@@ -88,11 +88,11 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     sinput << tx;
     std::string s = sinput.str();
 
-    Transaction txFromUnserialization;
-    sinput >> txFromUnserialization;
+    Transaction txFromDeserialization;
+    sinput >> txFromDeserialization;
 
     VStream soutput;
-    soutput << txFromUnserialization;
+    soutput << txFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
@@ -120,11 +120,11 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     sinput << block;
     std::string s = sinput.str();
 
-    Block blockFromUnserialization;
-    sinput >> blockFromUnserialization;
+    Block blockFromDeserialization;
+    sinput >> blockFromDeserialization;
 
     VStream soutput;
-    soutput << blockFromUnserialization;
+    soutput << blockFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
