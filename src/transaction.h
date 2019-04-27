@@ -1,11 +1,9 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include "coin.h"
 #include "hash.h"
 #include "params.h"
 #include "script.h"
-#include "serialize.h"
 #include "tinyformat.h"
 
 #include <cassert>

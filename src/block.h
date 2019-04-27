@@ -6,15 +6,9 @@
 #include <unordered_map>
 
 #include "arith_uint256.h"
-#include "coin.h"
-#include "hash.h"
-#include "params.h"
 #include "transaction.h"
 
 namespace std {
-/* Returns a multi-line string containing a description of the contents of
- * the block. Use for debugging purposes only.
- */
 string to_string(Block& block);
 } // namespace std
 

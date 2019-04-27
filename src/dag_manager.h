@@ -1,11 +1,11 @@
 #ifndef __SRC_DAG_MANAGER_H__
 #define __SRC_DAG_MANAGER_H__
 
-#include "block.h"
 #include "chain.h"
 #include "peer.h"
 #include "task.h"
 #include "uint256.h"
+#include "caterpillar.h"
 #include <atomic>
 #include <list>
 

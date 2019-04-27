@@ -276,8 +276,8 @@ Block Block::CreateGenesis() {
     Block genesis(GENESIS_BLOCK_VERSION);
     Transaction tx;
 
-    // Construct a script containing the difficulty bits and the following
-    // message:
+    // Construct a script containing the difficulty bits
+    // and the following message:
     std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
                        "4656e20696e20746865206576656e696e6720616e64207765206172"
                        "65207374696c6c20776f726b696e6721");
