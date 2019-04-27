@@ -1,5 +1,5 @@
-#ifndef EPIC_INIT_H
-#define EPIC_INIT_H
+#ifndef __SRC_INIT_H__
+#define __SRC_INIT_H__
 
 #include "config.h"
 #include "cpptoml.h"
@@ -7,9 +7,9 @@
 #include "file_utils.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
-enum {
+enum : uint8_t {
     COMMANDLINE_INIT_FAILURE = 1,
-    LOG_INIT_FAILURE         = 2,
+    LOG_INIT_FAILURE,
 };
 
 void Init(int argc, char* argv[]);
@@ -23,4 +23,4 @@ void UseFileLogger(const std::string& path, const std::string& filename);
 void InitLogger();
 
 
-#endif // EPIC_INIT_H
+#endif // __SRC_INIT_H__
