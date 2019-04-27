@@ -288,6 +288,7 @@ Block Block::CreateGenesis() {
     // Add input and output
     tx.AddInput(TxInput(Script(vs)));
     std::optional<CKeyID> pubKeyID = DecodeAddress("JXA9kkybKZL848rxcvczu2pFGcodcHXrC");
+    std::cout << "whether we have the key here:" << pubKeyID.has_value() << std::endl;
     tx.AddOutput(TxOutput(66, Script(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesis.AddTransaction(tx);
