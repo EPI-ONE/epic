@@ -1,12 +1,11 @@
 #ifndef __SRC_PARAMS_H__
 #define __SRC_PARAMS_H__
 
-#include "arith_uint256.h"
-#include "block.h"
-#include "coin.h"
-#include "uint256.h"
 #include <iostream>
 #include <sstream>
+
+#include "block.h"
+#include "utilstrencodings.h"
 
 // day(s) per diffculty cycle on average
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
@@ -41,45 +40,36 @@ public:
     uint32_t interval;
     uint32_t targetTPS;
     uint32_t punctualityThred;
+
     arith_uint256 maxTarget;
     Coin maxMoney;
     Coin reward;
-    const Block& GetGenesisBlock() const {
-        return genesisBlock;
-    }
-    const uint256& GetGenesisBlockHash() const {
-        return genesisBlockHash;
-    }
+
+    const Block& GetGenesisBlock() const;
+
+    const uint256& GetGenesisBlockHash() const;
 
 protected:
-    Params(){};
+    Params() = default;
+
     // genesis
     uint256 genesisBlockHash;
     Block genesisBlock;
+
     virtual void CreateGenesis() = 0;
 };
 
 class TestNetParams : public Params {
 public:
-    static const Params& GetParams() {
-        static const TestNetParams instance;
-        return instance;
-    }
+    static const Params& GetParams();
 
 protected:
-    TestNetParams() {
-        targetTimespan          = TARGET_TIMESPAN;
-        timeInterval            = TIME_INTERVAL;
-        interval                = INTERVAL;
-        targetTPS               = 100;
-        punctualityThred        = PUNTUALITY_THRESHOLD;
-        arith_uint256 maxTarget = arith_uint256().SetCompact(0x2100ffffL);
-        maxMoney                = MAX_MONEY;
-        reward                  = 1;
-        CreateGenesis();
-        genesisBlockHash = genesisBlock.GetHash();
-    }
+    TestNetParams();
+
     void CreateGenesis();
 };
+
+// instance of the parameters for usage throughout the project
+static const Params& params = TestNetParams::GetParams();
 
 #endif // __SRC_PARAMS_H__
