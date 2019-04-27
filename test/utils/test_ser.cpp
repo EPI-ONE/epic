@@ -9,12 +9,14 @@
 
 class TestSer : public testing::Test {
 protected:
+    Script randomBytes;
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
-    Script randomBytes;
+
     void SetUp() {
         rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
+        rand2 = uint256S("e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
     }
 
     void TearDown() {}
@@ -94,11 +96,10 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
-    TxOutput output     = TxOutput(100, Script());
-    Transaction tx      = Transaction(1);
-    tx.AddInput(input);
-    tx.AddOutput(output);
+    Transaction tx      = Transaction(Transaction::Validity::VALID);
+
+    tx.AddInput(TxInput(outpoint, Script()));
+    tx.AddOutput(TxOutput(100, Script()));
 
     VStream sinput;
     sinput << tx;
@@ -124,22 +125,14 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
-    auto emptyChar = new char[256]();
-    uint256 zeros  = uint256S(emptyChar);
-    delete[] emptyChar;
-
-    uint256 rand2 = uint256S("e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
-    uint256 rand3 = uint256S("84a01628cd9f0f715a9a611d99ea1f20bd7d823d04f41194aa49e03957d7e22e");
-
-    Block block = Block(1, rand1, zeros, rand2, rand3, 1, 1, 1);
+    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
-    TxOutput output     = TxOutput(100, Script());
-    Transaction tx      = Transaction(1);
-    tx.AddInput(input);
-    tx.AddOutput(output);
+    Transaction tx      = Transaction(Transaction::Validity::VALID);
+
+    tx.AddInput(TxInput(outpoint, Script()));
+    tx.AddOutput(TxOutput(100, Script()));
     block.AddTransaction(tx);
 
     VStream sinput;
