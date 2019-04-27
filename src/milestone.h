@@ -1,16 +1,16 @@
 #ifndef __SRC_MILESTONE_H__
 #define __SRC_MILESTONE_H__
 
-#include "block.h"
-#include "serialize.h"
-#include "uint256.h"
 #include <cstdint>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "block.h"
+
 class Block;
 class TxOutput;
+
 class Milestone {
 private:
     size_t height_;
@@ -38,6 +38,7 @@ public:
 
     // difficulty calculation
     void CheckDifficultyTransitions();
+
     // when receiving a milestone block, return a new milestone object
     std::unique_ptr<Milestone> AddBlock(const std::shared_ptr<const Block> pblock,
         const std::shared_ptr<std::vector<const Block>> pvblockstore,
@@ -65,7 +66,6 @@ public:
         blockTarget_.SetCompact(ser_readdata32(s));
         ::Unserialize(s, VARINT(hashRate_));
     }
-    // get and set methods
 };
 
 #endif // __SRC_MILESTONE_H__
