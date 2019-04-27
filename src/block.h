@@ -1,11 +1,11 @@
 #ifndef __SRC_BLOCK_H__
 #define __SRC_BLOCK_H__
 
-#include <cstdint>
 #include <ctime>
 #include <unordered_map>
 
 #include "arith_uint256.h"
+#include "pubkey.h"
 #include "transaction.h"
 
 namespace std {
@@ -207,8 +207,8 @@ protected:
     bool isMilestone_ = false;
 };
 
-static const uint256 genesisBlockHash    = Block::CreateGenesis().GetHash();
 static const Block genesisBlock          = Block::CreateGenesis();
+static const uint256 genesisBlockHash    = Block::CreateGenesis().GetHash();
 static constexpr std::size_t HEADER_SIZE = 116;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");

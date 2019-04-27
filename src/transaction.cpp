@@ -90,7 +90,7 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
 }
 
 void Transaction::FinalizeHash() {
-    if (!hash_.IsNull())
+    if (hash_.IsNull())
         hash_ = Hash<1>(VStream(*this));
 }
 

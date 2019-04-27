@@ -166,6 +166,10 @@ void CKey::MakeNewKey(bool fCompressedIn) {
     fCompressed = fCompressedIn;
 }
 
+void CKey::MakeNewKey(std::string& seed, bool fCompressed) {
+
+}
+
 CPrivKey CKey::GetPrivKey() const {
     assert(fValid);
     CPrivKey privkey;
@@ -277,7 +281,7 @@ bool ECC_InitSanityCheck() {
     return key.VerifyPubKey(pubkey);
 }
 
-void ECC_Start() {
+void ECC_Start(CPrivKey vseed) {
     assert(secp256k1_context_sign == nullptr);
 
     secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
@@ -286,8 +290,9 @@ void ECC_Start() {
 
     {
         // Pass in a random blinding seed to the secp256k1 context.
-        std::vector<unsigned char, secure_allocator<unsigned char>> vseed(32);
+    if (vseed == CPrivKey(32)) {
         GetRandBytes(vseed);
+    }
         bool ret = secp256k1_context_randomize(ctx, vseed.data());
         assert(ret);
     }

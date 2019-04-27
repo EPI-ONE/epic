@@ -284,11 +284,11 @@ Block Block::CreateGenesis() {
 
     // Convert the string to bytes
     auto vs = VStream(ParseHex(hexStr));
+
+    // Add input and output
     tx.AddInput(TxInput(Script(vs)));
-
-    // TODO: add output
-
-    tx.FinalizeHash();
+    std::optional<CKeyID> pubKeyID = DecodeAddress("JXA9kkybKZL848rxcvczu2pFGcodcHXrC");
+    tx.AddOutput(TxOutput(66, Script(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesis.AddTransaction(tx);
     genesis.SetMinerChainHeight(0);
@@ -296,7 +296,7 @@ Block Block::CreateGenesis() {
     genesis.SetDifficultyTarget(EASY_DIFFICULTY_TARGET.GetCompact());
     genesis.SetTime(1548078136L);
     genesis.SetNonce(11882);
-    // the hash should now be 000a923e9af1c429f630e32b5bddba79bb9f0a055cfb4436a4630bf22cf98fda
+    assert(genesis.GetHash() == uint256S("3f9ed447274fd9050aef23f1efbb6845609c1858f0d17f04655a09503eb70115"));
 
     return genesis;
 }
