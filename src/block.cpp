@@ -97,6 +97,22 @@ void Block::ResetReward() {
     cumulativeReward_ = ZERO_COIN;
 }
 
+void Block::SetDifficultyTarget(uint32_t target) {
+    diffTarget_ = target;
+}
+
+void Block::SetTime(time_t time) {
+    time_ = time;
+}
+
+const time_t Block::GetTime() const {
+    return time_;
+}
+
+void Block::SetNonce(uint32_t nonce) {
+    nonce_ = nonce;
+}
+
 void Block::InvalidateMilestone() {
     isMilestone_ = false;
 }

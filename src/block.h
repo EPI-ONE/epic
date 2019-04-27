@@ -96,6 +96,14 @@ public:
 
     void ResetReward();
 
+    void SetDifficultyTarget(uint32_t target);
+
+    void SetTime(time_t time);
+
+    const time_t GetTime() const;
+
+    void SetNonce(uint32_t nonce);
+
     void InvalidateMilestone();
 
     void SetMilestoneInstance(Milestone& ms);
