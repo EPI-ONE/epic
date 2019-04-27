@@ -1,5 +1,5 @@
-#ifndef EPIC_CONFIG_H
-#define EPIC_CONFIG_H
+#ifndef __SRC_CONFIG_H__
+#define __SRC_CONFIG_H__
 
 #include <memory>
 #include <sstream>
@@ -16,63 +16,54 @@ public:
     // default bind port
     static const uint16_t defaultPort = 7877;
 
-private:
-    // config file
-    std::string configFilePath_;
-
-    // logger
-    bool useFileLogger_         = true;
-    std::string loggerPath_     = "logs/";
-    std::string loggerFilename_ = "Debug.log";
-
-    // address manager
-    std::string addressPath_     = "";
-    std::string addressFilename_ = "address.toml";
-    std::uint32_t saveInterval_  = 15 * 60;
-
-    // network config
-    std::string bindAddress_ = defaultIP;
-    uint16_t bindPort_       = defaultPort;
-
-    std::vector<NetAddress> seeds;
-
-public:
     const std::string& getConfigFilePath() const {
         return configFilePath_;
     }
+
     void setConfigFilePath(const std::string& configFilePath) {
         configFilePath_ = configFilePath;
     }
+
     bool isUseFileLogger() const {
         return useFileLogger_;
     }
+
     void setUseFileLogger(bool useFileLogger) {
         useFileLogger_ = useFileLogger;
     }
+
     const std::string& getLoggerPath() const {
         return loggerPath_;
     }
+
     void setLoggerPath(const std::string& loggerPath) {
         loggerPath_ = loggerPath;
     }
+
     const std::string& getLoggerFilename() const {
         return loggerFilename_;
     }
+
     void setLoggerFilename(const std::string& loggerFilename) {
         loggerFilename_ = loggerFilename;
     }
+
     const std::string& getAddressPath() const {
         return addressPath_;
     }
+
     void setAddressPath(const std::string& addressPath) {
         addressPath_ = addressPath;
     }
+
     const std::string& getAddressFilename() const {
         return addressFilename_;
     }
+
     void setAddressFilename(const std::string& addressFilename) {
         addressFilename_ = addressFilename;
     }
+
     uint32_t getSaveInterval() const {
         return saveInterval_;
     }
@@ -126,7 +117,28 @@ public:
         ss << "]" << std::endl;
         spdlog::info(ss.str());
     }
+
+private:
+    // config file
+    std::string configFilePath_;
+
+    // logger
+    bool useFileLogger_         = true;
+    std::string loggerPath_     = "logs/";
+    std::string loggerFilename_ = "Debug.log";
+
+    // address manager
+    std::string addressPath_     = "";
+    std::string addressFilename_ = "address.toml";
+    std::uint32_t saveInterval_  = 15 * 60;
+
+    // network config
+    std::string bindAddress_ = defaultIP;
+    uint16_t bindPort_       = defaultPort;
+
+    std::vector<NetAddress> seeds;
 };
 
 extern std::unique_ptr<Config> config;
-#endif // EPIC_CONFIG_H
+
+#endif // __SRC_CONFIG_H__
