@@ -245,10 +245,12 @@ std::string std::to_string(Block& block) {
     s += strprintf("   time: %d \n", std::to_string(block.time_));
     s += strprintf("   difficulty target: %d \n", std::to_string(block.diffTarget_));
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
+
     if (block.HasTransaction()) {
         s += "   with transaction:\n";
         s += std::to_string(*(block.transaction_));
     }
+
     return s;
 }
 
@@ -272,7 +274,7 @@ void Block::deserializeMilestone(VStream& s, Milestone& milestone) {
 
 Block Block::CreateGenesis() {
     Block genesis(GENESIS_BLOCK_VERSION);
-    Transaction tx = Transaction();
+    Transaction tx;
 
     // Construct a script containing the difficulty bits and the following
     // message:
@@ -288,6 +290,10 @@ Block Block::CreateGenesis() {
     genesis.AddTransaction(tx);
     genesis.SetMinerChainHeight(0);
     genesis.ResetReward();
+    genesis.SetDifficultyTarget(EASY_DIFFICULTY_TARGET.GetCompact());
+    genesis.SetTime(1548078136L);
+    genesis.SetNonce(11882);
+    // the hash should now be 000a923e9af1c429f630e32b5bddba79bb9f0a055cfb4436a4630bf22cf98fda
 
     return genesis;
 }
