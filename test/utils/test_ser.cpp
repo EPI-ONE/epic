@@ -94,7 +94,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    Transaction tx      = Transaction(Transaction::Validity::VALID);
+    Transaction tx      = Transaction();
 
     tx.AddInput(TxInput(outpoint, Script()));
     tx.AddOutput(TxOutput(100, Script()));
@@ -127,7 +127,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    Transaction tx      = Transaction(Transaction::Validity::VALID);
+    Transaction tx      = Transaction();
 
     tx.AddInput(TxInput(outpoint, Script()));
     tx.AddOutput(TxOutput(100, Script()));

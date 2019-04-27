@@ -126,10 +126,10 @@ public:
         INVALID,
     };
 
-    Transaction(Validity&& status = UNKNOWN) {
+    Transaction() {
         inputs  = std::vector<TxInput>();
         outputs = std::vector<TxOutput>();
-        status_ = status;
+        status_ = UNKNOWN;
     }
 
     explicit Transaction(const Transaction& tx);
