@@ -1,5 +1,5 @@
-#ifndef EPIC_FILE_UTILS_H
-#define EPIC_FILE_UTILS_H
+#ifndef __SRC_UTILS_FILE_UTILS_H__
+#define __SRC_UTILS_FILE_UTILS_H__
 
 #include <cerrno>
 #include <fstream>
@@ -16,4 +16,4 @@ bool CheckFileExist(const std::string& filePath);
 // used c like way to implement this
 bool Mkdir_recursive(const std::string& path);
 
-#endif // EPIC_FILE_UTILS_H
+#endif // __SRC_UTILS_FILE_UTILS_H__
