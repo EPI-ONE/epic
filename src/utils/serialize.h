@@ -677,7 +677,7 @@ void Deserialize(Stream& os, std::unique_ptr<const T>& p);
 template <typename Stream, typename T>
 void Serialize(Stream& os, const std::optional<const T>& p);
 template <typename Stream, typename T>
-void Unserialize(Stream& os, std::optional<const T>& p);
+void Deserialize(Stream& os, std::optional<const T>& p);
 
 /**
  * If none of the specialized versions above matched, default to calling member
@@ -867,12 +867,12 @@ void Serialize(Stream& os, const std::optional<T>& p) {
 }
 
 template <typename Stream, typename T>
-void Unserialize(Stream& is, std::optional<T>& p) {
+void Deserialize(Stream& is, std::optional<T>& p) {
     bool flag;
-    Unserialize(is, flag);
+    Deserialize(is, flag);
     if (flag) {
         T t;
-        Unserialize(is, t);
+        Deserialize(is, t);
         p = std::forward<T>(t);
     } else {
         p.reset();

@@ -210,7 +210,7 @@ void Block::SerializeToDB(VStream& s) const {
     }
 
     if (milestone_ != nullptr) {
-        serializeMilestone(s, *milestone_);
+        SerializeMilestone(s, *milestone_);
     }
 }
 
@@ -230,7 +230,7 @@ void Block::DeserializeFromDB(VStream& s) {
         // TODO: store the milestone object in some kind of cache
         milestone_ = std::make_shared<Milestone>();
         // s >> *milestone_;
-        deserializeMilestone(s, *milestone_);
+        DeserializeMilestone(s, *milestone_);
     }
 }
 
@@ -254,7 +254,7 @@ std::string std::to_string(Block& block) {
     return s;
 }
 
-void Block::serializeMilestone(VStream& s, Milestone& milestone) {
+void Block::SerializeMilestone(VStream& s, Milestone& milestone) {
     ::Serialize(s, VARINT(milestone.height_));
     ::Serialize(s, milestone.chainwork_.GetCompact());
     ::Serialize(s, milestone.lastUpdateTime_);
@@ -263,13 +263,13 @@ void Block::serializeMilestone(VStream& s, Milestone& milestone) {
     ::Serialize(s, VARINT(milestone.hashRate_));
 }
 
-void Block::deserializeMilestone(VStream& s, Milestone& milestone) {
-    ::Unserialize(s, VARINT(milestone.height_));
+void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
+    ::Deserialize(s, VARINT(milestone.height_));
     milestone.chainwork_.SetCompact(ser_readdata32(s));
     milestone.lastUpdateTime_ = ser_readdata64(s);
     milestone.milestoneTarget_.SetCompact(ser_readdata32(s));
     milestone.blockTarget_.SetCompact(ser_readdata32(s));
-    ::Unserialize(s, VARINT(milestone.hashRate_));
+    ::Deserialize(s, VARINT(milestone.hashRate_));
 }
 
 Block Block::CreateGenesis() {
@@ -284,9 +284,12 @@ Block Block::CreateGenesis() {
 
     // Convert the string to bytes
     auto vs = VStream(ParseHex(hexStr));
-    tx.AddInput(TxInput(Script(vs))).FinalizeHash();
+    tx.AddInput(TxInput(Script(vs)));
 
     // TODO: add output
+
+    tx.FinalizeHash();
+
     genesis.AddTransaction(tx);
     genesis.SetMinerChainHeight(0);
     genesis.ResetReward();

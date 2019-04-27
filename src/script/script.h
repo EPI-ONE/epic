@@ -36,9 +36,9 @@ public:
     }
 
     template <typename Stream>
-    void Unserialize(Stream& s) {
+    void Deserialize(Stream& s) {
         size_t size;
-        ::Unserialize(s, VARINT(size));
+        ::Deserialize(s, VARINT(size));
         bytes = VStream(size);
         s.read((char*) bytes.data(), size);
     }

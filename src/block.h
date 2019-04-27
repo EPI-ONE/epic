@@ -188,7 +188,6 @@ public:
     }
 
     void SerializeToDB(VStream& s) const;
-
     void DeserializeFromDB(VStream& s);
 
     template <typename Stream>
@@ -199,8 +198,8 @@ public:
 
     friend std::string std::to_string(Block& block);
 
-    static void serializeMilestone(VStream& s, Milestone& milestone);
-    static void deserializeMilestone(VStream& s, Milestone& milestone);
+    static void SerializeMilestone(VStream& s, Milestone& milestone);
+    static void DeserializeMilestone(VStream& s, Milestone& milestone);
 
     static Block CreateGenesis();
 
