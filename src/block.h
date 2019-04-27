@@ -80,7 +80,7 @@ public:
 
     Block(const Block&) = default;
 
-    Block(uint32_t version);
+    Block(uint32_t versionNum);
 
     Block(const BlockHeader& header);
 

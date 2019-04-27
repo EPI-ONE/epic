@@ -41,116 +41,6 @@ void Block::SetNull() {
     transaction_.reset();
 }
 
-// void Block::AddTransaction(Transaction& tx) {
-//    // Invalidate cached hash to force recomputation
-//    hash_.SetNull();
-//    tx.SetParent(this);
-//    transaction_.clear();
-//    transaction_.push_back(tx);
-//}
-
-bool Block::HasTransaction() const {
-    return transaction_.has_value();
-}
-
-void Block::SetMinerChainHeight(uint32_t height) {
-    minerChainHeight_ = height;
-}
-
-void Block::ResetReward() {
-    cumulativeReward_ = ZERO_COIN;
-}
-
-void Block::InvalidateMilestone() {
-    isMilestone_ = false;
-}
-
-void Block::SetMilestoneInstance(Milestone& ms) {
-    milestoneInstance_ = std::make_shared<Milestone>(ms);
-    isMilestone_       = true;
-}
-
-/*
- * TODO: serialize the header and compute the hash of the block
- * Currently is only a placeholder.
- */
-const uint256& Block::GetHash() {
-    if (hash_.IsNull()) {
-        VStream s;
-        SerializeToHash(s);
-        hash_ = Hash<1>(s);
-    }
-
-    return hash_;
-}
-
-// TODO
-size_t Block::GetOptimalEncodingSize() const {
-    return 0;
-}
-
-bool Block::IsRegistration() const {
-    if (!HasTransaction()) {
-        return false;
-    }
-    return transaction_->IsRegistration();
-}
-
-bool Block::IsFirstRegistration() const {
-    if (HasTransaction()) {
-        return transaction_->IsFirstRegistration();
-    }
-    return false;
-}
-
-void Block::AddTransaction(Transaction& tx) {
-    // Invalidate cached hash to force recomputation
-    hash_.SetNull();
-    tx.SetParent(this);
-    transaction_.reset();
-    transaction_ = std::forward<Transaction>(tx);
-}
-
-const uint256& Block::GetTxHash() {
-    if (HasTransaction()) {
-        transaction_->FinalizeHash();
-        return transaction_->GetHash();
-    }
-
-    return Hash::ZERO_HASH;
-}
-
-arith_uint256 Block::GetChainWork() const {
-    arith_uint256 target = GetTargetAsInteger();
-    return LARGEST_HASH / (target + 1);
-}
-
-arith_uint256 Block::GetTargetAsInteger() const {
-    arith_uint256 target = arith_uint256().SetCompact(diffTarget_);
-    if (target <= 0 || target > params.maxTarget) {
-        throw "Bad difficulty target: " + std::to_string(target);
-    }
-
-    return target;
-}
-
-// const uint256& Block::GetTxHash() {
-//    return HasTransaction() ? transaction_.front().GetHash() : Hash::ZERO_HASH;
-//}
-
-bool Block::CheckPOW(bool throwException) {
-    arith_uint256 target = GetTargetAsInteger();
-    arith_uint256 hash   = UintToArith256(GetHash());
-    if (hash > target) {
-        if (throwException) {
-            throw "Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target);
-        } else {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool Block::Verify() {
     // checks pow
     if (!CheckPOW(false)) {
@@ -187,13 +77,109 @@ bool Block::Verify() {
     return true;
 }
 
+void Block::AddTransaction(Transaction& tx) {
+    // Invalidate cached hash to force recomputation
+    hash_.SetNull();
+    tx.SetParent(this);
+    transaction_.reset();
+    transaction_ = std::forward<Transaction>(tx);
+}
+
+bool Block::HasTransaction() const {
+    return transaction_.has_value();
+}
+
+void Block::SetMinerChainHeight(uint32_t height) {
+    minerChainHeight_ = height;
+}
+
+void Block::ResetReward() {
+    cumulativeReward_ = ZERO_COIN;
+}
+
+void Block::InvalidateMilestone() {
+    isMilestone_ = false;
+}
+
+void Block::SetMilestoneInstance(Milestone& ms) {
+    milestoneInstance_ = std::make_shared<Milestone>(ms);
+    isMilestone_       = true;
+}
+
+/*
+ * TODO: serialize the header and compute the hash of the block
+ * Currently is only a placeholder.
+ */
+const uint256& Block::GetHash() {
+    if (hash_.IsNull()) {
+        VStream s;
+        SerializeToHash(s);
+        hash_ = Hash<1>(s);
+    }
+
+    return hash_;
+}
+
+const uint256& Block::GetTxHash() {
+    if (HasTransaction()) {
+        transaction_->FinalizeHash();
+        return transaction_->GetHash();
+    }
+
+    return Hash::ZERO_HASH;
+}
+
+// TODO
+size_t Block::GetOptimalEncodingSize() const {
+    return 0;
+}
+
+bool Block::IsRegistration() const {
+    return HasTransaction() ? transaction_->IsRegistration() : false;
+}
+
+bool Block::IsFirstRegistration() const {
+    return HasTransaction() ? transaction_->IsFirstRegistration() : false;
+}
+
+arith_uint256 Block::GetChainWork() const {
+    arith_uint256 target = GetTargetAsInteger();
+    return LARGEST_HASH / (target + 1);
+}
+
+arith_uint256 Block::GetTargetAsInteger() const {
+    arith_uint256 target = arith_uint256().SetCompact(diffTarget_);
+    if (target <= 0 || target > params.maxTarget) {
+        throw "Bad difficulty target: " + std::to_string(target);
+    }
+
+    return target;
+}
+
+bool Block::CheckPOW(bool throwException) {
+    arith_uint256 target = GetTargetAsInteger();
+    arith_uint256 hash   = UintToArith256(GetHash());
+
+    if (hash > target) {
+        if (throwException) {
+            throw "Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target);
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void Block::SerializeToDB(VStream& s) const {
     s << *this;
     s << VARINT(cumulativeReward_);
     s << VARINT(minerChainHeight_);
+
     if (HasTransaction()) {
         s << (uint8_t) transaction_->GetStatus();
     }
+
     if (isMilestone_) {
         s << (uint8_t) IS_TRUE_MILESTONE;
     } else if (milestoneInstance_ != nullptr) {
@@ -201,6 +187,7 @@ void Block::SerializeToDB(VStream& s) const {
     } else {
         s << (uint8_t) IS_NOT_MILESTONE;
     }
+
     if (milestoneInstance_ != nullptr) {
         s << *milestoneInstance_;
     }
@@ -210,11 +197,14 @@ void Block::DeserializeFromDB(VStream& s) {
     s >> *this;
     s >> VARINT(cumulativeReward_);
     s >> VARINT(minerChainHeight_);
+
     if (HasTransaction()) {
         transaction_->SetStatus((Transaction::Validity) ser_readdata8(s));
     }
+
     enum MilestoneStatus msFlag = (MilestoneStatus) ser_readdata8(s);
     isMilestone_                = msFlag == IS_TRUE_MILESTONE;
+
     if (msFlag > 0) {
         // TODO: store the milestone object in some kind of cache
         milestoneInstance_ = std::make_shared<Milestone>();
