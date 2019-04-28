@@ -95,11 +95,11 @@ void Transaction::FinalizeHash() {
 }
 
 const TxInput& Transaction::GetInput(size_t index) const {
-    return inputs[index];
+    return inputs.at(index);
 }
 
 const TxOutput& Transaction::GetOutput(size_t index) const {
-    return outputs[index];
+    return outputs.at(index);
 }
 
 const std::vector<TxInput>& Transaction::GetInputs() const {
