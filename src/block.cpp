@@ -328,7 +328,6 @@ Block Block::CreateGenesis() {
     genesisBlock.SetTime(1548078136L);
     genesisBlock.SetNonce(8920);
     genesisBlock.FinalizeHash();
-    genesisBlock.Solve();
     assert(genesisBlock.GetHash() == uint256S("00000019da1f8bdc3e260232f5d626d919fc155eb0a1654c8aa4e19fb01166ce"));
 
     return genesisBlock;
