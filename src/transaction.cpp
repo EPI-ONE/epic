@@ -145,11 +145,8 @@ bool Transaction::Verify() const {
         sigOps += Script::GetSigOpCount(input.scriptSig);
     }
 
-    if (sigOps > MAX_BLOCK_SIGOPS) {
-        return false;
-    }
+    return sigOps <= MAX_BLOCK_SIGOPS;
 
-    return true;
 }
 
 void Transaction::Validate() {
