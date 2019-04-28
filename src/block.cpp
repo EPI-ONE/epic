@@ -185,8 +185,12 @@ bool Block::CheckPOW(bool throwException) {
     try {
         target = GetTargetAsInteger();
     } catch (const std::string& s) {
-        std::cout << s << std::endl;
-        return false;
+        if (throwException) {
+            throw s;
+        } else {
+            std::cout << s << std::endl;
+            return false;
+        }
     }
     FinalizeHash();
     arith_uint256 hash = UintToArith256(hash_);
