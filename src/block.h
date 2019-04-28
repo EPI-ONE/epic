@@ -210,7 +210,6 @@ protected:
 };
 
 extern const Block genesisBlock;
-extern const uint256 genesisBlockHash;
 static constexpr std::size_t HEADER_SIZE = 116;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");

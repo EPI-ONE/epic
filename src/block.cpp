@@ -61,7 +61,7 @@ bool Block::Verify() {
     }
 
     // check the conditions of the first registration block
-    if (prevBlockHash_ == genesisBlockHash) {
+    if (prevBlockHash_ == genesisBlock.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
             return false;
@@ -137,7 +137,6 @@ void Block::FinalizeHash() {
         SerializeToHash(s);
         hash_ = Hash<1>(s);
     }
-
 }
 
 const uint256& Block::GetTxHash() {
@@ -298,10 +297,9 @@ Block Block::CreateGenesis() {
     genesis.SetNonce(11882);
     genesis.FinalizeHash();
     std::cout << std::to_string(genesis) << "\n" << std::endl;
-        assert(genesis.GetHash() == uint256S("97327dc6ac6d8d389e83a274fb5a55b74c75213693fc6825a2918b12a2a38b0e"));
+    assert(genesis.GetHash() == uint256S("97327dc6ac6d8d389e83a274fb5a55b74c75213693fc6825a2918b12a2a38b0e"));
 
     return genesis;
 }
 
-const Block genesisBlock       = Block::CreateGenesis();
-const uint256 genesisBlockHash = genesisBlock.GetHash();
+const Block genesisBlock = Block::CreateGenesis();
