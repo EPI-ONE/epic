@@ -144,3 +144,4 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         exit(LOG_INIT_FAILURE);
     }
 }
+

@@ -4,8 +4,6 @@
 #include <iostream>
 #include <sstream>
 
-/* the inclusion below do not
- * result into circular deps */
 #include "arith_uint256.h"
 #include "coin.h"
 
@@ -33,8 +31,7 @@ static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // max number of signature verification OPs in a block TODO: determine the size
 static constexpr int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
 // an easy enough difficulty target
-static const arith_uint256 EASY_DIFFICULTY_TARGET =
-    arith_uint256("20000000000000000000000000000000000000000000000000000000000000000000000000");
+static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 
 class Params {
 public:

@@ -122,6 +122,8 @@ public:
 
     void SetNonce(uint32_t nonce);
 
+    const uint32_t GetNonce() const;
+
     void InvalidateMilestone();
 
     void SetMilestoneInstance(Milestone& ms);
@@ -162,12 +164,6 @@ public:
     arith_uint256 GetTargetAsInteger() const;
 
     /*
-     * A simple solver for nonce that makes the blocks hash lower than the
-     * difficulty target. For test purposes only.
-     */
-    void Solve();
-
-    /*
      * Proves the block was as difficult to make as it claims to be.
      * Note that this function only checks the block hash is no greater than
      * the difficulty target contained in the header.
@@ -175,6 +171,12 @@ public:
      * target which is not considered here.
      */
     bool CheckPOW(bool throwException);
+
+    /*
+     * A simple solver for nonce that makes the blocks hash lower than the
+     * difficulty target. For test purposes only.
+     */
+    void Solve();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -209,9 +211,7 @@ protected:
     bool isMilestone_ = false;
 };
 
-extern const Block genesisBlock;
+extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
-static const arith_uint256 LARGEST_HASH =
-    arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
 
 #endif //__SRC_BLOCK_H__

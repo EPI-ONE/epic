@@ -6,12 +6,12 @@ const Params& TestNetParams::GetParams() {
 }
 
 TestNetParams::TestNetParams() {
-    targetTimespan          = TARGET_TIMESPAN;
-    timeInterval            = TIME_INTERVAL;
-    interval                = INTERVAL;
-    targetTPS               = 100;
-    punctualityThred        = PUNTUALITY_THRESHOLD;
-    arith_uint256 maxTarget = arith_uint256().SetCompact(0x2100ffffL);
-    maxMoney                = MAX_MONEY;
-    reward                  = 1;
+    targetTimespan   = TARGET_TIMESPAN;
+    timeInterval     = TIME_INTERVAL;
+    interval         = INTERVAL;
+    targetTPS        = 100;
+    punctualityThred = PUNTUALITY_THRESHOLD;
+    maxTarget        = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
+    maxMoney         = MAX_MONEY;
+    reward           = 1;
 }

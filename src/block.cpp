@@ -61,7 +61,7 @@ bool Block::Verify() {
     }
 
     // check the conditions of the first registration block
-    if (prevBlockHash_ == genesisBlock.GetHash()) {
+    if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
             return false;
@@ -109,7 +109,12 @@ const time_t Block::GetTime() const {
 }
 
 void Block::SetNonce(uint32_t nonce) {
+    hash_.SetNull();
     nonce_ = nonce;
+}
+
+const uint32_t Block::GetNonce() const {
+    return nonce_;
 }
 
 void Block::InvalidateMilestone() {
@@ -163,7 +168,7 @@ bool Block::IsFirstRegistration() const {
 
 arith_uint256 Block::GetChainWork() const {
     arith_uint256 target = GetTargetAsInteger();
-    return LARGEST_HASH / (target + 1);
+    return params.maxTarget / (target + 1);
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
@@ -176,8 +181,15 @@ arith_uint256 Block::GetTargetAsInteger() const {
 }
 
 bool Block::CheckPOW(bool throwException) {
-    arith_uint256 target = GetTargetAsInteger();
-    arith_uint256 hash   = UintToArith256(GetHash());
+    arith_uint256 target;
+    try {
+        target = GetTargetAsInteger();
+    } catch (const std::string& s) {
+        std::cout << s << std::endl;
+        return false;
+    }
+    FinalizeHash();
+    arith_uint256 hash = UintToArith256(hash_);
 
     if (hash > target) {
         if (throwException) {
@@ -188,6 +200,22 @@ bool Block::CheckPOW(bool throwException) {
     }
 
     return true;
+}
+
+void Block::Solve() {
+    while (true) {
+        try {
+            if (CheckPOW(false)) {
+                return;
+            }
+            if (nonce_ == UINT_LEAST32_MAX) {
+                time_ = time(nullptr);
+            }
+            SetNonce(nonce_ + 1);
+        } catch (const std::string& e) {
+            std::cout << e << std::endl;
+        }
+    }
 }
 
 void Block::SerializeToDB(VStream& s) const {
@@ -271,7 +299,7 @@ void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
 }
 
 Block Block::CreateGenesis() {
-    Block genesis(GENESIS_BLOCK_VERSION);
+    Block genesisBlock(GENESIS_BLOCK_VERSION);
     Transaction tx;
 
     // Construct a script containing the difficulty bits
@@ -289,17 +317,17 @@ Block Block::CreateGenesis() {
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
     tx.AddOutput(TxOutput(66, Script(VStream(pubKeyID.value())))).FinalizeHash();
 
-    genesis.AddTransaction(tx);
-    genesis.SetMinerChainHeight(0);
-    genesis.ResetReward();
-    genesis.SetDifficultyTarget(EASY_DIFFICULTY_TARGET.GetCompact());
-    genesis.SetTime(1548078136L);
-    genesis.SetNonce(11882);
-    genesis.FinalizeHash();
-    std::cout << std::to_string(genesis) << "\n" << std::endl;
-    assert(genesis.GetHash() == uint256S("97327dc6ac6d8d389e83a274fb5a55b74c75213693fc6825a2918b12a2a38b0e"));
+    genesisBlock.AddTransaction(tx);
+    genesisBlock.SetMinerChainHeight(0);
+    genesisBlock.ResetReward();
+    genesisBlock.SetDifficultyTarget(0x1e00ffffL);
+    genesisBlock.SetTime(1548078136L);
+    genesisBlock.SetNonce(8920);
+    genesisBlock.FinalizeHash();
+    genesisBlock.Solve();
+    assert(genesisBlock.GetHash() == uint256S("00000019da1f8bdc3e260232f5d626d919fc155eb0a1654c8aa4e19fb01166ce"));
 
-    return genesis;
+    return genesisBlock;
 }
 
-const Block genesisBlock = Block::CreateGenesis();
+const Block GENESIS = Block::CreateGenesis();

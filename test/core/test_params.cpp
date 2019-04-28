@@ -11,7 +11,7 @@ public:
 
 TEST_F(ParamsTest, Basic_Value_Check) {
     EXPECT_EQ(100, params.targetTPS);
-    EXPECT_EQ(1548078136L, genesisBlock.GetTime());
+    EXPECT_EQ(1548078136L, GENESIS.GetTime());
 }
 
 TEST_F(ParamsTest, Singleton_Check) {
