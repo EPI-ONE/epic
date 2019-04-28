@@ -23,7 +23,7 @@ public:
 
     TxOutPoint() : index(UNCONNECTED) {}
 
-    // TODO: search for the pointer of BlockIndex in Cat
+    // TODO: search for the pointer of Block in Cat
     TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
