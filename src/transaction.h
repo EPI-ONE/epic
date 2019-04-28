@@ -1,15 +1,15 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include "hash.h"
-#include "params.h"
-#include "script.h"
-#include "tinyformat.h"
-
 #include <cassert>
 #include <limits>
 #include <sstream>
 #include <unordered_set>
+
+#include "hash.h"
+#include "params.h"
+#include "script.h"
+#include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
 
