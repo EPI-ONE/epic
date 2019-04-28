@@ -126,7 +126,9 @@ public:
 
     void SetMilestoneInstance(Milestone& ms);
 
-    const uint256& GetHash();
+    const uint256& GetHash() const;
+
+    void FinalizeHash();
 
     const uint256& GetTxHash();
 
@@ -200,15 +202,15 @@ public:
 protected:
     std::optional<Transaction> transaction_;
     Coin cumulativeReward_;
-    uint256 hash_;
+    mutable uint256 hash_;
 
     std::shared_ptr<Milestone> milestone_;
     uint64_t minerChainHeight_;
     bool isMilestone_ = false;
 };
 
-static const Block genesisBlock          = Block::CreateGenesis();
-static const uint256 genesisBlockHash    = Block::CreateGenesis().GetHash();
+extern const Block genesisBlock;
+extern const uint256 genesisBlockHash;
 static constexpr std::size_t HEADER_SIZE = 116;
 static const arith_uint256 LARGEST_HASH =
     arith_uint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");

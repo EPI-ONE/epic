@@ -26,9 +26,9 @@ Block::Block(uint32_t versionNum) {
     version_            = versionNum;
     diffTarget_         = 0x1d07fff8L;
     time_               = std::time(nullptr);
-    milestoneBlockHash_ = Hash::ZERO_HASH;
-    prevBlockHash_      = Hash::ZERO_HASH;
-    tipBlockHash_       = Hash::ZERO_HASH;
+    milestoneBlockHash_ = Hash::GetZeroHash();
+    prevBlockHash_      = Hash::GetZeroHash();
+    tipBlockHash_       = Hash::GetZeroHash();
 }
 
 Block::Block(const BlockHeader& header) : BlockHeader(header) {
@@ -127,18 +127,17 @@ void Block::SetMilestoneInstance(Milestone& ms) {
     isMilestone_ = true;
 }
 
-/*
- * TODO: serialize the header and compute the hash of the block
- * Currently is only a placeholder.
- */
-const uint256& Block::GetHash() {
+const uint256& Block::GetHash() const {
+    return hash_;
+}
+
+void Block::FinalizeHash() {
     if (hash_.IsNull()) {
         VStream s;
         SerializeToHash(s);
         hash_ = Hash<1>(s);
     }
 
-    return hash_;
 }
 
 const uint256& Block::GetTxHash() {
@@ -147,7 +146,7 @@ const uint256& Block::GetTxHash() {
         return transaction_->GetHash();
     }
 
-    return Hash::ZERO_HASH;
+    return Hash::GetZeroHash();
 }
 
 // TODO
@@ -236,7 +235,7 @@ void Block::DeserializeFromDB(VStream& s) {
 
 std::string std::to_string(Block& block) {
     std::string s;
-    s += " Block{ \n";
+    s += " Block { \n";
     s += strprintf("   hash: %s \n", std::to_string(block.GetHash()));
     s += strprintf("   version: %s \n", block.version_);
     s += strprintf("   milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
@@ -287,8 +286,8 @@ Block Block::CreateGenesis() {
 
     // Add input and output
     tx.AddInput(TxInput(Script(vs)));
-    std::optional<CKeyID> pubKeyID = DecodeAddress("JXA9kkybKZL848rxcvczu2pFGcodcHXrC");
-    std::cout << "whether we have the key here:" << pubKeyID.has_value() << std::endl;
+
+    std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
     tx.AddOutput(TxOutput(66, Script(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesis.AddTransaction(tx);
@@ -297,7 +296,12 @@ Block Block::CreateGenesis() {
     genesis.SetDifficultyTarget(EASY_DIFFICULTY_TARGET.GetCompact());
     genesis.SetTime(1548078136L);
     genesis.SetNonce(11882);
-    assert(genesis.GetHash() == uint256S("3f9ed447274fd9050aef23f1efbb6845609c1858f0d17f04655a09503eb70115"));
+    genesis.FinalizeHash();
+    std::cout << std::to_string(genesis) << "\n" << std::endl;
+        assert(genesis.GetHash() == uint256S("97327dc6ac6d8d389e83a274fb5a55b74c75213693fc6825a2918b12a2a38b0e"));
 
     return genesis;
 }
+
+const Block genesisBlock       = Block::CreateGenesis();
+const uint256 genesisBlockHash = genesisBlock.GetHash();

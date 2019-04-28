@@ -44,8 +44,8 @@ inline uint160 Hash160(const VStream& vch) {
 }
 
 namespace Hash {
-    static const uint256 ZERO_HASH = Hash<1>(VStream());
-    static const uint256 ZERO_HASH_DOUBLE = Hash<2>(VStream());
+    const uint256& GetZeroHash();
+    const uint256& GetDoubleZeroHash();
 }
 
 #endif

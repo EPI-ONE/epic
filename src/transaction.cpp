@@ -15,7 +15,7 @@ TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Sc
 }
 
 TxInput::TxInput(const Script& script) {
-    outpoint  = TxOutPoint(Hash::ZERO_HASH, UNCONNECTED);
+    outpoint  = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
     scriptSig = script;
 }
 
@@ -24,7 +24,7 @@ bool TxInput::IsRegistration() const {
 }
 
 bool TxInput::IsFirstRegistration() const {
-    return outpoint.bHash == Hash::ZERO_HASH && IsRegistration();
+    return outpoint.bHash == Hash::GetZeroHash() && IsRegistration();
 }
 
 
@@ -188,7 +188,8 @@ std::string std::to_string(const TxInput& input) {
     str += "TxInput{ ";
 
     if (input.IsRegistration()) {
-        str += "REGISTRATION";
+        str += "REGISTRATION ";
+        str += strprintf("scriptSig=%s", std::to_string(input.scriptSig));
     } else {
         str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
     }
