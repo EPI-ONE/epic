@@ -31,7 +31,7 @@ public:
     void Serialize(Stream& s) const {
         ::Serialize(s, VARINT(bytes.size()));
         if (!bytes.empty()) {
-            s << bytes;
+            bytes.Serialize(s);
         }
     }
 
