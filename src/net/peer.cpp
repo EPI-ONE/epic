@@ -7,8 +7,7 @@ Peer::Peer(NetAddress& netAddress,
     ConnectionManager* connectionManager,
     AddressManager* addressManager)
     : address(std::move(netAddress)), connection_handle(handle), isInbound(inbound), isSeed(isSeedPeer),
-      connectionManager_(connectionManager), addressManager_(addressManager) {
-}
+      connectionManager_(connectionManager), addressManager_(addressManager) {}
 
 Peer::~Peer() {
     addrSendQueue.Quit();

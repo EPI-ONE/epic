@@ -96,11 +96,11 @@ void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
 
-void Block::SetTime(time_t time) {
+void Block::SetTime(uint64_t time) {
     time_ = time;
 }
 
-const time_t Block::GetTime() const {
+const uint64_t Block::GetTime() const {
     return time_;
 }
 

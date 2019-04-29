@@ -75,7 +75,7 @@ public:
         READWRITE(milestoneBlockHash_);
         READWRITE(prevBlockHash_);
         READWRITE(tipBlockHash_);
-        READWRITE(*((int64_t*) &time_));
+        READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
     }
@@ -88,7 +88,7 @@ protected:
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    time_t time_;
+    uint64_t time_;
     uint32_t diffTarget_;
     uint32_t nonce_;
 };
@@ -117,9 +117,9 @@ public:
 
     void SetDifficultyTarget(uint32_t target);
 
-    void SetTime(time_t time);
+    void SetTime(uint64_t time);
 
-    const time_t GetTime() const;
+    const uint64_t GetTime() const;
 
     void SetNonce(uint32_t nonce);
 
