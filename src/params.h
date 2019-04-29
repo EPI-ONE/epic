@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <array>
 
 #include "arith_uint256.h"
 #include "coin.h"
@@ -35,6 +36,13 @@ static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 
 class Params {
 public:
+    enum KeyPrefixType : uint8_t {
+        PUBKEY_ADDRESS = 0,
+        SECRET_KEY,
+
+        MAX_KEY_PREFIX_TYPES
+    };
+
     // consensus parameter setting
     uint32_t targetTimespan;
     uint32_t timeInterval;
@@ -44,6 +52,10 @@ public:
     arith_uint256 maxTarget;
     Coin maxMoney;
     Coin reward;
+
+    std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
+
+    const unsigned char GetKeyPrefix(KeyPrefixType type) const;
 
 protected:
     Params() = default;

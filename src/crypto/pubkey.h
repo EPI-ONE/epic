@@ -8,6 +8,7 @@
 #define BITCOIN_PUBKEY_H
 
 #include "hash.h"
+#include "params.h"
 #include "serialize.h"
 #include "uint256.h"
 

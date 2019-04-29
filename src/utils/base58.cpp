@@ -158,12 +158,3 @@ bool DecodeBase58Check(const char* psz, std::vector<unsigned char>& vchRet) {
 bool DecodeBase58Check(const std::string& str, std::vector<unsigned char>& vchRet) {
     return DecodeBase58Check(str.c_str(), vchRet);
 }
-
-std::vector<unsigned char>& Base58Prefix(Type type) {
-    static std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES] = {
-        std::vector<unsigned char>(1, 0),   // base58Prefixes[PUBKEY_ADDRESS]
-        std::vector<unsigned char>(1, 128), // base58Prefixes[SECRET_KEY]
-    };
-
-    return base58Prefixes[type];
-}
