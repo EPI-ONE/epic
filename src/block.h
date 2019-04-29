@@ -3,7 +3,6 @@
 
 #include <ctime>
 #include <unordered_map>
-#include <spdlog.h>
 
 #include "arith_uint256.h"
 #include "pubkey.h"
