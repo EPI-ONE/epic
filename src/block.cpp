@@ -153,9 +153,32 @@ const uint256& Block::GetTxHash() {
     return Hash::GetZeroHash();
 }
 
-// TODO
-size_t Block::GetOptimalEncodingSize() const {
-    return 0;
+size_t Block::GetOptimalEncodingSize() {
+    if (optimalEncodingSize > 0) {
+        return optimalEncodingSize;
+    }
+    optimalEncodingSize = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
+    if (HasTransaction()) {
+        optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
+        for (const TxInput& input : transaction_->GetInputs()) {
+            size_t scriptSigSize = input.scriptSig.bytes.size();
+            size_t s             = ::GetSizeOfVarInt<VarIntMode::DEFAULT>(scriptSigSize);
+            optimalEncodingSize += (32                                                      // block hash
+                                    + 4                                                     // index
+                                    + ::GetSizeOfVarInt<VarIntMode::DEFAULT>(scriptSigSize) // script size in VARINT
+                                    + scriptSigSize                                         // script
+            );
+        }
+        optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
+        for (const TxOutput& output : transaction_->GetOutputs()) {
+            size_t scriptPkSize = output.scriptPubKey.bytes.size();
+            optimalEncodingSize += (8                                                      // value
+                                    + ::GetSizeOfVarInt<VarIntMode::DEFAULT>(scriptPkSize) // script size in VARINT
+                                    + scriptPkSize                                         // script
+            );
+        }
+    }
+    return optimalEncodingSize;
 }
 
 bool Block::IsRegistration() const {
