@@ -31,9 +31,7 @@ Block::Block(uint32_t versionNum) {
     tipBlockHash_       = Hash::GetZeroHash();
 }
 
-Block::Block(const BlockHeader& header) : BlockHeader(header) {
-    SetNull();
-}
+Block::Block(const BlockHeader& header) : BlockHeader(header) {}
 
 void Block::SetNull() {
     BlockHeader::SetNull();
