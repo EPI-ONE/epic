@@ -205,10 +205,8 @@ void Block::Solve() {
 
     FinalizeHash();
     for (;;) {
-        if (UintToArith256(hash_) > target) {
-            spdlog::debug("hash is higher than target: " + std::to_string(hash_) + " vs " + std::to_string(target));
+        if (UintToArith256(hash_) > target)
             return;
-        }
 
         if (nonce_ == UINT_LEAST32_MAX)
             time_ = time(nullptr);
