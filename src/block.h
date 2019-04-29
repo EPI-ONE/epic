@@ -191,12 +191,6 @@ public:
     void SerializeToDB(VStream& s) const;
     void DeserializeFromDB(VStream& s);
 
-    template <typename Stream>
-    inline void SerializeToHash(Stream& s) {
-        static_cast<BlockHeader>(*this).Serialize(s);
-        GetTxHash().Serialize(s);
-    }
-
     friend std::string std::to_string(Block& block);
 
     static void SerializeMilestone(VStream& s, Milestone& milestone);

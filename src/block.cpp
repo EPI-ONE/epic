@@ -139,7 +139,8 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     VStream s;
-    SerializeToHash(s);
+    static_cast<BlockHeader>(*this).Serialize(s);
+    GetTxHash().Serialize(s);
     hash_ = Hash<1>(s);
 }
 
