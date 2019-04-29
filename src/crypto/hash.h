@@ -7,7 +7,10 @@
 #include "stream.h"
 #include "uint256.h"
 
-/* Compute the 256-bit hash of an object. */
+/* Compute the 256-bit hash of an object.
+ * R: number of hashing rounds:
+ * 1 = single hash
+ * 2 = double hash */
 template <std::size_t R, typename T1>
 inline uint256 Hash(const T1 pbegin, const T1 pend) {
     static const unsigned char emptyByte[0] = {};
@@ -27,21 +30,21 @@ inline uint256 Hash(const T1 pbegin, const T1 pend) {
     return hash;
 }
 
-/* R: number of hashing rounds e.g 1 = single hash; 2 = double hash */
 template <std::size_t R>
 uint256 Hash(const VStream& data) {
     return Hash<R>(data.cbegin(), data.cend());
 }
 
-/** Compute the 160-bit hash an object. */
-template <typename T1>
+/* Compute the 160-bit hash an object
+ * NOTE: R means the same as with uint256 Hash */
+template <std::size_t R, typename T1>
 inline uint160 Hash160(const T1 pbegin, const T1 pend) {
-    return Hash<2>(pbegin, pend).GetUint160();
+    return Hash<R>(pbegin, pend).GetUint160();
 }
 
-/** Compute the 160-bit hash of a vector. */
+template <std::size_t R>
 inline uint160 Hash160(const VStream& vch) {
-    return Hash160(vch.cbegin(), vch.cend());
+    return Hash160<R>(vch.cbegin(), vch.cend());
 }
 
 namespace Hash {
