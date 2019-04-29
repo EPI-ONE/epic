@@ -135,11 +135,14 @@ const uint256& Block::GetHash() const {
 }
 
 void Block::FinalizeHash() {
-    if (hash_.IsNull()) {
-        VStream s;
-        SerializeToHash(s);
-        hash_ = Hash<1>(s);
-    }
+    if (hash_.IsNull())
+        CalculateHash();
+}
+
+void Block::CalculateHash() {
+    VStream s;
+    SerializeToHash(s);
+    hash_ = Hash<1>(s);
 }
 
 const uint256& Block::GetTxHash() {
@@ -198,18 +201,20 @@ bool Block::CheckPOW() {
 }
 
 void Block::Solve() {
-    while (true) {
-        try {
-            if (CheckPOW()) {
-                return;
-            }
-            if (nonce_ == UINT_LEAST32_MAX) {
-                time_ = time(nullptr);
-            }
-            SetNonce(nonce_ + 1);
-        } catch (const std::string& e) {
-            spdlog::debug(e);
+    arith_uint256 target = GetTargetAsInteger();
+
+    FinalizeHash();
+    for (;;) {
+        if (UintToArith256(hash_) > target) {
+            spdlog::debug("hash is higher than target: " + std::to_string(hash_) + " vs " + std::to_string(target));
+            return;
         }
+
+        if (nonce_ == UINT_LEAST32_MAX)
+            time_ = time(nullptr);
+
+        nonce_++;
+        CalculateHash();
     }
 }
 

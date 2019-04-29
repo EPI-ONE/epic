@@ -133,6 +133,8 @@ public:
 
     void FinalizeHash();
 
+    void CalculateHash();
+
     const uint256& GetTxHash();
 
     size_t GetOptimalEncodingSize() const;
