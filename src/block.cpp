@@ -36,6 +36,11 @@ void Block::SetNull() {
     transaction_.reset();
 }
 
+void Block::UnCache() {
+    optimalEncodingSize = 0;
+    hash_.SetNull();
+}
+
 bool Block::Verify() {
     // checks pow
     if (!CheckPOW()) {
@@ -74,7 +79,7 @@ bool Block::Verify() {
 
 void Block::AddTransaction(Transaction& tx) {
     // Invalidate cached hash to force recomputation
-    hash_.SetNull();
+    UnCache();
     tx.SetParent(this);
     transaction_.reset();
     transaction_ = std::forward<Transaction>(tx);

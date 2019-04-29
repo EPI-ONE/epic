@@ -105,6 +105,8 @@ public:
 
     void SetNull();
 
+    void UnCache();
+
     bool Verify();
 
     void AddTransaction(Transaction& tx);

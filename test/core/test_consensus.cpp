@@ -17,19 +17,21 @@ TEST_F(ConsensusTest, SyntaxChecking) {
 }
 
 TEST_F(ConsensusTest, OptimalEncodingSize) {
-    Block b             = GENESIS;
-    size_t encoded_size = VStream(b).size();
-    EXPECT_EQ(encoded_size, b.GetOptimalEncodingSize());
+    Block b = GENESIS;
+    EXPECT_EQ(VStream(b).size(), b.GetOptimalEncodingSize());
 
     Block b1 = Block(BlockHeader(1, Hash::GetZeroHash(), Hash::GetDoubleZeroHash(), Hash::GetZeroHash(), time(nullptr),
         EASIEST_COMP_DIFF_TARGET, 0));
+
+    // test without a tx
+    EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
+
+    // with a big-enough tx to test the variable size ints
     Transaction tx;
-    // A big-enough tx to test the variable size ints.
     for (int i = 0; i < 512; ++i) {
         tx.AddInput(TxInput(Hash::GetZeroHash(), i, Script(std::vector<unsigned char>(i))));
         tx.AddOutput(TxOutput(i, Script(std::vector<unsigned char>(i))));
     }
     b1.AddTransaction(tx);
-    size_t encoded_size1 = VStream(b1).size();
-    EXPECT_EQ(encoded_size1, b1.GetOptimalEncodingSize());
+    EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
 }
