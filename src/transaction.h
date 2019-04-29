@@ -49,11 +49,14 @@ struct std::hash<TxOutPoint> {
 class TxInput {
 public:
     TxOutPoint outpoint;
-    Script scriptSig;
+    Script scriptSig; // MAX: actual listing plus program must be here not in Output.
 
     TxInput() = default;
 
     explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+    // TASM How is scriptsig inhabited in the constructor? Do we get it from the message, right?
+    // MAX: we get in over the network
+    // QING: Max is correct
 
     TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
 
@@ -87,6 +90,8 @@ public:
     // TODO: implement Coin class
     Coin value;
     Script scriptPubKey;
+    // TASM push pubkey to vstream and create a listing with a verify op.
+    // QING: scriptPubKey is the serialized listing#data
 
     TxOutput();
 
@@ -167,6 +172,9 @@ public:
 private:
     std::vector<TxInput> inputs;
     std::vector<TxOutput> outputs;
+    // TASM should we merge the listings about to the member of transaction? MAX:let's do it this way
+    // TASM Where do you want to initialize the interpreter? MAX: DAG MANAGER
+    // QING: I think a better way could be: Tx contains the Script which is basically just the serialized listing. Tasm interpreter takes the Script, deserializes it into listing, and do whatever logic required by the listing#program. In this way Transaction won't care about how Tasm works and it's job is only to carry the information.
 
     uint256 hash_;
     Coin fee_;

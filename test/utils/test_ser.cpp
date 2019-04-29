@@ -5,11 +5,12 @@
 #include "key.h"
 #include "pubkey.h"
 #include "stream.h"
+#include "tasm.hpp"
 #include "transaction.h"
 
 class TestSer : public testing::Test {
 protected:
-    Script randomBytes;
+    tasm::listing randomBytes;
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
@@ -61,6 +62,42 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
     EXPECT_EQ(s, soutput.str());
 }
 
+TEST_F(TestSer, SerializeEqDeserializeVStream) {
+    std::vector<char> theguy = {'h', 'u', 'y'};
+    VStream v1(theguy);
+    VStream sinput;
+    sinput << v1;
+    std::string s = sinput.str();
+
+    VStream v2;
+    sinput >> v2;
+
+    VStream soutput;
+    soutput << v2;
+
+    EXPECT_EQ(s, soutput.str());
+}
+
+
+TEST_F(TestSer, SerializeEqDeserializeListing) {
+    std::vector<char> theguy = {'h', 'u', 'y'};
+    VStream v(theguy);
+    std::vector<uint8_t> p = {1, 1};
+    tasm::listing l1(p, v);
+    VStream sinput;
+    sinput << l1;
+    std::string s = sinput.str();
+
+    tasm::listing l2;
+    sinput >> l2;
+
+    VStream soutput;
+    soutput << l2;
+
+    EXPECT_EQ(s, soutput.str());
+}
+
+
 TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     TxInput input       = TxInput(outpoint, randomBytes);
@@ -96,8 +133,8 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, Script()));
-    tx.AddOutput(TxOutput(100, Script()));
+    tx.AddInput(TxInput(outpoint, tasm::listing()));
+    tx.AddOutput(TxOutput(100, tasm::listing()));
 
     VStream sinput;
     sinput << tx;
@@ -129,8 +166,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, Script()));
-    tx.AddOutput(TxOutput(100, Script()));
+    tx.AddInput(TxInput(outpoint, tasm::listing()));
+    tx.AddOutput(TxOutput(100, tasm::listing()));
     block.AddTransaction(tx);
 
     VStream sinput;
