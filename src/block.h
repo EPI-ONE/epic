@@ -75,7 +75,7 @@ public:
         READWRITE(milestoneBlockHash_);
         READWRITE(prevBlockHash_);
         READWRITE(tipBlockHash_);
-        READWRITE(*(&time_));
+        READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
     }
