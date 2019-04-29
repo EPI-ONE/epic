@@ -27,7 +27,6 @@ bool TxInput::IsFirstRegistration() const {
     return outpoint.bHash == Hash::GetZeroHash() && IsRegistration();
 }
 
-
 void TxInput::SetParent(const Transaction* const tx) {
     assert(tx != nullptr);
     parentTx_ = tx;
@@ -146,7 +145,6 @@ bool Transaction::Verify() const {
     }
 
     return sigOps <= MAX_BLOCK_SIGOPS;
-
 }
 
 void Transaction::Validate() {
@@ -164,7 +162,6 @@ void Transaction::SetStatus(Transaction::Validity&& status) {
 Transaction::Validity Transaction::GetStatus() const {
     return status_;
 }
-
 
 void Transaction::SetParent(const Block* const blk) {
     parentBlock_ = blk;
