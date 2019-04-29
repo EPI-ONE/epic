@@ -12,7 +12,6 @@ TEST_F(ConsensusTest, SyntaxChecking) {
     uint256 rand256;
     rand256.randomize();
     uint256 zeros;
-    Block block = Block(BlockHeader(1, rand256, zeros,
-                        rand256, time(nullptr), 1, 1));
+    Block block = Block(BlockHeader(1, rand256, zeros, rand256, time(nullptr), 1, 1));
     EXPECT_FALSE(block.Verify());
 }

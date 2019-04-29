@@ -1,0 +1,9 @@
+ff60f4047c296cdd3440aff3ddca94a4693dc9a6/src/compat/bitcoin_endian.h::add arith_uint256 and hash functions from bitcoin
+
+15023effab376db4c9ca82305692e1cdf462b0cf/src/compat/bitcoin_endian.h::Modify the .clang-format 1. indent of public/private is set to be 0 2. columnlimit is set to be 120 3. function in one line is set to be none
+
+01d0120856033fbbbe3b701203cd1e22ba4ee0f8/src/compat/bitcoin_endian.h::Cleanup, optimize and reformat code related to hash
+
+b9680d9a108c7d6c30a6223bc19e2b4746198158/src/compat/bitcoin_endian.h::A few modifications
+
+0396f78a2ff51951935862321697f32ec3f6cded/src/compat/bitcoin_endian.h::fix compile error in ubuntu 16.04 (#15)

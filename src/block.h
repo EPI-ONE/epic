@@ -3,9 +3,11 @@
 
 #include <ctime>
 #include <unordered_map>
+#include <spdlog.h>
 
 #include "arith_uint256.h"
 #include "pubkey.h"
+#include "spdlog.h"
 #include "transaction.h"
 
 namespace std {
@@ -170,7 +172,7 @@ public:
      * A complete syntax checking should also check the validity of the diff
      * target which is not considered here.
      */
-    bool CheckPOW(bool throwException);
+    bool CheckPOW();
 
     /*
      * A simple solver for nonce that makes the blocks hash lower than the

@@ -42,7 +42,7 @@ void Block::SetNull() {
 
 bool Block::Verify() {
     // checks pow
-    if (!CheckPOW(false)) {
+    if (!CheckPOW()) {
         return false;
     }
 
@@ -180,27 +180,20 @@ arith_uint256 Block::GetTargetAsInteger() const {
     return target;
 }
 
-bool Block::CheckPOW(bool throwException) {
+bool Block::CheckPOW() {
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
     } catch (const std::string& s) {
-        if (throwException) {
-            throw s;
-        } else {
-            std::cout << s << std::endl;
-            return false;
-        }
+        spdlog::info(s);
+        return false;
     }
     FinalizeHash();
-    arith_uint256 hash = UintToArith256(hash_);
+    arith_uint256 blkHash = UintToArith256(hash_);
 
-    if (hash > target) {
-        if (throwException) {
-            throw "Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target);
-        } else {
-            return false;
-        }
+    if (blkHash > target) {
+        spdlog::info("Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target));
+        return false;
     }
 
     return true;
@@ -209,7 +202,7 @@ bool Block::CheckPOW(bool throwException) {
 void Block::Solve() {
     while (true) {
         try {
-            if (CheckPOW(false)) {
+            if (CheckPOW()) {
                 return;
             }
             if (nonce_ == UINT_LEAST32_MAX) {
@@ -217,7 +210,7 @@ void Block::Solve() {
             }
             SetNonce(nonce_ + 1);
         } catch (const std::string& e) {
-            std::cout << e << std::endl;
+            spdlog::debug(e);
         }
     }
 }
