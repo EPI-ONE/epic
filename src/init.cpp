@@ -6,6 +6,7 @@ void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
     // setup and parse the command line
     cxxopts::Options options("epic", "welcome to epic, enjoy your time!");
+
     try {
         SetupCommandline(options);
         std::cout << options.help() << std::endl;
@@ -35,12 +36,13 @@ void SetupCommandline(cxxopts::Options& options) {
 
 void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     auto result = options.parse(argc, argv);
-    // since these two params have been set default values, there is no need to call result.count()
-    // to detect if they have values
+    // since these two params have been set default values, there is no need to
+    // call result.count() to detect if they have values
     config->setConfigFilePath(result["configpath"].as<std::string>());
     if (result.count("bindip") > 0) {
         config->setBindAddress(result["bindip"].as<std::string>());
     }
+
     if (result.count("bindport") > 0) {
         config->setBindPort(result["bindport"].as<uint16_t>());
     }
@@ -49,9 +51,12 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
 void LoadConfigFile() {
     std::string config_path = config->getConfigFilePath();
     if (!CheckFileExist(config_path)) {
-        std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
+        std::cerr << "config.toml not found in current directory, will use the "
+                     "default config"
+                  << std::endl;
         return;
     }
+
     auto configContent = cpptoml::parse_file(config_path);
 
     // logger
@@ -62,9 +67,11 @@ void LoadConfigFile() {
         if (use_file_logger) {
             auto path     = log_config->get_as<std::string>("path").value_or("./");
             auto filename = log_config->get_as<std::string>("filename").value_or("Debug.log");
+
             if (path[path.length() - 1] != '/') {
                 path.append("/");
             }
+
             config->setLoggerFilename(filename);
             config->setLoggerPath(path);
         }
@@ -91,6 +98,7 @@ void LoadConfigFile() {
         } else {
             spdlog::info("bind ip has been specified in the command line, discard the ip in the config file");
         }
+
         if (port && config->getBindPort() == config->defaultPort) {
             config->setBindPort(*port);
         } else {
@@ -103,6 +111,7 @@ void LoadConfigFile() {
     for (const auto& seed : *seeds) {
         auto ip   = seed->get_as<std::string>("ip");
         auto port = seed->get_as<uint16_t>("port");
+
         if (ip && port) {
             config->addSeeds(*ip, *port);
         }
@@ -126,6 +135,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
                 throw spdlog::spdlog_ex("fail to create the logger file");
             }
         }
+
         auto file_logger = spdlog::basic_logger_mt("basic_logger", path + filename);
         spdlog::set_default_logger(file_logger);
     } catch (const spdlog::spdlog_ex& ex) {
@@ -134,3 +144,4 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         exit(LOG_INIT_FAILURE);
     }
 }
+

@@ -156,8 +156,8 @@ void base_uint<BITS>::SetHex(const std::string& str) {
 }
 
 template <unsigned int BITS>
-std::string base_uint<BITS>::ToString() const {
-    return (GetHex());
+std::string std::to_string(const base_uint<BITS>& uint) {
+    return (uint.GetHex());
 }
 
 template <unsigned int BITS>
@@ -185,7 +185,7 @@ template int base_uint<256>::CompareTo(const base_uint<256>&) const;
 template bool base_uint<256>::EqualTo(uint64_t) const;
 template double base_uint<256>::getdouble() const;
 template std::string base_uint<256>::GetHex() const;
-template std::string base_uint<256>::ToString() const;
+template std::string std::to_string(const base_uint<256>& uint);
 template void base_uint<256>::SetHex(const char*);
 template void base_uint<256>::SetHex(const std::string&);
 template unsigned int base_uint<256>::bits() const;
@@ -219,7 +219,8 @@ uint32_t arith_uint256::GetCompact(bool fNegative) const {
         nCompact         = bn.GetLow64();
     }
     // The 0x00800000 bit denotes the sign.
-    // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
+    // Thus, if it is already set, divide the mantissa by 256 and increase the
+    // exponent.
     if (nCompact & 0x00800000) {
         nCompact >>= 8;
         nSize++;

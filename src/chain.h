@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <block.h>
-#include <milestone.h>
-#include <uint256.h>
+#include "block.h"
+#include "milestone.h"
+#include "uint256.h"
 
 class Chain {
 public:

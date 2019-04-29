@@ -6,8 +6,6 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
-#include "compat/bitcoin_endian.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -18,10 +16,13 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "compat/bitcoin_endian.h"
 
 static const unsigned int MAX_SIZE = 0x02000000;
 
@@ -161,7 +162,6 @@ inline float ser_uint32_to_float(uint32_t y) {
     tmp.y = y;
     return tmp.x;
 }
-
 
 /////////////////////////////////////////////////////////////////
 //
@@ -329,7 +329,6 @@ inline void Deserialize(Stream& s, bool& a) {
     a      = f;
 }
 
-
 /**
  * Compact Size
  * size <  253        -- 1 byte
@@ -496,13 +495,12 @@ I ReadVarInt(Stream& is) {
 #define LIMITED_STRING(obj, n) LimitedString<n>(REF(obj))
 
 template <VarIntMode Mode, typename I>
-class CVarInt {
+class VarInt {
 protected:
     I& n;
 
 public:
-    explicit CVarInt(I& nIn) : n(nIn) {
-    }
+    explicit VarInt(I& nIn) : n(nIn) {}
 
     template <typename Stream>
     void Serialize(Stream& s) const {
@@ -553,8 +551,7 @@ protected:
     uint64_t& n;
 
 public:
-    explicit CCompactSize(uint64_t& nIn) : n(nIn) {
-    }
+    explicit CCompactSize(uint64_t& nIn) : n(nIn) {}
 
     template <typename Stream>
     void Serialize(Stream& s) const {
@@ -573,8 +570,7 @@ protected:
     std::string& string;
 
 public:
-    explicit LimitedString(std::string& _string) : string(_string) {
-    }
+    explicit LimitedString(std::string& _string) : string(_string) {}
 
     template <typename Stream>
     void Deserialize(Stream& s) {
@@ -596,8 +592,8 @@ public:
 };
 
 template <VarIntMode Mode = VarIntMode::DEFAULT, typename I>
-CVarInt<Mode, I> WrapVarInt(I& n) {
-    return CVarInt<Mode, I>{n};
+VarInt<Mode, I> WrapVarInt(I& n) {
+    return VarInt<Mode, I>{n};
 }
 
 template <typename I>
@@ -675,6 +671,13 @@ void Serialize(Stream& os, const std::unique_ptr<const T>& p);
 template <typename Stream, typename T>
 void Deserialize(Stream& os, std::unique_ptr<const T>& p);
 
+/**
+ * optional
+ */
+template <typename Stream, typename T>
+void Serialize(Stream& os, const std::optional<const T>& p);
+template <typename Stream, typename T>
+void Deserialize(Stream& os, std::optional<const T>& p);
 
 /**
  * If none of the specialized versions above matched, default to calling member
@@ -689,7 +692,6 @@ template <typename Stream, typename T>
 inline void Deserialize(Stream& is, T&& a) {
     a.Deserialize(is);
 }
-
 
 /**
  * string
@@ -731,7 +733,6 @@ inline void Serialize(Stream& os, const std::vector<T, A>& v) {
     Serialize_impl(os, v, T());
 }
 
-
 template <typename Stream, typename T, typename A>
 void Deserialize_impl(Stream& is, std::vector<T, A>& v, const unsigned char&) {
     // Limit size per read so bogus size value won't cause out of memory
@@ -767,7 +768,6 @@ inline void Deserialize(Stream& is, std::vector<T, A>& v) {
     Deserialize_impl(is, v, T());
 }
 
-
 /**
  * pair
  */
@@ -782,7 +782,6 @@ void Deserialize(Stream& is, std::pair<K, T>& item) {
     Deserialize(is, item.first);
     Deserialize(is, item.second);
 }
-
 
 /**
  * map
@@ -806,7 +805,6 @@ void Deserialize(Stream& is, std::map<K, T, Pred, A>& m) {
     }
 }
 
-
 /**
  * set
  */
@@ -829,7 +827,6 @@ void Deserialize(Stream& is, std::set<K, Pred, A>& m) {
     }
 }
 
-
 /**
  * unique_ptr
  */
@@ -842,7 +839,6 @@ template <typename Stream, typename T>
 void Deserialize(Stream& is, std::unique_ptr<const T>& p) {
     p.reset(new T(deserialize, is));
 }
-
 
 /**
  * shared_ptr
@@ -857,6 +853,31 @@ void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
     p = std::make_shared<const T>(deserialize, is);
 }
 
+/**
+ * optional
+ */
+template <typename Stream, typename T>
+void Serialize(Stream& os, const std::optional<T>& p) {
+    if (p.has_value()) {
+        Serialize(os, true);
+        Serialize(os, *p);
+    } else {
+        Serialize(os, false);
+    }
+}
+
+template <typename Stream, typename T>
+void Deserialize(Stream& is, std::optional<T>& p) {
+    bool flag;
+    Deserialize(is, flag);
+    if (flag) {
+        T t;
+        Deserialize(is, t);
+        p = std::forward<T>(t);
+    } else {
+        p.reset();
+    }
+}
 
 /**
  * Support for ADD_SERIALIZE_METHODS and READWRITE macro
@@ -871,7 +892,6 @@ struct CSerActionDeserialize {
         return true;
     }
 };
-
 
 /* ::GetSerializeSize implementations
  *
@@ -891,8 +911,7 @@ protected:
     const int nVersion;
 
 public:
-    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {
-    }
+    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {}
 
     void write(const char* psz, size_t _nSize) {
         this->nSize += _nSize;
@@ -919,8 +938,7 @@ public:
 };
 
 template <typename Stream>
-void SerializeMany(Stream& s) {
-}
+void SerializeMany(Stream& s) {}
 
 template <typename Stream, typename Arg, typename... Args>
 void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
@@ -929,8 +947,7 @@ void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
 }
 
 template <typename Stream>
-inline void DeserializeMany(Stream& s) {
-}
+inline void DeserializeMany(Stream& s) {}
 
 template <typename Stream, typename Arg, typename... Args>
 inline void DeserializeMany(Stream& s, Arg&& arg, Args&&... args) {

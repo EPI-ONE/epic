@@ -16,25 +16,21 @@
 #include "utilstrencodings.h"
 
 class TestECKey : public testing::Test {
-   protected:
-    const std::string randstr = "frog learns chess";
-    const std::string testStrSeckey1 =
-        "5JN8uzRnFa6VHMiiRhuV23BgXDHtcVmQN7ymZb4FEapLRQG1KJa";
-    const std::string testStrSeckey2 =
-        "5J53YAc8zUM7aCcDN1vppc7Ecdesqp1UFVR1wgwmLCSSEStWmhs";
-    const std::string testStrSeckey1C =
-        "KyeHvtUNjK5DqCT7r3Yefae9SMFYofxz8DoZgqKKpxFviWqydoUT";
-    const std::string testStrSeckey2C =
-        "KxLrCZQ6Gfhn1YERZm6a57xX6GnBQSV5GxR1APJifjVGNLSRbaAm";
+protected:
+    const std::string randstr         = "frog learns chess";
+    const std::string testStrSeckey1  = "5JN8uzRnFa6VHMiiRhuV23BgXDHtcVmQN7ymZb4FEapLRQG1KJa";
+    const std::string testStrSeckey2  = "5J53YAc8zUM7aCcDN1vppc7Ecdesqp1UFVR1wgwmLCSSEStWmhs";
+    const std::string testStrSeckey1C = "KyeHvtUNjK5DqCT7r3Yefae9SMFYofxz8DoZgqKKpxFviWqydoUT";
+    const std::string testStrSeckey2C = "KxLrCZQ6Gfhn1YERZm6a57xX6GnBQSV5GxR1APJifjVGNLSRbaAm";
 
     ECCVerifyHandle handle;
 
-    void SetUp() { 
-        ECC_Start(); 
+    void SetUp() {
+        ECC_Start();
     }
 
-    void TearDown() { 
-        ECC_Stop(); 
+    void TearDown() {
+        ECC_Stop();
     }
 };
 
@@ -76,11 +72,11 @@ TEST_F(TestECKey, key_workflow_test) {
     std::string strSeckey = EncodeSecret(seckey);
     CKey decodeSeckey     = DecodeSecret(strSeckey);
     ASSERT_EQ(seckey, decodeSeckey);
-    std::string strAddr = EncodeAddress(pubkey.GetID());
+    std::string strAddr              = EncodeAddress(pubkey.GetID());
     std::optional<CKeyID> decodeAddr = DecodeAddress(strAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeAddr);
 
-    // cross verification 
+    // cross verification
     CPubKey pubkeyUC = seckeyUC.GetPubKey();
     ASSERT_NE(seckey, seckeyUC);
     ASSERT_NE(pubkey, pubkeyUC);
@@ -141,26 +137,26 @@ TEST_F(TestECKey, key_regular_test) {
         ASSERT_TRUE(key1C.Sign(hashMsg, sign1C));
         ASSERT_TRUE(key2C.Sign(hashMsg, sign2C));
 
-        ASSERT_TRUE( pubkey1.Verify(hashMsg, sign1));
+        ASSERT_TRUE(pubkey1.Verify(hashMsg, sign1));
         ASSERT_TRUE(!pubkey1.Verify(hashMsg, sign2));
-        ASSERT_TRUE( pubkey1.Verify(hashMsg, sign1C));
+        ASSERT_TRUE(pubkey1.Verify(hashMsg, sign1C));
         ASSERT_TRUE(!pubkey1.Verify(hashMsg, sign2C));
 
         ASSERT_TRUE(!pubkey2.Verify(hashMsg, sign1));
-        ASSERT_TRUE( pubkey2.Verify(hashMsg, sign2));
+        ASSERT_TRUE(pubkey2.Verify(hashMsg, sign2));
         ASSERT_TRUE(!pubkey2.Verify(hashMsg, sign1C));
-        ASSERT_TRUE( pubkey2.Verify(hashMsg, sign2C));
+        ASSERT_TRUE(pubkey2.Verify(hashMsg, sign2C));
 
-        ASSERT_TRUE( pubkey1C.Verify(hashMsg, sign1));
+        ASSERT_TRUE(pubkey1C.Verify(hashMsg, sign1));
         ASSERT_TRUE(!pubkey1C.Verify(hashMsg, sign2));
-        ASSERT_TRUE( pubkey1C.Verify(hashMsg, sign1C));
+        ASSERT_TRUE(pubkey1C.Verify(hashMsg, sign1C));
         ASSERT_TRUE(!pubkey1C.Verify(hashMsg, sign2C));
 
         ASSERT_TRUE(!pubkey2C.Verify(hashMsg, sign1));
-        ASSERT_TRUE( pubkey2C.Verify(hashMsg, sign2));
+        ASSERT_TRUE(pubkey2C.Verify(hashMsg, sign2));
         ASSERT_TRUE(!pubkey2C.Verify(hashMsg, sign1C));
-        ASSERT_TRUE( pubkey2C.Verify(hashMsg, sign2C));
-        
+        ASSERT_TRUE(pubkey2C.Verify(hashMsg, sign2C));
+
         // compact signatures (with key recovery)
         std::vector<unsigned char> csign1, csign2, csign1C, csign2C;
 
@@ -193,7 +189,7 @@ TEST_F(TestECKey, key_regular_test) {
     ASSERT_TRUE(key2.Sign(hashMsg, detsig));
     ASSERT_TRUE(key2C.Sign(hashMsg, detsigc));
     ASSERT_EQ(detsig, detsigc);
-    
+
     ASSERT_TRUE(key1.SignCompact(hashMsg, detsig));
     ASSERT_TRUE(key1C.SignCompact(hashMsg, detsigc));
     ASSERT_NE(detsig, detsigc);
@@ -202,3 +198,4 @@ TEST_F(TestECKey, key_regular_test) {
     ASSERT_TRUE(key2C.SignCompact(hashMsg, detsigc));
     ASSERT_NE(detsig, detsigc);
 }
+

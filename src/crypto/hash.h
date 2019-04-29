@@ -1,21 +1,20 @@
 #ifndef __SRC_CRYPTO_HASH__
 #define __SRC_CRYPTO_HASH__
 
+#include <vector>
+
 #include "sha256.h"
 #include "stream.h"
 #include "uint256.h"
 
-#include <vector>
-
 /* Compute the 256-bit hash of an object. */
-template<std::size_t R, typename T1>
+template <std::size_t R, typename T1>
 inline uint256 Hash(const T1 pbegin, const T1 pend) {
+    static const unsigned char emptyByte[0] = {};
     uint256 hash;
     CSHA256 sha;
 
-    static const unsigned char emptyByte[0] = {};
-    sha.Write((pbegin == pend) ? emptyByte : (const unsigned char*) &pbegin[0],
-        (pend - pbegin) * sizeof(pbegin[0]));
+    sha.Write((pbegin == pend) ? emptyByte : (const unsigned char*) &pbegin[0], (pend - pbegin) * sizeof(pbegin[0]));
     sha.Finalize((unsigned char*) &hash);
 
 #pragma clang loop unroll_count(R)
@@ -30,7 +29,7 @@ inline uint256 Hash(const T1 pbegin, const T1 pend) {
 
 /* R: number of hashing rounds e.g 1 = single hash; 2 = double hash */
 template <std::size_t R>
-uint256 Hash(VStream& data) {
+uint256 Hash(const VStream& data) {
     return Hash<R>(data.cbegin(), data.cend());
 }
 
@@ -41,8 +40,13 @@ inline uint160 Hash160(const T1 pbegin, const T1 pend) {
 }
 
 /** Compute the 160-bit hash of a vector. */
-inline uint160 Hash160(VStream& vch) {
+inline uint160 Hash160(const VStream& vch) {
     return Hash160(vch.cbegin(), vch.cend());
 }
+
+namespace Hash {
+const uint256& GetZeroHash();
+const uint256& GetDoubleZeroHash();
+} // namespace Hash
 
 #endif

@@ -4,11 +4,10 @@
 #include <atomic>
 #include <list>
 
-#include <block.h>
-#include <chain.h>
-#include <peer.h>
-#include <task.h>
-#include <uint256.h>
+#include "chain.h"
+#include "peer.h"
+#include "task.h"
+#include "uint256.h"
 
 class DAGManager {
 public:
@@ -37,7 +36,7 @@ public:
     // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
     // and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
     // sending queue according to the BlockLocator constructed by peer.
-    void requestInv(uint256 fromHash, size_t length, Peer& peer);
+    void requestInv(uint256 fromHash, size_t len, Peer& peer);
 
     // Called by Peer and sets a list of inventory as the callback to the task.
     void assembleInv(GetBlockTask& task);
@@ -49,7 +48,7 @@ public:
     void GetBundle(GetDataTask task);
 
     // Adds a newly received block that has past syntax checking to the corresponding chain.
-    void AddBlockToPending(const BlockIndex* pblock);
+    void AddBlockToPending(const Block* pblock);
 
     size_t GetBestMilestoneHeight();
 

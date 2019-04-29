@@ -1,19 +1,35 @@
+#include <gtest/gtest.h>
+#include <optional>
+
 #include "block.h"
 #include "key.h"
 #include "pubkey.h"
 #include "stream.h"
 #include "transaction.h"
-#include <gtest/gtest.h>
 
 class TestSer : public testing::Test {
 protected:
+    Script randomBytes;
     uint256 rand1;
+    uint256 rand2;
+    uint256 zeros;
+
     void SetUp() {
-        rand1 = uint256S("9efd5d25c8cc0e2eda7dfc94c258122685ad24e6b559ed95fe3d54d363e79798");
-    }
-    void TearDown() {
+        rand1.randomize();
+        rand2.randomize();
     }
 };
+
+TEST_F(TestSer, SerializeOptional) {
+    std::optional<uint32_t> o1 = 4, o2;
+    VStream vstream;
+    vstream << o1 << o2;
+    std::optional<uint32_t> o3, o4 = 5;
+    vstream >> o3 >> o4;
+
+    ASSERT_EQ(o1, o3);
+    ASSERT_EQ(o2, o4);
+}
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     ECC_Start();
@@ -47,7 +63,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
 
 TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
+    TxInput input       = TxInput(outpoint, randomBytes);
     VStream sinput;
     sinput << input;
     std::string s = sinput.str();
@@ -62,7 +78,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxInput) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
-    TxOutput output = TxOutput(100, Script());
+    TxOutput output = TxOutput(100, randomBytes);
     VStream sinput;
     sinput << output;
     std::string s = sinput.str();
@@ -78,11 +94,10 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
-    TxOutput output     = TxOutput(100, Script());
-    Transaction tx      = Transaction(1);
-    tx.AddInput(input);
-    tx.AddOutput(output);
+    Transaction tx      = Transaction();
+
+    tx.AddInput(TxInput(outpoint, Script()));
+    tx.AddOutput(TxOutput(100, Script()));
 
     VStream sinput;
     sinput << tx;
@@ -95,25 +110,27 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     soutput << txFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
+
+    Transaction txx(tx);
+    std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
+    VStream vs;
+    vs << ot;
+    vs >> ots;
+
+    ASSERT_TRUE(ot.has_value());
+    ASSERT_TRUE(ots.has_value());
+    EXPECT_EQ(ot, ots);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
-    auto emptyChar = new char[256]();
-    uint256 zeros  = uint256S(emptyChar);
-    delete[] emptyChar;
-
-    uint256 rand2 = uint256S("e6558bb8ac0fb9823e96b529b8eca3531b991ab7451045ffaa4944a1eb0f0088");
-    uint256 rand3 = uint256S("84a01628cd9f0f715a9a611d99ea1f20bd7d823d04f41194aa49e03957d7e22e");
-
-    Block block = Block(1, rand1, zeros, rand2, rand3, 1, 1, 1);
+    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
-    TxInput input       = TxInput(outpoint, Script());
-    TxOutput output     = TxOutput(100, Script());
-    Transaction tx      = Transaction(1);
-    tx.AddInput(input);
-    tx.AddOutput(output);
+    Transaction tx      = Transaction();
+
+    tx.AddInput(TxInput(outpoint, Script()));
+    tx.AddOutput(TxOutput(100, Script()));
     block.AddTransaction(tx);
 
     VStream sinput;
@@ -125,6 +142,42 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 
     VStream soutput;
     soutput << blockFromDeserialization;
+
+    EXPECT_EQ(s, soutput.str());
+}
+
+TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
+    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
+
+    // Add a tx into the block
+    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    Transaction tx      = Transaction();
+    tx.AddInput(TxInput(outpoint, randomBytes));
+    tx.AddOutput(TxOutput(100, randomBytes));
+    block.AddTransaction(tx);
+    tx.Validate();
+
+    // Set extra info
+    block.SetMinerChainHeight(100);
+    block.ResetReward();
+
+    // Link a ms instance
+    Milestone ms(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
+        arith_uint256(0X3E8));
+    block.SetMilestoneInstance(ms);
+
+    // Make it a fake milestone
+    block.InvalidateMilestone();
+
+    VStream sinput;
+    block.SerializeToDB(sinput);
+    std::string s = sinput.str();
+
+    Block blockFromUnserialization;
+    blockFromUnserialization.DeserializeFromDB(sinput);
+
+    VStream soutput;
+    blockFromUnserialization.SerializeToDB(soutput);
 
     EXPECT_EQ(s, soutput.str());
 }

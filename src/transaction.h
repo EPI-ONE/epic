@@ -1,38 +1,49 @@
 #ifndef __SRC_TRANSACTION_H__
 #define __SRC_TRANSACTION_H__
 
-#include "block.h"
-#include "coin.h"
-#include "script/script.h"
-#include "uint256.h"
-#include "utils/serialize.h"
+#include <cassert>
+#include <limits>
+#include <sstream>
+#include <unordered_set>
 
-/**
- * Outpoint of a transaction, which points to an input in a previous block
- */
+#include "hash.h"
+#include "params.h"
+#include "script.h"
+#include "tinyformat.h"
+
+static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
+
+class Block;
+class Transaction;
+
 class TxOutPoint {
 public:
-    uint256 hash;
+    uint256 bHash;
     uint32_t index;
 
-    TxOutPoint() : index((uint32_t) -1) {
-    }
+    TxOutPoint() : index(UNCONNECTED) {}
 
-    // TODO: search for the pointer of BlockIndex in Cat
-    TxOutPoint(const uint256 fromBlock, uint32_t index) : hash(fromBlock), index(index) {
+    // TODO: search for the pointer of Block in Cat
+    TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
+
+    friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
+        return out1.index == out2.index && out1.bHash == out2.bHash;
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(hash);
+        READWRITE(bHash);
         READWRITE(index);
     }
+};
 
-    std::string ToString() const;
-
-private:
-    struct BlockIndex* block;
+/** Key hasher for unordered_set */
+template <>
+struct std::hash<TxOutPoint> {
+    size_t operator()(const TxOutPoint& x) const {
+        return std::hash<uint256>()(x.bHash) + (size_t) index;
+    }
 };
 
 class TxInput {
@@ -40,9 +51,25 @@ public:
     TxOutPoint outpoint;
     Script scriptSig;
 
-    TxInput();
-    explicit TxInput(TxOutPoint outpoint, Script scriptSig = Script());
-    TxInput(uint256 fromBlock, uint32_t index, Script scriptSig = Script());
+    TxInput() = default;
+
+    explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+
+    TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
+
+    TxInput(const Script& script);
+
+    bool IsRegistration() const;
+
+    bool IsFirstRegistration() const;
+
+    void SetParent(const Transaction* const tx);
+
+    const Transaction* GetParentTx();
+
+    friend bool operator==(const TxInput& a, const TxInput& b) {
+        return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
+    }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -51,13 +78,8 @@ public:
         READWRITE(scriptSig);
     }
 
-    bool IsRegistration() {
-        return isRegistration;
-    }
-    std::string ToString() const;
-
 private:
-    bool isRegistration;
+    const Transaction* parentTx_;
 };
 
 class TxOutput {
@@ -66,12 +88,15 @@ public:
     Coin value;
     Script scriptPubKey;
 
-    TxOutput() {
-        value = -1;
-        scriptPubKey.clear();
-    }
+    TxOutput();
 
-    TxOutput(const Coin value, Script scriptPubKey);
+    TxOutput(const Coin& value, const Script& scriptPubKey);
+
+    void SetParent(const Transaction* const tx);
+
+    friend bool operator==(const TxOutput& a, const TxOutput& b) {
+        return (a.value == b.value) && (a.scriptPubKey.bytes == b.scriptPubKey.bytes);
+    }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -80,44 +105,81 @@ public:
         READWRITE(scriptPubKey);
     }
 
-    std::string ToString() const;
+private:
+    const Transaction* parentTx_;
 };
 
 class Transaction {
 public:
-    std::vector<TxInput> inputs;
-    std::vector<TxOutput> outputs;
-    uint32_t version;
-    bool isValid = false;
+    enum Validity : uint8_t {
+        UNKNOWN = 0,
+        VALID,
+        INVALID,
+    };
 
-private:
-    uint256 hash;
-    bool isRegistration;
-    Coin fee;
-
-public:
     Transaction();
+
     explicit Transaction(const Transaction& tx);
-    Transaction(const std::vector<TxInput>& inputs, const std::vector<TxOutput>& outputs);
-    Transaction(uint32_t version);
+
+    Transaction& AddInput(TxInput&& input);
+
+    Transaction& AddOutput(TxOutput&& output);
+
+    void FinalizeHash();
+
+    const TxInput& GetInput(size_t index) const;
+
+    const TxOutput& GetOutput(size_t index) const;
+
+    const std::vector<TxInput>& GetInputs() const;
+
+    const std::vector<TxOutput>& GetOutputs() const;
+
+    const uint256& GetHash() const;
+
+    bool IsRegistration() const;
+
+    bool IsFirstRegistration() const;
+
+    bool Verify() const;
+
+    void Validate();
+
+    void Invalidate();
+
+    void SetStatus(Validity&& status);
+
+    Validity GetStatus() const;
+
+    void SetParent(const Block* const blk);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(version);
         READWRITE(inputs);
         READWRITE(outputs);
     }
 
-
-    void AddInput(TxInput& input);
-    void AddOutput(TxOutput& output);
-    uint256 GetHash() const;
-    bool IsRegistration() const {
-        return isRegistration;
+    friend bool operator==(const Transaction& a, const Transaction& b) {
+        return a.GetHash() == b.GetHash();
     }
 
-    std::string ToString() const;
+private:
+    std::vector<TxInput> inputs;
+    std::vector<TxOutput> outputs;
+
+    uint256 hash_;
+    Coin fee_;
+    Validity status_;
+
+    const Block* parentBlock_;
 };
+
+namespace std {
+string to_string(const TxOutPoint& outpoint);
+string to_string(const TxInput& input);
+string to_string(const TxOutput& output);
+string to_string(Transaction& tx);
+} // namespace std
 
 #endif //__SRC_TRANSACTION_H__

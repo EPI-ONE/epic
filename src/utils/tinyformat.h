@@ -137,6 +137,8 @@ namespace tfm = tinyformat;
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_map>
+#include <vector>
 
 #ifndef TINYFORMAT_ERROR
 #define TINYFORMAT_ERROR(reason) assert(0 && reason)
@@ -166,8 +168,7 @@ namespace tinyformat {
 
 class format_error : public std::runtime_error {
 public:
-    explicit format_error(const std::string& what) : std::runtime_error(what) {
-    }
+    explicit format_error(const std::string& what) : std::runtime_error(what) {}
 };
 
 //------------------------------------------------------------------------------
@@ -531,13 +532,11 @@ namespace detail {
 // whereas a naive implementation based on inheritance does not.
 class FormatArg {
 public:
-    FormatArg() : m_value(nullptr), m_formatImpl(nullptr), m_toIntImpl(nullptr) {
-    }
+    FormatArg() : m_value(nullptr), m_formatImpl(nullptr), m_toIntImpl(nullptr) {}
 
     template <typename T>
     explicit FormatArg(const T& value)
-        : m_value(static_cast<const void*>(&value)), m_formatImpl(&formatImpl<T>), m_toIntImpl(&toIntImpl<T>) {
-    }
+        : m_value(static_cast<const void*>(&value)), m_formatImpl(&formatImpl<T>), m_toIntImpl(&toIntImpl<T>) {}
 
     void format(std::ostream& out, const char* fmtBegin, const char* fmtEnd, int ntrunc) const {
         assert(m_value);
@@ -864,8 +863,7 @@ inline void formatImpl(std::ostream& out, const char* fmt, const detail::FormatA
 /// common interface to perform formatting as required.
 class FormatList {
 public:
-    FormatList(detail::FormatArg* formatters, int N) : m_formatters(formatters), m_N(N) {
-    }
+    FormatList(detail::FormatArg* formatters, int N) : m_formatters(formatters), m_N(N) {}
 
     friend void vformat(std::ostream& out, const char* fmt, const FormatList& list);
 
@@ -891,8 +889,7 @@ public:
         static_assert(sizeof...(args) == N, "Number of args must be N");
     }
 #else // C++98 version
-    void init(int) {
-    }
+    void init(int) {}
 #define TINYFORMAT_MAKE_FORMATLIST_CONSTRUCTOR(n)                                       \
                                                                                         \
     template <TINYFORMAT_ARGTYPES(n)>                                                   \
@@ -919,8 +916,7 @@ private:
 template <>
 class FormatListN<0> : public FormatList {
 public:
-    FormatListN() : FormatList(0, 0) {
-    }
+    FormatListN() : FormatList(0, 0) {}
 };
 
 } // namespace detail
@@ -1055,6 +1051,24 @@ std::string format(const std::string& fmt, const Args&... args) {
 }
 
 } // namespace tinyformat
+
+// Added for EPIC
+/** Serializes elements {K, V} of an unordered_map */
+template <typename K, typename V>
+std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m) {
+    for (const std::pair<K, V>& p : m) {
+        os << "{" << std::to_string(p.first) << ": " << std::to_string(p.second) << "}\n";
+    }
+    return os;
+}
+
+/** Serialize elements in a vector */
+template <typename T, typename U>
+std::ostream& operator<<(std::ostream& os, const std::vector<T, U>& m) {
+    for (auto i = m.begin(); i != m.end(); ++i)
+        os << std::to_string(*i) << " ";
+    return os;
+}
 
 #define strprintf tfm::format
 

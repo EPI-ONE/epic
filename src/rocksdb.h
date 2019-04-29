@@ -28,7 +28,7 @@ public:
 
         // Create column families
         vector<ColumnFamilyDescriptor> descriptors;
-        for (string columnName : COLUMN_NAMES) {
+        for (const string& columnName : COLUMN_NAMES) {
             ColumnFamilyOptions cOptions;
             if (columnName == kDefaultColumnFamilyName) {
                 cOptions.OptimizeForPointLookup(500L);

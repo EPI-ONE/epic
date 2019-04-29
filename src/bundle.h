@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include <block.h>
-#include <uint256.h>
+#include "block.h"
+#include "uint256.h"
 
 class Bundle {
 public:
@@ -15,8 +15,7 @@ public:
     uint8_t type;
 
     Bundle();
-    Bundle(std::vector<std::shared_ptr<const Block>>&& vblocks) : vblocks(std::move(vblocks)) {
-    }
+    Bundle(std::vector<std::shared_ptr<const Block>>&& vblocks) : vblocks(std::move(vblocks)) {}
     ~Bundle();
 
     void AddBlock(std::shared_ptr<const Block> pblock);

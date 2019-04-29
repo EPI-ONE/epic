@@ -1,7 +1,7 @@
-#ifndef EPIC_MESSAGE_TYPE_H
-#define EPIC_MESSAGE_TYPE_H
+#ifndef __SRC_MESSAGE_TYPE_H__
+#define __SRC_MESSAGE_TYPE_H__
 
-enum MessageType {
+enum MessageType : uint8_t {
     PING = 0,
     PONG,
     VERSION_MSG,
@@ -12,4 +12,4 @@ enum MessageType {
     BUNDLE,
 };
 
-#endif //EPIC_MESSAGE_TYPE_H
+#endif //__SRC_MESSAGE_TYPE_H__

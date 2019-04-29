@@ -32,4 +32,3 @@
    ```
 #### rocksdb
 * For MacOS, it's as simple as `brew install rocksdb`. For Linux, please refer to the link https://github.com/facebook/rocksdb/blob/master/INSTALL.md
-

@@ -286,7 +286,7 @@ void ECC_Start() {
 
     {
         // Pass in a random blinding seed to the secp256k1 context.
-        std::vector<unsigned char, secure_allocator<unsigned char>> vseed(32);
+        CPrivKey vseed;
         GetRandBytes(vseed);
         bool ret = secp256k1_context_randomize(ctx, vseed.data());
         assert(ret);
@@ -321,8 +321,7 @@ CKey DecodeSecret(const std::string& str) {
     CKey key;
     std::vector<unsigned char> data;
     if (DecodeBase58Check(str, data)) {
-        const std::vector<unsigned char>& privkey_prefix =
-            Base58Prefix(SECRET_KEY);
+        const std::vector<unsigned char> privkey_prefix(1, params.GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
         if ((data.size() == 32 + privkey_prefix.size() ||
             (data.size() == 33 + privkey_prefix.size() && data.back() == 1)) &&
             std::equal(
@@ -340,7 +339,7 @@ CKey DecodeSecret(const std::string& str) {
 
 std::string EncodeSecret(const CKey& key) {
     assert(key.IsValid());
-    std::vector<unsigned char> data = Base58Prefix(SECRET_KEY);
+    std::vector<unsigned char> data(1, params.GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
     data.insert(data.end(), key.begin(), key.end());
     if (key.IsCompressed()) {
         data.push_back(1);

@@ -5,6 +5,7 @@
 
 #ifndef __SRC_UTILS_STREAM_H__
 #define __SRC_UTILS_STREAM_H__
+
 #include <cstring>
 
 #include "serialize.h"
@@ -36,6 +37,8 @@ public:
     typedef byte_vector::reverse_iterator reverse_iterator;
 
     explicit VStream() : readPos(0) {}
+
+    VStream(size_t size) : chars(size), readPos(0) {}
 
     VStream(const_iterator pbegin, const_iterator pend) : chars(pbegin, pend), readPos(0) {}
 

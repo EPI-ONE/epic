@@ -7,12 +7,14 @@
 #define BITCOIN_UINT256_H
 
 #include <cassert>
-#include <crypto/common.h>
 #include <cstdint>
 #include <cstring>
+#include <immintrin.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include "crypto/common.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template <unsigned int BITS>
@@ -56,7 +58,6 @@ public:
     std::string GetHex() const;
     void SetHex(const char* psz);
     void SetHex(const std::string& str);
-    std::string ToString() const;
 
     unsigned char* begin() {
         return &data[0];
@@ -85,6 +86,20 @@ public:
                ((uint64_t) ptr[7]) << 56;
     }
 
+    void randomize() {
+        unsigned long long x;
+        uint_fast8_t j;
+
+        for (std::size_t i = 0; i < WIDTH; i++) {
+            j = i % 8;
+            if (j == 0)
+                while (!_rdrand64_step(&x))
+                    ;
+
+            data[i] = ((uint8_t*) &x)[j];
+        }
+    }
+
     template <typename Stream>
     void Serialize(Stream& s) const {
         s.write((char*) data, sizeof(data));
@@ -96,16 +111,19 @@ public:
     }
 };
 
+namespace std {
+template <unsigned int BITS>
+string to_string(const base_blob<BITS>& uint);
+} // namespace std
+
 /** 160-bit opaque blob.
  * @note This type is called uint160 for historical reasons only. It is an
  * opaque blob of 160 bits and has no integer operations.
  */
 class uint160 : public base_blob<160> {
 public:
-    uint160() {
-    }
-    explicit uint160(const std::vector<unsigned char>& vch) : base_blob<160>(vch) {
-    }
+    uint160() {}
+    explicit uint160(const std::vector<unsigned char>& vch) : base_blob<160>(vch) {}
 };
 
 /** 256-bit opaque blob.
@@ -115,17 +133,17 @@ public:
  */
 class uint256 : public base_blob<256> {
 public:
-    uint256() {
-    }
-    explicit uint256(const std::vector<unsigned char>& vch) : base_blob<256>(vch) {
-    }
+    uint256() {}
+    explicit uint256(const std::vector<unsigned char>& vch) : base_blob<256>(vch) {}
 
     /** A cheap hash function that just returns 64 bits from the result, it can
      * be used when the contents are considered uniformly random. It is not
      * appropriate when the value can easily be influenced from outside as e.g.
      * a network adversary could provide values to trigger worst-case behavior.
      */
-    uint64_t GetCheapHash() const { return ReadLE64(data); }
+    uint64_t GetCheapHash() const {
+        return ReadLE64(data);
+    }
 
     uint160 GetUint160() const {
         std::vector<unsigned char> vch(data, data + 20);
@@ -142,6 +160,7 @@ inline uint256 uint256S(const char* str) {
     rv.SetHex(str);
     return rv;
 }
+
 /* uint256 from std::string.
  * This is a separate function because the constructor uint256(const std::string
  * &str) can result in dangerously catching uint256(0) via std::string(const

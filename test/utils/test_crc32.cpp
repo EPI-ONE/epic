@@ -1,7 +1,6 @@
 #include "crc32.h"
 #include <gtest/gtest.h>
 
-
 class TestCrc32 : public testing::Test {
     void SetUp() {}
 

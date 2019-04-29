@@ -1,5 +1,5 @@
-#ifndef __SRC_TASKS_TASK_H_
-#define __SRC_TASKS_TASK_H_
+#ifndef __SRC_TASK_H_
+#define __SRC_TASK_H_
 
 class Task {};
 
@@ -13,4 +13,4 @@ public:
 
 class GetBlockTask : public Task {};
 
-#endif // ifndef __SRC_TASKS_TASK_H_
+#endif // ifndef __SRC_TASK_H_
