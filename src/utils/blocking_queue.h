@@ -13,14 +13,53 @@
 template <typename T>
 class BlockingQueue {
 public:
-    BlockingQueue() : mtx(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {
+    BlockingQueue() : mtx(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {}
+
+    void Put(T& element) {
+        std::unique_lock<std::mutex> lock(mtx);
+        full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
+        queue_.emplace(std::move(element));
+        empty_.notify_all();
     }
-    void Put(T& element);
-    bool Take(T& front);
-    size_t Size();
-    bool Empty();
-    void SetCapacity(size_t capacity);
-    void Quit();
+
+    void Put(T&& element) {
+        std::unique_lock<std::mutex> lock(mtx);
+        full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
+        queue_.emplace(std::move(element));
+        empty_.notify_all();
+    }
+
+    bool Take(T& front) {
+        std::unique_lock<std::mutex> lock(mtx);
+        empty_.wait(lock, [this] { return !queue_.empty() || quit_; });
+        if (quit_) {
+            return false;
+        }
+        front = std::move(queue_.front());
+        queue_.pop();
+        full_.notify_all();
+        return true;
+    }
+
+    size_t Size() {
+        std::lock_guard<std::mutex> lock(mtx);
+        return queue_.size();
+    }
+
+    bool Empty() {
+        std::lock_guard<std::mutex> lock(mtx);
+        return queue_.empty();
+    }
+
+    void SetCapacity(size_t capacity) {
+        capacity_ = capacity;
+    }
+
+    void Quit() {
+        quit_ = true;
+        empty_.notify_all();
+        full_.notify_all();
+    }
 
 private:
     mutable std::mutex mtx;
