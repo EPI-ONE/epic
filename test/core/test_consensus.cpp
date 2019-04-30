@@ -26,7 +26,7 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
     // test without a tx
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
 
-    // with a big-enough tx to test the variable size ints
+    // with a big-enough tx to test the variable-size ints (e.g., VarInt, CompactSize)
     Transaction tx;
     for (int i = 0; i < 512; ++i) {
         tx.AddInput(TxInput(Hash::GetZeroHash(), i, Script(std::vector<unsigned char>(i))));
