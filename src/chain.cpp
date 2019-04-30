@@ -1,5 +1,10 @@
 #include "chain.h"
 
+Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
+    pendingBlocks_ = {};
+    vmilestones_   = {std::make_shared<Milestone>()};
+}
+
 std::shared_ptr<Milestone> Chain::GetChainHead() const {
     return vmilestones_.front();
 }

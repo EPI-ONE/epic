@@ -347,21 +347,21 @@ std::string std::to_string(Block& block) {
 }
 
 void Block::SerializeMilestone(VStream& s, Milestone& milestone) {
-    ::Serialize(s, VARINT(milestone.height_));
-    ::Serialize(s, milestone.chainwork_.GetCompact());
-    ::Serialize(s, milestone.lastUpdateTime_);
-    ::Serialize(s, milestone.milestoneTarget_.GetCompact());
-    ::Serialize(s, milestone.blockTarget_.GetCompact());
-    ::Serialize(s, VARINT(milestone.hashRate_));
+    ::Serialize(s, VARINT(milestone.height));
+    ::Serialize(s, milestone.chainwork.GetCompact());
+    ::Serialize(s, milestone.lastUpdateTime);
+    ::Serialize(s, milestone.milestoneTarget.GetCompact());
+    ::Serialize(s, milestone.blockTarget.GetCompact());
+    ::Serialize(s, VARINT(milestone.hashRate));
 }
 
 void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
-    ::Deserialize(s, VARINT(milestone.height_));
-    milestone.chainwork_.SetCompact(ser_readdata32(s));
-    milestone.lastUpdateTime_ = ser_readdata64(s);
-    milestone.milestoneTarget_.SetCompact(ser_readdata32(s));
-    milestone.blockTarget_.SetCompact(ser_readdata32(s));
-    ::Deserialize(s, VARINT(milestone.hashRate_));
+    ::Deserialize(s, VARINT(milestone.height));
+    milestone.chainwork.SetCompact(ser_readdata32(s));
+    milestone.lastUpdateTime = ser_readdata64(s);
+    milestone.milestoneTarget.SetCompact(ser_readdata32(s));
+    milestone.blockTarget.SetCompact(ser_readdata32(s));
+    ::Deserialize(s, VARINT(milestone.hashRate));
 }
 
 Block Block::CreateGenesis() {
@@ -463,12 +463,12 @@ size_t BlockDag::GetOptimalEncodingSize() {
     optimalEncodingSize_ += 1;
 
     if (milestone_ != nullptr) {
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->height_);
+        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->height);
         optimalEncodingSize_ += 4;
         optimalEncodingSize_ += 8;
         optimalEncodingSize_ += 4;
         optimalEncodingSize_ += 4;
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->hashRate_);
+        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->hashRate);
     }
 
     return optimalEncodingSize_;

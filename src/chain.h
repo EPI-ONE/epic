@@ -5,10 +5,16 @@
 #include <vector>
 
 #include "block.h"
+#include "params.h"
 #include "uint256.h"
 
 class Chain {
 public:
+    Chain() {
+        Chain(false);
+    }
+    Chain(bool mainchain);
+    Chain(const Chain&);
     // add block to this chain
     void AddBlock(const std::shared_ptr<Block> pblock);
 
@@ -36,14 +42,13 @@ private:
 
     // store a (probabily recent) list of milestones
     std::vector<std::shared_ptr<Milestone>> vmilestones_;
+    // store blocks not yet verified in this chain
+    std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
 
-    bool IsMilestone(const std::shared_ptr<Block> pblock);
+    inline bool IsMilestone(const std::shared_ptr<Block> pblock);
 
     // when we add a milestone block to this chain, we start verification
     std::shared_ptr<Milestone> MilestoneVerify(const std::shared_ptr<Block> pblock);
-
-    // container for all pending blocks
-    std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
 
     // do validity check on the block
     void Validate(const std::shared_ptr<Block> pblock);
