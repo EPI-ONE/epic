@@ -105,6 +105,8 @@ public:
 
     void SetNull();
 
+    void UnCache();
+
     bool Verify();
 
     void AddTransaction(Transaction& tx);
@@ -137,7 +139,7 @@ public:
 
     const uint256& GetTxHash();
 
-    size_t GetOptimalEncodingSize() const;
+    size_t GetOptimalEncodingSize();
 
     /*
      * Checks whether the block is a registration block.
@@ -206,6 +208,9 @@ protected:
     std::shared_ptr<Milestone> milestone_;
     uint64_t minerChainHeight_;
     bool isMilestone_ = false;
+
+private:
+    size_t optimalEncodingSize = 0;
 };
 
 extern const Block GENESIS;

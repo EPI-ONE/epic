@@ -546,12 +546,12 @@ public:
     }
 };
 
-class CCompactSize {
+class CompactSize {
 protected:
     uint64_t& n;
 
 public:
-    explicit CCompactSize(uint64_t& nIn) : n(nIn) {}
+    explicit CompactSize(uint64_t& nIn) : n(nIn) {}
 
     template <typename Stream>
     void Serialize(Stream& s) const {
