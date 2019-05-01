@@ -54,6 +54,10 @@ void TxOutput::SetParent(const Transaction* const tx) {
     parentTx_ = tx;
 }
 
+const Transaction* TxOutput::GetParentTx() const {
+    return parentTx_;
+}
+
 /*
  * transaction class START
  */
@@ -71,6 +75,7 @@ Transaction::Transaction(const Transaction& tx) {
     fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
     status_      = tx.status_;
+    FinalizeHash();
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {
@@ -171,7 +176,12 @@ Transaction::Validity Transaction::GetStatus() const {
 }
 
 void Transaction::SetParent(const Block* const blk) {
+    assert(blk != nullptr);
     parentBlock_ = blk;
+}
+
+const Block* Transaction::GetParentBlock() const {
+    return parentBlock_;
 }
 
 /*

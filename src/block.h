@@ -114,6 +114,8 @@ public:
 
     bool HasTransaction() const;
 
+    std::optional<Transaction>& GetTransaction();
+
     void SetMinerChainHeight(uint32_t height);
 
     void ResetReward();

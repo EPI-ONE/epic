@@ -89,6 +89,10 @@ bool Block::HasTransaction() const {
     return transaction_.has_value();
 }
 
+std::optional<Transaction>& Block::GetTransaction() {
+    return transaction_;
+}
+
 void Block::SetMinerChainHeight(uint32_t height) {
     minerChainHeight_ = height;
 }

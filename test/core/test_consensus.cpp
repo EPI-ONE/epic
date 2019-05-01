@@ -1,8 +1,40 @@
 #include <gtest/gtest.h>
 
-#include "block.h"
+#include "utxo.h"
 
 class ConsensusTest : public testing::Test {};
+
+Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
+    uint256 r1;
+    r1.randomize();
+    uint256 r2;
+    r2.randomize();
+    uint256 r3;
+    r3.randomize();
+
+    Block b = Block(BlockHeader(1, r1, r2, r3, time(nullptr), EASIEST_COMP_DIFF_TARGET, 0));
+
+    if (numTxInput || numTxOutput) {
+        Transaction tx;
+        for (int i = 0; i < numTxInput; ++i) {
+            uint256 inputH;
+            inputH.randomize();
+            int maxPos = rand() % 128;
+            tx.AddInput(TxInput(inputH, i % maxPos, Script(std::vector<unsigned char>(i))));
+        }
+        for (int i = 0; i < numTxOutput; ++i) {
+            tx.AddOutput(TxOutput(i, Script(std::vector<unsigned char>(i))));
+        }
+
+        b.AddTransaction(tx);
+    }
+
+    if (solve) {
+        b.Solve();
+    }
+
+    return b;
+}
 
 TEST_F(ConsensusTest, SyntaxChecking) {
     Block b = GENESIS;
@@ -20,8 +52,7 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
     Block b = GENESIS;
     EXPECT_EQ(VStream(b).size(), b.GetOptimalEncodingSize());
 
-    Block b1 = Block(BlockHeader(1, Hash::GetZeroHash(), Hash::GetDoubleZeroHash(), Hash::GetZeroHash(), time(nullptr),
-        EASIEST_COMP_DIFF_TARGET, 0));
+    Block b1 = FakeBlock();
 
     // test without a tx
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
@@ -34,4 +65,10 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
     }
     b1.AddTransaction(tx);
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
+}
+
+TEST_F(ConsensusTest, UTXO) {
+    Block b   = FakeBlock(1, 1);
+    UTXO utxo = UTXO(b.GetTransaction()->GetOutput(0), 0);
+    uint256 key = utxo.GetKey();
 }
