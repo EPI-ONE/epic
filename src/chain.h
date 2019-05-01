@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "block.h"
-#include "milestone.h"
 #include "uint256.h"
 
 class Chain {
@@ -19,15 +18,18 @@ public:
 
     std::shared_ptr<Milestone> GetChainHead() const;
 
+    void addPendingBlock(Block& block);
+
+    void removePendingBlock(const uint256& hash);
+
+    bool isBlockPending(const uint256& hash) const;
+
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
 
-    // store blocks not yet verified in this chain
-    std::unordered_map<uint256, const Block*> mpending_;
-
     // store a (probabily recent) list of milestones
-    std::list<std::shared_ptr<Milestone>> vmilestones_;
+    std::vector<std::shared_ptr<Milestone>> vmilestones_;
 
     bool IsMilestone(const std::shared_ptr<Block> pblock);
 
@@ -36,6 +38,9 @@ private:
 
     // get a list of block to verify by a post-order DFS
     std::vector<std::shared_ptr<Block>> FindValidSubgraph(const std::shared_ptr<Block> pblock);
+
+    // container for all pending blocks
+    std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
 
     // do validity check on the block
     void Validate(const std::shared_ptr<Block> pblock);
