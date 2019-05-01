@@ -37,13 +37,17 @@ public:
         READWRITE(bHash);
         READWRITE(index);
     }
+
+    uint64_t HashCode() const {
+        return std::hash<uint256>()(bHash) ^ index;
+    }
 };
 
-/** Key hasher for unordered_set */
+// Key hashers for unordered_set
 template <>
 struct std::hash<TxOutPoint> {
     size_t operator()(const TxOutPoint& x) const {
-        return std::hash<uint256>()(x.bHash) + (size_t) index;
+        return x.HashCode();
     }
 };
 
@@ -95,6 +99,8 @@ public:
     TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData);
 
     void SetParent(const Transaction* const tx);
+
+    const Transaction* GetParentTx() const;
 
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
         return (a.value == b.value) && (a.listingContent == b.listingContent);
@@ -156,6 +162,8 @@ public:
     Validity GetStatus() const;
 
     void SetParent(const Block* const blk);
+
+    const Block* GetParentBlock() const;
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
