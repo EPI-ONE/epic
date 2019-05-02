@@ -1,20 +1,22 @@
+#include <gtest/gtest.h>
+
 #include "base58.h"
 #include "hash.h"
 #include "key.h"
 #include "pubkey.h"
 #include "serialize.h"
 #include "stream.h"
-#include "tasm/functors.hpp"
+#include "tasm/functors.h"
 #include "tasm/opcodes.h"
-#include "tasm/tasm.hpp"
+#include "tasm/tasm.h"
 #include "tinyformat.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-#include <gtest/gtest.h>
 
 
 class TestTasm : public testing::Test {
 protected:
+    ECCVerifyHandle handle;
     void SetUp() {
         ECC_Start();
     }
@@ -26,20 +28,20 @@ protected:
 
 TEST_F(TestTasm, simple_listing) {
     VStream v;
-    tasm t(functors);
+    Tasm t(functors);
     std::vector<uint8_t> p = {SUCCESS};
-    tasm::listing l(p, v);
-    ASSERT_TRUE(t.exec_listing(l));
+    Tasm::Listing l(p, v);
+    ASSERT_TRUE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, verify) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     CKey seckey = CKey();
     seckey.MakeNewKey(true);
     CPubKey pubkey      = seckey.GetPubKey();
-    uint160 pubkeyHash  = Hash160(pubkey.begin(), pubkey.end());
+    uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
     std::string randstr = "frog learns chess";
     uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> sig;
@@ -51,12 +53,12 @@ TEST_F(TestTasm, verify) {
     msg.Serialize(v);
 
     std::vector<uint8_t> p = {VERIFY};
-    tasm::listing l(p, v);
-    ASSERT_TRUE(t.exec_listing(l));
+    Tasm::Listing l(p, v);
+    ASSERT_TRUE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, verify_bad_pubkeyhash) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     CKey seckey          = CKey();
@@ -64,9 +66,9 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     seckey.MakeNewKey(true);
     maliciousSeckey.MakeNewKey(true);
     CPubKey pubkey              = seckey.GetPubKey();
-    uint160 pubkeyHash          = Hash160(pubkey.begin(), pubkey.end());
+    uint160 pubkeyHash          = Hash160<1>(pubkey.begin(), pubkey.end());
     CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
-    uint160 maliciousPubkeyHash = Hash160(maliciousPubkey.begin(), maliciousPubkey.end());
+    uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
     std::string randstr         = "frog learns chess";
     uint256 msg                 = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> sig;
@@ -78,13 +80,13 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     v << msg;
 
     std::vector<uint8_t> p = {VERIFY};
-    tasm::listing l(p, v);
+    Tasm::Listing l(p, v);
 
-    ASSERT_FALSE(t.exec_listing(l));
+    ASSERT_FALSE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, verify_bad_signature) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     CKey seckey          = CKey();
@@ -92,7 +94,7 @@ TEST_F(TestTasm, verify_bad_signature) {
     seckey.MakeNewKey(true);
     maliciousSeckey.MakeNewKey(true);
     CPubKey pubkey      = seckey.GetPubKey();
-    uint160 pubkeyHash  = Hash160(pubkey.begin(), pubkey.end());
+    uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
     std::string randstr = "frog learns chess";
     uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> maliciousSig;
@@ -104,13 +106,13 @@ TEST_F(TestTasm, verify_bad_signature) {
     v << msg;
 
     std::vector<uint8_t> p = {VERIFY};
-    tasm::listing l(p, v);
+    Tasm::Listing l(p, v);
 
-    ASSERT_FALSE(t.exec_listing(l));
+    ASSERT_FALSE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, continuous_verify) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
@@ -118,7 +120,7 @@ TEST_F(TestTasm, continuous_verify) {
         CKey seckey = CKey();
         seckey.MakeNewKey(true);
         CPubKey pubkey     = seckey.GetPubKey();
-        uint160 pubkeyHash = Hash160(pubkey.begin(), pubkey.end());
+        uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
         uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
         std::vector<unsigned char> sig;
         seckey.Sign(msg, sig);
@@ -130,12 +132,12 @@ TEST_F(TestTasm, continuous_verify) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    tasm::listing l(p, v);
-    ASSERT_TRUE(t.exec_listing(l));
+    Tasm::Listing l(p, v);
+    ASSERT_TRUE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
@@ -144,7 +146,7 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             CKey seckey = CKey();
             seckey.MakeNewKey(true);
             CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160(pubkey.begin(), pubkey.end());
+            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
             uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
@@ -159,9 +161,9 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             seckey.MakeNewKey(true);
             maliciousSeckey.MakeNewKey(true);
             CPubKey pubkey              = seckey.GetPubKey();
-            uint160 pubkeyHash          = Hash160(pubkey.begin(), pubkey.end());
+            uint160 pubkeyHash          = Hash160<1>(pubkey.begin(), pubkey.end());
             CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
-            uint160 maliciousPubkeyHash = Hash160(maliciousPubkey.begin(), maliciousPubkey.end());
+            uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
             uint256 msg                 = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
@@ -174,12 +176,12 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    tasm::listing l(p, v);
-    ASSERT_FALSE(t.exec_listing(l));
+    Tasm::Listing l(p, v);
+    ASSERT_FALSE(t.ExecListing(l));
 }
 
 TEST_F(TestTasm, continuous_verify_bad_signature) {
-    tasm t(functors);
+    Tasm t(functors);
     VStream v;
 
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
@@ -188,7 +190,7 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
             CKey seckey = CKey();
             seckey.MakeNewKey(true);
             CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160(pubkey.begin(), pubkey.end());
+            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
             uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
@@ -203,7 +205,7 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
             seckey.MakeNewKey(true);
             maliciousSeckey.MakeNewKey(true);
             CPubKey pubkey      = seckey.GetPubKey();
-            uint160 pubkeyHash  = Hash160(pubkey.begin(), pubkey.end());
+            uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
             std::string randstr = "frog learns chess";
             uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
             std::vector<unsigned char> maliciousSig;
@@ -217,6 +219,6 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    tasm::listing l(p, v);
-    ASSERT_FALSE(t.exec_listing(l));
+    Tasm::Listing l(p, v);
+    ASSERT_FALSE(t.ExecListing(l));
 }

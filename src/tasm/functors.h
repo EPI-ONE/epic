@@ -6,9 +6,8 @@
 #include <unistd.h>
 
 #include "../utils/stream.h"
+#include "tasm/tasm.h"
 #include "uint256.h"
-
-typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
 
 std::array<instruction, 256> functors = {
     // FALSE
@@ -25,13 +24,15 @@ std::array<instruction, 256> functors = {
         pubkey.Deserialize(data);
         Deserialize(data, sig);
         msg.Deserialize(data);
-        if (Hash160(pubkey.begin(), pubkey.end()) != pubkeyHash) {
+
+        if (Hash160<1>(pubkey.begin(), pubkey.end()) != pubkeyHash) {
             return ip + 1;
         }
-        ECCVerifyHandle handle;
+
         if (!pubkey.Verify(msg, sig)) {
             return ip + 1;
         }
+
         return ip + 2;
     })};
 #endif

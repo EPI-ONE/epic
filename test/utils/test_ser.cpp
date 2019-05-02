@@ -5,12 +5,12 @@
 #include "key.h"
 #include "pubkey.h"
 #include "stream.h"
-#include "tasm.hpp"
+#include "tasm.h"
 #include "transaction.h"
 
 class TestSer : public testing::Test {
 protected:
-    tasm::listing randomBytes;
+    Tasm::Listing randomBytes;
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
@@ -63,8 +63,8 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeVStream) {
-    std::vector<char> theguy = {'h', 'u', 'y'};
-    VStream v1(theguy);
+    std::vector<char> deterministicVector = {'x', 'y', 'z'};
+    VStream v1(deterministicVector);
     VStream sinput;
     sinput << v1;
     std::string s = sinput.str();
@@ -80,15 +80,15 @@ TEST_F(TestSer, SerializeEqDeserializeVStream) {
 
 
 TEST_F(TestSer, SerializeEqDeserializeListing) {
-    std::vector<char> theguy = {'h', 'u', 'y'};
-    VStream v(theguy);
+    std::vector<char> deterministicVector = {'x', 'y', 'z'};
+    VStream v(deterministicVector);
     std::vector<uint8_t> p = {1, 1};
-    tasm::listing l1(p, v);
+    Tasm::Listing l1(p, v);
     VStream sinput;
     sinput << l1;
     std::string s = sinput.str();
 
-    tasm::listing l2;
+    Tasm::Listing l2;
     sinput >> l2;
 
     VStream soutput;
@@ -133,8 +133,8 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, tasm::listing()));
-    tx.AddOutput(TxOutput(100, tasm::listing()));
+    tx.AddInput(TxInput(outpoint, Tasm::Listing(randomBytes)));
+    tx.AddOutput(TxOutput(100, Tasm::Listing(randomBytes)));
 
     VStream sinput;
     sinput << tx;
@@ -166,8 +166,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, tasm::listing()));
-    tx.AddOutput(TxOutput(100, tasm::listing()));
+    tx.AddInput(TxInput(outpoint, Tasm::Listing(randomBytes)));
+    tx.AddOutput(TxOutput(100, Tasm::Listing(randomBytes)));
     block.AddTransaction(tx);
 
     VStream sinput;

@@ -1,9 +1,9 @@
 #ifndef __SRC_PARAMS_H__
 #define __SRC_PARAMS_H__
 
+#include <array>
 #include <iostream>
 #include <sstream>
-#include <array>
 
 #include "arith_uint256.h"
 #include "coin.h"
@@ -29,8 +29,6 @@ static constexpr Coin MAX_MONEY = 9999999999L;
 static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
-// max number of signature verification OPs in a block TODO: determine the size
-static constexpr int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
 // an easy enough difficulty target
 static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 

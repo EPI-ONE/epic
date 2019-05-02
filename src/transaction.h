@@ -9,7 +9,7 @@
 #include "hash.h"
 #include "params.h"
 #include "stream.h"
-#include "tasm.hpp"
+#include "tasm.h"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
@@ -50,18 +50,15 @@ struct std::hash<TxOutPoint> {
 class TxInput {
 public:
     TxOutPoint outpoint;
-    tasm::listing scriptSig; // MAX: actual listing plus program must be here not in Output.
+    Tasm::Listing listingContent;
 
     TxInput() = default;
 
-    explicit TxInput(const TxOutPoint& outpoint, const tasm::listing& scriptSig = tasm::listing());
-    // TASM How is scriptsig inhabited in the constructor? Do we get it from the message, right?
-    // MAX: we get in over the network
-    // QING: Max is correct
+    explicit TxInput(const TxOutPoint& outpoint, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const uint256& fromBlock, const uint32_t index, const tasm::listing& scriptSig = tasm::listing());
+    TxInput(const uint256& fromBlock, const uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const tasm::listing& script);
+    TxInput(const Tasm::Listing& script);
 
     bool IsRegistration() const;
 
@@ -72,14 +69,14 @@ public:
     const Transaction* GetParentTx();
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
-        return (a.outpoint == b.outpoint) && (a.scriptSig == b.scriptSig);
+        return (a.outpoint == b.outpoint) && (a.listingContent == b.listingContent);
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(outpoint);
-        READWRITE(scriptSig);
+        READWRITE(listingContent);
     }
 
 private:
@@ -90,25 +87,23 @@ class TxOutput {
 public:
     // TODO: implement Coin class
     Coin value;
-    tasm::listing scriptPubKey;
-    // TASM push pubkey to vstream and create a listing with a verify op.
-    // QING: scriptPubKey is the serialized listing#data
+    Tasm::Listing listingContent;
 
     TxOutput();
 
-    TxOutput(const Coin& value, const tasm::listing& scriptPubKey);
+    TxOutput(const Coin& value, const Tasm::Listing& ListingData);
 
     void SetParent(const Transaction* const tx);
 
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
-        return (a.value == b.value) && (a.scriptPubKey == b.scriptPubKey);
+        return (a.value == b.value) && (a.listingContent == b.listingContent);
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(value);
-        READWRITE(scriptPubKey);
+        READWRITE(listingContent);
     }
 
 private:
@@ -141,20 +136,7 @@ public:
 
     const std::vector<TxOutput>& GetOutputs() const;
 
-    tasm::listing GetListing() {
-        tasm::listing l;
-        if (inputs.size() != outputs.size()) {
-            throw std::runtime_error("Transaction is inconsistent. Input size doesn't match output size");
-        }
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            l.program.push_back(VERIFY);
-            l.program.push_back(FAIL);
-            l.data << outputs[i].scriptPubKey.data;
-            l.data << inputs[i].scriptSig.data;
-        }
-        l.program.push_back(SUCCESS);
-        return l;
-    }
+    const Tasm::Listing GetListing() const;
 
     const uint256& GetHash() const;
 
@@ -188,12 +170,6 @@ public:
 private:
     std::vector<TxInput> inputs;
     std::vector<TxOutput> outputs;
-    // TASM should we merge the listings about to the member of transaction? MAX:let's do it this way
-    // TASM Where do you want to initialize the interpreter? MAX: DAG MANAGER
-    // QING: I think a better way could be: Tx contains the Script which is basically just the serialized listing. Tasm
-    // interpreter takes the Script, deserializes it into listing, and do whatever logic required by the
-    // listing#program. In this way Transaction won't care about how Tasm works and it's job is only to carry the
-    // information.
 
     uint256 hash_;
     Coin fee_;

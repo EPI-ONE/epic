@@ -29,8 +29,8 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
     // with a big-enough tx to test the variable-size ints (e.g., VarInt, CompactSize)
     Transaction tx;
     for (int i = 0; i < 512; ++i) {
-        tx.AddInput(TxInput(Hash::GetZeroHash(), i, Script(std::vector<unsigned char>(i))));
-        tx.AddOutput(TxOutput(i, Script(std::vector<unsigned char>(i))));
+        tx.AddInput(TxInput(Hash::GetZeroHash(), i, Tasm::Listing(VStream(i))));
+        tx.AddOutput(TxOutput(i, Tasm::Listing(VStream(i))));
     }
     b1.AddTransaction(tx);
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());

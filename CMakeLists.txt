@@ -48,7 +48,6 @@ set(UTIL_DIR src/utils)
 set(SUPPORT_DIR src/support)
 set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
-set(SCRIPT_DIR src/script)
 set(SUPPORT_DIR src/support)
 set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
@@ -57,7 +56,6 @@ aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${TASM_DIR} TASM_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
-aux_source_directory(${SCRIPT_DIR} SCRIPT_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
@@ -67,7 +65,6 @@ include_directories(src
         ${UTIL_DIR}
         ${CRYPTO_DIR}
         ${COMPAT_DIR}
-        ${SCRIPT_DIR}
         ${CORE_DIR}
         ${TASM_DIR}
         ${SPDLOG_DIR}
@@ -78,7 +75,6 @@ set(SRC_CODE
         ${NET_SRCS}
         ${UTIL_SRCS}
         ${CRYPTO_SRCS}
-        ${SCRIPT_SRCS}
         ${CORE_SRCS}
         ${SUPPORT_DIR}
         )

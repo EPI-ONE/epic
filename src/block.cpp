@@ -169,21 +169,18 @@ size_t Block::GetOptimalEncodingSize() {
 
     optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
     for (const TxInput& input : transaction_->GetInputs()) {
-        size_t scriptSigSize = input.scriptSig.bytes.size();
-        optimalEncodingSize += (32                                 // block hash
-                                + 4                                // index
-                                + ::GetSizeOfVarInt(scriptSigSize) // script size in VARINT
-                                + scriptSigSize                    // script
-        );
+        size_t listingDataSize    = input.listingContent.data.size();
+        size_t listingProgramSize = input.listingContent.program.size();
+        optimalEncodingSize += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
     optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
     for (const TxOutput& output : transaction_->GetOutputs()) {
-        size_t scriptPkSize = output.scriptPubKey.bytes.size();
-        optimalEncodingSize += (8                                 // value
-                                + ::GetSizeOfVarInt(scriptPkSize) // script size in VARINT
-                                + scriptPkSize                    // script
-        );
+        size_t listingDataSize    = output.listingContent.data.size();
+        size_t listingProgramSize = output.listingContent.program.size();
+        optimalEncodingSize += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
     return optimalEncodingSize;
@@ -235,7 +232,7 @@ void Block::Solve() {
 
     FinalizeHash();
     for (;;) {
-        if (UintToArith256(hash_) < target) {
+        if (UintToArith256(hash_) <= target) {
             return;
         }
 
@@ -341,18 +338,17 @@ Block Block::CreateGenesis() {
     auto vs = VStream(ParseHex(hexStr));
 
     // Add input and output
-    tx.AddInput(TxInput(tasm::listing(vs)));
+    tx.AddInput(TxInput(Tasm::Listing(vs)));
 
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, tasm::listing(VStream(pubKeyID.value())))).FinalizeHash();
+    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetMinerChainHeight(0);
     genesisBlock.ResetReward();
-    // genesisBlock.SetDifficultyTarget(0x1e00ffffL);
-    genesisBlock.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
+    genesisBlock.SetDifficultyTarget(0x1f00ffffL);
     genesisBlock.SetTime(1548078136L);
-    genesisBlock.Solve();
+    genesisBlock.SetNonce(47772);
     genesisBlock.FinalizeHash();
 
     return genesisBlock;

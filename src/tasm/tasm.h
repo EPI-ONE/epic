@@ -2,32 +2,30 @@
 #define __TASM_H__
 
 #include <array>
+#include <functional>
 #include <vector>
 
 #include "opcodes.h"
+#include "stream.h"
 #include "utils/serialize.h"
 
 typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
 
-class tasm {
+class Tasm {
 public:
-    class listing {
+    class Listing {
     public:
         std::vector<uint8_t> program;
         VStream data;
 
-        listing() = default;
+        Listing() = default;
 
-        listing(std::vector<uint8_t>& p, VStream& d) {
+        Listing(std::vector<uint8_t>& p, VStream& d) {
             program = p;
             data    = d;
         };
 
-        listing(VStream& d) {
-            data = d;
-        }
-
-        listing(VStream&& d) {
+        Listing(const VStream& d) {
             data = d;
         }
 
@@ -38,24 +36,24 @@ public:
             READWRITE(data);
         }
 
-        friend bool operator==(const listing& a, const listing& b) {
+        friend bool operator==(const Listing& a, const Listing& b) {
             return a.program == b.program && a.data == b.data;
         }
     };
 
-    explicit tasm(std::array<instruction, 256> is) {
+    explicit Tasm(std::array<instruction, 256> is) {
         is_ = is;
     };
 
-    instruction yield_instruction(const std::vector<uint8_t> program) {
-        return yield_instruction_n_channel(preprocessor(program));
+    instruction YieldInstruction(const std::vector<uint8_t> program) {
+        return YieldInstructionNChannel(Preprocessor(program));
     }
 
-    instruction yield_debug_instruction(const std::vector<uint8_t> program) {
-        return yield_instruction_m_channel(preprocessor(program), {SUCCESS}, {SUCCESS});
+    instruction YieldDebugInstruction(const std::vector<uint8_t> program) {
+        return YieldInstructionMChannel(Preprocessor(program), {SUCCESS}, {SUCCESS});
     }
 
-    std::vector<uint8_t> preprocessor(const std::vector<uint8_t>& program_) {
+    std::vector<uint8_t> Preprocessor(const std::vector<uint8_t>& program_) {
         std::vector<uint8_t> program = program_;
         if (program.back() != SUCCESS) {
             program.push_back(FAIL);
@@ -65,26 +63,26 @@ public:
         return program;
     }
 
-    int exec_listing(listing l) {
-        return yield_instruction(l.program)(l.data, 0);
+    int ExecListing(Listing l) {
+        return YieldInstruction(l.program)(l.data, 0);
     }
 
-    int exec_debug_listing(listing l) {
-        return yield_debug_instruction(l.program)(l.data, 0);
+    int ExecDebugListing(Listing l) {
+        return YieldDebugInstruction(l.program)(l.data, 0);
     }
 
-    void set_op(uint8_t ip, instruction i) {
+    void SetOp(uint8_t ip, instruction i) {
         is_[ip] = i;
     }
 
-    void compile_set_op(uint8_t ip, std::vector<uint8_t> op, bool debug = false) {
-        is_[ip] = debug ? yield_debug_instruction(op) : yield_instruction(op);
+    void CompileSetOp(uint8_t ip, std::vector<uint8_t> op, bool debug = false) {
+        is_[ip] = debug ? YieldDebugInstruction(op) : YieldInstruction(op);
     }
 
 private:
     std::array<instruction, 256> is_;
 
-    instruction yield_instruction_n_channel(const std::vector<uint8_t> program) {
+    instruction YieldInstructionNChannel(const std::vector<uint8_t> program) {
         return [=](VStream& data, std::size_t ip) {
             std::size_t ip_p = 0;
             uint8_t op;
@@ -98,11 +96,11 @@ private:
         };
     }
 
-    instruction yield_instruction_m_channel(const std::vector<uint8_t>& program,
+    instruction YieldInstructionMChannel(const std::vector<uint8_t>& program,
         const std::vector<uint8_t>& uchannel,
         const std::vector<uint8_t>& lchannel) {
-        instruction iuc = yield_instruction_n_channel(uchannel);
-        instruction luc = yield_instruction_n_channel(lchannel);
+        instruction iuc = YieldInstructionNChannel(uchannel);
+        instruction luc = YieldInstructionNChannel(lchannel);
 
         return [=](VStream& data, std::size_t ip) {
             std::size_t ip_p = 0;

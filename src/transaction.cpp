@@ -4,19 +4,19 @@
  * TxInput class START
  */
 
-TxInput::TxInput(const TxOutPoint& outpointToPrev, const tasm::listing& script) {
-    outpoint  = outpointToPrev;
-    scriptSig = script;
+TxInput::TxInput(const TxOutPoint& outpointToPrev, const Tasm::Listing& listingData) {
+    outpoint       = outpointToPrev;
+    listingContent = listingData;
 }
 
-TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const tasm::listing& script) {
-    outpoint  = TxOutPoint(fromBlockHash, indexNum);
-    scriptSig = script;
+TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Tasm::Listing& listingData) {
+    outpoint       = TxOutPoint(fromBlockHash, indexNum);
+    listingContent = listingData;
 }
 
-TxInput::TxInput(const tasm::listing& script) {
-    outpoint  = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
-    scriptSig = script;
+TxInput::TxInput(const Tasm::Listing& listingData) {
+    outpoint       = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
+    listingContent = listingData;
 }
 
 bool TxInput::IsRegistration() const {
@@ -44,9 +44,9 @@ TxOutput::TxOutput() {
     value = IMPOSSIBLE_COIN;
 }
 
-TxOutput::TxOutput(const Coin& coinValue, const tasm::listing& script) {
-    value        = coinValue;
-    scriptPubKey = script;
+TxOutput::TxOutput(const Coin& coinValue, const Tasm::Listing& listingData) {
+    value          = coinValue;
+    listingContent = listingData;
 }
 
 void TxOutput::SetParent(const Transaction* const tx) {
@@ -108,6 +108,21 @@ const std::vector<TxOutput>& Transaction::GetOutputs() const {
     return outputs;
 }
 
+const Tasm::Listing Transaction::GetListing() const {
+    Tasm::Listing l;
+    if (inputs.size() > 1 && outputs.size() > 1) {
+        throw std::runtime_error("Transaction is inconsistent. Input size and output size currently supported is <= 1");
+    }
+
+    if (inputs.size() == 1 && outputs.size() == 1) {
+        l.program.push_back(VERIFY);
+        l.data << outputs[0].listingContent.data;
+        l.data << inputs[0].listingContent.data;
+    }
+
+    return l;
+}
+
 const uint256& Transaction::GetHash() const {
     return hash_;
 }
@@ -136,14 +151,6 @@ bool Transaction::Verify() const {
 
     outpoints.clear();
 
-    // Make sure that there aren't not too many sig verifications
-    // in the block to prevent the potential DDos attack.
-    // int sigOps = 0;
-    // for (const TxInput& input : inputs) {
-    //     sigOps += Script::GetSigOpCount(input.scriptSig);
-    // }
-
-    // return sigOps <= MAX_BLOCK_SIGOPS;
     return true;
 }
 
@@ -183,9 +190,10 @@ std::string std::to_string(const TxInput& input) {
 
     if (input.IsRegistration()) {
         str += "REGISTRATION ";
-        str += strprintf("scriptSig=%s", std::to_string(input.scriptSig));
+        str += strprintf("listing content = %s", std::to_string(input.listingContent));
     } else {
-        str += strprintf("outpoint=%s, scriptSig=%s", std::to_string(input.outpoint), std::to_string(input.scriptSig));
+        str += strprintf("outpoint = %s, listing content = %s", std::to_string(input.outpoint),
+            std::to_string(input.listingContent));
     }
 
     return str + " }";
@@ -194,7 +202,7 @@ std::string std::to_string(const TxInput& input) {
 std::string std::to_string(const TxOutput& output) {
     std::string str;
     str += "TxOut{ ";
-    str += strprintf("value=%d, scriptPubKey=%s", output.value, std::to_string(output.scriptPubKey));
+    str += strprintf("value=%d, listing content = %s", output.value, std::to_string(output.listingContent));
 
     return str += " }";
 }
