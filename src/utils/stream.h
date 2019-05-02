@@ -176,12 +176,6 @@ public:
         chars.insert(chars.end(), pch, pch + nSize);
     }
 
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(chars);
-    }
-
     template <typename T>
     VStream& operator<<(const T& obj) {
         // Serialize to this stream

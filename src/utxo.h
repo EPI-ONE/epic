@@ -31,5 +31,5 @@ struct std::hash<UTXO> {
         return u.HashCode();
     }
 };
-#endif /* ifndef __SRC_UTXO_H__ */
 
+#endif /* ifndef __SRC_UTXO_H__ */

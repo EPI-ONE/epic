@@ -414,17 +414,7 @@ uint64_t ReadCompactSize(Stream& is) {
  * 2^32:           [0x8E 0xFE 0xFE 0xFF 0x00]
  */
 
-/**
- * Mode for encoding VarInts.
- *
- * Currently there is no support for signed encodings. The default mode will not
- * compile with signed values, and the legacy "nonnegative signed" mode will
- * accept signed values, but improperly encode and decode them if they are
- * negative. In the future, the DEFAULT mode could be extended to support
- * negative numbers in a backwards compatible way, and additional modes could be
- * added to support different varint formats (e.g. zigzag encoding).
- */
-template <typename I>
+template<typename I>
 inline unsigned int GetSizeOfVarInt(I n) {
     int nRet = 0;
     while (true) {

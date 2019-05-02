@@ -8,6 +8,7 @@
 
 #include "hash.h"
 #include "params.h"
+#include "spdlog.h"
 #include "stream.h"
 #include "tasm.h"
 #include "tinyformat.h"

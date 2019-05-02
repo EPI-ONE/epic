@@ -7,7 +7,6 @@
 
 #include "arith_uint256.h"
 #include "pubkey.h"
-#include "spdlog.h"
 #include "threadpool.h"
 #include "transaction.h"
 #include "utilstrencodings.h"

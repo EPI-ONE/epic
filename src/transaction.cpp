@@ -139,6 +139,7 @@ const Tasm::Listing Transaction::GetListing() const {
     }
 
     return l;
+}
 
 std::vector<TxInput>& Transaction::GetInputs() {
     return inputs;
@@ -162,6 +163,7 @@ bool Transaction::IsFirstRegistration() const {
 
 bool Transaction::Verify() const {
     if (inputs.empty() || outputs.empty()) {
+        spdlog::info("Empty inputs or outputs");
         return false;
     }
 
@@ -169,6 +171,7 @@ bool Transaction::Verify() const {
     std::unordered_set<TxOutPoint> outpoints = {};
     for (const TxInput& input : inputs) {
         if (outpoints.find(input.outpoint) != outpoints.end()) {
+            spdlog::info("Duplicated outpoint found in inputs");
             return false;
         }
         outpoints.insert(input.outpoint);
