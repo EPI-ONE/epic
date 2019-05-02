@@ -24,6 +24,8 @@ public:
 
     bool isBlockPending(const uint256& hash) const;
 
+    std::size_t getPendingBlockCount() const;
+
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;

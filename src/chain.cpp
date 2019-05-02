@@ -16,6 +16,10 @@ bool Chain::isBlockPending(const uint256& hash) const {
     return pendingBlocks_.find(hash) != pendingBlocks_.end();
 }
 
+std::size_t Chain::getPendingBlockCount() const {
+    return pendingBlocks_.size();
+}
+
 std::vector<std::shared_ptr<const Block>> Chain::GetSortedSubgraph(const std::shared_ptr<const Block> pblock) {
     std::vector<std::shared_ptr<const Block>> stack = {pblock};
     std::vector<std::shared_ptr<const Block>> result;
