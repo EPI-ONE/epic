@@ -144,7 +144,7 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     VStream s;
-    static_cast<BlockHeader>(*this).Serialize(s);
+    BlockHeader::Serialize(s);
     GetTxHash().Serialize(s);
     hash_ = Hash<1>(s);
 }
@@ -170,19 +170,19 @@ size_t Block::GetOptimalEncodingSize() {
     optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t scriptSigSize = input.scriptSig.bytes.size();
-        optimalEncodingSize += (32                                                      // block hash
-                                + 4                                                     // index
-                                + ::GetSizeOfVarInt<VarIntMode::DEFAULT>(scriptSigSize) // script size in VARINT
-                                + scriptSigSize                                         // script
+        optimalEncodingSize += (32                                 // block hash
+                                + 4                                // index
+                                + ::GetSizeOfVarInt(scriptSigSize) // script size in VARINT
+                                + scriptSigSize                    // script
         );
     }
 
     optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t scriptPkSize = output.scriptPubKey.bytes.size();
-        optimalEncodingSize += (8                                                      // value
-                                + ::GetSizeOfVarInt<VarIntMode::DEFAULT>(scriptPkSize) // script size in VARINT
-                                + scriptPkSize                                         // script
+        optimalEncodingSize += (8                                 // value
+                                + ::GetSizeOfVarInt(scriptPkSize) // script size in VARINT
+                                + scriptPkSize                    // script
         );
     }
 
