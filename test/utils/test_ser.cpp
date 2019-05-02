@@ -18,6 +18,8 @@ protected:
     void SetUp() {
         rand1.randomize();
         rand2.randomize();
+//        VStream s(rand1);
+//        randomBytes = Script(s);
     }
 };
 

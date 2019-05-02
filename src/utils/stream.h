@@ -176,6 +176,16 @@ public:
         chars.insert(chars.end(), pch, pch + nSize);
     }
 
+<<<<<<< HEAD
+=======
+//    template <typename Stream>
+//    void Serialize(Stream& s) const {
+//        ::Serialize(s, VARINT(size()));
+//        if (!chars.empty())
+//            s.write((char*) chars.data(), chars.size() * sizeof(value_type));
+//    }
+
+>>>>>>> Remove VarIntMode support since it's doesn't take effect
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {

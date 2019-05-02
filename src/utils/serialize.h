@@ -424,6 +424,7 @@ uint64_t ReadCompactSize(Stream& is) {
  * negative numbers in a backwards compatible way, and additional modes could be
  * added to support different varint formats (e.g. zigzag encoding).
  */
+
 template <typename I>
 inline unsigned int GetSizeOfVarInt(I n) {
     int nRet = 0;
