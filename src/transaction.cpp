@@ -81,6 +81,14 @@ Transaction::Transaction(const Transaction& tx) {
     parentBlock_ = tx.parentBlock_;
     status_      = tx.status_;
     FinalizeHash();
+
+    // Set parents for the copied inputs and outputs
+    for (TxInput& input : inputs) {
+        input.SetParent(this);
+    }
+    for (TxOutput& output : outputs) {
+        output.SetParent(this);
+    }
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {

@@ -127,7 +127,7 @@ public:
 
     Transaction();
 
-    explicit Transaction(const Transaction& tx);
+    Transaction(const Transaction& tx);
 
     Transaction& AddInput(TxInput&& input);
 
