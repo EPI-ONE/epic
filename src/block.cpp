@@ -18,6 +18,18 @@ bool BlockHeader::IsNull() const {
     return time_ == 0;
 }
 
+uint256 BlockHeader::getMilestoneHash() const {
+    return milestoneBlockHash_;
+}
+
+uint256 BlockHeader::getPrevHash() const {
+    return prevBlockHash_;
+}
+
+uint256 BlockHeader::getTIPHash() const {
+    return tipBlockHash_;
+}
+
 Block::Block() {
     SetNull();
 }
