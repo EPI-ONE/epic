@@ -48,12 +48,16 @@ bool Block::Verify() {
     }
 
     // checks if the time of block is too far in the future
-    if (time_ > std::time(nullptr) + ALLOWED_TIME_DRIFT) {
+    uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
+    if (time_ > allowedTime) {
+        spdlog::info(strprintf("Block too advanced in the future: %s (%s) v.s. allowed %s (%s)",
+            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
+        spdlog::info(strprintf("Block with size %s larger than MAX_BLOCK_SIZE", optimalEncodingSize));
         return false;
     }
 
@@ -65,11 +69,13 @@ bool Block::Verify() {
     if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
+            spdlog::info("The first registration block must contain a tx");
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
+            spdlog::info("Tx in the first registration block is not valid");
             return false;
         }
     }

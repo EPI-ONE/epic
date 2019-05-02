@@ -2,6 +2,8 @@
 
 #include "utxo.h"
 
+typedef Tasm::Listing Listing;
+
 class ConsensusTest : public testing::Test {};
 
 Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
@@ -12,7 +14,7 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
     uint256 r3;
     r3.randomize();
 
-    Block b = Block(BlockHeader(1, r1, r2, r3, time(nullptr), 0x1e00ffffL, 0));
+    Block b = Block(BlockHeader(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0));
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
@@ -20,10 +22,10 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
             uint256 inputH;
             inputH.randomize();
             int maxPos = rand() % 128;
-            tx.AddInput(TxInput(inputH, i % maxPos, Script(std::vector<unsigned char>(i))));
+            tx.AddInput(TxInput(inputH, i % maxPos, Listing(std::vector<unsigned char>(i))));
         }
         for (int i = 0; i < numTxOutput; ++i) {
-            tx.AddOutput(TxOutput(i, Script(std::vector<unsigned char>(i))));
+            tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
         }
 
         b.AddTransaction(tx);
@@ -68,9 +70,11 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
 }
 
 TEST_F(ConsensusTest, UTXO) {
-    Block b   = FakeBlock(1, 1);
-    UTXO utxo = UTXO(b.GetTransaction()->GetOutput(0), 0);
-    uint256 key = utxo.GetKey();
-    EXPECT_EQ(ArithToUint256(UintToArith256(b.GetHash()) ^ (arith_uint256(0) << 224)), key);
-    std::cout << std::to_string(key) << std::endl;
+    Block b             = FakeBlock(1, 67, true);
+    UTXO utxo           = UTXO(b.GetTransaction()->GetOutput(66), 66);
+    uint256 key         = utxo.GetKey();
+
+    arith_uint256 bHash = UintToArith256(b.GetHash());
+    arith_uint256 index = arith_uint256("0x4200000000000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(ArithToUint256(bHash ^ index), key);
 }
