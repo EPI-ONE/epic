@@ -16,10 +16,6 @@ public:
      * and this utxo is then stored in a map in Chain
      */
     uint256 GetKey() {
-        const Transaction* tx = GetParentTx();
-        const Block* b        = tx->GetParentBlock();
-        uint256 h             = b->GetHash();
-
         return ArithToUint256(
             UintToArith256(GetParentTx()->GetParentBlock()->GetHash()) ^ (arith_uint256(index_) << 224));
     }
