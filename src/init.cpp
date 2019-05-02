@@ -108,12 +108,14 @@ void LoadConfigFile() {
 
     // seeds
     auto seeds = configContent->get_table_array("seeds");
-    for (const auto& seed : *seeds) {
-        auto ip   = seed->get_as<std::string>("ip");
-        auto port = seed->get_as<uint16_t>("port");
+    if (seeds) {
+        for (const auto& seed : *seeds) {
+            auto ip   = seed->get_as<std::string>("ip");
+            auto port = seed->get_as<uint16_t>("port");
 
-        if (ip && port) {
-            config->addSeeds(*ip, *port);
+            if (ip && port) {
+                config->addSeeds(*ip, *port);
+            }
         }
     }
 }
@@ -144,4 +146,3 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         exit(LOG_INIT_FAILURE);
     }
 }
-
