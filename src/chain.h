@@ -26,6 +26,9 @@ public:
 
     std::size_t getPendingBlockCount() const;
 
+    // get a list of block to verify by a post-order DFS
+    std::vector<std::shared_ptr<const Block>> getSortedSubgraph(const std::shared_ptr<const Block> pblock);
+
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
@@ -37,9 +40,6 @@ private:
 
     // when we add a milestone block to this chain, we start verification
     std::shared_ptr<Milestone> MilestoneVerify(const std::shared_ptr<Block> pblock);
-
-    // get a list of block to verify by a post-order DFS
-    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const std::shared_ptr<const Block> pblock);
 
     // container for all pending blocks
     std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
