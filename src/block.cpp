@@ -154,12 +154,11 @@ void Block::CalculateHash() {
 }
 
 const uint256& Block::GetTxHash() {
-    if (HasTransaction()) {
-        transaction_->FinalizeHash();
-        return transaction_->GetHash();
+    if (!HasTransaction()) {
+        return Hash::GetZeroHash();
     }
-
-    return Hash::GetZeroHash();
+    transaction_->FinalizeHash();
+    return transaction_->GetHash();
 }
 
 size_t Block::GetOptimalEncodingSize() {

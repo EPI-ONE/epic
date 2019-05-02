@@ -12,7 +12,7 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
     uint256 r3;
     r3.randomize();
 
-    Block b = Block(BlockHeader(1, r1, r2, r3, time(nullptr), EASIEST_COMP_DIFF_TARGET, 0));
+    Block b = Block(BlockHeader(1, r1, r2, r3, time(nullptr), 0x1e00ffffL, 0));
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
@@ -39,6 +39,7 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
 TEST_F(ConsensusTest, SyntaxChecking) {
     Block b = GENESIS;
     EXPECT_TRUE(b.Verify());
+    std::cout << std::to_string(b.GetHash()) << std::endl;
 
     // Create a random block with bad difficulty target
     uint256 rand256;
@@ -68,7 +69,9 @@ TEST_F(ConsensusTest, OptimalEncodingSize) {
 }
 
 TEST_F(ConsensusTest, UTXO) {
-    Block b   = FakeBlock(1, 1);
+    Block b   = FakeBlock(1, 1, true);
     UTXO utxo = UTXO(b.GetTransaction()->GetOutput(0), 0);
     uint256 key = utxo.GetKey();
+    EXPECT_EQ(ArithToUint256(UintToArith256(b.GetHash()) ^ (arith_uint256(0) << 224)), key);
+    std::cout << std::to_string(key) << std::endl;
 }

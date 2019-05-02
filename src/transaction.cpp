@@ -134,6 +134,13 @@ const Tasm::Listing Transaction::GetListing() const {
     }
 
     return l;
+
+std::vector<TxInput>& Transaction::GetInputs() {
+    return inputs;
+}
+
+std::vector<TxOutput>& Transaction::GetOutputs() {
+    return outputs;
 }
 
 const uint256& Transaction::GetHash() const {
