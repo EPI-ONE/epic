@@ -8,6 +8,7 @@
 #include "pubkey.h"
 #include "spdlog.h"
 #include "transaction.h"
+#include "utilstrencodings.h"
 
 namespace std {
 string to_string(Block& block);

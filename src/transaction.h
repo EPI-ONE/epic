@@ -8,7 +8,8 @@
 
 #include "hash.h"
 #include "params.h"
-#include "script.h"
+#include "stream.h"
+#include "tasm.hpp"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
@@ -49,18 +50,18 @@ struct std::hash<TxOutPoint> {
 class TxInput {
 public:
     TxOutPoint outpoint;
-    Script scriptSig; // MAX: actual listing plus program must be here not in Output.
+    tasm::listing scriptSig; // MAX: actual listing plus program must be here not in Output.
 
     TxInput() = default;
 
-    explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+    explicit TxInput(const TxOutPoint& outpoint, const tasm::listing& scriptSig = tasm::listing());
     // TASM How is scriptsig inhabited in the constructor? Do we get it from the message, right?
     // MAX: we get in over the network
     // QING: Max is correct
 
-    TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
+    TxInput(const uint256& fromBlock, const uint32_t index, const tasm::listing& scriptSig = tasm::listing());
 
-    TxInput(const Script& script);
+    TxInput(const tasm::listing& script);
 
     bool IsRegistration() const;
 
@@ -71,7 +72,7 @@ public:
     const Transaction* GetParentTx();
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
-        return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
+        return (a.outpoint == b.outpoint) && (a.scriptSig == b.scriptSig);
     }
 
     ADD_SERIALIZE_METHODS;
@@ -89,18 +90,18 @@ class TxOutput {
 public:
     // TODO: implement Coin class
     Coin value;
-    Script scriptPubKey;
+    tasm::listing scriptPubKey;
     // TASM push pubkey to vstream and create a listing with a verify op.
     // QING: scriptPubKey is the serialized listing#data
 
     TxOutput();
 
-    TxOutput(const Coin& value, const Script& scriptPubKey);
+    TxOutput(const Coin& value, const tasm::listing& scriptPubKey);
 
     void SetParent(const Transaction* const tx);
 
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
-        return (a.value == b.value) && (a.scriptPubKey.bytes == b.scriptPubKey.bytes);
+        return (a.value == b.value) && (a.scriptPubKey == b.scriptPubKey);
     }
 
     ADD_SERIALIZE_METHODS;
@@ -140,6 +141,21 @@ public:
 
     const std::vector<TxOutput>& GetOutputs() const;
 
+    tasm::listing GetListing() {
+        tasm::listing l;
+        if (inputs.size() != outputs.size()) {
+            throw std::runtime_error("Transaction is inconsistent. Input size doesn't match output size");
+        }
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            l.program.push_back(VERIFY);
+            l.program.push_back(FAIL);
+            l.data << outputs[i].scriptPubKey.data;
+            l.data << inputs[i].scriptSig.data;
+        }
+        l.program.push_back(SUCCESS);
+        return l;
+    }
+
     const uint256& GetHash() const;
 
     bool IsRegistration() const;
@@ -174,7 +190,10 @@ private:
     std::vector<TxOutput> outputs;
     // TASM should we merge the listings about to the member of transaction? MAX:let's do it this way
     // TASM Where do you want to initialize the interpreter? MAX: DAG MANAGER
-    // QING: I think a better way could be: Tx contains the Script which is basically just the serialized listing. Tasm interpreter takes the Script, deserializes it into listing, and do whatever logic required by the listing#program. In this way Transaction won't care about how Tasm works and it's job is only to carry the information.
+    // QING: I think a better way could be: Tx contains the Script which is basically just the serialized listing. Tasm
+    // interpreter takes the Script, deserializes it into listing, and do whatever logic required by the
+    // listing#program. In this way Transaction won't care about how Tasm works and it's job is only to carry the
+    // information.
 
     uint256 hash_;
     Coin fee_;

@@ -4,17 +4,17 @@
  * TxInput class START
  */
 
-TxInput::TxInput(const TxOutPoint& outpointToPrev, const Script& script) {
+TxInput::TxInput(const TxOutPoint& outpointToPrev, const tasm::listing& script) {
     outpoint  = outpointToPrev;
     scriptSig = script;
 }
 
-TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Script& script) {
+TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const tasm::listing& script) {
     outpoint  = TxOutPoint(fromBlockHash, indexNum);
     scriptSig = script;
 }
 
-TxInput::TxInput(const Script& script) {
+TxInput::TxInput(const tasm::listing& script) {
     outpoint  = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
     scriptSig = script;
 }
@@ -42,10 +42,9 @@ const Transaction* TxInput::GetParentTx() {
 
 TxOutput::TxOutput() {
     value = IMPOSSIBLE_COIN;
-    scriptPubKey.clear();
 }
 
-TxOutput::TxOutput(const Coin& coinValue, const Script& script) {
+TxOutput::TxOutput(const Coin& coinValue, const tasm::listing& script) {
     value        = coinValue;
     scriptPubKey = script;
 }
@@ -139,12 +138,13 @@ bool Transaction::Verify() const {
 
     // Make sure that there aren't not too many sig verifications
     // in the block to prevent the potential DDos attack.
-    int sigOps = 0;
-    for (const TxInput& input : inputs) {
-        sigOps += Script::GetSigOpCount(input.scriptSig);
-    }
+    // int sigOps = 0;
+    // for (const TxInput& input : inputs) {
+    //     sigOps += Script::GetSigOpCount(input.scriptSig);
+    // }
 
-    return sigOps <= MAX_BLOCK_SIGOPS;
+    // return sigOps <= MAX_BLOCK_SIGOPS;
+    return true;
 }
 
 void Transaction::Validate() {
