@@ -424,21 +424,8 @@ uint64_t ReadCompactSize(Stream& is) {
  * negative numbers in a backwards compatible way, and additional modes could be
  * added to support different varint formats (e.g. zigzag encoding).
  */
-enum class VarIntMode { DEFAULT, NONNEGATIVE_SIGNED };
-
-template <VarIntMode Mode, typename I>
-struct CheckVarIntMode {
-    constexpr CheckVarIntMode() {
-        static_assert(
-            Mode != VarIntMode::DEFAULT || std::is_unsigned<I>::value, "Unsigned type required with mode DEFAULT.");
-        static_assert(Mode != VarIntMode::NONNEGATIVE_SIGNED || std::is_signed<I>::value,
-            "Signed type required with mode NONNEGATIVE_SIGNED.");
-    }
-};
-
-template <VarIntMode Mode, typename I>
+template <typename I>
 inline unsigned int GetSizeOfVarInt(I n) {
-    CheckVarIntMode<Mode, I>();
     int nRet = 0;
     while (true) {
         nRet++;
@@ -452,9 +439,8 @@ inline unsigned int GetSizeOfVarInt(I n) {
 template <typename I>
 inline void WriteVarInt(CSizeComputer& os, I n);
 
-template <typename Stream, VarIntMode Mode, typename I>
+template <typename Stream, typename I>
 void WriteVarInt(Stream& os, I n) {
-    CheckVarIntMode<Mode, I>();
     unsigned char tmp[(sizeof(n) * 8 + 6) / 7];
     int len = 0;
     while (true) {
@@ -469,9 +455,8 @@ void WriteVarInt(Stream& os, I n) {
     } while (len--);
 }
 
-template <typename Stream, VarIntMode Mode, typename I>
+template <typename Stream, typename I>
 I ReadVarInt(Stream& is) {
-    CheckVarIntMode<Mode, I>();
     I n = 0;
     while (true) {
         unsigned char chData = ser_readdata8(is);
@@ -494,7 +479,7 @@ I ReadVarInt(Stream& is) {
 #define COMPACTSIZE(obj) CCompactSize(REF(obj))
 #define LIMITED_STRING(obj, n) LimitedString<n>(REF(obj))
 
-template <VarIntMode Mode, typename I>
+template <typename I>
 class VarInt {
 protected:
     I& n;
@@ -504,12 +489,12 @@ public:
 
     template <typename Stream>
     void Serialize(Stream& s) const {
-        WriteVarInt<Stream, Mode, I>(s, n);
+        WriteVarInt<Stream, I>(s, n);
     }
 
     template <typename Stream>
     void Deserialize(Stream& s) {
-        n = ReadVarInt<Stream, Mode, I>(s);
+        n = ReadVarInt<Stream, I>(s);
     }
 };
 
@@ -591,9 +576,9 @@ public:
     }
 };
 
-template <VarIntMode Mode = VarIntMode::DEFAULT, typename I>
-VarInt<Mode, I> WrapVarInt(I& n) {
-    return VarInt<Mode, I>{n};
+template <typename I>
+VarInt<I> WrapVarInt(I& n) {
+    return VarInt<I>{n};
 }
 
 template <typename I>
