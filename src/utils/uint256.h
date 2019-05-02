@@ -180,5 +180,4 @@ struct std::hash<uint256> {
     }
 };
 
-
 #endif // BITCOIN_UINT256_H

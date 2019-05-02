@@ -77,12 +77,12 @@ bool Block::Verify() {
     return true;
 }
 
-void Block::AddTransaction(Transaction& tx) {
+void Block::AddTransaction(Transaction tx) {
     // Invalidate cached hash to force recomputation
     UnCache();
-    tx.SetParent(this);
     transaction_.reset();
-    transaction_ = std::forward<Transaction>(tx);
+    transaction_ = tx;
+    transaction_->SetParent(this);
 }
 
 bool Block::HasTransaction() const {

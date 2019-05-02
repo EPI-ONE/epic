@@ -110,7 +110,7 @@ public:
 
     bool Verify();
 
-    void AddTransaction(Transaction& tx);
+    void AddTransaction(Transaction tx);
 
     bool HasTransaction() const;
 
