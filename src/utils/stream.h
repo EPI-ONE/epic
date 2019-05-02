@@ -56,6 +56,13 @@ public:
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(chars);
+    }
+
+
     VStream& operator+=(const VStream& b) {
         chars.insert(chars.end(), b.cbegin(), b.cend());
         return *this;
@@ -167,13 +174,6 @@ public:
     void write(const char* pch, size_t nSize) {
         // Write to the end of the buffer
         chars.insert(chars.end(), pch, pch + nSize);
-    }
-
-    template <typename Stream>
-    void Serialize(Stream& s) const {
-        // Special case: stream << stream concatenates like stream += stream
-        if (!chars.empty())
-            s.write((char*) chars.data(), chars.size() * sizeof(value_type));
     }
 
     template <typename T>

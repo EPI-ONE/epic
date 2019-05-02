@@ -198,4 +198,3 @@ TEST_F(TestECKey, key_regular_test) {
     ASSERT_TRUE(key2C.SignCompact(hashMsg, detsigc));
     ASSERT_NE(detsig, detsigc);
 }
-

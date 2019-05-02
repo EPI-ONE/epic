@@ -8,7 +8,8 @@
 
 #include "hash.h"
 #include "params.h"
-#include "script.h"
+#include "stream.h"
+#include "tasm.h"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
@@ -49,15 +50,15 @@ struct std::hash<TxOutPoint> {
 class TxInput {
 public:
     TxOutPoint outpoint;
-    Script scriptSig;
+    Tasm::Listing listingContent;
 
     TxInput() = default;
 
-    explicit TxInput(const TxOutPoint& outpoint, const Script& scriptSig = Script());
+    explicit TxInput(const TxOutPoint& outpoint, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const uint256& fromBlock, const uint32_t index, const Script& scriptSig = Script());
+    TxInput(const uint256& fromBlock, const uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const Script& script);
+    TxInput(const Tasm::Listing& script);
 
     bool IsRegistration() const;
 
@@ -68,14 +69,14 @@ public:
     const Transaction* GetParentTx();
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
-        return (a.outpoint == b.outpoint) && (a.scriptSig.bytes == b.scriptSig.bytes);
+        return (a.outpoint == b.outpoint) && (a.listingContent == b.listingContent);
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(outpoint);
-        READWRITE(scriptSig);
+        READWRITE(listingContent);
     }
 
 private:
@@ -86,23 +87,23 @@ class TxOutput {
 public:
     // TODO: implement Coin class
     Coin value;
-    Script scriptPubKey;
+    Tasm::Listing listingContent;
 
     TxOutput();
 
-    TxOutput(const Coin& value, const Script& scriptPubKey);
+    TxOutput(const Coin& value, const Tasm::Listing& ListingData);
 
     void SetParent(const Transaction* const tx);
 
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
-        return (a.value == b.value) && (a.scriptPubKey.bytes == b.scriptPubKey.bytes);
+        return (a.value == b.value) && (a.listingContent == b.listingContent);
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(value);
-        READWRITE(scriptPubKey);
+        READWRITE(listingContent);
     }
 
 private:
@@ -134,6 +135,8 @@ public:
     const std::vector<TxInput>& GetInputs() const;
 
     const std::vector<TxOutput>& GetOutputs() const;
+
+    const Tasm::Listing GetListing() const;
 
     const uint256& GetHash() const;
 
