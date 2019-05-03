@@ -272,6 +272,34 @@ void Block::RandomizeHash() {
     hash_.randomize();
 }
 
+void Block::Solve(int numThreads, ThreadPool& solverPool) {
+    arith_uint256 target           = GetTargetAsInteger();
+    std::atomic<uint32_t> newNonce = 0;
+    solverPool.Start();
+    for (int i = 0; i < numThreads; ++i) {
+        solverPool.Execute([this, &newNonce, i, &target, &numThreads]() {
+            Block blk(*this);
+            blk.SetNonce(i);
+            blk.FinalizeHash();
+            while (newNonce.load() == 0) {
+                if (UintToArith256(blk.hash_) <= target) {
+                    newNonce = blk.GetNonce();
+                }
+                blk.SetNonce(blk.nonce_ + numThreads);
+                blk.CalculateHash();
+            }
+        });
+    }
+    while (newNonce.load() == 0) {
+        usleep(100);
+    }
+    solverPool.Stop();
+
+    assert(newNonce.load() > 0);
+    SetNonce(newNonce.load());
+    FinalizeHash();
+}
+
 void Block::SerializeToDB(VStream& s) const {
     s << *this;
     s << VARINT(cumulativeReward_.GetValue());
@@ -376,10 +404,16 @@ Block Block::CreateGenesis() {
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetMinerChainHeight(0);
     genesisBlock.ResetReward();
-    genesisBlock.SetDifficultyTarget(0x1f00ffffL);
+    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
     genesisBlock.SetTime(1548078136L);
-    genesisBlock.SetNonce(47772);
+    genesisBlock.SetNonce(0);
     genesisBlock.FinalizeHash();
+
+    // The following commented lines are used for mining a genesis block
+    int numThreads = 44;
+    ThreadPool solverPool(numThreads);
+    genesisBlock.Solve(numThreads, solverPool);
+    std::cout << std::to_string(genesisBlock) << std::endl;
 
     return genesisBlock;
 }

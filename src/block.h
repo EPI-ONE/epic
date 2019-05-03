@@ -1,12 +1,14 @@
 #ifndef __SRC_BLOCK_H__
 #define __SRC_BLOCK_H__
 
+#include <atomic>
 #include <ctime>
 #include <unordered_map>
 
 #include "arith_uint256.h"
 #include "pubkey.h"
 #include "spdlog.h"
+#include "threadpool.h"
 #include "transaction.h"
 #include "utilstrencodings.h"
 
@@ -94,6 +96,7 @@ public:
     }
 
 protected:
+    uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
@@ -200,6 +203,12 @@ public:
      * block does not matter e.g DFS testing
      */
     void RandomizeHash();
+
+    /*
+     * A multi-thread solver for nonce that makes the blocks hash lower than the
+     * difficulty target. For test purposes only.
+     */
+    void Solve(int numThreads, ThreadPool& pool);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

@@ -76,6 +76,7 @@ set(SRC_CODE
         ${UTIL_SRCS}
         ${CRYPTO_SRCS}
         ${CORE_SRCS}
+        ${TASM_SRCS}
         ${SUPPORT_DIR}
         )
 
