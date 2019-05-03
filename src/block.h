@@ -75,6 +75,12 @@ public:
 
     uint256 getTIPHash() const;
 
+    void setMilestoneHash(const uint256& hash);
+
+    void setPrevHash(const uint256& hash);
+
+    void setTIPHash(const uint256& hash);
+
     /*
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing

@@ -30,6 +30,18 @@ uint256 BlockHeader::getTIPHash() const {
     return tipBlockHash_;
 }
 
+void BlockHeader::setMilestoneHash(const uint256& hash) {
+    milestoneBlockHash_ = hash;
+}
+
+void BlockHeader::setPrevHash(const uint256& hash) {
+    prevBlockHash_ = hash;
+}
+
+void BlockHeader::setTIPHash(const uint256& hash) {
+    tipBlockHash_ = hash;
+}
+
 void BlockHeader::randomizeHash() {
     hash_.randomize();
 }
