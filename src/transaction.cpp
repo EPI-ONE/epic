@@ -32,7 +32,7 @@ void TxInput::SetParent(const Transaction* const tx) {
     parentTx_ = tx;
 }
 
-const Transaction* TxInput::GetParentTx() {
+const Transaction* TxInput::GetParentTx() const{
     return parentTx_;
 }
 

@@ -71,7 +71,7 @@ public:
 
     void SetParent(const Transaction* const tx);
 
-    const Transaction* GetParentTx();
+    const Transaction* GetParentTx() const;
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
         return (a.outpoint == b.outpoint) && (a.listingContent == b.listingContent);

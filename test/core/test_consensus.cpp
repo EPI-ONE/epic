@@ -41,7 +41,6 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
 TEST_F(ConsensusTest, SyntaxChecking) {
     Block b = GENESIS;
     EXPECT_TRUE(b.Verify());
-    std::cout << std::to_string(b.GetHash()) << std::endl;
 
     // Create a random block with bad difficulty target
     uint256 rand256;

@@ -8,9 +8,11 @@
 #include "tasm.h"
 #include "transaction.h"
 
+typedef Tasm::Listing Listing;
+
 class TestSer : public testing::Test {
 protected:
-    Tasm::Listing randomBytes;
+    Listing randomBytes;
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
@@ -18,6 +20,9 @@ protected:
     void SetUp() {
         rand1.randomize();
         rand2.randomize();
+
+        VStream s(rand1);
+        randomBytes = Listing(s);
     }
 };
 
@@ -83,12 +88,12 @@ TEST_F(TestSer, SerializeEqDeserializeListing) {
     std::vector<char> deterministicVector = {'x', 'y', 'z'};
     VStream v(deterministicVector);
     std::vector<uint8_t> p = {1, 1};
-    Tasm::Listing l1(p, v);
+    Listing l1(p, v);
     VStream sinput;
     sinput << l1;
     std::string s = sinput.str();
 
-    Tasm::Listing l2;
+    Listing l2;
     sinput >> l2;
 
     VStream soutput;
@@ -133,8 +138,8 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, Tasm::Listing(randomBytes)));
-    tx.AddOutput(TxOutput(100, Tasm::Listing(randomBytes)));
+    tx.AddInput(TxInput(outpoint, Listing(randomBytes)));
+    tx.AddOutput(TxOutput(100, Listing(randomBytes)));
 
     VStream sinput;
     sinput << tx;
@@ -166,8 +171,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
 
-    tx.AddInput(TxInput(outpoint, Tasm::Listing(randomBytes)));
-    tx.AddOutput(TxOutput(100, Tasm::Listing(randomBytes)));
+    tx.AddInput(TxInput(outpoint, Listing(randomBytes)));
+    tx.AddOutput(TxOutput(100, Listing(randomBytes)));
     block.AddTransaction(tx);
 
     VStream sinput;
@@ -181,6 +186,16 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     soutput << blockFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
+
+    // Check parent pointers
+    Transaction* ptrTx = &*blockFromDeserialization.GetTransaction();
+    EXPECT_EQ(&blockFromDeserialization, ptrTx->GetParentBlock());
+    for (const TxInput& input : ptrTx->GetInputs()) {
+        EXPECT_EQ(ptrTx, input.GetParentTx());
+    }
+    for (const TxOutput& output : ptrTx->GetOutputs()) {
+        EXPECT_EQ(ptrTx, output.GetParentTx());
+    }
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {

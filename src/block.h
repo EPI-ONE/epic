@@ -229,6 +229,9 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITEAS(BlockHeader, *this);
         READWRITE(transaction_);
+        if (ser_action.ForRead() == true) {
+            SetParents();
+        }
     }
 
     void SerializeToDB(VStream& s) const;
