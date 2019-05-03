@@ -26,7 +26,7 @@ uint256 BlockHeader::getPrevHash() const {
     return prevBlockHash_;
 }
 
-uint256 BlockHeader::getTIPHash() const {
+uint256 BlockHeader::getTipHash() const {
     return tipBlockHash_;
 }
 

@@ -73,7 +73,7 @@ public:
 
     uint256 getPrevHash() const;
 
-    uint256 getTIPHash() const;
+    uint256 getTipHash() const;
 
     void setMilestoneHash(const uint256& hash);
 
