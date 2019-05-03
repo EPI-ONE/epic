@@ -23,8 +23,8 @@ static constexpr uint32_t SORTITION_THRESHOLD = 10 * 1000;
 static constexpr double SORTITION_COEFFICIENT = 0.01;
 // maximum time in a block header allowed to be in advanced to the current time
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
-// max amount of money allowed in one output
-static constexpr Coin MAX_MONEY = 9999999999L;
+// max amount of of money allowd in one output
+static constexpr uint64_t MAX_MONEY = 9999999999L;
 // version of genesis block
 static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 // maximum allowed block size in optimal encoding format

@@ -16,11 +16,11 @@ TestNetParams::TestNetParams() {
     targetTPS        = 100;
     punctualityThred = PUNTUALITY_THRESHOLD;
     maxTarget        = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
-    maxMoney         = MAX_MONEY;
+    maxMoney         = Coin(MAX_MONEY);
     reward           = 1;
 
     keyPrefixes = {
-        0,           // base58Prefixes[PUBKEY_ADDRESS]
-        128          // base58Prefixes[SECRET_KEY]
+        0,  // base58Prefixes[PUBKEY_ADDRESS]
+        128 // base58Prefixes[SECRET_KEY]
     };
 }

@@ -85,13 +85,14 @@ private:
 
 class TxOutput {
 public:
-    // TODO: implement Coin class
     Coin value;
     Tasm::Listing listingContent;
 
     TxOutput();
 
     TxOutput(const Coin& value, const Tasm::Listing& ListingData);
+
+    TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData);
 
     void SetParent(const Transaction* const tx);
 

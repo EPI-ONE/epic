@@ -274,7 +274,7 @@ void Block::RandomizeHash() {
 
 void Block::SerializeToDB(VStream& s) const {
     s << *this;
-    s << VARINT(cumulativeReward_);
+    s << cumulativeReward_;
     s << VARINT(minerChainHeight_);
 
     if (HasTransaction()) {
@@ -296,7 +296,7 @@ void Block::SerializeToDB(VStream& s) const {
 
 void Block::DeserializeFromDB(VStream& s) {
     s >> *this;
-    s >> VARINT(cumulativeReward_);
+    s >> cumulativeReward_;
     s >> VARINT(minerChainHeight_);
 
     if (HasTransaction()) {

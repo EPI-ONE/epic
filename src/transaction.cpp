@@ -49,6 +49,11 @@ TxOutput::TxOutput(const Coin& coinValue, const Tasm::Listing& listingData) {
     listingContent = listingData;
 }
 
+TxOutput::TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData) {
+    value          = coinValue;
+    listingContent = listingData;
+}
+
 void TxOutput::SetParent(const Transaction* const tx) {
     assert(tx != nullptr);
     parentTx_ = tx;
@@ -202,7 +207,7 @@ std::string std::to_string(const TxInput& input) {
 std::string std::to_string(const TxOutput& output) {
     std::string str;
     str += "TxOut{ ";
-    str += strprintf("value=%d, listing content = %s", output.value, std::to_string(output.listingContent));
+    str += strprintf("value=%d, listing content = %s", output.value.getValue(), std::to_string(output.listingContent));
 
     return str += " }";
 }
