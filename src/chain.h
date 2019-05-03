@@ -1,7 +1,6 @@
 #ifndef __SRC_CHAIN_H__
 #define __SRC_CHAIN_H__
 
-#include <list>
 #include <unordered_map>
 #include <vector>
 

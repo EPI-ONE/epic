@@ -29,6 +29,13 @@ std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const std::sh
     std::vector<std::shared_ptr<const Block>> result;
     std::shared_ptr<const Block> cursor;
 
+    /* reserve a good chunk of memory for efficiency;
+     * please note that n/2 is a not really precise
+     * upper bound and can be improved */
+    std::size_t alloc_size = pendingBlocks_.size() / 2;
+    stack.reserve(alloc_size);
+    result.reserve(alloc_size);
+
     while (!stack.empty()) {
         cursor = stack.back();
 
@@ -56,5 +63,6 @@ std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const std::sh
         stack.pop_back();
     }
 
+    result.shrink_to_fit();
     return result;
 }
