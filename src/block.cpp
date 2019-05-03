@@ -30,6 +30,10 @@ uint256 BlockHeader::getTIPHash() const {
     return tipBlockHash_;
 }
 
+void BlockHeader::randomizeHash() {
+    hash_.randomize();
+}
+
 Block::Block() {
     SetNull();
 }

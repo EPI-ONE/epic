@@ -75,6 +75,12 @@ public:
 
     uint256 getTIPHash() const;
 
+    /*
+     * Only to be used for debugging when validity of the
+     * block does not matter e.g DFS testing
+     * */
+    void randomizeHash();
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
