@@ -87,16 +87,15 @@ public:
     }
 
     void randomize() {
+        std::size_t n = WIDTH > 8 ? 8 : WIDTH;
+
+        /* draw 64 bit */
         unsigned long long x;
-        uint_fast8_t j;
+        while (!_rdrand64_step(&x))
+            ;
 
-        for (std::size_t i = 0; i < WIDTH; i++) {
-            j = i % 8;
-            if (j == 0)
-                while (!_rdrand64_step(&x))
-                    ;
-
-            data[i] = ((uint8_t*) &x)[j];
+        for (std::size_t i = 0; i < n; i++) {
+            data[i] = ((uint8_t*) &x)[i];
         }
     }
 
