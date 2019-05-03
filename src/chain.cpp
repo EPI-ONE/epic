@@ -20,6 +20,10 @@ std::size_t Chain::getPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
+std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const Block& pblock) {
+    return getSortedSubgraph(std::make_shared<const Block>(pblock));
+}
+
 std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const std::shared_ptr<const Block> pblock) {
     std::vector<std::shared_ptr<const Block>> stack = {pblock};
     std::vector<std::shared_ptr<const Block>> result;

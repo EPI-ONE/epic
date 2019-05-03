@@ -27,6 +27,8 @@ public:
     std::size_t getPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
+    std::vector<std::shared_ptr<const Block>> getSortedSubgraph(const Block& pblock);
+
     std::vector<std::shared_ptr<const Block>> getSortedSubgraph(const std::shared_ptr<const Block> pblock);
 
 private:
