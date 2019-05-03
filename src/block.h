@@ -81,12 +81,6 @@ public:
 
     void setTIPHash(const uint256& hash);
 
-    /*
-     * Only to be used for debugging when validity of the
-     * block does not matter e.g DFS testing
-     * */
-    void randomizeHash();
-
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -100,16 +94,15 @@ public:
     }
 
 protected:
-    uint256 hash_;
-
-    // To be serialized to net and db
-    uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    uint64_t time_;
+
     uint32_t diffTarget_;
+    uint32_t version_;
     uint32_t nonce_;
+
+    uint64_t time_;
 };
 
 class Block : public BlockHeader {
@@ -201,6 +194,12 @@ public:
      * difficulty target. For test purposes only.
      */
     void Solve();
+
+    /*
+     * Only to be used for debugging when validity of the
+     * block does not matter e.g DFS testing
+     */
+    void randomizeHash();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

@@ -42,10 +42,6 @@ void BlockHeader::setTIPHash(const uint256& hash) {
     tipBlockHash_ = hash;
 }
 
-void BlockHeader::randomizeHash() {
-    hash_.randomize();
-}
-
 Block::Block() {
     SetNull();
 }
@@ -270,6 +266,10 @@ void Block::Solve() {
         nonce_++;
         CalculateHash();
     }
+}
+
+void Block::randomizeHash() {
+    hash_.randomize();
 }
 
 void Block::SerializeToDB(VStream& s) const {
