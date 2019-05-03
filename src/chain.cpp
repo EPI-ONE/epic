@@ -32,9 +32,8 @@ std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const std::sh
     /* reserve a good chunk of memory for efficiency;
      * please note that n/2 is a not really precise
      * upper bound and can be improved */
-    std::size_t alloc_size = pendingBlocks_.size() / 2;
-    stack.reserve(alloc_size);
-    result.reserve(alloc_size);
+    stack.reserve(pendingBlocks_.size() / 2);
+    result.reserve(pendingBlocks_.size());
 
     while (!stack.empty()) {
         cursor = stack.back();
