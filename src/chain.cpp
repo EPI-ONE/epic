@@ -32,25 +32,25 @@ std::vector<std::shared_ptr<const Block>> Chain::getSortedSubgraph(const std::sh
     while (!stack.empty()) {
         cursor = stack.back();
 
-        auto swap = pendingBlocks_.find(cursor.get()->getMilestoneHash());
+        auto swap = pendingBlocks_.find(cursor->getMilestoneHash());
         if (swap != pendingBlocks_.end()) {
             stack.push_back(swap->second);
             continue;
         }
 
-        swap = pendingBlocks_.find(cursor.get()->getPrevHash());
+        swap = pendingBlocks_.find(cursor->getPrevHash());
         if (swap != pendingBlocks_.end()) {
             stack.push_back(swap->second);
             continue;
         }
 
-        swap = pendingBlocks_.find(cursor.get()->getTipHash());
+        swap = pendingBlocks_.find(cursor->getTipHash());
         if (swap != pendingBlocks_.end()) {
             stack.push_back(swap->second);
             continue;
         }
 
-        uint256 cursorHash = cursor.get()->GetHash();
+        uint256 cursorHash = cursor->GetHash();
         pendingBlocks_.erase(cursorHash);
         result.push_back(cursor);
         stack.pop_back();

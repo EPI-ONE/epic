@@ -80,15 +80,15 @@ TEST_F(DFSTest, complex_test) {
     ASSERT_EQ(graph.size(), 9);
 
     /* check if the result matches the expectation */
-    ASSERT_EQ(graph[0].get()->GetTime(), 8);
-    ASSERT_EQ(graph[1].get()->GetTime(), 5);
-    ASSERT_EQ(graph[2].get()->GetTime(), 4);
-    ASSERT_EQ(graph[3].get()->GetTime(), 6);
-    ASSERT_EQ(graph[4].get()->GetTime(), 2);
-    ASSERT_EQ(graph[5].get()->GetTime(), 7);
-    ASSERT_EQ(graph[6].get()->GetTime(), 1);
-    ASSERT_EQ(graph[7].get()->GetTime(), 3);
-    ASSERT_EQ(graph[8].get()->GetTime(), 0);
+    ASSERT_EQ(graph[0]->GetTime(), 8);
+    ASSERT_EQ(graph[1]->GetTime(), 5);
+    ASSERT_EQ(graph[2]->GetTime(), 4);
+    ASSERT_EQ(graph[3]->GetTime(), 6);
+    ASSERT_EQ(graph[4]->GetTime(), 2);
+    ASSERT_EQ(graph[5]->GetTime(), 7);
+    ASSERT_EQ(graph[6]->GetTime(), 1);
+    ASSERT_EQ(graph[7]->GetTime(), 3);
+    ASSERT_EQ(graph[8]->GetTime(), 0);
 
     /* populate the pending Block
      * map for the second time for
@@ -112,12 +112,12 @@ TEST_F(DFSTest, complex_test) {
     ASSERT_EQ(graph.size(), 8);
 
     /* check if the result matches the expectation */
-    ASSERT_EQ(graph[0].get()->GetTime(), 8);
-    ASSERT_EQ(graph[1].get()->GetTime(), 5);
-    ASSERT_EQ(graph[2].get()->GetTime(), 4);
-    ASSERT_EQ(graph[3].get()->GetTime(), 7);
-    ASSERT_EQ(graph[4].get()->GetTime(), 6);
-    ASSERT_EQ(graph[5].get()->GetTime(), 1);
-    ASSERT_EQ(graph[6].get()->GetTime(), 3);
-    ASSERT_EQ(graph[7].get()->GetTime(), 9);
+    ASSERT_EQ(graph[0]->GetTime(), 8);
+    ASSERT_EQ(graph[1]->GetTime(), 5);
+    ASSERT_EQ(graph[2]->GetTime(), 4);
+    ASSERT_EQ(graph[3]->GetTime(), 7);
+    ASSERT_EQ(graph[4]->GetTime(), 6);
+    ASSERT_EQ(graph[5]->GetTime(), 1);
+    ASSERT_EQ(graph[6]->GetTime(), 3);
+    ASSERT_EQ(graph[7]->GetTime(), 9);
 }
