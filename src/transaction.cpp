@@ -86,6 +86,7 @@ Transaction::Transaction(const Transaction& tx) {
     for (TxInput& input : inputs) {
         input.SetParent(this);
     }
+
     for (TxOutput& output : outputs) {
         output.SetParent(this);
     }

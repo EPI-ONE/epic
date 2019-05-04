@@ -325,6 +325,17 @@ void Block::Solve(int numThreads, ThreadPool& solverPool) {
     FinalizeHash();
 }
 
+void Block::SetParents() {
+    transaction_->SetParent(this);
+    for (TxInput& input : transaction_->GetInputs()) {
+        input.SetParent(&*transaction_);
+    }
+
+    for (TxOutput& output : transaction_->GetOutputs()) {
+        output.SetParent(&*transaction_);
+    }
+}
+
 void Block::SerializeToDB(VStream& s) const {
     s << *this;
     s << VARINT(cumulativeReward_.GetValue());

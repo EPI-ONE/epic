@@ -18,12 +18,13 @@ Block FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
+        int maxPos = rand() % 128;
         for (int i = 0; i < numTxInput; ++i) {
             uint256 inputH;
             inputH.randomize();
-            int maxPos = rand() % 128;
             tx.AddInput(TxInput(inputH, i % maxPos, Listing(std::vector<unsigned char>(i))));
         }
+
         for (int i = 0; i < numTxOutput; ++i) {
             tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
         }

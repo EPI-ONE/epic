@@ -213,16 +213,7 @@ public:
     /*
      * Sets parents for elements contained in the block all at once
      */
-    void SetParents() {
-        transaction_->SetParent(this);
-        for (TxInput& input : transaction_->GetInputs()) {
-            input.SetParent(&*transaction_);
-        }
-
-        for (TxOutput& output : transaction_->GetOutputs()) {
-            output.SetParent(&*transaction_);
-        }
-    }
+    void SetParents();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

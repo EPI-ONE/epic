@@ -414,7 +414,7 @@ uint64_t ReadCompactSize(Stream& is) {
  * 2^32:           [0x8E 0xFE 0xFE 0xFF 0x00]
  */
 
-template<typename I>
+template <typename I>
 inline unsigned int GetSizeOfVarInt(I n) {
     int nRet = 0;
     while (true) {

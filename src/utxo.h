@@ -4,9 +4,6 @@
 #include "block.h"
 
 class UTXO : TxOutput {
-private:
-    uint32_t index_;
-
 public:
     UTXO(const TxOutput& output, const uint32_t& index) : TxOutput(output), index_(index) {}
 
@@ -23,6 +20,9 @@ public:
     uint64_t HashCode() const {
         return std::hash<uint256>()(GetParentTx()->GetParentBlock()->GetHash()) ^ index_;
     }
+
+private:
+    uint32_t index_;
 };
 
 template <>
