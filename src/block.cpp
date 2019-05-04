@@ -275,28 +275,34 @@ void Block::RandomizeHash() {
 void Block::Solve(int numThreads, ThreadPool& solverPool) {
     arith_uint256 target           = GetTargetAsInteger();
     std::atomic<uint32_t> newNonce = 0;
-    solverPool.Start();
+    std::atomic<uint64_t> newTime = time_;
     for (int i = 0; i < numThreads; ++i) {
-        solverPool.Execute([this, &newNonce, i, &target, &numThreads]() {
+        solverPool.Execute([this, &newNonce, &newTime, i, &target, &numThreads]() {
             Block blk(*this);
             blk.SetNonce(i);
             blk.FinalizeHash();
             while (newNonce.load() == 0) {
                 if (UintToArith256(blk.hash_) <= target) {
                     newNonce = blk.GetNonce();
+                    newTime = blk.GetTime();
+                }
+                if (blk.nonce_ == UINT_LEAST32_MAX) {
+                    blk.time_ = time(nullptr);
                 }
                 blk.SetNonce(blk.nonce_ + numThreads);
                 blk.CalculateHash();
             }
         });
     }
+
+    // Block the main thread until a nonce is solved
     while (newNonce.load() == 0) {
         usleep(100);
     }
-    solverPool.Stop();
 
     assert(newNonce.load() > 0);
     SetNonce(newNonce.load());
+    SetTime(newTime.load());
     FinalizeHash();
 }
 
@@ -406,14 +412,16 @@ Block Block::CreateGenesis() {
     genesisBlock.ResetReward();
     genesisBlock.SetDifficultyTarget(0x1d00ffffL);
     genesisBlock.SetTime(1548078136L);
-    genesisBlock.SetNonce(0);
+    genesisBlock.SetNonce(2081807681);
     genesisBlock.FinalizeHash();
 
-    // The following commented lines are used for mining a genesis block
-    int numThreads = 44;
-    ThreadPool solverPool(numThreads);
-    genesisBlock.Solve(numThreads, solverPool);
-    std::cout << std::to_string(genesisBlock) << std::endl;
+    // The following commented lines were used for mining a genesis block
+    //int numThreads = 44;
+    //ThreadPool solverPool(numThreads);
+    //solverPool.Start();
+    //genesisBlock.Solve(numThreads, solverPool);
+    //solverPool.Stop();
+    //std::cout << std::to_string(genesisBlock) << std::endl;
 
     return genesisBlock;
 }
