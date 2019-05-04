@@ -5,23 +5,23 @@ Coin::Coin() {
 }
 
 Coin::Coin(uint64_t value) {
-    setValue(value);
+    SetValue(value);
 }
 
 Coin::Coin(const Coin& coin) {
-    setValue(coin.getValue());
+    SetValue(coin.GetValue());
 }
 
-uint64_t Coin::getValue() const {
+uint64_t Coin::GetValue() const {
     return value_;
 }
 
-void Coin::setValue(const uint64_t& value) {
+void Coin::SetValue(const uint64_t& value) {
     value_ = value;
 }
 
 Coin& Coin::operator=(uint64_t value) {
-    setValue(value);
+    SetValue(value);
     return *this;
 }
 
@@ -62,36 +62,36 @@ Coin& Coin::operator|=(uint64_t value) {
 
 
 Coin& Coin::operator+=(const Coin& coin) {
-    value_ += coin.getValue();
+    value_ += coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator-=(const Coin& coin) {
-    value_ -= coin.getValue();
+    value_ -= coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator*=(const Coin& coin) {
-    value_ *= coin.getValue();
+    value_ *= coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator<<=(const Coin& coin) {
-    value_ <<= coin.getValue();
+    value_ <<= coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator>>=(const Coin& coin) {
-    value_ <<= coin.getValue();
+    value_ <<= coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator&=(const Coin& coin) {
-    value_ &= coin.getValue();
+    value_ &= coin.GetValue();
     return *this;
 }
 
 Coin& Coin::operator|=(const Coin& coin) {
-    value_ |= coin.getValue();
+    value_ |= coin.GetValue();
     return *this;
 }

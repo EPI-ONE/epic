@@ -16,9 +16,9 @@ public:
 
     Coin(const Coin& coin);
 
-    uint64_t getValue() const;
+    uint64_t GetValue() const;
 
-    void setValue(const uint64_t& value);
+    void SetValue(const uint64_t& value);
 
     Coin& operator=(uint64_t value);
 
@@ -111,35 +111,35 @@ private:
 };
 
 inline bool operator==(const Coin& a, const Coin& b) {
-    return a.getValue() == b.getValue();
+    return a.GetValue() == b.GetValue();
 }
 
 inline bool operator!=(const Coin& a, const Coin& b) {
-    return a.getValue() != b.getValue();
+    return a.GetValue() != b.GetValue();
 }
 
 inline bool operator<=(const Coin& a, const Coin& b) {
-    return a.getValue() <= b.getValue();
+    return a.GetValue() <= b.GetValue();
 }
 
 inline bool operator>=(const Coin& a, const Coin& b) {
-    return a.getValue() >= b.getValue();
+    return a.GetValue() >= b.GetValue();
 }
 
 inline bool operator==(const Coin& a, uint64_t b) {
-    return a.getValue() == b;
+    return a.GetValue() == b;
 }
 
 inline bool operator!=(const Coin& a, uint64_t b) {
-    return a.getValue() != b;
+    return a.GetValue() != b;
 }
 
 inline bool operator<=(const Coin& a, uint64_t b) {
-    return a.getValue() <= b;
+    return a.GetValue() <= b;
 }
 
 inline bool operator>=(const Coin& a, uint64_t b) {
-    return a.getValue() >= b;
+    return a.GetValue() >= b;
 }
 
 inline const Coin operator+(const Coin& a, uint64_t b) {
@@ -171,31 +171,31 @@ inline const Coin operator|(const Coin& a, uint64_t b) {
 }
 
 inline const Coin operator+(const Coin& a, const Coin& b) {
-    return Coin(a) += b.getValue();
+    return Coin(a) += b.GetValue();
 }
 
 inline const Coin operator-(const Coin& a, const Coin& b) {
-    return Coin(a) -= b.getValue();
+    return Coin(a) -= b.GetValue();
 }
 
 inline const Coin operator*(const Coin& a, const Coin& b) {
-    return Coin(a) *= b.getValue();
+    return Coin(a) *= b.GetValue();
 }
 
 inline const Coin operator<<(const Coin& a, const Coin& b) {
-    return Coin(a) <<= b.getValue();
+    return Coin(a) <<= b.GetValue();
 }
 
 inline const Coin operator>>(const Coin& a, const Coin& b) {
-    return Coin(a) >>= b.getValue();
+    return Coin(a) >>= b.GetValue();
 }
 
 inline const Coin operator&(const Coin& a, const Coin& b) {
-    return Coin(a) &= b.getValue();
+    return Coin(a) &= b.GetValue();
 }
 
 inline const Coin operator|(const Coin& a, const Coin& b) {
-    return Coin(a) |= b.getValue();
+    return Coin(a) |= b.GetValue();
 }
 
 #endif /* ifndef __SRC_COIN_H__ */
