@@ -17,18 +17,18 @@ public:
 
     std::shared_ptr<Milestone> GetChainHead() const;
 
-    void addPendingBlock(Block& block);
+    void AddPendingBlock(Block& block);
 
-    void removePendingBlock(const uint256& hash);
+    void RemovePendingBlock(const uint256& hash);
 
-    bool isBlockPending(const uint256& hash) const;
+    bool IsBlockPending(const uint256& hash) const;
 
-    std::size_t getPendingBlockCount() const;
+    std::size_t GetPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
-    std::vector<std::shared_ptr<const Block>> getSortedSubgraph(const Block& pblock);
+    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const Block& pblock);
 
-    std::vector<std::shared_ptr<const Block>> getSortedSubgraph(const std::shared_ptr<const Block> pblock);
+    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const std::shared_ptr<const Block> pblock);
 
 private:
     // 1 if this chain is main chain, 0 otherwise;

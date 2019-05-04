@@ -18,27 +18,27 @@ bool BlockHeader::IsNull() const {
     return time_ == 0;
 }
 
-uint256 BlockHeader::getMilestoneHash() const {
+uint256 BlockHeader::GetMilestoneHash() const {
     return milestoneBlockHash_;
 }
 
-uint256 BlockHeader::getPrevHash() const {
+uint256 BlockHeader::GetPrevHash() const {
     return prevBlockHash_;
 }
 
-uint256 BlockHeader::getTipHash() const {
+uint256 BlockHeader::GetTipHash() const {
     return tipBlockHash_;
 }
 
-void BlockHeader::setMilestoneHash(const uint256& hash) {
+void BlockHeader::SetMilestoneHash(const uint256& hash) {
     milestoneBlockHash_ = hash;
 }
 
-void BlockHeader::setPrevHash(const uint256& hash) {
+void BlockHeader::SetPrevHash(const uint256& hash) {
     prevBlockHash_ = hash;
 }
 
-void BlockHeader::setTIPHash(const uint256& hash) {
+void BlockHeader::SetTIPHash(const uint256& hash) {
     tipBlockHash_ = hash;
 }
 
@@ -268,7 +268,7 @@ void Block::Solve() {
     }
 }
 
-void Block::randomizeHash() {
+void Block::RandomizeHash() {
     hash_.randomize();
 }
 

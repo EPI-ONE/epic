@@ -69,17 +69,17 @@ public:
 
     bool IsNull() const;
 
-    uint256 getMilestoneHash() const;
+    uint256 GetMilestoneHash() const;
 
-    uint256 getPrevHash() const;
+    uint256 GetPrevHash() const;
 
-    uint256 getTipHash() const;
+    uint256 GetTipHash() const;
 
-    void setMilestoneHash(const uint256& hash);
+    void SetMilestoneHash(const uint256& hash);
 
-    void setPrevHash(const uint256& hash);
+    void SetPrevHash(const uint256& hash);
 
-    void setTIPHash(const uint256& hash);
+    void SetTIPHash(const uint256& hash);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -199,7 +199,7 @@ public:
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing
      */
-    void randomizeHash();
+    void RandomizeHash();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
