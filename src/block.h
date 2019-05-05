@@ -11,6 +11,7 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
+class Block;
 namespace std {
 string to_string(Block& block);
 } // namespace std
@@ -50,6 +51,12 @@ struct Milestone {
         arith_uint256 chainwork)
         : lastUpdateTime_(lastUpdateTime), hashRate_(hashRate), height_(height), milestoneTarget_(milestoneTarget),
           blockTarget_(blockTarget), chainwork_(chainwork) {}
+
+    bool operator==(const Milestone& another) {
+        return lastUpdateTime_ == another.lastUpdateTime_ && chainwork_ == another.chainwork_ &&
+               hashRate_ == another.hashRate_ && milestoneTarget_ == another.milestoneTarget_ &&
+               blockTarget_ == another.blockTarget_;
+    }
 };
 
 class Block {
@@ -80,47 +87,53 @@ public:
 
     uint256 GetTipHash() const;
 
-    void SetMilestoneHash(const uint256& hash);
+    void SetMilestoneHash(const uint256&);
 
-    void SetPrevHash(const uint256& hash);
+    void SetPrevHash(const uint256&);
 
-    void SetTIPHash(const uint256& hash);
+    void SetTIPHash(const uint256&);
 
     void UnCache();
 
-    bool Verify();
+    bool Verify() const;
 
-    void AddTransaction(Transaction tx);
+    void AddTransaction(Transaction);
 
     bool HasTransaction() const;
 
     std::optional<Transaction>& GetTransaction();
 
-    void SetMinerChainHeight(uint32_t height);
+    void SetMinerChainHeight(uint32_t);
+
+    void SetCumulativeReward(Coin coin);
 
     void ResetReward();
 
-    void SetDifficultyTarget(uint32_t target);
+    void SetDifficultyTarget(uint32_t);
 
-    void SetTime(uint64_t time);
+    const uint32_t GetDifficultyTarget() const;
+
+    void SetTime(uint64_t);
 
     const uint64_t GetTime() const;
 
-    void SetNonce(uint32_t nonce);
+    void SetNonce(uint32_t);
 
     const uint32_t GetNonce() const;
 
     void InvalidateMilestone();
 
-    void SetMilestoneInstance(Milestone& ms);
+    void SetMilestoneInstance(Milestone&);
+
+    const std::shared_ptr<Milestone>& GetMilestoneInstance() const;
 
     const uint256& GetHash() const;
 
-    void FinalizeHash();
+    void FinalizeHash() const;
 
-    void CalculateHash();
+    void CalculateHash() const;
 
-    const uint256& GetTxHash();
+    const uint256& GetTxHash() const;
 
     virtual size_t GetOptimalEncodingSize();
 
@@ -158,13 +171,13 @@ public:
      * A complete syntax checking should also check the validity of the diff
      * target which is not considered here.
      */
-    bool CheckPOW();
+    bool CheckPOW() const;
 
     /*
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing
      */
-    void RandomizeHash();
+    void RandomizeHash() const;
 
     /*
      * A simple solver for nonce that makes the blocks hash lower than the
@@ -197,8 +210,8 @@ public:
 
     friend std::string std::to_string(Block& block);
 
-    static void SerializeMilestone(VStream& s, Milestone& milestone);
-    static void DeserializeMilestone(VStream& s, Milestone& milestone);
+    static void SerializeMilestone(VStream&, Milestone&);
+    static void DeserializeMilestone(VStream&, Milestone&);
 
     static Block CreateGenesis();
 
@@ -261,6 +274,9 @@ public:
 };
 
 extern const Block GENESIS;
-static constexpr std::size_t HEADER_SIZE = 116;
+static constexpr std::size_t HEADER_SIZE                 = 116;
+static constexpr std::size_t MAX_ADDITIONAL_STORAGE_SIZE = 58;
+
+typedef std::shared_ptr<const Block> BlockPtr;
 
 #endif //__SRC_BLOCK_H__

@@ -1,8 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "test-methods/block-factory.h"
 #include "utxo.h"
-
-typedef Tasm::Listing Listing;
 
 class ConsensusTest : public testing::Test {};
 

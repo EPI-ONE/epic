@@ -106,7 +106,7 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     return *this;
 }
 
-void Transaction::FinalizeHash() {
+void Transaction::FinalizeHash() const {
     if (hash_.IsNull())
         hash_ = Hash<1>(VStream(*this));
 }
@@ -203,7 +203,7 @@ std::string std::to_string(const TxOutPoint& outpoint) {
 
 std::string std::to_string(const TxInput& input) {
     std::string str;
-    str += "TxInput{ ";
+    str += "TxInput { ";
 
     if (input.IsRegistration()) {
         str += "REGISTRATION ";
@@ -218,7 +218,7 @@ std::string std::to_string(const TxInput& input) {
 
 std::string std::to_string(const TxOutput& output) {
     std::string str;
-    str += "TxOut{ ";
+    str += "TxOut { ";
     str += strprintf("value=%d, listing content = %s", output.value.GetValue(), std::to_string(output.listingContent));
 
     return str += " }";
@@ -227,20 +227,20 @@ std::string std::to_string(const TxOutput& output) {
 std::string std::to_string(Transaction& tx) {
     std::string s;
     s += "Transaction { \n";
-    s += strprintf("   hash: %s \n", std::to_string(tx.GetHash()));
+    s += strprintf("     hash: %s \n", std::to_string(tx.GetHash()));
 
     for (int i = 0; i < tx.GetInputs().size(); ++i) {
-        s += "   ";
+        s += "     ";
         s += std::to_string(tx.GetInputs()[i]);
         s += "\n";
     }
 
     for (int j = 0; j < tx.GetOutputs().size(); ++j) {
-        s += "   ";
+        s += "     ";
         s += std::to_string(tx.GetOutputs()[j]);
         s += "\n";
     }
 
-    s += " }\n";
+    s += "   }\n";
     return s;
 }

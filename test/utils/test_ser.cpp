@@ -183,13 +183,24 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     sinput >> blockFromDeserialization;
 
     VStream soutput;
-    soutput << blockFromDeserialization;
+    soutput << block1;
 
     EXPECT_EQ(s, soutput.str());
 
     // Check parent pointers
-    Transaction* ptrTx = &*blockFromDeserialization.GetTransaction();
-    EXPECT_EQ(&blockFromDeserialization, ptrTx->GetParentBlock());
+    Transaction* ptrTx = &*block1.GetTransaction();
+    EXPECT_EQ(&block1, ptrTx->GetParentBlock());
+    for (const TxInput& input : ptrTx->GetInputs()) {
+        EXPECT_EQ(ptrTx, input.GetParentTx());
+    }
+
+    for (const TxOutput& output : ptrTx->GetOutputs()) {
+        EXPECT_EQ(ptrTx, output.GetParentTx());
+    }
+
+    Block block2(soutput);
+    ptrTx = &*block2.GetTransaction();
+    EXPECT_EQ(&block2, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());
     }

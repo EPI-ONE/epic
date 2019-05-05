@@ -11,6 +11,11 @@
 
 class DAGManager {
 public:
+    static DAGManager& GetDAGManager() {
+        static DAGManager DAG;
+        return DAG;
+    }
+
     // A list of hashes we've sent out in GetData requests.
     // It can be operated by multi threads.
     std::list<uint256> downloading;
@@ -25,30 +30,29 @@ public:
 
     // Indicator of whether we are synching with some peer.
     // Needs atomic set and get operations since is accessible by multiple threads.
-    std::atomic_flag isBatchSynching = ATOMIC_FLAG_INIT;
+    std::atomic_flag isBatchSynching = false;
 
     // The peer we are synching with. Null if isBatchSynching is false.
-    Peer& syncingPeer;
+    Peer* syncingPeer;
 
     DAGManager();
-    void init();
 
     // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
     // and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
     // sending queue according to the BlockLocator constructed by peer.
-    void requestInv(uint256 fromHash, size_t len, Peer& peer);
+    void RequestInv(const uint256& fromHash, const size_t& len, const Peer& peer);
 
     // Called by Peer and sets a list of inventory as the callback to the task.
-    void assembleInv(GetBlockTask& task);
+    void AssembleInv(GetBlockTask& task);
 
     // Called by batchSync to create a GetDataTask for a given hash.
-    GetDataTask requestData(uint256 hash, GetDataTask::Type type, Peer& peer);
+    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, const Peer& peer);
 
     // Called by Peer and sets a Bundle as the callback to the task.
-    void GetBundle(GetDataTask task);
+    void GetBundle(GetDataTask& task);
 
     // Adds a newly received block that has past syntax checking to the corresponding chain.
-    void AddBlockToPending(const Block* pblock);
+    void AddBlockToPending(const BlockPtr& block);
 
     size_t GetBestMilestoneHeight();
 
@@ -67,7 +71,7 @@ private:
     // Removes a verified ms hash from the downloading queue, and start another
     // round of batch sync when the downloading queue is empty.
     // Returns whether the hash is removed successfully.
-    bool updateDownloadingQueue(uint256 hash);
+    bool UpdateDownloadingQueue(uint256& hash);
 
     // Swaps a forked chain with the main chain if the forked chain wins a competition.
     // Rolls back and rebuild the ledger if neccessary.
