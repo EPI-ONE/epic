@@ -170,6 +170,8 @@ public:
 
     const Block* GetParentBlock() const;
 
+    uint64_t HashCode() const;
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {

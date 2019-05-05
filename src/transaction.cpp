@@ -32,7 +32,7 @@ void TxInput::SetParent(const Transaction* const tx) {
     parentTx_ = tx;
 }
 
-const Transaction* TxInput::GetParentTx() const{
+const Transaction* TxInput::GetParentTx() const {
     return parentTx_;
 }
 
@@ -206,6 +206,10 @@ void Transaction::SetParent(const Block* const blk) {
 
 const Block* Transaction::GetParentBlock() const {
     return parentBlock_;
+}
+
+uint64_t Transaction::HashCode() const {
+    return hash_.GetCheapHash();
 }
 
 /*
