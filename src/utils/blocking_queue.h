@@ -6,7 +6,7 @@
 #include <queue>
 #include <vector>
 
-#define DEFAULT_CAPACITY 65536
+#define DEFAULT_CAPACITY 1 << 16
 
 template <typename T>
 class BlockingQueue {
