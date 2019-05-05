@@ -301,7 +301,7 @@ void Block::Solve(int numThreads, ThreadPool& solverPool) {
 
     // Block the main thread until a nonce is solved
     while (newNonce.load() == 0) {
-        usleep(100);
+        std::this_thread::yield();
     }
 
     assert(newNonce.load() > 0);
