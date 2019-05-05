@@ -80,9 +80,9 @@ public:
 
     const uint256& GetHash() const;
 
-    void FinalizeHash();
+    void FinalizeHash() const;
 
-    void CalculateHash();
+    void CalculateHash() const;
 
     const uint256& FinalizeTxHash();
 

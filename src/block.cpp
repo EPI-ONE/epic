@@ -160,12 +160,12 @@ const uint256& Block::GetHash() const {
     return hash_;
 }
 
-void Block::FinalizeHash() {
+void Block::FinalizeHash() const {
     if (hash_.IsNull())
         CalculateHash();
 }
 
-void Block::CalculateHash() {
+void Block::CalculateHash() const {
     VStream s;
     Block::Serialize(s);
     FinalizeTxHash().Serialize(s);
@@ -325,7 +325,6 @@ void Block::SetParents() {
     if (!HasTransaction()) {
         return;
     }
-
     transaction_->SetParent(this);
     for (TxInput& input : transaction_->GetInputs()) {
         input.SetParent(&*transaction_);

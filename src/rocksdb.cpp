@@ -163,7 +163,6 @@ RocksDBStore::~RocksDBStore() {
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
     handleMap.reserve(COLUMN_NAMES.size());
-
     auto keyIter = COLUMN_NAMES.begin();
     auto valIter = handles.begin();
     while (keyIter != COLUMN_NAMES.end() && valIter != handles.end()) {

@@ -104,7 +104,7 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     return *this;
 }
 
-void Transaction::FinalizeHash() {
+void Transaction::FinalizeHash() const {
     if (hash_.IsNull())
         hash_ = Hash<1>(VStream(*this));
 }

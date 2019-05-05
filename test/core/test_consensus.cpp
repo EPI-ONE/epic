@@ -4,8 +4,7 @@
 #include "chain.h"
 #include "test-methods/block-factory.h"
 #include "utxo.h"
-
-typedef Tasm::Listing Listing;
+#include "test-methods/block-factory.h"
 
 std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
     auto pb = std::make_shared<BlockNet>();

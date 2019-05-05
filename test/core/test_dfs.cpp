@@ -19,8 +19,7 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 TEST_F(DFSTest, complex_test) {
     Chain chain;
 
-    std::size_t n = 10;
-    std::vector<Block> blocks;
+    std::size_t n = 10; std::vector<Block> blocks;
     blocks.reserve(n);
 
     for (std::size_t i = 0; i < n; i++) {

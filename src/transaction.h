@@ -128,7 +128,7 @@ public:
 
     Transaction& AddOutput(TxOutput&& output);
 
-    void FinalizeHash();
+    void FinalizeHash() const;
 
     const std::vector<TxInput>& GetInputs() const;
 
@@ -167,7 +167,7 @@ private:
     std::vector<TxInput> inputs_;
     std::vector<TxOutput> outputs_;
 
-    uint256 hash_;
+    mutable uint256 hash_;
     Coin fee_;
 
     const Block* parentBlock_;
