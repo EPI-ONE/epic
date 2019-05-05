@@ -91,12 +91,12 @@ public:
     void addSeeds(const std::string& ip, const uint16_t& port) {
         auto address = NetAddress::StringToNetAddress(ip, port);
         if (address) {
-            seeds.push_back(*address);
+            seeds_.push_back(*address);
         }
     }
 
     std::vector<NetAddress> getSeeds() const {
-        return seeds;
+        return seeds_;
     }
 
     void showConfig() {
@@ -111,9 +111,11 @@ public:
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
         ss << "seeds = [" << std::endl;
-        for (const NetAddress& addr : seeds) {
+
+        for (const NetAddress& addr : seeds_) {
             ss << addr.ToString() << ',' << std::endl;
         }
+
         ss << "]" << std::endl;
         spdlog::info(ss.str());
     }
@@ -136,7 +138,7 @@ private:
     std::string bindAddress_ = defaultIP;
     uint16_t bindPort_       = defaultPort;
 
-    std::vector<NetAddress> seeds;
+    std::vector<NetAddress> seeds_;
 };
 
 extern std::unique_ptr<Config> config;
