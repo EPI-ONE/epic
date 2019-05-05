@@ -1,4 +1,3 @@
-
 #ifndef EPIC_MESSAGE_HEADER_H
 #define EPIC_MESSAGE_HEADER_H
 
