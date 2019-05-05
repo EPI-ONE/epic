@@ -155,12 +155,14 @@ public:
         if (nReadPosNext > chars.size()) {
             throw std::ios_base::failure("Stream::read(): end of data");
         }
+
         memcpy(pch, &chars[readPos], nSize);
         if (nReadPosNext == chars.size()) {
             readPos = 0;
             chars.clear();
             return;
         }
+
         readPos = nReadPosNext;
     }
 
@@ -169,6 +171,7 @@ public:
         if (nSize < 0) {
             throw std::ios_base::failure("Stream::ignore(): nSize negative");
         }
+
         unsigned int nReadPosNext = readPos + nSize;
         if (nReadPosNext >= chars.size()) {
             if (nReadPosNext > chars.size())
@@ -177,6 +180,7 @@ public:
             chars.clear();
             return;
         }
+
         readPos = nReadPosNext;
     }
 
