@@ -9,5 +9,5 @@ bool NetMessage::VerifyChecksum() {
         return true;
     }
 
-    return getCrc32((unsigned char*) payload.data(), payload.size()) == header.checksum;
+    return GetCrc32((unsigned char*) payload.data(), payload.size()) == header.checksum;
 }

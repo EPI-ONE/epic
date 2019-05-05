@@ -23,7 +23,7 @@ public:
         header.magic_number   = GetMagicNumber();
         header.type           = message_type;
         header.payload_length = payload.size();
-        header.checksum       = getCrc32((unsigned char*) payload.data(), payload.size());
+        header.checksum       = GetCrc32((unsigned char*) payload.data(), payload.size());
     }
 
     NetMessage(const void* handle, uint32_t message_type, VStream& data)
@@ -31,7 +31,7 @@ public:
         header.magic_number   = GetMagicNumber();
         header.type           = message_type;
         header.payload_length = payload.size();
-        header.checksum       = getCrc32((unsigned char*) payload.data(), payload.size());
+        header.checksum       = GetCrc32((unsigned char*) payload.data(), payload.size());
     }
 
     NetMessage(void* handle, uint32_t message_type) : connection_handle_(handle) {
