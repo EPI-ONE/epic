@@ -16,6 +16,8 @@ void OrphanBlocksContainer::ReleaseBlocks(const uint256& blockHash) {}
 
 OrphanBlocksContainer::~OrphanBlocksContainer() {
     thread_.Stop();
+    ODict_.clear();
+    solidDegree_.clear();
 }
 
 Caterpillar::Caterpillar(std::string& dbPath) : dbStore_(dbPath), thread_(1) {

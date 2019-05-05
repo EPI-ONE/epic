@@ -28,7 +28,7 @@ public:
     inline size_t size() {
         size_t size = 0;
         for (auto& it: solidDegree_) {
-            size += it.second.size(); 
+            size += it.second.size();
         }
         return size;
     }
@@ -45,7 +45,6 @@ private:
     ThreadPool thread_;
     std::unordered_map<uint256, std::unordered_set<BlockPtr>> ODict_;
     std::unordered_map<uint8_t, std::unordered_set<uint256>> solidDegree_;
-
     std::vector<BlockPtr> updateOne(uint256& blockHash);
 };
 
