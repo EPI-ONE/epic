@@ -9,9 +9,6 @@
 #include "stream.h"
 
 class NetMessage {
-private:
-    const void* connection_handle_;
-
 public:
     message_header_t header;
     VStream payload;
@@ -46,6 +43,9 @@ public:
 
     const void* GetConnectionHandle();
     bool VerifyChecksum();
+
+private:
+    const void* connection_handle_;
 };
 
 #endif // EPIC_NET_MESSAGE_H
