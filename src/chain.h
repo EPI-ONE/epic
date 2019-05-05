@@ -1,7 +1,6 @@
 #ifndef __SRC_CHAIN_H__
 #define __SRC_CHAIN_H__
 
-#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -18,11 +17,18 @@ public:
 
     std::shared_ptr<Milestone> GetChainHead() const;
 
-    void addPendingBlock(Block& block);
+    void AddPendingBlock(Block& block);
 
-    void removePendingBlock(const uint256& hash);
+    void RemovePendingBlock(const uint256& hash);
 
-    bool isBlockPending(const uint256& hash) const;
+    bool IsBlockPending(const uint256& hash) const;
+
+    std::size_t GetPendingBlockCount() const;
+
+    // get a list of block to verify by a post-order DFS
+    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const Block& pblock);
+
+    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const std::shared_ptr<const Block> pblock);
 
 private:
     // 1 if this chain is main chain, 0 otherwise;
@@ -35,9 +41,6 @@ private:
 
     // when we add a milestone block to this chain, we start verification
     std::shared_ptr<Milestone> MilestoneVerify(const std::shared_ptr<Block> pblock);
-
-    // get a list of block to verify by a post-order DFS
-    std::vector<std::shared_ptr<Block>> FindValidSubgraph(const std::shared_ptr<Block> pblock);
 
     // container for all pending blocks
     std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;

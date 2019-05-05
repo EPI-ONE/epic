@@ -69,6 +69,18 @@ public:
 
     bool IsNull() const;
 
+    uint256 GetMilestoneHash() const;
+
+    uint256 GetPrevHash() const;
+
+    uint256 GetTipHash() const;
+
+    void SetMilestoneHash(const uint256& hash);
+
+    void SetPrevHash(const uint256& hash);
+
+    void SetTIPHash(const uint256& hash);
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -82,16 +94,15 @@ public:
     }
 
 protected:
-    uint256 hash_;
-
-    // To be serialized to net and db
-    uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    uint64_t time_;
+
     uint32_t diffTarget_;
+    uint32_t version_;
     uint32_t nonce_;
+
+    uint64_t time_;
 };
 
 class Block : public BlockHeader {
@@ -183,6 +194,12 @@ public:
      * difficulty target. For test purposes only.
      */
     void Solve();
+
+    /*
+     * Only to be used for debugging when validity of the
+     * block does not matter e.g DFS testing
+     */
+    void RandomizeHash();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

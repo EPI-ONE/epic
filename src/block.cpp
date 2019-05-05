@@ -18,6 +18,30 @@ bool BlockHeader::IsNull() const {
     return time_ == 0;
 }
 
+uint256 BlockHeader::GetMilestoneHash() const {
+    return milestoneBlockHash_;
+}
+
+uint256 BlockHeader::GetPrevHash() const {
+    return prevBlockHash_;
+}
+
+uint256 BlockHeader::GetTipHash() const {
+    return tipBlockHash_;
+}
+
+void BlockHeader::SetMilestoneHash(const uint256& hash) {
+    milestoneBlockHash_ = hash;
+}
+
+void BlockHeader::SetPrevHash(const uint256& hash) {
+    prevBlockHash_ = hash;
+}
+
+void BlockHeader::SetTIPHash(const uint256& hash) {
+    tipBlockHash_ = hash;
+}
+
 Block::Block() {
     SetNull();
 }
@@ -242,6 +266,10 @@ void Block::Solve() {
         nonce_++;
         CalculateHash();
     }
+}
+
+void Block::RandomizeHash() {
+    hash_.randomize();
 }
 
 void Block::SerializeToDB(VStream& s) const {
