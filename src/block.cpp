@@ -135,6 +135,10 @@ void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
 
+const uint32_t Block::GetDifficultyTarget() const {
+    return diffTarget_;
+}
+
 void Block::SetTime(uint64_t time) {
     time_ = time;
 }

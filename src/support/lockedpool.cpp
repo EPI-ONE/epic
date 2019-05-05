@@ -2,15 +2,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <support/cleanse.h>
-#include <support/lockedpool.h>
+#include "support/lockedpool.h"
+#include "support/cleanse.h"
 
-#include <limits.h>       // for PAGESIZE
+#include <algorithm>
+#include <climits>        // for PAGESIZE
 #include <sys/mman.h>     // for mmap
 #include <sys/resource.h> // for getrlimit
 #include <unistd.h>       // for sysconf
-
-#include <algorithm>
 
 LockedPoolManager* LockedPoolManager::_instance = nullptr;
 std::once_flag LockedPoolManager::init_flag;

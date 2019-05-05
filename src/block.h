@@ -34,9 +34,9 @@ public:
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-        tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
-            CalculateOptimalEncodingSize();
-        }
+          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+        CalculateOptimalEncodingSize();
+    }
 
     void SetNull();
 
@@ -65,6 +65,8 @@ public:
     std::optional<Transaction>& GetTransaction();
 
     void SetDifficultyTarget(uint32_t target);
+
+    const uint32_t GetDifficultyTarget() const;
 
     void SetTime(uint64_t time);
 
