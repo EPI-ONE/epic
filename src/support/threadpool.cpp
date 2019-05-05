@@ -13,7 +13,7 @@ ThreadPool::ThreadPool(size_t worker_size) {
     SetThreadSize(worker_size);
 }
 
-void ThreadPool::worker_thread() {
+void ThreadPool::WorkerThread() {
     try {
         CallableWrapper task;
         while (task_queue.Take(task)) {
@@ -30,7 +30,7 @@ void ThreadPool::SetThreadSize(size_t size) {
 
 void ThreadPool::Start() {
     for (int i = 0; i < workers.capacity(); i++) {
-        workers.emplace_back(&ThreadPool::worker_thread, this);
+        workers.emplace_back(&ThreadPool::WorkerThread, this);
     }
 }
 

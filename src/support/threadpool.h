@@ -90,7 +90,7 @@ private:
     BlockingQueue<CallableWrapper> task_queue;
     std::vector<std::thread> workers;
 
-    void worker_thread();
+    void WorkerThread();
 };
 
 #endif // EPIC_THREADPOOL_H
