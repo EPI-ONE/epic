@@ -272,6 +272,44 @@ void Block::RandomizeHash() {
     hash_.randomize();
 }
 
+void Block::Solve(int numThreads, ThreadPool& solverPool) {
+    arith_uint256 target           = GetTargetAsInteger();
+    std::atomic<uint32_t> newNonce = 0;
+    std::atomic<uint64_t> newTime  = time_;
+
+    for (int i = 0; i < numThreads; ++i) {
+        solverPool.Execute([this, &newNonce, &newTime, i, &target, &numThreads]() {
+            Block blk(*this);
+            blk.SetNonce(i);
+            blk.FinalizeHash();
+
+            while (newNonce.load() == 0) {
+                if (UintToArith256(blk.hash_) <= target) {
+                    newNonce = blk.nonce_;
+                    newTime  = blk.time_;
+                }
+
+                if (blk.nonce_ == UINT_LEAST32_MAX) {
+                    blk.time_ = time(nullptr);
+                }
+
+                blk.nonce_ += numThreads;
+                blk.CalculateHash();
+            }
+        });
+    }
+
+    // Block the main thread until a nonce is solved
+    while (newNonce.load() == 0) {
+        std::this_thread::yield();
+    }
+
+    assert(newNonce.load() > 0);
+    SetNonce(newNonce.load());
+    SetTime(newTime.load());
+    FinalizeHash();
+}
+
 void Block::SerializeToDB(VStream& s) const {
     s << *this;
     s << VARINT(cumulativeReward_.GetValue());
@@ -376,10 +414,18 @@ Block Block::CreateGenesis() {
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetMinerChainHeight(0);
     genesisBlock.ResetReward();
-    genesisBlock.SetDifficultyTarget(0x1f00ffffL);
+    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
     genesisBlock.SetTime(1548078136L);
-    genesisBlock.SetNonce(47772);
+    genesisBlock.SetNonce(2081807681);
     genesisBlock.FinalizeHash();
+
+    // The following commented lines were used for mining a genesis block
+    // int numThreads = 44;
+    // ThreadPool solverPool(numThreads);
+    // solverPool.Start();
+    // genesisBlock.Solve(numThreads, solverPool);
+    // solverPool.Stop();
+    // std::cout << std::to_string(genesisBlock) << std::endl;
 
     return genesisBlock;
 }
