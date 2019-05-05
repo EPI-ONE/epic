@@ -67,7 +67,7 @@ public:
      */
     template <typename FunctionType>
     void Execute(FunctionType&& f) {
-        task_queue.Put(std::move(f));
+        task_queue_.Put(std::move(f));
     }
 
     /**
@@ -82,13 +82,13 @@ public:
         typedef typename std::result_of<FunctionType()>::type result_type;
         std::packaged_task<result_type()> packagedTask(std::move(f));
         std::future<result_type> result(packagedTask.get_future());
-        task_queue.Put(std::move(packagedTask));
+        task_queue_.Put(std::move(packagedTask));
         return result;
     }
 
 private:
-    BlockingQueue<CallableWrapper> task_queue;
-    std::vector<std::thread> workers;
+    BlockingQueue<CallableWrapper> task_queue_;
+    std::vector<std::thread> workers_;
 
     void WorkerThread();
 };
