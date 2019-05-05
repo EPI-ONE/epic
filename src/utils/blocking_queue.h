@@ -1,7 +1,5 @@
-
 #ifndef EPIC_BLOCKING_QUEUE_H
 #define EPIC_BLOCKING_QUEUE_H
-
 
 #include <condition_variable>
 #include <iostream>
@@ -13,24 +11,24 @@
 template <typename T>
 class BlockingQueue {
 public:
-    BlockingQueue() : mtx(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {}
+    BlockingQueue() : mtx_(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {}
 
     void Put(T& element) {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::unique_lock<std::mutex> lock(mtx_);
         full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
         queue_.emplace(std::move(element));
         empty_.notify_all();
     }
 
     void Put(T&& element) {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::unique_lock<std::mutex> lock(mtx_);
         full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
         queue_.emplace(std::move(element));
         empty_.notify_all();
     }
 
     bool Take(T& front) {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::unique_lock<std::mutex> lock(mtx_);
         empty_.wait(lock, [this] { return !queue_.empty() || quit_; });
         if (quit_) {
             return false;
@@ -42,12 +40,12 @@ public:
     }
 
     size_t Size() {
-        std::lock_guard<std::mutex> lock(mtx);
+        std::lock_guard<std::mutex> lock(mtx_);
         return queue_.size();
     }
 
     bool Empty() {
-        std::lock_guard<std::mutex> lock(mtx);
+        std::lock_guard<std::mutex> lock(mtx_);
         return queue_.empty();
     }
 
@@ -62,7 +60,7 @@ public:
     }
 
 private:
-    mutable std::mutex mtx;
+    mutable std::mutex mtx_;
     std::condition_variable full_;
     std::condition_variable empty_;
     std::queue<T> queue_;
