@@ -13,106 +13,43 @@
 #include "rocksdb/slice.h"
 
 using namespace rocksdb;
-using namespace std;
 
-static const vector<string> COLUMN_NAMES = {
-    kDefaultColumnFamilyName, "msList", "UTXO", "selfChain", "regKeys", "info"};
+static const std::vector<std::string> COLUMN_NAMES = {
+    kDefaultColumnFamilyName, // the default column family that must have
+    "msList", "UTXO", "selfChain", "regKeys", "info"};
 
 class RocksDBStore {
 public:
-    RocksDBStore(string dbPath) {
-        this->DBPATH_ = dbPath;
-        // Make directory DBPATH_ if missing
-        if (!CheckDirExist(DBPATH_)) {
-            Mkdir_recursive(DBPATH_);
-        }
+    RocksDBStore() = default;
 
-        // Create column families
-        vector<ColumnFamilyDescriptor> descriptors;
-        for (const string& columnName : COLUMN_NAMES) {
-            ColumnFamilyOptions cOptions;
-            if (columnName == kDefaultColumnFamilyName) {
-                cOptions.OptimizeForPointLookup(500L);
-            }
-            descriptors.push_back(ColumnFamilyDescriptor(columnName, cOptions));
-        }
+    RocksDBStore(std::string dbPath);
 
-        // Set options
-        DBOptions dbOptions;
-        dbOptions.db_log_dir = DBPATH_ + "/log";
-        dbOptions.create_if_missing = true;
-        dbOptions.create_missing_column_families = true;
-        dbOptions.IncreaseParallelism(2);
-        // Open DB and store handles into a map
-        vector<ColumnFamilyHandle*> handles;
+    bool Exists(const uint256& blockHash) const;
 
-        if (!DB::Open(dbOptions, DBPATH_, descriptors, &handles, &db_).ok()) {
-            throw "DB initialization failed";
-        }
+    bool GetBlock(const uint256& blockHash, BlockPtr& block) const;
 
-        initHandleMap(handles);
-        handles.clear();
-        descriptors.clear();
-    }
+    bool WriteBlock(const BlockPtr& block) const;
 
-    const string Get(const string& column, const string& key) {
-        string value;
-        Status s = db_->Get(ReadOptions(), handleMap_[column], key, &value);
+    bool WriteBlocks(const std::vector<BlockPtr> blocks) const;
 
-        if (s.ok()) {
-            return value;
-        }
-
-        return "";
-    }
-
-    const void Write(const string& column, const string& key, const string& value) {
-        bool ok = db_->Put(WriteOptions(), handleMap_[column], key, value).ok();
-        assert(ok);
-    }
-
-    const void WriteBatch(const string& column, const map<string, string>& batch) {
-        class WriteBatch wb;
-        for (auto const& [key, value] : batch) {
-            wb.Put(handleMap_[column], key, value);
-        }
-
-        bool ok = db_->Write(WriteOptions(), &wb).ok();
-        assert(ok);
-    }
-
-    const void Delete(const string& column, const string& key) {
-        bool ok = db_->Delete(WriteOptions(), handleMap_[column], key).ok();
-        assert(ok);
-    }
-
-    ~RocksDBStore() {
-        for (auto entry = handleMap_.begin(); entry != handleMap_.end(); ++entry) {
-            delete entry->second;
-        }
-
-        handleMap_.clear();
-        delete db_;
-    }
+    ~RocksDBStore();
 
 private:
-    unordered_map<string, ColumnFamilyHandle*> handleMap_;
-    DB* db_;
-    string DBPATH_;
+    mutable std::unordered_map<std::string, ColumnFamilyHandle*> handleMap;
+    DB* db;
+    std::string DBPATH;
 
-    void initHandleMap(vector<ColumnFamilyHandle*> handles) {
-        handleMap_.reserve(COLUMN_NAMES.size());
-        auto keyIter = COLUMN_NAMES.begin();
-        auto valIter = handles.begin();
+    void initHandleMap(std::vector<ColumnFamilyHandle*> handles);
 
-        while (keyIter != COLUMN_NAMES.end() && valIter != handles.end()) {
-            handleMap_[*keyIter] = *valIter;
-            ++keyIter;
-            ++valIter;
-        }
+    const Slice Get(const std::string& column, const Slice& key) const;
 
-        assert(!handleMap_.empty());
-    }
+    const std::string Get(const std::string& column, const std::string& key) const;
+
+    bool Write(const std::string& column, const Slice& key, const Slice& value) const;
+
+    bool Write(const std::string& column, const std::string& key, const std::string& value) const;
+
+    void Delete(const std::string& column, const std::string& key) const;
 };
 
 #endif /* ifndef __SRC_ROCKSDB_H__ */
