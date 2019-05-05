@@ -36,7 +36,7 @@ public:
 
     explicit IPAddress(const struct in6_addr& ip6);
 
-    void setIP(const uint8_t* p, NetworkType type);
+    void SetIP(const uint8_t* p, NetworkType type);
 
     bool IsIPv4() const; // IPv4 mapped address (::FFFF:0:0/96, 0.0.0.0/0)
 
