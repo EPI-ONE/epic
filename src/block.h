@@ -96,7 +96,6 @@ public:
     }
 
 protected:
-    uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
