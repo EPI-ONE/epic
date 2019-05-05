@@ -245,7 +245,7 @@ protected:
     bool isMilestone_ = false;
 
 private:
-    size_t optimalEncodingSize = 0;
+    size_t optimalEncodingSize_ = 0;
 };
 
 extern const Block GENESIS;

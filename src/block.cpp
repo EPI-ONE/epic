@@ -61,7 +61,7 @@ void Block::SetNull() {
 }
 
 void Block::UnCache() {
-    optimalEncodingSize = 0;
+    optimalEncodingSize_ = 0;
     hash_.SetNull();
 }
 
@@ -206,31 +206,31 @@ const uint256& Block::GetTxHash() {
 }
 
 size_t Block::GetOptimalEncodingSize() {
-    if (optimalEncodingSize > 0) {
-        return optimalEncodingSize;
+    if (optimalEncodingSize_ > 0) {
+        return optimalEncodingSize_;
     }
 
-    optimalEncodingSize = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
+    optimalEncodingSize_ = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
     if (!HasTransaction())
-        return optimalEncodingSize;
+        return optimalEncodingSize_;
 
-    optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t listingDataSize    = input.listingContent.data.size();
         size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
-    optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t listingDataSize    = output.listingContent.data.size();
         size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
-    return optimalEncodingSize;
+    return optimalEncodingSize_;
 }
 
 bool Block::IsRegistration() const {

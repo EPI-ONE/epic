@@ -32,35 +32,35 @@ public:
     typedef byte_vector::const_iterator const_iterator;
     typedef byte_vector::reverse_iterator reverse_iterator;
 
-    explicit VStream() : readPos(0) {}
+    explicit VStream() : readPos_(0) {}
 
-    VStream(size_t size) : chars(size), readPos(0) {}
+    VStream(size_t size) : chars_(size), readPos_(0) {}
 
-    VStream(const_iterator pbegin, const_iterator pend) : chars(pbegin, pend), readPos(0) {}
+    VStream(const_iterator pbegin, const_iterator pend) : chars_(pbegin, pend), readPos_(0) {}
 
-    VStream(const char* pbegin, const char* pend) : chars(pbegin, pend), readPos(0) {}
+    VStream(const char* pbegin, const char* pend) : chars_(pbegin, pend), readPos_(0) {}
 
-    VStream(const byte_vector& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const byte_vector& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
 
-    VStream(const std::vector<char>& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const std::vector<char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
 
-    VStream(const std::vector<unsigned char>& vchIn) : chars(vchIn.begin(), vchIn.end()), readPos(0) {}
+    VStream(const std::vector<unsigned char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
 
     template <typename... Args>
     VStream(Args&&... args) {
-        readPos = 0;
+        readPos_ = 0;
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(chars);
+        READWRITE(chars_);
     }
 
 
     VStream& operator+=(const VStream& b) {
-        chars.insert(chars.end(), b.cbegin(), b.cend());
+        chars_.insert(chars_.end(), b.cbegin(), b.cend());
         return *this;
     }
 
@@ -80,56 +80,56 @@ public:
 
     // Vector subset
     const_iterator cbegin() const {
-        return chars.cbegin() + readPos;
+        return chars_.cbegin() + readPos_;
     }
 
     iterator begin() {
-        return chars.begin() + readPos;
+        return chars_.begin() + readPos_;
     }
 
     const_iterator cend() const {
-        return chars.cend();
+        return chars_.cend();
     }
 
     iterator end() {
-        return chars.end();
+        return chars_.end();
     }
 
     size_type size() const {
-        return chars.size() - readPos;
+        return chars_.size() - readPos_;
     }
 
     bool empty() const {
-        return chars.size() == readPos;
+        return chars_.size() == readPos_;
     }
 
     void resize(size_type n, value_type c = 0) {
-        chars.resize(n + readPos, c);
+        chars_.resize(n + readPos_, c);
     }
 
     void reserve(size_type n) {
-        chars.reserve(n + readPos);
+        chars_.reserve(n + readPos_);
     }
 
     const_reference operator[](size_type pos) const {
-        return chars[pos + readPos];
+        return chars_[pos + readPos_];
     }
 
     reference operator[](size_type pos) {
-        return chars[pos + readPos];
+        return chars_[pos + readPos_];
     }
 
     void clear() {
-        chars.clear();
-        readPos = 0;
+        chars_.clear();
+        readPos_ = 0;
     }
 
     value_type* data() {
-        return chars.data() + readPos;
+        return chars_.data() + readPos_;
     }
 
     const value_type* data() const {
-        return chars.data() + readPos;
+        return chars_.data() + readPos_;
     }
 
     // Stream subset
@@ -151,19 +151,19 @@ public:
             return;
 
         // Read from the beginning of the buffer
-        unsigned int nReadPosNext = readPos + nSize;
-        if (nReadPosNext > chars.size()) {
+        unsigned int nReadPosNext = readPos_ + nSize;
+        if (nReadPosNext > chars_.size()) {
             throw std::ios_base::failure("Stream::read(): end of data");
         }
 
-        memcpy(pch, &chars[readPos], nSize);
-        if (nReadPosNext == chars.size()) {
-            readPos = 0;
-            chars.clear();
+        memcpy(pch, &chars_[readPos_], nSize);
+        if (nReadPosNext == chars_.size()) {
+            readPos_ = 0;
+            chars_.clear();
             return;
         }
 
-        readPos = nReadPosNext;
+        readPos_ = nReadPosNext;
     }
 
     void ignore(int nSize) {
@@ -172,21 +172,21 @@ public:
             throw std::ios_base::failure("Stream::ignore(): nSize negative");
         }
 
-        unsigned int nReadPosNext = readPos + nSize;
-        if (nReadPosNext >= chars.size()) {
-            if (nReadPosNext > chars.size())
+        unsigned int nReadPosNext = readPos_ + nSize;
+        if (nReadPosNext >= chars_.size()) {
+            if (nReadPosNext > chars_.size())
                 throw std::ios_base::failure("Stream::ignore(): end of data");
-            readPos = 0;
-            chars.clear();
+            readPos_ = 0;
+            chars_.clear();
             return;
         }
 
-        readPos = nReadPosNext;
+        readPos_ = nReadPosNext;
     }
 
     void write(const char* pch, size_t nSize) {
         // Write to the end of the buffer
-        chars.insert(chars.end(), pch, pch + nSize);
+        chars_.insert(chars_.end(), pch, pch + nSize);
     }
 
     template <typename T>
@@ -209,8 +209,8 @@ public:
     }
 
 protected:
-    byte_vector chars;
-    unsigned int readPos;
+    byte_vector chars_;
+    unsigned int readPos_;
 };
 
 #endif // ifndef __SRC_UTILS_STREAM_H__
