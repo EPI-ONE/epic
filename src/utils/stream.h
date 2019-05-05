@@ -21,10 +21,6 @@ typedef std::vector<char, zero_after_free_allocator<char>> byte_vector;
  * take N^2 time.
  */
 class VStream {
-protected:
-    byte_vector chars;
-    unsigned int readPos;
-
 public:
     typedef byte_vector::allocator_type allocator_type;
     typedef byte_vector::size_type size_type;
@@ -194,6 +190,10 @@ public:
         d.insert(d.end(), begin(), end());
         clear();
     }
+
+protected:
+    byte_vector chars;
+    unsigned int readPos;
 };
 
 #endif // ifndef __SRC_UTILS_STREAM_H__
