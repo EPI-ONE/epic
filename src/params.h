@@ -21,8 +21,8 @@ static constexpr uint32_t PUNTUALITY_THRESHOLD = 2 * 60 * 60;
 static constexpr uint32_t SORTITION_THRESHOLD = 10 * 1000;
 // transaction sortition: coefficient for computing allowed distance
 static constexpr double SORTITION_COEFFICIENT = 0.01;
-// maximum time in a block header allowed to be in advanced to the current time
-static constexpr uint32_t ALLOWED_TIME_DRIFT = 2 * 60 * 60;
+// maximum time in a block header allowed to be in advanced to the current time (sec)
+static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 // max amount of money allowed in one output
 static constexpr uint64_t MAX_MONEY = 9999999999L;
 // version of genesis block
