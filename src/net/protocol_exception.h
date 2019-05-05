@@ -1,14 +1,14 @@
-#include <utility>
-
 #ifndef EPIC_PROTOCOL_EXCEPTION_H
 #define EPIC_PROTOCOL_EXCEPTION_H
+
 #include <exception>
 #include <string>
+#include <utility>
 
 class ProtocolException : public std::exception {
 public:
-    explicit ProtocolException(std::string msg) : msg_(std::move(msg)) {
-    }
+    explicit ProtocolException(std::string msg) : msg_(std::move(msg)) {}
+
     std::string ToString() const {
         return msg_;
     }
