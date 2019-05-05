@@ -40,7 +40,7 @@ public:
     }
 
     uint64_t HashCode() const {
-        return std::hash<uint256>()(bHash) ^ index;
+        return bHash.GetCheapHash() ^ index;
     }
 };
 
