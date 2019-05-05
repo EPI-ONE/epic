@@ -23,10 +23,6 @@ enum NetworkType {
 };
 
 class IPAddress {
-protected:
-    // Serialize
-    unsigned char ip[16];
-
 public:
     static std::optional<IPAddress> StringToIP(const std::string& ip_string);
 
@@ -84,6 +80,10 @@ public:
 
     // this function current only support ipv4
     uint32_t GetIpInt() const;
+
+protected:
+    // Serialize
+    unsigned char ip[16];
 };
 
 namespace std {
