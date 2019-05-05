@@ -6,12 +6,12 @@ AddressManager::AddressManager() {
 }
 
 void AddressManager::Init() {
-    for (const NetAddress& seed : config->getSeeds()) {
+    for (const NetAddress& seed : config->GetSeeds()) {
         allSeeds_.insert(seed);
     }
 
     LoadLocalAddresses();
-    LoadAddress(config->getAddressPath(), config->getAddressFilename());
+    LoadAddress(config->GetAddressPath(), config->GetAddressFilename());
 }
 
 bool AddressManager::IsSeedAddress(const IPAddress& address) {

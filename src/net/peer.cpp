@@ -123,7 +123,7 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
         // send local address
         AddressMessage addressMessage;
         IPAddress localAddress = addressManager_->GetBestLocalAddress();
-        addressMessage.AddAddress(NetAddress(localAddress, config->getBindPort()));
+        addressMessage.AddAddress(NetAddress(localAddress, config->GetBindPort()));
         SendMessage(NetMessage(connection_handle, ADDR, VStream(addressMessage)));
         spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
 
