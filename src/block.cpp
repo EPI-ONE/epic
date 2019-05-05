@@ -285,15 +285,15 @@ void Block::Solve(int numThreads, ThreadPool& solverPool) {
 
             while (newNonce.load() == 0) {
                 if (UintToArith256(blk.hash_) <= target) {
-                    newNonce = blk.GetNonce();
-                    newTime  = blk.GetTime();
+                    newNonce = blk.nonce_;
+                    newTime  = blk.time_;
                 }
 
                 if (blk.nonce_ == UINT_LEAST32_MAX) {
                     blk.time_ = time(nullptr);
                 }
 
-                blk.SetNonce(blk.nonce_ + numThreads);
+                blk.nonce_ += numThreads;
                 blk.CalculateHash();
             }
         });
