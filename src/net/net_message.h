@@ -44,7 +44,7 @@ public:
         header.checksum       = 0;
     }
 
-    const void* getConnectionHandle();
+    const void* GetConnectionHandle();
     bool VerifyChecksum();
 };
 

@@ -286,7 +286,7 @@ void ConnectionManager::WriteOneMessage_(NetMessage& message) {
     }
 
     bev_mtx_.lock();
-    bufferevent* bev = (bufferevent*) message.getConnectionHandle();
+    bufferevent* bev = (bufferevent*) message.GetConnectionHandle();
     if (isExist_(bev)) {
         bufferevent_write_buffer(bev, send_buffer);
     }

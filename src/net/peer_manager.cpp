@@ -130,9 +130,9 @@ void PeerManager::HandleMessage() {
     while (!interrupt) {
         NetMessage msg;
         if (connectionManager_->ReceiveMessage(msg)) {
-            Peer* msg_from = GetPeer(msg.getConnectionHandle());
+            Peer* msg_from = GetPeer(msg.GetConnectionHandle());
             if (!msg_from) {
-                spdlog::warn("can't find the peer with the handle {}", msg.getConnectionHandle());
+                spdlog::warn("can't find the peer with the handle {}", msg.GetConnectionHandle());
                 continue;
             }
             msg_from->ProcessMessage(msg);
