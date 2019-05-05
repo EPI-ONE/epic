@@ -302,7 +302,7 @@ void ConnectionManager::ReadMessages(struct bufferevent* bev) {
 
 bool ConnectionManager::SeekMagicNumber_(struct evbuffer* buf) {
     size_t data_length    = evbuffer_get_length(buf);
-    uint32_t magic_number = getMagicNumber();
+    uint32_t magic_number = GetMagicNumber();
 
     if (data_length < MESSAGE_MAGIC_NUMBER_LENGTH) {
         return false;
