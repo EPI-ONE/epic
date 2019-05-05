@@ -111,23 +111,23 @@ public:
     void FreeBufferevent(struct bufferevent* bev);
 
 private:
-    struct event_base* base                                 = nullptr;
-    struct evconnlistener* listener                         = nullptr;
-    new_connection_callback_t new_connection_callback       = nullptr;
-    delete_connection_callback_t delete_connection_callback = nullptr;
+    struct event_base* base_                                 = nullptr;
+    struct evconnlistener* listener_                         = nullptr;
+    new_connection_callback_t new_connection_callback_       = nullptr;
+    delete_connection_callback_t delete_connection_callback_ = nullptr;
 
     std::atomic<bool> interrupt_send_message_;
 
-    std::thread thread_event_base;
-    std::thread thread_send_message;
+    std::thread thread_event_base_;
+    std::thread thread_send_message_;
 
-    std::mutex bev_mtx;
+    std::mutex bev_mtx_;
 
     /* the key is bufferevent, the value is the length of next receive message */
-    std::unordered_map<struct bufferevent*, size_t> bufferevent_map;
+    std::unordered_map<struct bufferevent*, size_t> bufferevent_map_;
 
-    BlockingQueue<NetMessage> receive_message_queue;
-    BlockingQueue<NetMessage> send_message_queue;
+    BlockingQueue<NetMessage> receive_message_queue_;
+    BlockingQueue<NetMessage> send_message_queue_;
 
     void FreeAllBufferevent_();
     bool isExist_(struct bufferevent* bev);
