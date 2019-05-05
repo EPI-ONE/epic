@@ -97,10 +97,6 @@ struct hash<IPAddress> {
 
 
 class NetAddress : public IPAddress {
-protected:
-    // Serialize
-    uint16_t port_ = 0;
-
 public:
     static std::optional<NetAddress> StringToNetAddress(const std::string& netaddr_string);
 
@@ -130,6 +126,10 @@ public:
         READWRITE(ip);
         READWRITE(port_);
     }
+
+protected:
+    // Serialize
+    uint16_t port_ = 0;
 };
 
 namespace std {
