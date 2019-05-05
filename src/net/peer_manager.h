@@ -1,11 +1,11 @@
 #ifndef EPIC_PEER_MANAGER_H
 #define EPIC_PEER_MANAGER_H
 
+#include <ctime>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
-#include <ctime>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -177,8 +177,8 @@ private:
      * threads
      */
     // handle message
-    std::atomic_bool interrupt = false;
-    std::thread handleMessageTask;
+    std::atomic_bool interrupt_ = false;
+    std::thread handleMessageTask_;
 };
 
 extern std::unique_ptr<PeerManager> peerManager;

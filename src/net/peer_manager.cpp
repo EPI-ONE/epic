@@ -18,20 +18,23 @@ void PeerManager::Start() {
     connectionManager_->RegisterDeleteConnectionCallBack(
         std::bind(&PeerManager::OnConnectionClosed, this, std::placeholders::_1));
     connectionManager_->Start();
-    handleMessageTask = std::thread(std::bind(&PeerManager::HandleMessage, this));
+    handleMessageTask_ = std::thread(std::bind(&PeerManager::HandleMessage, this));
 }
 
 void PeerManager::Stop() {
     spdlog::info("Stopping the Peer Manager...");
     connectionManager_->Stop();
-    interrupt = true;
-    if (handleMessageTask.joinable()) {
-        handleMessageTask.join();
+    interrupt_ = true;
+
+    if (handleMessageTask_.joinable()) {
+        handleMessageTask_.join();
     }
+
     std::unique_lock<std::mutex> lock(peerLock_);
     for (auto peer_entry : peerMap_) {
         delete peer_entry.second;
     }
+
     peerMap_.clear();
     connectedAddress_.clear();
 }
@@ -127,7 +130,7 @@ void PeerManager::SendMessage(NetMessage&& message) {
 }
 
 void PeerManager::HandleMessage() {
-    while (!interrupt) {
+    while (!interrupt_) {
         NetMessage msg;
         if (connectionManager_->ReceiveMessage(msg)) {
             Peer* msg_from = GetPeer(msg.GetConnectionHandle());
