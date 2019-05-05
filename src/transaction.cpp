@@ -68,15 +68,15 @@ const Transaction* TxOutput::GetParentTx() const {
  */
 
 Transaction::Transaction() {
-    inputs  = std::vector<TxInput>();
-    outputs = std::vector<TxOutput>();
-    status_ = UNKNOWN;
+    inputs_  = std::vector<TxInput>();
+    outputs_ = std::vector<TxOutput>();
+    status_  = UNKNOWN;
 }
 
 Transaction::Transaction(const Transaction& tx) {
     hash_.SetNull();
-    inputs       = tx.inputs;
-    outputs      = tx.outputs;
+    inputs_      = tx.inputs_;
+    outputs_     = tx.outputs_;
     fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
     status_      = tx.status_;
@@ -95,14 +95,14 @@ Transaction::Transaction(const Transaction& tx) {
 Transaction& Transaction::AddInput(TxInput&& txin) {
     hash_.SetNull();
     txin.SetParent(this);
-    inputs.push_back(txin);
+    inputs_.push_back(txin);
     return *this;
 }
 
 Transaction& Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(this);
-    outputs.push_back(txout);
+    outputs_.push_back(txout);
     return *this;
 }
 
@@ -112,31 +112,31 @@ void Transaction::FinalizeHash() {
 }
 
 const TxInput& Transaction::GetInput(size_t index) const {
-    return inputs.at(index);
+    return inputs_.at(index);
 }
 
 const TxOutput& Transaction::GetOutput(size_t index) const {
-    return outputs.at(index);
+    return outputs_.at(index);
 }
 
 const std::vector<TxInput>& Transaction::GetInputs() const {
-    return inputs;
+    return inputs_;
 }
 
 const std::vector<TxOutput>& Transaction::GetOutputs() const {
-    return outputs;
+    return outputs_;
 }
 
 const Tasm::Listing Transaction::GetListing() const {
     Tasm::Listing l;
-    if (inputs.size() > 1 && outputs.size() > 1) {
+    if (inputs_.size() > 1 && outputs_.size() > 1) {
         throw std::runtime_error("Transaction is inconsistent. Input size and output size currently supported is <= 1");
     }
 
-    if (inputs.size() == 1 && outputs.size() == 1) {
+    if (inputs_.size() == 1 && outputs_.size() == 1) {
         l.program.push_back(VERIFY);
-        l.data << outputs[0].listingContent.data;
-        l.data << inputs[0].listingContent.data;
+        l.data << outputs_[0].listingContent.data;
+        l.data << inputs_[0].listingContent.data;
     }
 
     return l;
@@ -155,11 +155,11 @@ const uint256& Transaction::GetHash() const {
 }
 
 bool Transaction::IsRegistration() const {
-    return inputs.size() == 1 && inputs.front().IsRegistration();
+    return inputs_.size() == 1 && inputs_.front().IsRegistration();
 }
 
 bool Transaction::IsFirstRegistration() const {
-    return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
+    return inputs_.size() == 1 && inputs_.front().IsFirstRegistration() && outputs_.front().value == ZERO_COIN;
 }
 
 void Transaction::Validate() {
