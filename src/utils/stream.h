@@ -79,44 +79,55 @@ public:
     }
 
     // Vector subset
-
     const_iterator cbegin() const {
         return chars.cbegin() + readPos;
     }
+
     iterator begin() {
         return chars.begin() + readPos;
     }
+
     const_iterator cend() const {
         return chars.cend();
     }
+
     iterator end() {
         return chars.end();
     }
+
     size_type size() const {
         return chars.size() - readPos;
     }
+
     bool empty() const {
         return chars.size() == readPos;
     }
+
     void resize(size_type n, value_type c = 0) {
         chars.resize(n + readPos, c);
     }
+
     void reserve(size_type n) {
         chars.reserve(n + readPos);
     }
+
     const_reference operator[](size_type pos) const {
         return chars[pos + readPos];
     }
+
     reference operator[](size_type pos) {
         return chars[pos + readPos];
     }
+
     void clear() {
         chars.clear();
         readPos = 0;
     }
+
     value_type* data() {
         return chars.data() + readPos;
     }
+
     const value_type* data() const {
         return chars.data() + readPos;
     }
@@ -126,9 +137,11 @@ public:
     bool eof() const {
         return size() == 0;
     }
+
     VStream* rdbuf() {
         return this;
     }
+
     int in_avail() const {
         return size();
     }
