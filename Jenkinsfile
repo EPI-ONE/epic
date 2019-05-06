@@ -9,29 +9,41 @@ for (x in labels) {
     builders[label] = {
       node(label) {
         try {
+          def BUILD_DIR = "build"
+          def COVERAGE_DIR = "coverage"
           stage('build') {
-            checkout scm
-            sh 'rm -rf build'
-            sh 'mkdir build'
-            dir("build") {
+            checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'CleanBeforeCheckout'], [$class: 'CleanCheckout'], [$class: 'LocalBranch']], submoduleCfg: [], userRemoteConfigs: [[url: 'git@github.com:reijz/epic.git']]])
+            sh "rm -rf ${BUILD_DIR}"
+            sh "mkdir ${BUILD_DIR}"
+            dir("${BUILD_DIR}") {
               sh 'cmake ..'
               sh 'make -j2'
             }
           }
 
           stage('unittest') {
-            dir("bin") {
-              sh './epictest --gtest_output=xml:gtestall.xml'
+            timeout(10) {
+              dir("bin") {
+                sh './epictest --gtest_output=xml:gtestall.xml'
+              }
             }
-
             xunit([GoogleTest(deleteOutputFiles: true, failIfNotNew: true, pattern: 'bin/gtestall.xml', skipNoTestFiles: false, stopProcessingIfError: true)])
+          }
+
+          stage('coverage') {
+            if (env.NODE_NAME == 'master') {
+              sh "rm -rf ${COVERAGE_DIR}"
+              sh "mkdir ${COVERAGE_DIR}"
+              sh "lcov --directory ${BUILD_DIR}/CMakeFiles/epictest.dir/ --gcov-tool llvm-gcov.sh --capture -o ${COVERAGE_DIR}/cov.info"
+              sh "genhtml ${COVERAGE_DIR}/cov.info -o ${COVERAGE_DIR}"
+              publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'coverage', reportFiles: 'index.html', reportName: 'coverage', reportTitles: 'coverage'])
+            }
           }
           currentBuild.result = 'SUCCESS'
         } catch (Exception err) {
           currentBuild.result = 'FAILURE'
         } finally {
           def branch = sh(returnStdout: true, script: "git symbolic-ref --short -q HEAD")
-          def slack_color
           if (currentBuild.currentResult == 'SUCCESS') {
             color = "good"
           } else {

@@ -9,11 +9,6 @@ add_compile_options(-Wthread-safety)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(EVENT__DISABLE_BENCHMARK ON CACHE BOOL "")
-set(EVENT__DISABLE_TESTS ON CACHE BOOL "")
-set(EVENT__DISABLE_REGRESS ON CACHE BOOL "")
-set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "")
-
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "-pthread $ENV{CXXFLAGS} -march=native")
@@ -23,6 +18,14 @@ LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # default bulid type
 set(DEFAULT_BUILD_TYPE "Debug")
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
+    set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE STRING "Choose the type of build." FORCE)
+    # Set the possible values of build type for cmake-gui
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
+endif ()
+
 
 # gtest
 find_package(GTest 1.8.1 EXACT REQUIRED)
@@ -115,6 +118,9 @@ target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
 target_link_libraries(epictest ${Secp256k1_LIBRARY})
 target_link_libraries(epictest ${GMP_LIBRARY})
 
+target_compile_options(epictest PUBLIC --coverage)
+target_link_options(epictest PUBLIC --coverage)
+
 # add test
 gtest_add_tests(
         TARGET epictest
@@ -124,3 +130,10 @@ gtest_add_tests(
 
 # install
 install(TARGETS epic DESTINATION bin)
+
+# display cmake options
+MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
+MESSAGE(STATUS "Compiler flags:" ${CMAKE_CXX_COMPILE_FLAGS})
+MESSAGE(STATUS "Compiler cxx debug flags:" ${CMAKE_CXX_FLAGS_DEBUG})
+MESSAGE(STATUS "Compiler cxx release flags:" ${CMAKE_CXX_FLAGS_RELEASE})
+MESSAGE(STATUS "Compiler cxx flags:" ${CMAKE_CXX_FLAGS})
