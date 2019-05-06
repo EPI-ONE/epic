@@ -115,15 +115,6 @@ bool RocksDBStore::Write(const std::string& column, const std::string& key, cons
     return Write(column, key, value);
 }
 
-void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
-    class WriteBatch wb;
-    for (auto const& [key, value] : batch) {
-        wb.Put(handleMap[column], key, value);
-    }
-    bool ok = db->Write(WriteOptions(), &wb).ok();
-    assert(ok);
-}
-
 void RocksDBStore::Delete(const std::string& column, const std::string& key) const {
     bool ok = db->Delete(WriteOptions(), handleMap[column], key).ok();
     assert(ok);
