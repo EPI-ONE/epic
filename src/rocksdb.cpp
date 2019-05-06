@@ -42,20 +42,20 @@ bool RocksDBStore::Exists(const uint256& blockHash) const {
     return Get(kDefaultColumnFamilyName, keySlice) != "";
 }
 
-bool RocksDBStore::GetBlock(const uint256& blockHash, BlockPtr& block) const {
+std::unique_ptr<Block> RocksDBStore::GetBlock(const uint256& blockHash) const {
     VStream key;
     key.reserve(32);
     key << blockHash;
     Slice keySlice(key.data(), key.size());
     Slice valueSlice = Get(kDefaultColumnFamilyName, keySlice);
+    std::unique_ptr<Block> b;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        // TODO: wrong. to be fixed
-        //value >> *block;
+        b = std::make_unique<Block>(value);
     } catch (const std::exception&) {
-        return false;
+        return nullptr;
     }
-    return true;
+    return b;
 }
 
 const Slice RocksDBStore::Get(const std::string& column, const Slice& key) const {

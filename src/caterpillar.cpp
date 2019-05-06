@@ -25,7 +25,7 @@ Caterpillar::Caterpillar(std::string& dbPath) : dbStore_(dbPath), thread_(1) {
 }
 
 bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
-    if (Exisis(blk->GetHash())) {
+    if (Exists(blk->GetHash())) {
         return false;
     }
 
@@ -43,7 +43,7 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
     uint256 tipHash  = blk->GetTipHash();
 
     // First, check if we already received its preceding blocks
-    if (Exisis(msHash) && Exisis(prevHash) && Exisis(tipHash)) {
+    if (Exists(msHash) && Exists(prevHash) && Exists(tipHash)) {
         if (obc_.Contains(msHash) || obc_.Contains(prevHash) || obc_.Contains(tipHash)) {
             obc_.Add(blk);
             return false;
@@ -58,7 +58,6 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
         // Abort and send GetBlock requests.
         obc_.Add(blk);
 
-        // TODO: Send sync request to DAG
         DAG.RequestInv(Hash::GetZeroHash(), 5, peer);
 
         return false;
@@ -66,9 +65,10 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
 
     // Check difficulty target ///////////////////////
 
-    BlockPtr ms;
-    if (!dbStore_.GetBlock(blk->GetMilestoneHash(), ms)) {
-        spdlog::info(strprintf("Block %s has missing milestone link %s", std::to_string(blk->GetHash()), std::to_string(blk->GetMilestoneHash())));
+    std::unique_ptr<Block> ms = dbStore_.GetBlock(msHash);
+    if (ms == nullptr) {
+        spdlog::info(strprintf("Block %s has missing milestone link %s", std::to_string(blk->GetHash()),
+            std::to_string(blk->GetMilestoneHash())));
         return false;
     }
 
@@ -85,7 +85,7 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
 
     // Check punctuality /////////////////////////////
 
-    if (!CheckPuntuality(blk, ms)) {
+    if (!CheckPuntuality(blk, std::move(ms))) {
         return false;
     }
 
@@ -98,9 +98,10 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
     return true;
 }
 
-bool Caterpillar::CheckPuntuality(const BlockPtr& blk, BlockPtr ms) {
+bool Caterpillar::CheckPuntuality(const BlockPtr& blk, std::unique_ptr<Block> ms) const {
     if (ms == nullptr) {
-        if (!dbStore_.GetBlock(blk->GetMilestoneHash(), ms)) {
+        ms.reset(dbStore_.GetBlock(blk->GetMilestoneHash()).release());
+        if (ms == nullptr) {
             // Should not happen
             return false;
         }

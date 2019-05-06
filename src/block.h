@@ -48,17 +48,17 @@ public:
 
     uint256 GetTipHash() const;
 
-    void SetMilestoneHash(const uint256& hash);
+    void SetMilestoneHash(const uint256&);
 
-    void SetPrevHash(const uint256& hash);
+    void SetPrevHash(const uint256&);
 
-    void SetTIPHash(const uint256& hash);
+    void SetTIPHash(const uint256&);
 
     void UnCache();
 
     bool Verify() const;
 
-    void AddTransaction(Transaction tx);
+    void AddTransaction(Transaction);
 
     bool HasTransaction() const;
 
@@ -68,11 +68,11 @@ public:
 
     const uint32_t GetDifficultyTarget() const;
 
-    void SetTime(uint64_t time);
+    void SetTime(uint64_t);
 
     const uint64_t GetTime() const;
 
-    void SetNonce(uint32_t nonce);
+    void SetNonce(uint32_t);
 
     const uint32_t GetNonce() const;
 

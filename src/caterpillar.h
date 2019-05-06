@@ -25,7 +25,7 @@ public:
         return ODict_.empty();
     }
 
-    inline size_t size() {
+    size_t size() {
         size_t size = 0;
         for (auto& it: solidDegree_) {
             size += it.second.size();
@@ -72,11 +72,11 @@ private:
     RocksDBStore dbStore_;
     OrphanBlocksContainer obc_;
 
-    inline bool Exisis(const uint256& blockHash) const {
+    inline bool Exists(const uint256& blockHash) const {
         return dbStore_.Exists(blockHash) || obc_.Contains(blockHash);
     }
 
-    bool CheckPuntuality(const BlockPtr& blk, BlockPtr ms = nullptr);
+    bool CheckPuntuality(const BlockPtr& blk, std::unique_ptr<Block> ms = nullptr) const;
 };
 
 #endif // __SRC_CATERPILLAR_H__
