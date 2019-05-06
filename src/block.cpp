@@ -72,28 +72,48 @@ bool Block::Verify() {
     }
 
     // checks if the time of block is too far in the future
-    if (time_ > std::time(nullptr) + ALLOWED_TIME_DRIFT) {
+    uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
+    if (time_ > allowedTime) {
+        spdlog::info(strprintf("Block %s too advanced in the future: %s (%s) v.s. allowed %s (%s)", std::to_string(hash_),
+            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
+        spdlog::info(strprintf("Block %s with size %s larger than MAX_BLOCK_SIZE", std::to_string(hash_), optimalEncodingSize));
         return false;
     }
 
-    if (HasTransaction() && !transaction_->Verify()) {
-        return false;
+    if (HasTransaction()) {
+        if (transaction_->GetInputs().empty() || transaction_->GetOutputs().empty()) {
+            spdlog::info(strprintf("Block %s contains empty inputs or outputs", std::to_string(hash_)));
+            return false;
+        }
+
+        // Make sure no duplicated TxInput
+        std::unordered_set<TxOutPoint> outpoints = {};
+        for (const TxInput& input : transaction_->GetInputs()) {
+            if (outpoints.find(input.outpoint) != outpoints.end()) {
+                spdlog::info(strprintf("Block %s contains duplicated outpoints", std::to_string(hash_)));
+                return false;
+            }
+            outpoints.insert(input.outpoint);
+        }
+        outpoints.clear();
     }
 
     // check the conditions of the first registration block
     if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
+            spdlog::info(strprintf("Block %s is the first registration but does not contain a tx", std::to_string(hash_)));
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
+            spdlog::info(strprintf("Block %s is the first registration but conatains invalid tx", std::to_string(hash_)));
             return false;
         }
     }
@@ -101,16 +121,20 @@ bool Block::Verify() {
     return true;
 }
 
-void Block::AddTransaction(Transaction& tx) {
+void Block::AddTransaction(Transaction tx) {
     // Invalidate cached hash to force recomputation
     UnCache();
-    tx.SetParent(this);
     transaction_.reset();
-    transaction_ = std::forward<Transaction>(tx);
+    transaction_ = tx;
+    transaction_->SetParent(this);
 }
 
 bool Block::HasTransaction() const {
     return transaction_.has_value();
+}
+
+std::optional<Transaction>& Block::GetTransaction() {
+    return transaction_;
 }
 
 void Block::SetMinerChainHeight(uint32_t height) {
@@ -174,12 +198,11 @@ void Block::CalculateHash() {
 }
 
 const uint256& Block::GetTxHash() {
-    if (HasTransaction()) {
-        transaction_->FinalizeHash();
-        return transaction_->GetHash();
+    if (!HasTransaction()) {
+        return Hash::GetZeroHash();
     }
-
-    return Hash::GetZeroHash();
+    transaction_->FinalizeHash();
+    return transaction_->GetHash();
 }
 
 size_t Block::GetOptimalEncodingSize() {
@@ -314,6 +337,17 @@ void Block::Solve(int numThreads, ThreadPool& solverPool) {
     SetNonce(final_nonce.load());
     SetTime(final_time);
     FinalizeHash();
+}
+
+void Block::SetParents() {
+    transaction_->SetParent(this);
+    for (TxInput& input : transaction_->GetInputs()) {
+        input.SetParent(&*transaction_);
+    }
+
+    for (TxOutput& output : transaction_->GetOutputs()) {
+        output.SetParent(&*transaction_);
+    }
 }
 
 void Block::SerializeToDB(VStream& s) const {

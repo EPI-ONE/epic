@@ -8,6 +8,7 @@
 
 #include "hash.h"
 #include "params.h"
+#include "spdlog.h"
 #include "stream.h"
 #include "tasm.h"
 #include "tinyformat.h"
@@ -37,13 +38,17 @@ public:
         READWRITE(bHash);
         READWRITE(index);
     }
+
+    uint64_t HashCode() const {
+        return bHash.GetCheapHash() ^ index;
+    }
 };
 
-/** Key hasher for unordered_set */
+// Key hashers for unordered_set
 template <>
 struct std::hash<TxOutPoint> {
     size_t operator()(const TxOutPoint& x) const {
-        return std::hash<uint256>()(x.bHash) + (size_t) index;
+        return x.HashCode();
     }
 };
 
@@ -66,7 +71,7 @@ public:
 
     void SetParent(const Transaction* const tx);
 
-    const Transaction* GetParentTx();
+    const Transaction* GetParentTx() const;
 
     friend bool operator==(const TxInput& a, const TxInput& b) {
         return (a.outpoint == b.outpoint) && (a.listingContent == b.listingContent);
@@ -96,6 +101,8 @@ public:
 
     void SetParent(const Transaction* const tx);
 
+    const Transaction* GetParentTx() const;
+
     friend bool operator==(const TxOutput& a, const TxOutput& b) {
         return (a.value == b.value) && (a.listingContent == b.listingContent);
     }
@@ -121,7 +128,7 @@ public:
 
     Transaction();
 
-    explicit Transaction(const Transaction& tx);
+    Transaction(const Transaction& tx);
 
     Transaction& AddInput(TxInput&& input);
 
@@ -135,17 +142,19 @@ public:
 
     const std::vector<TxInput>& GetInputs() const;
 
+    std::vector<TxInput>& GetInputs();
+
     const std::vector<TxOutput>& GetOutputs() const;
 
     const Tasm::Listing GetListing() const;
+
+    std::vector<TxOutput>& GetOutputs();
 
     const uint256& GetHash() const;
 
     bool IsRegistration() const;
 
     bool IsFirstRegistration() const;
-
-    bool Verify() const;
 
     void Validate();
 
@@ -156,6 +165,10 @@ public:
     Validity GetStatus() const;
 
     void SetParent(const Block* const blk);
+
+    const Block* GetParentBlock() const;
+
+    uint64_t HashCode() const;
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

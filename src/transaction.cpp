@@ -32,7 +32,7 @@ void TxInput::SetParent(const Transaction* const tx) {
     parentTx_ = tx;
 }
 
-const Transaction* TxInput::GetParentTx() {
+const Transaction* TxInput::GetParentTx() const {
     return parentTx_;
 }
 
@@ -59,6 +59,10 @@ void TxOutput::SetParent(const Transaction* const tx) {
     parentTx_ = tx;
 }
 
+const Transaction* TxOutput::GetParentTx() const {
+    return parentTx_;
+}
+
 /*
  * transaction class START
  */
@@ -76,6 +80,16 @@ Transaction::Transaction(const Transaction& tx) {
     fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
     status_      = tx.status_;
+    FinalizeHash();
+
+    // Set parents for the copied inputs and outputs
+    for (TxInput& input : inputs) {
+        input.SetParent(this);
+    }
+
+    for (TxOutput& output : outputs) {
+        output.SetParent(this);
+    }
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {
@@ -128,6 +142,14 @@ const Tasm::Listing Transaction::GetListing() const {
     return l;
 }
 
+std::vector<TxInput>& Transaction::GetInputs() {
+    return inputs;
+}
+
+std::vector<TxOutput>& Transaction::GetOutputs() {
+    return outputs;
+}
+
 const uint256& Transaction::GetHash() const {
     return hash_;
 }
@@ -138,25 +160,6 @@ bool Transaction::IsRegistration() const {
 
 bool Transaction::IsFirstRegistration() const {
     return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
-}
-
-bool Transaction::Verify() const {
-    if (inputs.empty() || outputs.empty()) {
-        return false;
-    }
-
-    // Make sure no duplicated TxInput
-    std::unordered_set<TxOutPoint> outpoints = {};
-    for (const TxInput& input : inputs) {
-        if (outpoints.find(input.outpoint) != outpoints.end()) {
-            return false;
-        }
-        outpoints.insert(input.outpoint);
-    }
-
-    outpoints.clear();
-
-    return true;
 }
 
 void Transaction::Validate() {
@@ -176,7 +179,16 @@ Transaction::Validity Transaction::GetStatus() const {
 }
 
 void Transaction::SetParent(const Block* const blk) {
+    assert(blk != nullptr);
     parentBlock_ = blk;
+}
+
+const Block* Transaction::GetParentBlock() const {
+    return parentBlock_;
+}
+
+uint64_t Transaction::HashCode() const {
+    return hash_.GetCheapHash();
 }
 
 /*

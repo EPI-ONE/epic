@@ -7,7 +7,6 @@
 
 #include "arith_uint256.h"
 #include "pubkey.h"
-#include "spdlog.h"
 #include "threadpool.h"
 #include "transaction.h"
 #include "utilstrencodings.h"
@@ -123,9 +122,11 @@ public:
 
     bool Verify();
 
-    void AddTransaction(Transaction& tx);
+    void AddTransaction(Transaction tx);
 
     bool HasTransaction() const;
+
+    std::optional<Transaction>& GetTransaction();
 
     void SetMinerChainHeight(uint32_t height);
 
@@ -209,11 +210,19 @@ public:
      */
     void Solve(int numThreads, ThreadPool& pool);
 
+    /*
+     * Sets parents for elements contained in the block all at once
+     */
+    void SetParents();
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITEAS(BlockHeader, *this);
         READWRITE(transaction_);
+        if (ser_action.ForRead() == true) {
+            SetParents();
+        }
     }
 
     void SerializeToDB(VStream& s) const;
