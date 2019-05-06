@@ -156,8 +156,6 @@ public:
 
     bool IsFirstRegistration() const;
 
-    bool Verify() const;
-
     void Validate();
 
     void Invalidate();

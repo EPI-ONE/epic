@@ -162,27 +162,6 @@ bool Transaction::IsFirstRegistration() const {
     return inputs.size() == 1 && inputs.front().IsFirstRegistration() && outputs.front().value == ZERO_COIN;
 }
 
-bool Transaction::Verify() const {
-    if (inputs.empty() || outputs.empty()) {
-        spdlog::info("Empty inputs or outputs");
-        return false;
-    }
-
-    // Make sure no duplicated TxInput
-    std::unordered_set<TxOutPoint> outpoints = {};
-    for (const TxInput& input : inputs) {
-        if (outpoints.find(input.outpoint) != outpoints.end()) {
-            spdlog::info("Duplicated outpoint found in inputs");
-            return false;
-        }
-        outpoints.insert(input.outpoint);
-    }
-
-    outpoints.clear();
-
-    return true;
-}
-
 void Transaction::Validate() {
     status_ = VALID;
 }
