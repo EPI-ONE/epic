@@ -1,5 +1,7 @@
 #include "rocksdb.h"
 
+using namespace rocksdb;
+
 RocksDBStore::RocksDBStore(std::string dbPath) {
     this->DBPATH = dbPath;
     // Make directory DBPATH if missing
@@ -48,7 +50,8 @@ bool RocksDBStore::GetBlock(const uint256& blockHash, BlockPtr& block) const {
     Slice valueSlice = Get(kDefaultColumnFamilyName, keySlice);
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        value >> *block;
+        // TODO: wrong. to be fixed
+        //value >> *block;
     } catch (const std::exception&) {
         return false;
     }

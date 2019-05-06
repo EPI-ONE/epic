@@ -33,7 +33,7 @@ public:
     std::atomic_flag isBatchSynching = false;
 
     // The peer we are synching with. Null if isBatchSynching is false.
-    Peer& syncingPeer;
+    Peer* syncingPeer;
 
     DAGManager();
 

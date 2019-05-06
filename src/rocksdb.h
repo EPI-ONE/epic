@@ -12,15 +12,13 @@
 #include "rocksdb/options.h"
 #include "rocksdb/slice.h"
 
-using namespace rocksdb;
-
 static const std::vector<std::string> COLUMN_NAMES = {
-    kDefaultColumnFamilyName, // the default column family that must have
+    rocksdb::kDefaultColumnFamilyName, // the default column family that must have
     "msList", "UTXO", "selfChain", "regKeys", "info"};
 
 class RocksDBStore {
 public:
-    RocksDBStore() = default;
+    RocksDBStore() = delete;
 
     RocksDBStore(std::string dbPath);
 
@@ -35,17 +33,17 @@ public:
     ~RocksDBStore();
 
 private:
-    mutable std::unordered_map<std::string, ColumnFamilyHandle*> handleMap;
-    DB* db;
+    mutable std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
+    rocksdb::DB* db;
     std::string DBPATH;
 
-    void initHandleMap(std::vector<ColumnFamilyHandle*> handles);
+    void initHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
-    const Slice Get(const std::string& column, const Slice& key) const;
+    const rocksdb::Slice Get(const std::string& column, const rocksdb::Slice& key) const;
 
     const std::string Get(const std::string& column, const std::string& key) const;
 
-    bool Write(const std::string& column, const Slice& key, const Slice& value) const;
+    bool Write(const std::string& column, const rocksdb::Slice& key, const rocksdb::Slice& value) const;
 
     bool Write(const std::string& column, const std::string& key, const std::string& value) const;
 
