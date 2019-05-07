@@ -28,31 +28,34 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
         b.AddTransaction(tx);
     }
 
-    if (db) {
-        // Set extra info
-        b.SetMinerChainHeight(rand());
-        b.SetCumulativeReward(Coin(rand()));
-
-        if (rand() % 2) {
-            // Link a ms instance
-            Milestone ms(time(nullptr), rand(), rand(), arith_uint256(rand()).GetCompact(),
-                arith_uint256(rand()).GetCompact(), arith_uint256(rand()));
-            b.SetMilestoneInstance(ms);
-
-            if (rand() % 2) {
-                // Make it a fake milestone
-                b.InvalidateMilestone();
-            }
-        }
-    }
-
     b.FinalizeHash();
+    b.CalculateOptimalEncodingSize();
 
     if (solve) {
         b.Solve();
     }
 
     return b;
+}
+
+NodeRecord FakeNodeRecord(const BlockNet& b) {
+    NodeRecord rec(b);
+    // Set extra info
+    rec.minerChainHeight = rand();
+    rec.cumulativeReward = Coin(rand());
+
+    if (rand() % 2) {
+        // Link a ms instance
+        ChainState cs(time(nullptr), rand(), rand(), arith_uint256(rand()).GetCompact(),
+            arith_uint256(rand()).GetCompact(), arith_uint256(rand()));
+        rec.LinkChainState(cs);
+
+        if (rand() % 2) {
+            // Make it a fake milestone
+            rec.InvalidateMilestone();
+        }
+    }
+    return rec;
 }
 
 ConstBlockPtr FakeBlockPtr(int numTxInput, int numTxOutput, bool solve) {

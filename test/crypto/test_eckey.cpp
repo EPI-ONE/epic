@@ -3,7 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <cstdio> #include <gtest/gtest.h>
+#include <cstdio>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 

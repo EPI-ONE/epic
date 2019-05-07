@@ -38,8 +38,6 @@ public:
     }
 };
 
-// static TestImplRocksDBStore *db;
-
 class TestRocksDB : public testing::Test {
 public:
     static TestImplRocksDBStore* db;
@@ -55,7 +53,6 @@ protected:
         os << time(nullptr);
         filename = PREFIX + os.str();
         db       = new TestImplRocksDBStore(filename);
-        // RocksDBStore{filename};
     }
 
     void SetUp() {}
@@ -123,18 +120,17 @@ TEST_F(TestRocksDB, write_single_block) {
 
 TEST_F(TestRocksDB, write_batch_blocks) {
     size_t size = 100;
-    std::vector<BlockPtr> blocks;
-    blocks.reserve(size);
-    std::vector<uint256> keys;
+    std::vector<BlockPtr> blocks(size);
+    std::vector<uint256> keys(size);
     for (int i = 0; i < size; ++i) {
         BlockPtr b = FakeBlockPtr(i, i, true);
-        blocks.push_back(b);
-        keys.push_back(b->GetHash());
+        blocks[i] = b;
+        keys[i] = b->GetHash();
     }
-
     EXPECT_TRUE(db->WriteBlocks(blocks));
+
     for (int i = 0; i < size; ++i) {
-        std::unique_ptr<Block> value = db->GetBlock(keys[i]);
-        EXPECT_EQ(*(blocks[i]), *value);
+        auto pblock = db->GetBlock(keys[i]);
+        EXPECT_EQ(*blocks[i], *pblock);
     }
 }
