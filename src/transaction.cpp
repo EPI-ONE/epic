@@ -83,11 +83,11 @@ Transaction::Transaction(const Transaction& tx) {
     FinalizeHash();
 
     // Set parents for the copied inputs and outputs
-    for (TxInput& input : inputs) {
+    for (TxInput& input : inputs_) {
         input.SetParent(this);
     }
 
-    for (TxOutput& output : outputs) {
+    for (TxOutput& output : outputs_) {
         output.SetParent(this);
     }
 }
@@ -143,11 +143,11 @@ const Tasm::Listing Transaction::GetListing() const {
 }
 
 std::vector<TxInput>& Transaction::GetInputs() {
-    return inputs;
+    return inputs_;
 }
 
 std::vector<TxOutput>& Transaction::GetOutputs() {
-    return outputs;
+    return outputs_;
 }
 
 const uint256& Transaction::GetHash() const {
