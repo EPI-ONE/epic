@@ -32,12 +32,12 @@ public:
 
     ~RocksDBStore();
 
-private:
+protected:
     mutable std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
     rocksdb::DB* db;
     std::string DBPATH;
 
-    void initHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
+    void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
     const rocksdb::Slice Get(const std::string& column, const rocksdb::Slice& key) const;
 
@@ -46,6 +46,8 @@ private:
     bool Write(const std::string& column, const rocksdb::Slice& key, const rocksdb::Slice& value) const;
 
     bool Write(const std::string& column, const std::string& key, const std::string& value) const;
+
+    const void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const;
 
     void Delete(const std::string& column, const std::string& key) const;
 };

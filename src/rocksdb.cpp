@@ -29,7 +29,7 @@ RocksDBStore::RocksDBStore(std::string dbPath) {
     if (!DB::Open(dbOptions, DBPATH, descriptors, &handles, &db).ok()) {
         throw "DB initialization failed";
     }
-    initHandleMap(handles);
+    InitHandleMap(handles);
     handles.clear();
     descriptors.clear();
 }
@@ -70,7 +70,7 @@ const Slice RocksDBStore::Get(const std::string& column, const Slice& key) const
 }
 
 const std::string RocksDBStore::Get(const std::string& column, const std::string& key) const {
-    return Get(column, key);
+    return Get(column, Slice(key)).ToString();
 }
 
 bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
@@ -115,7 +115,16 @@ bool RocksDBStore::Write(const std::string& column, const Slice& key, const Slic
 }
 
 bool RocksDBStore::Write(const std::string& column, const std::string& key, const std::string& value) const {
-    return Write(column, key, value);
+    return Write(column, Slice(key), Slice(value));
+}
+
+const void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
+    class WriteBatch wb;
+    for (auto const& [key, value] : batch) {
+        wb.Put(handleMap[column], key, value);
+    }
+    bool ok = db->Write(WriteOptions(), &wb).ok();
+    assert(ok);
 }
 
 void RocksDBStore::Delete(const std::string& column, const std::string& key) const {
@@ -131,7 +140,7 @@ RocksDBStore::~RocksDBStore() {
     delete db;
 }
 
-void RocksDBStore::initHandleMap(std::vector<ColumnFamilyHandle*> handles) {
+void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
     handleMap.reserve(COLUMN_NAMES.size());
     auto keyIter = COLUMN_NAMES.begin();
     auto valIter = handles.begin();
