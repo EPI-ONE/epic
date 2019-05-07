@@ -39,7 +39,7 @@ protected:
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
-    const rocksdb::Slice Get(const std::string& column, const rocksdb::Slice& key) const;
+    const std::string Get(const std::string& column, const rocksdb::Slice& key) const;
 
     const std::string Get(const std::string& column, const std::string& key) const;
 

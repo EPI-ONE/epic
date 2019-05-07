@@ -77,6 +77,14 @@ public:
         blockTarget.SetCompact(ser_readdata32(s));
         ::Deserialize(s, VARINT(hashRate));
     }
+
+    friend bool operator==(const ChainState& a, const ChainState& b) {
+        return a.lastUpdateTime == b.lastUpdateTime &&
+               a.chainwork.GetCompact() == b.chainwork.GetCompact() &&
+               a.hashRate == b.hashRate &&
+               a.milestoneTarget.GetCompact() == b.milestoneTarget.GetCompact() &&
+               a.blockTarget.GetCompact() == b.blockTarget.GetCompact();
+    }
 };
 
 /*
@@ -115,6 +123,13 @@ public:
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
+
+    friend bool operator==(NodeRecord& a, NodeRecord& b) {
+        return *(a.cBlock) == *(b.cBlock)
+                && a.cumulativeReward == b.cumulativeReward
+                && ((a.snapshot == nullptr || b.snapshot == nullptr) ? true : (*(a.snapshot) == *(b.snapshot)))
+                && a.minerChainHeight == b.minerChainHeight;
+    }
 
     static NodeRecord CreateGenesisRecord();
 };

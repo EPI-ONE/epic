@@ -163,6 +163,13 @@ public:
         READWRITE(nonce_);
     }
 
+    friend bool operator==(const Block& a, const Block& b) {
+        if (a.GetHash().IsNull() || b.GetHash().IsNull()) {
+            return false;
+        }
+        return a.hash_ == b.hash_;
+    }
+
     friend std::string std::to_string(Block& block);
 
     static Block CreateGenesis();

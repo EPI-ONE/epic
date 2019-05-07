@@ -47,21 +47,27 @@ std::unique_ptr<Block> RocksDBStore::GetBlock(const uint256& blockHash) const {
     key.reserve(32);
     key << blockHash;
     Slice keySlice(key.data(), key.size());
-    Slice valueSlice = Get(kDefaultColumnFamilyName, keySlice);
+
+    // PinnableSlice is used here to reduce memcpy overhead.
+    // See https://rocksdb.org/blog/2017/08/24/pinnableslice.html
+    PinnableSlice valueSlice;
+
+    Status s = db->Get(ReadOptions(), handleMap[kDefaultColumnFamilyName], keySlice, &valueSlice);
+    if (!s.ok()) {
+        return nullptr;
+    }
     std::unique_ptr<Block> b;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        b = std::make_unique<Block>(value);
+        b = std::make_unique<Block>(value, true);
     } catch (const std::exception&) {
         return nullptr;
     }
     return b;
 }
 
-const Slice RocksDBStore::Get(const std::string& column, const Slice& key) const {
-    // PinnableSlice is used here to avoid memcpy overhead.
-    // See https://rocksdb.org/blog/2017/08/24/pinnableslice.html
-    PinnableSlice value;
+const std::string RocksDBStore::Get(const std::string& column, const Slice& key) const {
+    std::string value;
     Status s = db->Get(ReadOptions(), handleMap[column], key, &value);
     if (s.ok()) {
         return value;
@@ -70,7 +76,7 @@ const Slice RocksDBStore::Get(const std::string& column, const Slice& key) const
 }
 
 const std::string RocksDBStore::Get(const std::string& column, const std::string& key) const {
-    return Get(column, Slice(key)).ToString();
+    return Get(column, Slice(key));
 }
 
 bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
@@ -80,8 +86,9 @@ bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
     Slice keySlice(key.data(), key.size());
 
     VStream value;
-    value.reserve(block->GetOptimalEncodingSize());
+    value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
     block->SerializeToDB(value);
+
     Slice valueSlice(value.data(), value.size());
 
     return Write(kDefaultColumnFamilyName, keySlice, valueSlice);
@@ -98,7 +105,7 @@ bool RocksDBStore::WriteBlocks(const std::vector<BlockPtr> blocks) const {
         Slice keySlice(key.data(), key.size());
 
         // Prepare value
-        value.reserve(block->GetOptimalEncodingSize());
+        value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
         block->SerializeToDB(value);
         Slice valueSlice(value.data(), value.size());
 

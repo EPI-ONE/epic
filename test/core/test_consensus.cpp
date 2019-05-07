@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 #include <random>
 
-#include "utxo.h"
 #include "chain.h"
+#include "test-methods/block-factory.h"
+#include "utxo.h"
 
 typedef Tasm::Listing Listing;
 
@@ -16,40 +17,7 @@ std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
 
 class TestConsensus : public testing::Test {};
 
-BlockNet FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
-    uint256 r1;
-    r1.randomize();
-    uint256 r2;
-    r2.randomize();
-    uint256 r3;
-    r3.randomize();
-
-    BlockNet b = Block(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
-
-    if (numTxInput || numTxOutput) {
-        Transaction tx;
-        int maxPos = rand() % 128;
-        for (int i = 0; i < numTxInput; ++i) {
-            uint256 inputH;
-            inputH.randomize();
-            tx.AddInput(TxInput(inputH, i % maxPos, Listing(std::vector<unsigned char>(i))));
-        }
-
-        for (int i = 0; i < numTxOutput; ++i) {
-            tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
-        }
-
-        b.AddTransaction(tx);
-    }
-
-    if (solve) {
-        b.Solve();
-    }
-
-    return b;
-}
-
-TEST_F(TestConsensus, SyntaxChecking) {
+TEST_F(ConsensusTest, SyntaxChecking) {
     BlockNet b = GENESIS;
     EXPECT_TRUE(b.Verify());
 
@@ -118,24 +86,24 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 
     uint32_t simulatedTime = 1556784921L; // arbitrarily take a starting point
     std::default_random_engine generator;
-    std::uniform_int_distribution<uint32_t> distribution(1,30);
+    std::uniform_int_distribution<uint32_t> distribution(1, 30);
 
     arrayMs[1] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[0]);
 
     size_t LOOPS = 100;
-    for (int i=2; i< LOOPS; i++) {
+    for (int i = 2; i < LOOPS; i++) {
         simulatedTime += distribution(generator);
-        arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i-1]);
+        arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i - 1]);
         ASSERT_EQ(i, arrayMs[i]->height);
-        if (((i+1) % params.timeInterval) == 0) {
-            ASSERT_NE(arrayMs[i-1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-            ASSERT_NE(arrayMs[i-1]->milestoneTarget, arrayMs[i]->milestoneTarget);
-            ASSERT_NE(arrayMs[i-1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if ( ((i+1) % params.timeInterval) != 1){
-            ASSERT_EQ(arrayMs[i-1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
+        if (((i + 1) % params.timeInterval) == 0) {
+            ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
+            ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
+            ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
+        } else if (((i + 1) % params.timeInterval) != 1) {
+            ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
-        ASSERT_NE(0, arrayMs[i-1]->hashRate);
-        ASSERT_LE(arrayMs[i-1]->chainwork, arrayMs[i]->chainwork);
+        ASSERT_NE(0, arrayMs[i - 1]->hashRate);
+        ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
 }
 
