@@ -22,7 +22,7 @@ void Init(int argc, char* argv[]) {
     // init logger
     InitLogger();
 
-    config->showConfig();
+    config->ShowConfig();
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -38,18 +38,18 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     auto result = options.parse(argc, argv);
     // since these two params have been set default values, there is no need to
     // call result.count() to detect if they have values
-    config->setConfigFilePath(result["configpath"].as<std::string>());
+    config->SetConfigFilePath(result["configpath"].as<std::string>());
     if (result.count("bindip") > 0) {
-        config->setBindAddress(result["bindip"].as<std::string>());
+        config->SetBindAddress(result["bindip"].as<std::string>());
     }
 
     if (result.count("bindport") > 0) {
-        config->setBindPort(result["bindport"].as<uint16_t>());
+        config->SetBindPort(result["bindport"].as<uint16_t>());
     }
 }
 
 void LoadConfigFile() {
-    std::string config_path = config->getConfigFilePath();
+    std::string config_path = config->GetConfigFilePath();
     if (!CheckFileExist(config_path)) {
         std::cerr << "config.toml not found in current directory, will use the "
                      "default config"
@@ -63,7 +63,7 @@ void LoadConfigFile() {
     auto log_config = configContent->get_table("logs");
     if (log_config) {
         auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
-        config->setUseFileLogger(use_file_logger);
+        config->SetUseFileLogger(use_file_logger);
         if (use_file_logger) {
             auto path     = log_config->get_as<std::string>("path").value_or("./");
             auto filename = log_config->get_as<std::string>("filename").value_or("Debug.log");
@@ -72,8 +72,8 @@ void LoadConfigFile() {
                 path.append("/");
             }
 
-            config->setLoggerFilename(filename);
-            config->setLoggerPath(path);
+            config->SetLoggerFilename(filename);
+            config->SetLoggerPath(path);
         }
     }
 
@@ -83,9 +83,9 @@ void LoadConfigFile() {
         auto path     = address_config->get_as<std::string>("path").value_or("");
         auto filename = address_config->get_as<std::string>("filename").value_or("address.toml");
         auto interval = address_config->get_as<uint>("interval").value_or(15 * 60);
-        config->setAddressPath(path);
-        config->setAddressFilename(filename);
-        config->setSaveInterval(interval);
+        config->SetAddressPath(path);
+        config->SetAddressFilename(filename);
+        config->SetSaveInterval(interval);
     }
 
     // network config
@@ -93,14 +93,14 @@ void LoadConfigFile() {
     if (network_config) {
         auto ip   = network_config->get_as<std::string>("ip");
         auto port = network_config->get_as<uint16_t>("port");
-        if (ip && config->getBindAddress() == config->defaultIP) {
-            config->setBindAddress(*ip);
+        if (ip && config->GetBindAddress() == config->defaultIP) {
+            config->SetBindAddress(*ip);
         } else {
             spdlog::info("bind ip has been specified in the command line, discard the ip in the config file");
         }
 
-        if (port && config->getBindPort() == config->defaultPort) {
-            config->setBindPort(*port);
+        if (port && config->GetBindPort() == config->defaultPort) {
+            config->SetBindPort(*port);
         } else {
             spdlog::info("bind port has been specified in the command line, discard the port in the config file");
         }
@@ -114,15 +114,15 @@ void LoadConfigFile() {
             auto port = seed->get_as<uint16_t>("port");
 
             if (ip && port) {
-                config->addSeeds(*ip, *port);
+                config->AddSeeds(*ip, *port);
             }
         }
     }
 }
 
 void InitLogger() {
-    if (config->isUseFileLogger()) {
-        UseFileLogger(config->getLoggerPath(), config->getLoggerFilename());
+    if (config->IsUseFileLogger()) {
+        UseFileLogger(config->GetLoggerPath(), config->GetLoggerFilename());
     }
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
 }

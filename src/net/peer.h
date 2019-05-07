@@ -21,7 +21,7 @@
 
 class Peer {
 public:
-    /**
+    /*
      *
      * @param netAddress
      * @param handle ,the libevent socket handle
@@ -45,7 +45,7 @@ public:
 
     void SendMessage(NetMessage&& message);
 
-    /**
+    /*
      * basic information of peer
      */
 
@@ -72,41 +72,41 @@ public:
     std::atomic_bool disconnect;
 
 private:
-    /**
+    /*
      * read the nonce and send back pong message
      * @param ping
      */
     void ProcessPing(const Ping& ping);
 
-    /**
+    /*
      * update ping statistic of the peer
      * @param pong
      */
     void ProcessPong(const Pong& pong);
 
-    /**
+    /*
      * process version message
      * @param versionMessage
      */
     void ProcessVersionMessage(VersionMessage& versionMessage_);
 
-    /**
+    /*
      * process version ack message
      */
     void ProcessVersionACK();
 
-    /**
+    /*
      * process address message, check, relay and save addresses
      * @param addressMessage
      */
     void ProcessAddressMessage(AddressMessage& addressMessage);
 
-    /**
+    /*
      * send addresses to the peer
      */
     void ProcessGetAddrMessage();
 
-    /**
+    /*
      * Parameters of network setting
      */
 
@@ -136,7 +136,7 @@ private:
     // result in an immediate disconnect
     const int kMinProtocolVersion = 0; // TODO to be set
 
-    /**
+    /*
      * statistic of peer status
      */
 
@@ -162,15 +162,13 @@ private:
     BlockingQueue<NetAddress> addrSendQueue;
 
 
-    /**
-     * Synchronization information
+    /*
+     * TODO: Synchronization information
      */
-    // TODO
 
-    /**
+    /*
      * pointer from outside
      */
-
     ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
 };

@@ -1,4 +1,3 @@
-
 #ifndef EPIC_MESSAGE_HEADER_H
 #define EPIC_MESSAGE_HEADER_H
 
@@ -24,7 +23,7 @@ typedef struct {
 } message_header_t;
 
 /* magic number defined by protocol */
-inline uint32_t getMagicNumber() {
+inline uint32_t GetMagicNumber() {
     return 0xD9B4BEF9;
 }
 

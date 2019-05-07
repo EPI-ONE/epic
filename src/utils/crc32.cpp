@@ -1,4 +1,3 @@
-
 #include "crc32.h"
 
 const uint32_t table[] = {
@@ -260,10 +259,13 @@ const uint32_t table[] = {
     0x2d02ef8d,
 };
 
-uint32_t getCrc32(unsigned char* buf, size_t length) {
+uint32_t GetCrc32(unsigned char* buf, size_t length) {
     uint32_t crc = 0xffffffff;
     size_t i;
-    for (i = 0; i < length; i++)
+
+    for (i = 0; i < length; i++) {
         crc = table[*buf++ ^ (crc & 0xff)] ^ (crc >> 8);
+    }
+
     return (~crc);
 }

@@ -61,7 +61,7 @@ void Block::SetNull() {
 }
 
 void Block::UnCache() {
-    optimalEncodingSize = 0;
+    optimalEncodingSize_ = 0;
     hash_.SetNull();
 }
 
@@ -74,14 +74,15 @@ bool Block::Verify() {
     // checks if the time of block is too far in the future
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
-        spdlog::info(strprintf("Block %s too advanced in the future: %s (%s) v.s. allowed %s (%s)", std::to_string(hash_),
-            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime));
+        spdlog::info(strprintf("Block %s too advanced in the future: %s (%s) v.s. allowed %s (%s)",
+            std::to_string(hash_), ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
-        spdlog::info(strprintf("Block %s with size %s larger than MAX_BLOCK_SIZE", std::to_string(hash_), optimalEncodingSize));
+        spdlog::info(
+            strprintf("Block %s with size %s larger than MAX_BLOCK_SIZE", std::to_string(hash_), optimalEncodingSize_));
         return false;
     }
 
@@ -107,13 +108,15 @@ bool Block::Verify() {
     if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
-            spdlog::info(strprintf("Block %s is the first registration but does not contain a tx", std::to_string(hash_)));
+            spdlog::info(
+                strprintf("Block %s is the first registration but does not contain a tx", std::to_string(hash_)));
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
-            spdlog::info(strprintf("Block %s is the first registration but conatains invalid tx", std::to_string(hash_)));
+            spdlog::info(
+                strprintf("Block %s is the first registration but conatains invalid tx", std::to_string(hash_)));
             return false;
         }
     }
@@ -206,31 +209,31 @@ const uint256& Block::GetTxHash() {
 }
 
 size_t Block::GetOptimalEncodingSize() {
-    if (optimalEncodingSize > 0) {
-        return optimalEncodingSize;
+    if (optimalEncodingSize_ > 0) {
+        return optimalEncodingSize_;
     }
 
-    optimalEncodingSize = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
+    optimalEncodingSize_ = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
     if (!HasTransaction())
-        return optimalEncodingSize;
+        return optimalEncodingSize_;
 
-    optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t listingDataSize    = input.listingContent.data.size();
         size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
-    optimalEncodingSize += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t listingDataSize    = output.listingContent.data.size();
         size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
-    return optimalEncodingSize;
+    return optimalEncodingSize_;
 }
 
 bool Block::IsRegistration() const {

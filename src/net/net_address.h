@@ -23,10 +23,6 @@ enum NetworkType {
 };
 
 class IPAddress {
-protected:
-    // Serialize
-    unsigned char ip[16];
-
 public:
     static std::optional<IPAddress> StringToIP(const std::string& ip_string);
 
@@ -36,7 +32,7 @@ public:
 
     explicit IPAddress(const struct in6_addr& ip6);
 
-    void setIP(const uint8_t* p, NetworkType type);
+    void SetIP(const uint8_t* p, NetworkType type);
 
     bool IsIPv4() const; // IPv4 mapped address (::FFFF:0:0/96, 0.0.0.0/0)
 
@@ -84,6 +80,10 @@ public:
 
     // this function current only support ipv4
     uint32_t GetIpInt() const;
+
+protected:
+    // Serialize
+    unsigned char ip[16];
 };
 
 namespace std {
@@ -97,10 +97,6 @@ struct hash<IPAddress> {
 
 
 class NetAddress : public IPAddress {
-protected:
-    // Serialize
-    uint16_t port_ = 0;
-
 public:
     static std::optional<NetAddress> StringToNetAddress(const std::string& netaddr_string);
 
@@ -130,6 +126,10 @@ public:
         READWRITE(ip);
         READWRITE(port_);
     }
+
+protected:
+    // Serialize
+    uint16_t port_ = 0;
 };
 
 namespace std {

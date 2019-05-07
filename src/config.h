@@ -16,90 +16,90 @@ public:
     // default bind port
     static const uint16_t defaultPort = 7877;
 
-    const std::string& getConfigFilePath() const {
+    const std::string& GetConfigFilePath() const {
         return configFilePath_;
     }
 
-    void setConfigFilePath(const std::string& configFilePath) {
+    void SetConfigFilePath(const std::string& configFilePath) {
         configFilePath_ = configFilePath;
     }
 
-    bool isUseFileLogger() const {
+    bool IsUseFileLogger() const {
         return useFileLogger_;
     }
 
-    void setUseFileLogger(bool useFileLogger) {
+    void SetUseFileLogger(bool useFileLogger) {
         useFileLogger_ = useFileLogger;
     }
 
-    const std::string& getLoggerPath() const {
+    const std::string& GetLoggerPath() const {
         return loggerPath_;
     }
 
-    void setLoggerPath(const std::string& loggerPath) {
+    void SetLoggerPath(const std::string& loggerPath) {
         loggerPath_ = loggerPath;
     }
 
-    const std::string& getLoggerFilename() const {
+    const std::string& GetLoggerFilename() const {
         return loggerFilename_;
     }
 
-    void setLoggerFilename(const std::string& loggerFilename) {
+    void SetLoggerFilename(const std::string& loggerFilename) {
         loggerFilename_ = loggerFilename;
     }
 
-    const std::string& getAddressPath() const {
+    const std::string& GetAddressPath() const {
         return addressPath_;
     }
 
-    void setAddressPath(const std::string& addressPath) {
+    void SetAddressPath(const std::string& addressPath) {
         addressPath_ = addressPath;
     }
 
-    const std::string& getAddressFilename() const {
+    const std::string& GetAddressFilename() const {
         return addressFilename_;
     }
 
-    void setAddressFilename(const std::string& addressFilename) {
+    void SetAddressFilename(const std::string& addressFilename) {
         addressFilename_ = addressFilename;
     }
 
-    uint32_t getSaveInterval() const {
+    uint32_t GetSaveInterval() const {
         return saveInterval_;
     }
 
-    void setSaveInterval(uint32_t saveInterval) {
+    void SetSaveInterval(uint32_t saveInterval) {
         Config::saveInterval_ = saveInterval;
     }
 
-    const std::string& getBindAddress() const {
+    const std::string& GetBindAddress() const {
         return bindAddress_;
     }
 
-    void setBindAddress(const std::string& bindAddress) {
+    void SetBindAddress(const std::string& bindAddress) {
         bindAddress_ = bindAddress;
     }
 
-    uint16_t getBindPort() const {
+    uint16_t GetBindPort() const {
         return bindPort_;
     }
 
-    void setBindPort(uint16_t bindPort) {
+    void SetBindPort(uint16_t bindPort) {
         bindPort_ = bindPort;
     }
 
-    void addSeeds(const std::string& ip, const uint16_t& port) {
+    void AddSeeds(const std::string& ip, const uint16_t& port) {
         auto address = NetAddress::StringToNetAddress(ip, port);
         if (address) {
-            seeds.push_back(*address);
+            seeds_.push_back(*address);
         }
     }
 
-    std::vector<NetAddress> getSeeds() const {
-        return seeds;
+    std::vector<NetAddress> GetSeeds() const {
+        return seeds_;
     }
 
-    void showConfig() {
+    void ShowConfig() {
         std::stringstream ss;
         ss << "current config: " << std::endl;
         ss << "config file path = " << configFilePath_ << std::endl;
@@ -111,9 +111,11 @@ public:
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
         ss << "seeds = [" << std::endl;
-        for (const NetAddress& addr : seeds) {
+
+        for (const NetAddress& addr : seeds_) {
             ss << addr.ToString() << ',' << std::endl;
         }
+
         ss << "]" << std::endl;
         spdlog::info(ss.str());
     }
@@ -136,7 +138,7 @@ private:
     std::string bindAddress_ = defaultIP;
     uint16_t bindPort_       = defaultPort;
 
-    std::vector<NetAddress> seeds;
+    std::vector<NetAddress> seeds_;
 };
 
 extern std::unique_ptr<Config> config;

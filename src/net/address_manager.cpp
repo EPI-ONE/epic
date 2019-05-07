@@ -6,12 +6,12 @@ AddressManager::AddressManager() {
 }
 
 void AddressManager::Init() {
-    for (const NetAddress& seed : config->getSeeds()) {
+    for (const NetAddress& seed : config->GetSeeds()) {
         allSeeds_.insert(seed);
     }
 
     LoadLocalAddresses();
-    LoadAddress(config->getAddressPath(), config->getAddressFilename());
+    LoadAddress(config->GetAddressPath(), config->GetAddressFilename());
 }
 
 bool AddressManager::IsSeedAddress(const IPAddress& address) {
@@ -19,7 +19,7 @@ bool AddressManager::IsSeedAddress(const IPAddress& address) {
 }
 
 bool AddressManager::ContainAddress(const IPAddress& address) const {
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     return newAddr_.find(address) != newAddr_.end() || oldAddr_.find(address) != oldAddr_.end();
 }
 
@@ -38,7 +38,7 @@ void AddressManager::AddNewAddress(const NetAddress& address) {
     if (IsSeedAddress(address) || IsLocal(address)) {
         return;
     }
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     if (newAddr_.find(address) != newAddr_.end()) {
         return;
     }
@@ -51,7 +51,7 @@ void AddressManager::MarkOld(const IPAddress& address) {
     if (!ContainAddress(address)) {
         return;
     }
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     NetAddressInfo* info = GetInfo(address);
     info->lastSuccess    = time(nullptr);
     info->numAttempts    = 0;
@@ -66,7 +66,7 @@ void AddressManager::SetLastTry(const IPAddress& address, uint64_t time) {
     if (!info) {
         return;
     }
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     info->numAttempts++;
     info->lastTry = time;
 }
@@ -76,13 +76,13 @@ void AddressManager::SetLastSuccess(const IPAddress& address, uint64_t time) {
     if (!info) {
         return;
     }
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     info->numAttempts = 0;
     info->lastSuccess = time;
 }
 
 NetAddressInfo* AddressManager::GetInfo(const IPAddress& address) {
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     auto it = newAddr_.find(address);
     if (it != newAddr_.end()) {
         return &(it->second);
@@ -96,7 +96,7 @@ NetAddressInfo* AddressManager::GetInfo(const IPAddress& address) {
 }
 
 std::optional<NetAddress> AddressManager::GetOneAddress(bool onlyNew) {
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     if (onlyNew && newAddr_.empty()) {
         return {};
     }
@@ -196,7 +196,7 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
 }
 
 std::vector<NetAddress> AddressManager::GetAddresses(size_t size) {
-    std::lock_guard<std::recursive_mutex> lk(lock);
+    std::lock_guard<std::recursive_mutex> lk(lock_);
     size_t total_size  = newAddr_.size() + oldAddr_.size();
     size_t actual_size = std::min(size, total_size);
     std::vector<NetAddress> list;
@@ -272,22 +272,22 @@ bool AddressManager::IsLocal(const IPAddress& address) const {
 }
 
 bool AddressManager::IsNew(const IPAddress& address) const {
-    std::unique_lock<std::recursive_mutex> lk(lock);
+    std::unique_lock<std::recursive_mutex> lk(lock_);
     return newAddr_.find(address) != newAddr_.end();
 }
 
 bool AddressManager::IsOld(const IPAddress& address) const {
-    std::unique_lock<std::recursive_mutex> lk(lock);
+    std::unique_lock<std::recursive_mutex> lk(lock_);
     return oldAddr_.find(address) != oldAddr_.end();
 }
 
 void AddressManager::Clear() {
-    std::unique_lock<std::recursive_mutex> lk(lock);
+    std::unique_lock<std::recursive_mutex> lk(lock_);
     newAddr_.clear();
     oldAddr_.clear();
 }
 
 size_t AddressManager::SizeOfAllAddr() {
-    std::unique_lock<std::recursive_mutex> lk(lock);
+    std::unique_lock<std::recursive_mutex> lk(lock_);
     return newAddr_.size() + oldAddr_.size();
 }

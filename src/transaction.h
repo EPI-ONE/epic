@@ -173,8 +173,8 @@ public:
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(inputs);
-        READWRITE(outputs);
+        READWRITE(inputs_);
+        READWRITE(outputs_);
     }
 
     friend bool operator==(const Transaction& a, const Transaction& b) {
@@ -182,8 +182,8 @@ public:
     }
 
 private:
-    std::vector<TxInput> inputs;
-    std::vector<TxOutput> outputs;
+    std::vector<TxInput> inputs_;
+    std::vector<TxOutput> outputs_;
 
     uint256 hash_;
     Coin fee_;

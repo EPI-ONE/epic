@@ -8,11 +8,11 @@
 static const unsigned char pchIPv4[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
 
 IPAddress::IPAddress(const struct in_addr& ip4) {
-    setIP((const uint8_t*) &(ip4.s_addr), NET_IPV4);
+    SetIP((const uint8_t*) &(ip4.s_addr), NET_IPV4);
 }
 
 IPAddress::IPAddress(const struct in6_addr& ip6) {
-    setIP((const uint8_t*) &(ip6.s6_addr), NET_IPV6);
+    SetIP((const uint8_t*) &(ip6.s6_addr), NET_IPV6);
     //    setIP((const uint8_t *) &(ip6.__u6_addr.__u6_addr8), NET_IPV6);
 }
 
@@ -31,7 +31,7 @@ std::optional<IPAddress> IPAddress::StringToIP(const std::string& ip_string) {
     return {};
 }
 
-void IPAddress::setIP(const uint8_t* p, NetworkType type) {
+void IPAddress::SetIP(const uint8_t* p, NetworkType type) {
     switch (type) {
     case NET_IPV4:
         memcpy(ip, pchIPv4, 12);
@@ -177,14 +177,11 @@ bool IPAddress::IsLocal() const {
     return memcmp(ip, pchLocal, 16) == 0;
 }
 
-NetAddress::NetAddress(const IPAddress& ip, uint16_t port) : IPAddress(ip), port_(port) {
-}
+NetAddress::NetAddress(const IPAddress& ip, uint16_t port) : IPAddress(ip), port_(port) {}
 
-NetAddress::NetAddress(const struct in_addr& ip4, uint16_t port) : IPAddress(ip4), port_(port) {
-}
+NetAddress::NetAddress(const struct in_addr& ip4, uint16_t port) : IPAddress(ip4), port_(port) {}
 
-NetAddress::NetAddress(const struct in6_addr& ip6, uint16_t port) : IPAddress(ip6), port_(port) {
-}
+NetAddress::NetAddress(const struct in6_addr& ip6, uint16_t port) : IPAddress(ip6), port_(port) {}
 
 std::optional<NetAddress> NetAddress::StringToNetAddress(const std::string& netaddr_string) {
     std::string ip;
