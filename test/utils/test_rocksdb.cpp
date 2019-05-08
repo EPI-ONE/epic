@@ -122,7 +122,7 @@ TEST_F(TestRocksDB, write_single_block) {
 }
 
 TEST_F(TestRocksDB, write_batch_blocks) {
-    size_t size = 10;
+    size_t size = 100;
     std::vector<BlockPtr> blocks;
     blocks.reserve(size);
     std::vector<uint256> keys;

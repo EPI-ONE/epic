@@ -14,7 +14,7 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
-        int maxPos = rand() % 128;
+        int maxPos = rand() % 128 + 1;
         for (int i = 0; i < numTxInput; ++i) {
             uint256 inputH;
             inputH.randomize();
