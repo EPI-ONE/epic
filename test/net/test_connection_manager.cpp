@@ -52,6 +52,9 @@ TEST_F(TestConnectionManager, Listen) {
 
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, true);
+    EXPECT_EQ(server.GetInboundNum(), 1);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 1);
 }
 
 TEST_F(TestConnectionManager, Connect) {
@@ -67,6 +70,9 @@ TEST_F(TestConnectionManager, Connect) {
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, false);
     EXPECT_EQ(test_address, "127.0.0.1:7890");
+    EXPECT_EQ(client.GetInboundNum(), 0);
+    EXPECT_EQ(client.GetOutboundNum(), 1);
+    EXPECT_EQ(client.GetConnectionNum(), 1);
 }
 
 TEST_F(TestConnectionManager, Disconnect) {
@@ -75,17 +81,22 @@ TEST_F(TestConnectionManager, Disconnect) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(7777), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 7777), 0);
+    EXPECT_EQ(server.Listen(51234), 0);
+    EXPECT_EQ(client.Connect(0x7f000001, 51234), 0);
 
     usleep(10000);
-
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, true);
+    EXPECT_EQ(server.GetInboundNum(), 1);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 1);
     server.Disconnect(test_connect_handle);
 
     usleep(10000);
     EXPECT_EQ(test_disconnect_run, true);
+    EXPECT_EQ(server.GetInboundNum(), 0);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 0);
 }
 
 TEST_F(TestConnectionManager, SendAndReceive) {
@@ -94,8 +105,8 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(7777), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 7777), 0);
+    EXPECT_EQ(server.Listen(51001), 0);
+    EXPECT_EQ(client.Connect(0x7f000001, 51001), 0);
 
     while (!test_connect_run) {
     };
@@ -128,11 +139,12 @@ TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(7777), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 7777), 0);
+    EXPECT_EQ(server.Listen(51010), 0);
+    EXPECT_EQ(client.Connect(0x7f000001, 51010), 0);
 
     while (!test_connect_run) {
-    };
+        usleep(1000);
+    }
 
     uint32_t test_type = 0xAAAAAAAA;
 
@@ -154,11 +166,11 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(7777), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 7777), 0);
+    EXPECT_EQ(server.Listen(51020), 0);
+    EXPECT_EQ(client.Connect(0x7f000001, 51020), 0);
 
     while (!test_connect_run) {
-    };
+    }
 
     int data_len = 2000;
     int num      = 3;
@@ -186,7 +198,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 }
 
 TEST_F(TestConnectionManager, MultiClient) {
-    EXPECT_EQ(server.Listen(7777), 0);
+    EXPECT_EQ(server.Listen(51030), 0);
 
     int client_num = 3;
     ConnectionManager client[client_num];
@@ -195,10 +207,13 @@ TEST_F(TestConnectionManager, MultiClient) {
         client[i].RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestMultiClientNewCallback, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         client[i].Start();
-        EXPECT_EQ(client[i].Connect(0x7f000001, 7777), 0);
+        EXPECT_EQ(client[i].Connect(0x7f000001, 51030), 0);
     }
 
-    sleep(1);
+    usleep(10000);
+    EXPECT_EQ(server.GetInboundNum(), 3);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 3);
 
     int data_len          = 2000;
     uint32_t message_type = 100;
@@ -227,4 +242,9 @@ TEST_F(TestConnectionManager, MultiClient) {
     for (int i = 0; i < client_num; i++) {
         client[i].Stop();
     }
+
+    usleep(100000);
+    EXPECT_EQ(server.GetInboundNum(), 0);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 0);
 }

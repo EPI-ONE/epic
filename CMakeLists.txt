@@ -118,8 +118,11 @@ target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
 target_link_libraries(epictest ${Secp256k1_LIBRARY})
 target_link_libraries(epictest ${GMP_LIBRARY})
 
-target_compile_options(epictest PUBLIC --coverage)
-target_link_options(epictest PUBLIC --coverage)
+option(UNITTEST_COVERAGE "coverage compile flag" OFF)
+if (UNITTEST_COVERAGE)
+    target_compile_options(epictest PUBLIC --coverage)
+    target_link_options(epictest PUBLIC --coverage)
+endif ()
 
 # add test
 gtest_add_tests(
