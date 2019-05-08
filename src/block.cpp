@@ -131,6 +131,21 @@ std::optional<Transaction>& Block::GetTransaction() {
     return transaction_;
 }
 
+<<<<<<< HEAD
+=======
+void Block::SetMinerChainHeight(uint32_t height) {
+    minerChainHeight_ = height;
+}
+
+void Block::SetCumulativeReward(Coin coin) {
+    cumulativeReward_ = coin;
+}
+
+void Block::ResetReward() {
+    cumulativeReward_ = ZERO_COIN;
+}
+
+>>>>>>> Fixed a bug that causes write_batch_blocks failed
 void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
@@ -321,6 +336,9 @@ void Block::Solve(ThreadPool& solverPool) {
 }
 
 void Block::SetParents() {
+    if (!HasTransaction()) {
+        return;
+    }
     transaction_->SetParent(this);
     for (TxInput& input : transaction_->GetInputs()) {
         input.SetParent(&*transaction_);
@@ -344,9 +362,10 @@ std::string std::to_string(Block& block) {
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
 
     if (block.HasTransaction()) {
-        s += "   with transaction:\n";
-        s += std::to_string(*(block.transaction_));
+        s += strprintf("  with %s\n", to_string(*(block.transaction_)));
     }
+
+    s += " }";
 
     return s;
 }

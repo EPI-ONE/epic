@@ -134,6 +134,10 @@ public:
     static NodeRecord CreateGenesisRecord();
 };
 
+namespace std {
+string to_string(const NodeRecord&);
+} // namespace std
+
 extern const NodeRecord GENESIS_RECORD;
 
 #endif /* ifndef __SRC_CONSENSUS_H__ */

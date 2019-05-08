@@ -42,6 +42,8 @@ public:
 
     bool IsNull() const;
 
+    void RandomizeHash();
+
     uint256 GetMilestoneHash() const;
 
     uint256 GetPrevHash() const;
@@ -130,7 +132,7 @@ public:
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing
      */
-    void RandomizeHash();
+    void RandomizeHash() const;
 
     /*
      * A simple solver for nonce that makes the blocks hash lower than the

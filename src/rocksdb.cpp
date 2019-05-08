@@ -99,7 +99,7 @@ bool RocksDBStore::WriteBlocks(const std::vector<BlockPtr> blocks) const {
     VStream key;
     key.reserve(32);
     VStream value;
-    for (auto const& block : blocks) {
+    for (const auto& block : blocks) {
         // Prepare key
         key << block->GetHash();
         Slice keySlice(key.data(), key.size());

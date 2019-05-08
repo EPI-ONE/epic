@@ -141,6 +141,28 @@ size_t NodeRecord::GetOptimalStorageSize() {
     return optimalStorageSize;
 }
 
+std::string std::to_string(const NodeRecord& rec) {
+    std::string s = "NodeRecord {\n";
+    s += strprintf("   contained block: \n %s", std::to_string(*(rec.cBlock)));
+    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
+    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward);
+
+    if (rec.snapshot != nullptr) {
+        s += "   with chain state snapshot {\n";
+        s += strprintf("     height: %s \n", rec.snapshot->height);
+        s += strprintf("     chainwork: %s \n", rec.snapshot->chainwork.GetCompact());
+        s += strprintf("     last update time: %s \n", rec.snapshot->lastUpdateTime);
+        s += strprintf("     ms target: %s \n", rec.snapshot->milestoneTarget.GetCompact());
+        s += strprintf("     block target: %s \n", rec.snapshot->blockTarget.GetCompact());
+        s += strprintf("     hash rate: %s \n", rec.snapshot->hashRate);
+        s += "   }\n";
+    }
+
+    s += strprintf("   status: %s \n }", rec.validity);
+
+    return s;
+}
+
 NodeRecord NodeRecord::CreateGenesisRecord() {
     return NodeRecord(GENESIS);
 }

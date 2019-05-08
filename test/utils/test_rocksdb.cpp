@@ -114,7 +114,7 @@ TEST_F(TestRocksDB, batch_insertion) {
 }
 
 TEST_F(TestRocksDB, write_single_block) {
-    BlockPtr b = FakeBlockPtr(1, 1);
+    BlockPtr b = FakeBlockPtr(1, 1, true);
     EXPECT_TRUE(db->WriteBlock(b));
 
     std::unique_ptr<Block> value = db->GetBlock(b->GetHash());
@@ -122,11 +122,12 @@ TEST_F(TestRocksDB, write_single_block) {
 }
 
 TEST_F(TestRocksDB, write_batch_blocks) {
-    size_t size = 1;
+    size_t size = 10;
     std::vector<BlockPtr> blocks;
+    blocks.reserve(size);
     std::vector<uint256> keys;
     for (int i = 0; i < size; ++i) {
-        BlockPtr b = FakeBlockPtr(i, i);
+        BlockPtr b = FakeBlockPtr(i, i, true);
         blocks.push_back(b);
         keys.push_back(b->GetHash());
     }
