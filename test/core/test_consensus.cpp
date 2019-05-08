@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <random>
 
+#include "block.h"
 #include "utxo.h"
 #include "chain.h"
 
@@ -14,7 +15,20 @@ std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
     return std::make_shared<NodeRecord>(pb);
 }
 
-class TestConsensus : public testing::Test {};
+class TestConsensus : public testing::Test {
+public:
+    TestConsensus() : simulatedTime(1556784921L), distribution(1,30) {}
+
+    uint32_t TimeFactory() {
+        simulatedTime += distribution(generator);
+        return simulatedTime;
+    }
+
+private:
+    uint32_t simulatedTime; // arbitrarily take a starting point
+    std::default_random_engine generator;
+    std::uniform_int_distribution<uint32_t> distribution;
+};
 
 BlockNet FakeBlock(int numTxInput = 0, int numTxOutput = 0, bool solve = false) {
     uint256 r1;
@@ -113,34 +127,67 @@ TEST_F(TestConsensus, UTXO) {
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     std::array<std::shared_ptr<ChainState>, 100> arrayMs;
-    arrayMs[0] = std::make_shared<ChainState>();
+    arrayMs[0] = make_shared_ChainState();
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    uint32_t simulatedTime = 1556784921L; // arbitrarily take a starting point
-    std::default_random_engine generator;
-    std::uniform_int_distribution<uint32_t> distribution(1,30);
-
-    arrayMs[1] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[0]);
-
     size_t LOOPS = 100;
-    for (int i=2; i< LOOPS; i++) {
-        simulatedTime += distribution(generator);
-        arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i-1]);
+    for (int i = 1; i < LOOPS; i++) {
+        arrayMs[i] = make_shared_ChainState(NodeFactory(TimeFactory()), arrayMs[i - 1]);
         ASSERT_EQ(i, arrayMs[i]->height);
-        if (((i+1) % params.timeInterval) == 0) {
-            ASSERT_NE(arrayMs[i-1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-            ASSERT_NE(arrayMs[i-1]->milestoneTarget, arrayMs[i]->milestoneTarget);
-            ASSERT_NE(arrayMs[i-1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if ( ((i+1) % params.timeInterval) != 1){
-            ASSERT_EQ(arrayMs[i-1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
+
+        if (((i + 1) % params.timeInterval) == 0) {
+            ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
+            ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
+            ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
+        } else if (i > 1 && ((i + 1) % params.timeInterval) != 1) {
+            ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
-        ASSERT_NE(0, arrayMs[i-1]->hashRate);
-        ASSERT_LE(arrayMs[i-1]->chainwork, arrayMs[i]->chainwork);
+        ASSERT_NE(0, arrayMs[i - 1]->hashRate);
+        ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
 }
 
-TEST_F(TestConsensus, Chain) {
-    Chain chain1{};
-    Chain chain2(false);
-    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+TEST_F(TestConsensus, FindSplittingPoint) {
+    // construct main chain
+    std::vector<std::shared_ptr<ChainState>> vMs0{make_shared_ChainState()};
+    for (int i=1; i<5; i++) { // reach height 4
+        vMs0.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs0[i-1]));
+    }
+
+    auto vMs1 = vMs0;
+    std::shared_ptr<ChainState> split_of_0_1 = vMs0.back();
+    for (int i=0; i<6; i++) { // reach height 7
+        if (i % 2) {
+            vMs0.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs0.back(), true));
+        } else {
+            vMs1.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs1.back()));
+        }
+    }
+
+    auto vMs2 = vMs1, vMs3 = vMs0;
+    std::shared_ptr<ChainState> split_of_1_2 = vMs1.back(), split_of_0_3 = vMs0.back();
+    for (int i = 0; i<2; i++) { // reach height 9
+        vMs0.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs0.back(), true)); 
+        vMs1.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs1.back())); 
+        vMs2.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs2.back())); 
+        vMs3.push_back(make_shared_ChainState(NodeFactory(TimeFactory()), vMs3.back())); 
+    }
+    std::array<Chain, 4> arrchain = {Chain{vMs0, true}, Chain{vMs1}, Chain{vMs2}, Chain{vMs3}};
+
+    ASSERT_EQ(*split_of_0_1, *arrchain[0].FindSplit(arrchain[1]));
+    if (auto wp = split_of_0_1->pnext.lock()) {
+        ASSERT_EQ(*wp, *vMs0[5]);
+    } else {
+        FAIL() << "We should get a weak_ptr!\n";
+    }
+
+    ASSERT_EQ(*split_of_0_3, *arrchain[0].FindSplit(arrchain[3]));
+    if (auto wp = split_of_0_3->pnext.lock()) {
+        ASSERT_EQ(*wp, *vMs0[8]);
+    } else {
+        FAIL() << "We should get a weak_ptr!\n";
+    }
+
+    ASSERT_EQ(*split_of_1_2, *arrchain[1].FindSplit(arrchain[2]));
+    ASSERT_TRUE(split_of_1_2->pnext.expired());
 }

@@ -6,7 +6,7 @@ ChainState::ChainState() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwo
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(BlkStatPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
+ChainState::ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
     pblock->LinkChainState(*this);
     if (pprevious != nullptr) {
         height    = pprevious->height + 1;
@@ -143,6 +143,17 @@ size_t NodeRecord::GetOptimalStorageSize() {
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
     return NodeRecord(GENESIS);
+}
+
+std::shared_ptr<ChainState> make_shared_ChainState() {
+    return std::make_shared<ChainState>();
+}
+
+std::shared_ptr<ChainState> make_shared_ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous, bool inMainChain) {
+    std::shared_ptr<ChainState> pms = std::make_shared<ChainState>(pblock, previous);
+    if (inMainChain) 
+        pms->pprevious->pnext = pms;
+    return pms;
 }
 
 const NodeRecord GENESIS_RECORD = NodeRecord::CreateGenesisRecord();

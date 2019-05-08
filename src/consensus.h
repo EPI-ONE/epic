@@ -10,7 +10,7 @@ enum MilestoneStatus : uint8_t {
 };
 
 class NodeRecord;
-typedef std::shared_ptr<NodeRecord> BlkStatPtr;
+typedef std::shared_ptr<NodeRecord> RecordPtr;
 
 class ChainState {
 public:
@@ -26,13 +26,13 @@ public:
     std::weak_ptr<ChainState> pnext;
 
     // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<BlkStatPtr> vblockstore;
+    std::vector<RecordPtr> vblockstore;
     std::vector<uint256> pubkeySnapshot;
 
     // constructor of a milestone of genesis.
     ChainState();
     // constructor of a milestone with all data fields
-    ChainState(BlkStatPtr, std::shared_ptr<ChainState>);
+    ChainState(RecordPtr, std::shared_ptr<ChainState>);
     // copy constructor
     ChainState(const ChainState&) = default;
 
@@ -60,6 +60,16 @@ public:
         return (arith_uint256(params.maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
+    friend bool operator==(const ChainState& a, const ChainState& b) {
+        return a.lastUpdateTime == b.lastUpdateTime && a.chainwork.GetCompact() == b.chainwork.GetCompact() &&
+               a.hashRate == b.hashRate && a.milestoneTarget.GetCompact() == b.milestoneTarget.GetCompact() &&
+               a.blockTarget.GetCompact() == b.blockTarget.GetCompact();
+    }
+
+    friend bool operator!=(const ChainState& a, const ChainState& b) { 
+        return !(a == b);
+    }
+
     void Serialize(VStream& s) const {
         ::Serialize(s, VARINT(height));
         ::Serialize(s, chainwork.GetCompact());
@@ -78,6 +88,9 @@ public:
         ::Deserialize(s, VARINT(hashRate));
     }
 };
+
+std::shared_ptr<ChainState> make_shared_ChainState();
+std::shared_ptr<ChainState> make_shared_ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous, bool inMainChain=false);
 
 /*
  * A structure that contains a shared_ptr<const BlockNet> that will

@@ -6,11 +6,47 @@ Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
 }
 
 std::shared_ptr<ChainState> Chain::GetChainHead() const {
-    return vmilestones_.front();
+    return vmilestones_.back();
 }
 
-void Chain::AddPendingBlock(Block& block) {
-    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<Block>(block));
+Chain::Chain(const Chain& chain)
+    : ismainchain_(false), vmilestones_(chain.vmilestones_), pendingBlocks_(chain.pendingBlocks_) {}
+
+Chain::Chain(const Chain& chain, std::shared_ptr<ChainState> pfork) : ismainchain_(false), pendingBlocks_(chain.pendingBlocks_) {
+    std::shared_ptr<ChainState> cursor = chain.GetChainHead();
+    std::shared_ptr<ChainState> target = pfork->pprevious;
+    while (cursor != target) {
+        for (const auto& pblock : cursor->vblockstore) {
+            pendingBlocks_.insert({pblock->cBlock->GetHash(), pblock->cBlock});
+        }
+        cursor = cursor->pprevious;
+        assert(cursor);
+    }
+}
+
+std::shared_ptr<ChainState> Chain::FindSplit(const Chain& pchain) const {
+    std::shared_ptr<ChainState> cursor = GetChainHead();
+    std::shared_ptr<ChainState> newCursor = pchain.GetChainHead();
+
+    while (cursor != newCursor) {
+        if (cursor->height > newCursor->height) {
+            cursor = cursor->pprevious;
+            assert(cursor);
+        } else {
+            newCursor = newCursor->pprevious;
+            assert(newCursor);
+        }
+    }
+
+    return newCursor;
+}
+
+void Chain::AddPendingBlock(ConstBlockPtr pblock) {
+    pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+}
+    
+void Chain::AddPendingBlock(const Block& block) {
+    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<const BlockNet>(block));
 }
 
 void Chain::RemovePendingBlock(const uint256& hash) {
