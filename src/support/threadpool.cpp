@@ -45,3 +45,7 @@ void ThreadPool::Stop() {
 
     workers_.clear();
 }
+
+std::size_t ThreadPool::size() const {
+    return workers_.size();
+}
