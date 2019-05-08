@@ -196,8 +196,11 @@ private:
     bool new_arena(size_t size, size_t align);
 
     std::list<LockedPageArena> arenas;
+    std::unordered_map<void*, LockedPageArena*> chunk_arena_map;
+
     LockingFailed_Callback lf_cb;
     size_t cumulative_bytes_locked;
+
     /** Mutex protects access to this pool's data structures, including arenas.
      */
     mutable std::mutex mutex;

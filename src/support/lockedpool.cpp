@@ -205,34 +205,38 @@ void* LockedPool::alloc(size_t size) {
     std::lock_guard<std::mutex> lock(mutex);
 
     // Don't handle impossible sizes
-    if (size == 0 || size > ARENA_SIZE)
+    if (size == 0 || size > ARENA_SIZE) {
         return nullptr;
+    }
 
     // Try allocating from each current arena
     for (auto& arena : arenas) {
         void* addr = arena.alloc(size);
         if (addr) {
+            chunk_arena_map.insert_or_assign(addr, &arena);
             return addr;
         }
     }
+
     // If that fails, create a new one
     if (new_arena(ARENA_SIZE, ARENA_ALIGN)) {
-        return arenas.back().alloc(size);
+        void* addr = arenas.back().alloc(size);
+        chunk_arena_map.insert_or_assign(addr, &arenas.back());
+        return addr;
     }
+
     return nullptr;
 }
 
 void LockedPool::free(void* ptr) {
     std::lock_guard<std::mutex> lock(mutex);
-    // TODO we can do better than this linear search by keeping a map of arena
-    // extents to arena, and looking up the address.
-    for (auto& arena : arenas) {
-        if (arena.addressInArena(ptr)) {
-            arena.free(ptr);
-            return;
-        }
+
+    auto origin_arena = chunk_arena_map.find(ptr);
+    if (origin_arena == chunk_arena_map.end()) {
+        throw std::runtime_error("LockedPool: invalid address not pointing to any arena");
     }
-    throw std::runtime_error("LockedPool: invalid address not pointing to any arena");
+
+    origin_arena->second->free(ptr);
 }
 
 LockedPool::Stats LockedPool::stats() const {
