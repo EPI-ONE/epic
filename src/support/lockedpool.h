@@ -134,7 +134,7 @@ public:
     /** Chunk alignment. Another compromise. Setting this too high will waste
      * memory, setting it too low will facilitate fragmentation.
      */
-    static const size_t ARENA_ALIGN = 16;
+    static const size_t ARENA_ALIGN = 32;
 
     /** Callback when allocation succeeds but locking fails.
      */
