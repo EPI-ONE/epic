@@ -208,7 +208,7 @@ public:
      * A multi-thread solver for nonce that makes the blocks hash lower than the
      * difficulty target. For test purposes only.
      */
-    void Solve(int numThreads, ThreadPool& pool);
+    void Solve(ThreadPool& pool);
 
     /*
      * Sets parents for elements contained in the block all at once
