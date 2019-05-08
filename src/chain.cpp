@@ -2,15 +2,40 @@
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
-    vmilestones_   = {std::make_shared<ChainState>()};
+    recordHistory_ = {};
+    dqChainStates_ = {std::make_shared<ChainState>()};
 }
 
-std::shared_ptr<ChainState> Chain::GetChainHead() const {
-    return vmilestones_.front();
+ChainStatePtr Chain::GetChainHead() const {
+    return dqChainStates_.back();
 }
 
-void Chain::AddPendingBlock(Block& block) {
-    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<Block>(block));
+Chain::Chain(const Chain& chain)
+    : ismainchain_(false), dqChainStates_(chain.dqChainStates_), pendingBlocks_(chain.pendingBlocks_) {}
+
+Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
+    : ismainchain_(false), dqChainStates_(chain.dqChainStates_), pendingBlocks_(chain.pendingBlocks_), recordHistory_(chain.recordHistory_){
+    ChainStatePtr cursor = chain.GetChainHead();
+    uint256 target       = pfork->GetMilestoneHash();
+
+    for (auto it = dqChainStates_.rbegin(); (*it)->GetMilestoneHash() != target && it != dqChainStates_.rend(); it++) {
+        // TODO: add logic to pendingBlocks_ and recordHistory_ now
+        dqChainStates_.erase(std::next(it).base());
+    }
+}
+
+Chain::~Chain() {
+    dqChainStates_.clear();
+    pendingBlocks_.clear();
+    recordHistory_.clear();
+}
+
+void Chain::AddPendingBlock(ConstBlockPtr pblock) {
+    pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+}
+    
+void Chain::AddPendingBlock(const Block& block) {
+    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<const BlockNet>(block));
 }
 
 void Chain::RemovePendingBlock(const uint256& hash) {

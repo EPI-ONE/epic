@@ -3,27 +3,22 @@
 ////////////////
 // ChainState
 //
-ChainState::ChainState()
-    : height(0), chainwork(arith_uint256(0)), lastUpdateTime(GENESIS.GetTime()), pprevious(nullptr) {
+ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTime(GENESIS.GetTime()) {
     milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
     blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
-    pblock->LinkChainState(*this);
-    if (pprevious) {
-        height    = pprevious->height + 1;
-        chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->cBlock->GetHash()));
+ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& recHash)
+    : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), vrecordHash_(recHash) {
+    auto msBlock = rec.cBlock;
+    chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
+    UpdateDifficulty(msBlock->GetTime());
+}
 
-        lastUpdateTime  = pprevious->lastUpdateTime;
-        milestoneTarget = pprevious->milestoneTarget;
-        blockTarget     = pprevious->blockTarget;
-
-        UpdateDifficulty(pblock->cBlock->GetTime());
-    } else {
-        // TODO: go somewhere to find the height
-    }
+ChainState::ChainState(VStream& payload) {
+    payload >> *this; 
 }
 
 void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
@@ -60,6 +55,16 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     lastUpdateTime = blockUpdateTime;
 }
 
+ChainStatePtr make_shared_ChainState() {
+    return std::make_shared<ChainState>();
+}
+
+ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
+    auto pcs = std::make_shared<ChainState>(previous, record, std::move(hashes));
+    record.LinkChainState(pcs);
+    return pcs;
+}
+
 ////////////////
 // NodeRecord
 //
@@ -81,8 +86,8 @@ void NodeRecord::InvalidateMilestone() {
     snapshot.reset();
 }
 
-void NodeRecord::LinkChainState(ChainState& ss) {
-    snapshot = std::make_shared<ChainState>(ss);
+void NodeRecord::LinkChainState(ChainStatePtr pcs) {
+    snapshot    = pcs;
     isMilestone = true;
 }
 
@@ -109,9 +114,7 @@ void NodeRecord::Serialize(VStream& s) const {
 }
 
 void NodeRecord::Deserialize(VStream& s) {
-    BlockNet b;
-    s >> b;
-    cBlock = std::make_shared<BlockNet>(b);
+    cBlock = std::make_shared<BlockNet>(s);
     uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);
@@ -125,8 +128,7 @@ void NodeRecord::Deserialize(VStream& s) {
     isMilestone                 = msFlag == IS_TRUE_MILESTONE;
 
     if (msFlag > 0) {
-        snapshot = std::make_shared<ChainState>();
-        s >> *snapshot;
+        snapshot = std::make_shared<ChainState>(s);
     }
 }
 
@@ -156,33 +158,37 @@ size_t NodeRecord::GetOptimalStorageSize() {
     return optimalStorageSize;
 }
 
-std::string std::to_string(const NodeRecord& rec) {
+std::string std::to_string(const ChainState& cs) {
+    std::string s = "Chain State {\n";
+    s += strprintf("   height: %s \n", cs.height);
+    s += strprintf("   chainwork: %s \n", cs.chainwork.GetCompact());
+    s += strprintf("   last update time: %s \n", cs.lastUpdateTime);
+    s += strprintf("   ms target: %s \n", cs.milestoneTarget.GetCompact());
+    s += strprintf("   block target: %s \n", cs.blockTarget.GetCompact());
+    s += strprintf("   hash rate: %s \n", cs.hashRate);
+    s += "   }\n";
+    return s;
+}
+
+std::string std::to_string(const NodeRecord& rec, bool showtx) {
     std::string s = "NodeRecord {\n";
-    s += strprintf("  contained%s \n", std::to_string(*(rec.cBlock)));
+    s += strprintf("   contained%s \n", std::to_string(*(rec.cBlock), showtx));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
     if (rec.snapshot) {
-        s += "   with chain state snapshot {\n";
-        s += strprintf("     height: %s \n", rec.snapshot->height);
-        s += strprintf("     chainwork: %s \n", rec.snapshot->chainwork.GetCompact());
-        s += strprintf("     last update time: %s \n", rec.snapshot->lastUpdateTime);
-        s += strprintf("     ms target: %s \n", rec.snapshot->milestoneTarget.GetCompact());
-        s += strprintf("     block target: %s \n", rec.snapshot->blockTarget.GetCompact());
-        s += strprintf("     hash rate: %s \n", rec.snapshot->hashRate);
-        s += "   }\n";
+        s += "   with snapshot of ";
+        s += to_string(*(rec.snapshot));
     }
 
     static const std::string enumName[] = {"UNKNOWN", "VALID", "INVALID"};
-
     s += strprintf("   status: %s \n }", enumName[rec.validity]);
-
     return s;
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
     NodeRecord genesis(GENESIS);
-    static ChainState genesisState;
+    static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
     return genesis;
 }

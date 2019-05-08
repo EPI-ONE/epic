@@ -1,20 +1,19 @@
 #include <gtest/gtest.h>
 
 #include "obc.h"
+#include "test_factory.h"
 
 class OBCTest : public testing::Test {
 public:
     std::vector<Block> blocks;
+    TestFactory fac;
 
     void SetUp() {
         std::size_t n = 10;
         blocks.reserve(n);
 
         for (std::size_t i = 0; i < n; i++) {
-            blocks.push_back(Block());
-
-            // faster than solving the blocks
-            blocks[i].RandomizeHash();
+            blocks.push_back(fac.CreateBlock());
 
             // time is used as the node id
             blocks[i].SetTime(i);

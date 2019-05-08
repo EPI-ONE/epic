@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <optional>
 
+#include "test_factory.h"
 #include "consensus.h"
 #include "key.h"
 
@@ -8,14 +9,15 @@ typedef Tasm::Listing Listing;
 
 class TestSer : public testing::Test {
 protected:
+    TestFactory fac;
     Listing randomBytes;
     uint256 rand1;
     uint256 rand2;
     uint256 zeros;
 
     void SetUp() {
-        rand1.randomize();
-        rand2.randomize();
+        rand1 = fac.CreateRandomHash();
+        rand2 = fac.CreateRandomHash();
 
         VStream s(rand1);
         randomBytes = Listing(s);
@@ -225,9 +227,9 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.cumulativeReward = 10;
 
     // Link the chain state
-    ChainState state(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
-        arith_uint256(0X3E8));
-    block.LinkChainState(state);
+    auto pstate = std::make_shared<ChainState>(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(),
+        arith_uint256(0).GetCompact(), arith_uint256(0X3E8));
+    block.LinkChainState(pstate);
 
     // Make it a fake milestone
     block.InvalidateMilestone();

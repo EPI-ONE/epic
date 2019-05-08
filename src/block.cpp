@@ -262,10 +262,6 @@ bool Block::CheckPOW() const {
     return true;
 }
 
-void Block::RandomizeHash() {
-    hash_.randomize();
-}
-
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
 
@@ -342,7 +338,7 @@ void Block::SetParents() {
     }
 }
 
-std::string std::to_string(const Block& block) {
+std::string std::to_string(const Block& block, bool showtx) {
     std::string s;
     s += " Block { \n";
     s += strprintf("   hash: %s \n", std::to_string(block.GetHash()));
@@ -354,7 +350,7 @@ std::string std::to_string(const Block& block) {
     s += strprintf("   difficulty target: %d \n", std::to_string(block.diffTarget_));
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
 
-    if (block.HasTransaction()) {
+    if (block.HasTransaction() && showtx) {
         s += strprintf("  with %s\n", std::to_string(*(block.transaction_)));
     }
 

@@ -15,7 +15,7 @@ extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
-string to_string(const Block&);
+string to_string(const Block& b, bool showtx = false);
 } // namespace std
 
 class Block {
@@ -129,12 +129,6 @@ public:
     bool CheckPOW() const;
 
     /*
-     * Only to be used for debugging when validity of the
-     * block does not matter e.g DFS testing
-     */
-    void RandomizeHash();
-
-    /*
      * A simple solver for nonce that makes the blocks hash lower than the
      * difficulty target. For test purposes only.
      */
@@ -171,7 +165,7 @@ public:
         return hash_ == another.hash_;
     }
 
-    friend std::string std::to_string(const Block&);
+    friend std::string std::to_string(const Block& b, bool showtx);
 
     static Block CreateGenesis();
 

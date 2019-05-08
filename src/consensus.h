@@ -4,8 +4,8 @@
 #include "block.h"
 
 class NodeRecord;
-extern const NodeRecord GENESIS_RECORD;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
+extern const NodeRecord GENESIS_RECORD;
 
 class ChainState {
 public:
@@ -17,19 +17,12 @@ public:
     uint64_t hashRate;
 
 
-    // TODO: remove these two pointers as ChainState
-    //       instances will be stored in deque in Chain
-    std::shared_ptr<ChainState> pprevious;
-    std::weak_ptr<ChainState> pnext;
-
-    // a vector consists of blocks in the level set of this chain state
-    std::vector<RecordPtr> vblockstore;
-    std::vector<uint256> pubkeySnapshot;
-
     // constructor of a chain state of genesis.
     ChainState();
     // constructor of a chain state with all data fields
-    ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous);
+    ChainState(std::shared_ptr<ChainState>, const NodeRecord&, std::vector<uint256>&&);
+    // constructor of a chain state by vstream
+    ChainState(VStream&);
     // copy constructor
     ChainState(const ChainState&) = default;
 
@@ -47,8 +40,6 @@ public:
         return ((height + 1) % params.interval) == 0;
     }
 
-    void UpdateDifficulty(uint64_t blockUpdateTime);
-
     inline uint64_t GetBlockDifficulty() const {
         return (arith_uint256(params.maxTarget) / (blockTarget + 1)).GetLow64();
     }
@@ -57,22 +48,29 @@ public:
         return (arith_uint256(params.maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
-    void Serialize(VStream& s) const {
-        ::Serialize(s, VARINT(height));
-        ::Serialize(s, chainwork.GetCompact());
-        ::Serialize(s, lastUpdateTime);
-        ::Serialize(s, milestoneTarget.GetCompact());
-        ::Serialize(s, blockTarget.GetCompact());
-        ::Serialize(s, VARINT(hashRate));
+    const std::vector<uint256>& GetRecordHashes() const {
+        return vrecordHash_;
     }
 
-    void Deserialize(VStream& s) {
-        ::Deserialize(s, VARINT(height));
-        chainwork.SetCompact(ser_readdata32(s));
-        lastUpdateTime = ser_readdata64(s);
-        milestoneTarget.SetCompact(ser_readdata32(s));
-        blockTarget.SetCompact(ser_readdata32(s));
-        ::Deserialize(s, VARINT(hashRate));
+    const uint256& GetMilestoneHash() const {
+        return vrecordHash_.back(); 
+    }
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(VARINT(height));
+        READWRITE(VARINT(hashRate));
+        READWRITE(lastUpdateTime);
+        if (ser_action.ForRead()) {
+            chainwork.SetCompact(ser_readdata32(s));
+            milestoneTarget.SetCompact(ser_readdata32(s));
+            blockTarget.SetCompact(ser_readdata32(s));
+        } else {
+            ::Serialize(s, chainwork.GetCompact());
+            ::Serialize(s, milestoneTarget.GetCompact());
+            ::Serialize(s, blockTarget.GetCompact());
+        }
     }
 
     bool operator==(const ChainState& rhs) const {
@@ -82,7 +80,23 @@ public:
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
     }
+
+    bool operator!=(const ChainState& another) const { 
+        return !(*this == another);
+    }
+
+private:
+    // a vector consists of hashes of blocks in level set of this chain state
+    std::vector<uint256> vrecordHash_;
+    // TODO: a vector of TXOC: changes on transaction outputs from previous chain state
+
+    void UpdateDifficulty(uint64_t blockUpdateTime);
 };
+
+typedef std::shared_ptr<ChainState> ChainStatePtr;
+
+ChainStatePtr make_shared_ChainState();
+ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
  * A structure that contains a shared_ptr<const BlockNet> that will
@@ -108,7 +122,7 @@ public:
     uint64_t minerChainHeight;
 
     bool isMilestone = false;
-    std::shared_ptr<ChainState> snapshot;
+    ChainStatePtr snapshot;
 
     Validity validity;
 
@@ -119,7 +133,7 @@ public:
     NodeRecord(const BlockNet&);
     NodeRecord(VStream&);
 
-    void LinkChainState(ChainState&);
+    void LinkChainState(ChainStatePtr);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
 
@@ -129,14 +143,15 @@ public:
     bool operator==(const NodeRecord& another) const {
         return std::tie(*cBlock, cumulativeReward, minerChainHeight) ==
                    std::tie(*(another.cBlock), another.cumulativeReward, another.minerChainHeight) &&
-               ((snapshot == nullptr || another.snapshot == nullptr) ? true : (*(snapshot) == *(another.snapshot)));
+               ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot));
     }
 
     static NodeRecord CreateGenesisRecord();
 };
 
 namespace std {
-string to_string(const NodeRecord&);
+string to_string(const ChainState&);
+string to_string(const NodeRecord& rec, bool showtx = false);
 } // namespace std
 
-#endif /* ifndef __SRC_CONSENSUS_H__ */
+#endif // __SRC_CONSENSUS_H__

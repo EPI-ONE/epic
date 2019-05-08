@@ -1,8 +1,12 @@
 #include <gtest/gtest.h>
 
 #include "chain.h"
+#include "test_factory.h"
 
-class DFSTest : public testing::Test {};
+class DFSTest : public testing::Test {
+public:
+    TestFactory fac;
+};
 
 TEST_F(DFSTest, empty_pending_blocks_map) {
     Chain chain;
@@ -23,10 +27,7 @@ TEST_F(DFSTest, complex_test) {
     blocks.reserve(n);
 
     for (std::size_t i = 0; i < n; i++) {
-        blocks.push_back(Block());
-
-        // faster than solving the blocks
-        blocks[i].RandomizeHash();
+        blocks.push_back(fac.CreateBlock());
 
         // time is used as the node id
         blocks[i].SetTime(i);

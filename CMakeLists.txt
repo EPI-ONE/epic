@@ -87,6 +87,8 @@ set(SRC_MAIN src/main.cpp)
 
 
 # test codes
+set(TEST_METHODS_SRCS test/test-methods)
+
 aux_source_directory(test/net TEST_NET_SRCS)
 aux_source_directory(test/utils TEST_UTILS_SRCS)
 aux_source_directory(test/tasm TEST_TASM_SRCS)
@@ -95,7 +97,9 @@ aux_source_directory(test/core TEST_CORE_SRCS)
 aux_source_directory(test/support TEST_SUPPORT_SRCS)
 aux_source_directory(test/test-methods TEST_METHODS_SRCS)
 
-include_directories(test)
+include_directories(test
+    ${TEST_METHODS_SRCS}
+    )
 
 set(TEST_CODE
         ${TEST_NET_SRCS}
