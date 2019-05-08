@@ -2,17 +2,25 @@
 #define EPIC_CLEANSE_H
 
 #define __STDC_WANT_LIB_EXT1__ 1
+
+#include <cassert>
 #include <cstring>
+#include <immintrin.h>
 
-typedef void* (*memset_t)(void*, int, std::size_t);
-static volatile memset_t memset_safe = std::memset;
+void* memset_zero_tmp(void* ptr, std::size_t len);
+void* memset_zero_ntmp(void* ptr, std::size_t len);
 
+typedef void* (*memset_zero_t)(void*, std::size_t);
+static volatile memset_zero_t memset_safe_zero_tmp  = memset_zero_tmp;
+static volatile memset_zero_t memset_safe_zero_ntmp = memset_zero_ntmp;
+
+template <bool FinalCleanse = false>
 inline void memory_cleanse(void* ptr, std::size_t len) {
-#ifdef __STDC_LIB_EXT1__
-    memset_s(ptr, len, 0, len);
-#else
-    memset_safe(ptr, 0, len);
-#endif
+    if (FinalCleanse) {
+        memset_safe_zero_ntmp(ptr, len);
+    } else {
+        memset_safe_zero_tmp(ptr, len);
+    }
 }
 
 #endif
