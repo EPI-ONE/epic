@@ -7,19 +7,19 @@
 #include <cstring>
 #include <immintrin.h>
 
-void* memset_tmp(void* ptr, int value, std::size_t len);
-void* memset_ntmp(void* ptr, int value, std::size_t len);
+void* memset_zero_tmp(void* ptr, std::size_t len);
+void* memset_zero_ntmp(void* ptr, std::size_t len);
 
-typedef void* (*memset_t)(void*, int, std::size_t);
-static volatile memset_t memset_safe_tmp  = memset_tmp;
-static volatile memset_t memset_safe_ntmp = memset_ntmp;
+typedef void* (*memset_zero_t)(void*, std::size_t);
+static volatile memset_zero_t memset_safe_zero_tmp  = memset_zero_tmp;
+static volatile memset_zero_t memset_safe_zero_ntmp = memset_zero_ntmp;
 
 template <bool FinalCleanse = false>
 inline void memory_cleanse(void* ptr, std::size_t len) {
     if (FinalCleanse) {
-        memset_safe_ntmp(ptr, 0, len);
+        memset_safe_zero_ntmp(ptr, len);
     } else {
-        memset_safe_tmp(ptr, 0, len);
+        memset_safe_zero_tmp(ptr, len);
     }
 }
 
