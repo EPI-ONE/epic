@@ -13,19 +13,7 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
     Block b = Block(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
 
     if (numTxInput || numTxOutput) {
-        Transaction tx;
-        int maxPos = rand() % 128 + 1;
-        for (int i = 0; i < numTxInput; ++i) {
-            uint256 inputH;
-            inputH.randomize();
-            tx.AddInput(TxInput(inputH, i % maxPos, Listing(std::vector<unsigned char>(i))));
-        }
-
-        for (int i = 0; i < numTxOutput; ++i) {
-            tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
-        }
-
-        b.AddTransaction(tx);
+        b.AddTransaction(FakeTx(numTxInput, numTxOutput));
     }
 
     b.FinalizeHash();
@@ -36,6 +24,26 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
     }
 
     return b;
+}
+
+ConstBlockPtr FakeBlockPtr(int numTxInput, int numTxOutput, bool solve) {
+    ConstBlockPtr b = std::make_shared<BlockNet>(FakeBlock(numTxInput, numTxOutput, solve));
+    return b;
+}
+
+Transaction FakeTx(int numTxInput, int numTxOutput) {
+    Transaction tx;
+    int maxPos = rand() % 128 + 1;
+    for (int i = 0; i < numTxInput; ++i) {
+        uint256 inputH;
+        inputH.randomize();
+        tx.AddInput(TxInput(inputH, i % maxPos, Listing(std::vector<unsigned char>(i))));
+    }
+
+    for (int i = 0; i < numTxOutput; ++i) {
+        tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
+    }
+    return tx;
 }
 
 NodeRecord FakeNodeRecord(const BlockNet& b) {
@@ -58,7 +66,6 @@ NodeRecord FakeNodeRecord(const BlockNet& b) {
     return rec;
 }
 
-ConstBlockPtr FakeBlockPtr(int numTxInput, int numTxOutput, bool solve) {
-    ConstBlockPtr b = std::make_shared<BlockNet>(FakeBlock(numTxInput, numTxOutput, solve));
-    return b;
+NodeRecord FakeNodeRecord(int numTxInput, int numTxOutput, bool solve) {
+    return FakeNodeRecord(FakeBlock(numTxInput, numTxOutput, solve));
 }
