@@ -27,11 +27,10 @@ TEST_F(ThreadPoolSolverTest, simple_test) {
     /*
      * test the solver
      */
-    std::size_t numThreads = 4;
-    ThreadPool solverPool(numThreads);
+    ThreadPool solverPool(4);
 
     solverPool.Start();
-    block.Solve(numThreads, solverPool);
+    block.Solve(solverPool);
     solverPool.Stop();
 
     EXPECT_TRUE(block.Verify());

@@ -298,15 +298,16 @@ void Block::RandomizeHash() {
     hash_.randomize();
 }
 
-void Block::Solve(int numThreads, ThreadPool& solverPool) {
+void Block::Solve(ThreadPool& solverPool) {
     arith_uint256 target = GetTargetAsInteger();
+    std::size_t nthreads = solverPool.size();
     uint64_t final_time  = time_;
 
     uint32_t default_nonce            = 0;
     std::atomic<uint32_t> final_nonce = default_nonce;
 
-    for (std::size_t i = 1; i <= numThreads; ++i) {
-        solverPool.Execute([this, &final_nonce, &final_time, &default_nonce, i, target, numThreads]() {
+    for (std::size_t i = 1; i <= nthreads; ++i) {
+        solverPool.Execute([this, &final_nonce, &final_time, &default_nonce, i, target, nthreads]() {
             Block blk(*this);
             blk.nonce_ = i;
             blk.FinalizeHash();
@@ -320,11 +321,11 @@ void Block::Solve(int numThreads, ThreadPool& solverPool) {
                     break;
                 }
 
-                if (blk.nonce_ >= UINT_LEAST32_MAX - numThreads) {
+                if (blk.nonce_ >= UINT_LEAST32_MAX - nthreads) {
                     blk.time_  = time(nullptr);
                     blk.nonce_ = i;
                 } else {
-                    blk.nonce_ += numThreads;
+                    blk.nonce_ += nthreads;
                 }
 
                 blk.CalculateHash();
