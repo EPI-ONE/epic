@@ -88,7 +88,6 @@ bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
     VStream value;
     value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
     block->SerializeToDB(value);
-
     Slice valueSlice(value.data(), value.size());
 
     return Write(kDefaultColumnFamilyName, keySlice, valueSlice);

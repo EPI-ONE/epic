@@ -41,6 +41,9 @@ public:
 class TestRocksDB : public testing::Test {
 public:
     static TestImplRocksDBStore* db;
+    static std::vector<BlockPtr> blocks;
+    static std::vector<uint256> keys;
+    static size_t size;
 
 protected:
     // Shared resource across all test cases
@@ -53,6 +56,15 @@ protected:
         os << time(nullptr);
         filename = PREFIX + os.str();
         db       = new TestImplRocksDBStore(filename);
+
+        // Initialize batch blocks and keys
+        // blocks.reserve(size);
+        // keys.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            BlockPtr b = FakeBlockPtr(rand() % 100 + 1, rand() % 100 + 1, true);
+            blocks[i]  = b;
+            keys[i]    = b->GetHash();
+        }
     }
 
     void SetUp() {}
@@ -64,7 +76,8 @@ protected:
         std::string cmd = "exec rm -r " + PREFIX;
         system(cmd.c_str());
         delete db;
-        db = nullptr;
+        blocks.clear();
+        keys.clear();
     }
 
     // Creates a random string using numbers and alphabet with given length
@@ -82,7 +95,10 @@ protected:
     }
 };
 
-TestImplRocksDBStore* TestRocksDB::db = nullptr;
+TestImplRocksDBStore* TestRocksDB::db     = nullptr;
+size_t TestRocksDB::size                  = 1000;
+std::vector<BlockPtr> TestRocksDB::blocks = std::vector<BlockPtr>(size);
+std::vector<uint256> TestRocksDB::keys    = std::vector<uint256>(size);
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     const std::string column = "default";
@@ -97,7 +113,7 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
 }
 
 TEST_F(TestRocksDB, batch_insertion) {
-    const std::string column = "default";
+    const std::string column                 = "default";
     std::map<std::string, std::string> batch = {};
     for (int i = 0; i < 1000; ++i) {
         auto key   = RandomString(32);
@@ -119,15 +135,18 @@ TEST_F(TestRocksDB, write_single_block) {
 }
 
 TEST_F(TestRocksDB, write_batch_blocks) {
-    size_t size = 100;
-    std::vector<BlockPtr> blocks(size);
-    std::vector<uint256> keys(size);
-    for (int i = 0; i < size; ++i) {
-        BlockPtr b = FakeBlockPtr(i, i, true);
-        blocks[i] = b;
-        keys[i] = b->GetHash();
-    }
     EXPECT_TRUE(db->WriteBlocks(blocks));
+
+    for (int i = 0; i < size; ++i) {
+        auto pblock = db->GetBlock(keys[i]);
+        EXPECT_EQ(*blocks[i], *pblock);
+    }
+}
+
+TEST_F(TestRocksDB, write_blocks_one_by_one) {
+    for (int i = 0; i < size; ++i) {
+        EXPECT_TRUE(db->WriteBlock(blocks[i]));
+    }
 
     for (int i = 0; i < size; ++i) {
         auto pblock = db->GetBlock(keys[i]);

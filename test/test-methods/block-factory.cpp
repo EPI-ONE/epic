@@ -14,6 +14,11 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
 
     if (numTxInput || numTxOutput) {
         b.AddTransaction(FakeTx(numTxInput, numTxOutput));
+        if (rand() % 2) {
+            b.GetTransaction()->Validate();
+        } else {
+            b.GetTransaction()->Invalidate();
+        }
     }
 
     b.FinalizeHash();

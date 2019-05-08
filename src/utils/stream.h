@@ -153,7 +153,7 @@ public:
         // Read from the beginning of the buffer
         unsigned int nReadPosNext = readPos_ + nSize;
         if (nReadPosNext > chars_.size()) {
-            throw std::ios_base::failure("Stream::read(): end of data");
+            throw std::ios_base::failure("VStream::read(): end of data");
         }
 
         memcpy(pch, &chars_[readPos_], nSize);
@@ -169,13 +169,13 @@ public:
     void ignore(int nSize) {
         // Ignore from the beginning of the buffer
         if (nSize < 0) {
-            throw std::ios_base::failure("Stream::ignore(): nSize negative");
+            throw std::ios_base::failure("VStream::ignore(): nSize negative");
         }
 
         unsigned int nReadPosNext = readPos_ + nSize;
         if (nReadPosNext >= chars_.size()) {
             if (nReadPosNext > chars_.size())
-                throw std::ios_base::failure("Stream::ignore(): end of data");
+                throw std::ios_base::failure("VStream::ignore(): end of data");
             readPos_ = 0;
             chars_.clear();
             return;
