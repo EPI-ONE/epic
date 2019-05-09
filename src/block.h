@@ -34,8 +34,8 @@ typedef struct Milestone {
     std::weak_ptr<Milestone> pnext;
     
     // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<std::shared_ptr<Block>> vblockstore_;
-    std::vector<uint256> pubkeySnapshot_;
+    std::vector<std::shared_ptr<Block>> vblockstore;
+    std::vector<uint256> pubkeySnapshot;
 
     // constructor of a milestone of genesis.
     Milestone();

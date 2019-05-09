@@ -1,5 +1,61 @@
 #include "block.h"
 
+
+Milestone::Milestone() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
+    milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
+    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
+    hashRate        = GetMsDifficulty() / params.timeInterval;
+}
+
+ Milestone::Milestone(std::shared_ptr<Block> pblock, std::shared_ptr<Milestone> previous) : pprevious(previous) {
+    pblock->SetMilestoneInstance(*this);
+    if (pprevious != nullptr) {
+        height    = pprevious->height + 1;
+        chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->GetHash()));
+
+         lastUpdateTime  = pprevious->lastUpdateTime;
+        milestoneTarget = pprevious->milestoneTarget;
+        blockTarget     = pprevious->blockTarget;
+
+         UpdateDifficulty(pblock->GetTime());
+    } else {
+        // TODO: go somewhere to find the height
+    }
+}
+
+ void Milestone::UpdateDifficulty(const uint64_t blockUpdateTime) {
+    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = params.targetTimespan;
+    if (timespan < targetTimespan / 4) {
+        timespan = targetTimespan / 4;
+    }
+    if (timespan > targetTimespan * 4) {
+        timespan = targetTimespan * 4;
+    }
+
+     if (height == 1) {
+        lastUpdateTime = blockUpdateTime;
+        timespan = params.timeInterval;
+    }
+
+     if (!IsDiffTransition()) {
+        hashRate = ((height + 1) % params.interval) * GetMsDifficulty() / timespan;
+        return;
+    }
+
+     hashRate        = params.interval * GetMsDifficulty() / timespan;
+    milestoneTarget = milestoneTarget * timespan / targetTimespan;
+    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS);
+    blockTarget *= params.timeInterval;
+
+     if (blockTarget > params.maxTarget) {
+        // in case that it is not difficult in this round
+        blockTarget     = params.maxTarget;
+        milestoneTarget = blockTarget * arith_uint256(params.timeInterval / params.targetTPS);
+    }
+
+     lastUpdateTime = blockUpdateTime;
+}
+
 Block::Block() {
     SetNull();
 }

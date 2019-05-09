@@ -10,13 +10,11 @@
 
 class Chain {
 public:
-    Chain() {
-        Chain(false);
-    }
+    Chain() : Chain(false) {}
     Chain(bool mainchain);
     Chain(const Chain&);
     // add block to this chain
-    void AddBlock(const std::shared_ptr<Block> pblock);
+    void AddBlock(const std::shared_ptr<const Block> pblock);
 
     // find the most recent common milestone compared with the other chain
     std::shared_ptr<Milestone> FindSplit(std::shared_ptr<const Chain> pchain) const;
@@ -45,7 +43,7 @@ private:
     // store blocks not yet verified in this chain
     std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
 
-    inline bool IsMilestone(const std::shared_ptr<Block> pblock);
+    bool IsMilestone(const std::shared_ptr<Block> pblock);
 
     // when we add a milestone block to this chain, we start verification
     std::shared_ptr<Milestone> MilestoneVerify(const std::shared_ptr<Block> pblock);

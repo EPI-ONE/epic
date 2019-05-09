@@ -2,6 +2,7 @@
 #include <random>
 
 #include "utxo.h"
+#include "chain.h"
 
 typedef Tasm::Listing Listing;
 
@@ -134,4 +135,10 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_NE(0, arrayMs[i-1]->hashRate);
         ASSERT_LE(arrayMs[i-1]->chainwork, arrayMs[i]->chainwork);
     }
+}
+
+TEST_F(TestConsensus, Chain) {
+    Chain chain1{};
+    Chain chain2(false);
+    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
 }
