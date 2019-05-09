@@ -22,10 +22,15 @@ public:
     ~OrphanBlocksContainer();
 
     /*
-     * returns the number of blocks
-     * held in this OBC
+     * returns the number of missing
+     * hashes necessary to empty the OBC
      */
     size_t Size() const;
+
+    /*
+     * returns the number dependencies
+     * managed by the OBC */
+    size_t DependencySize() const;
 
     /*
      * this->size() == 0

@@ -9,6 +9,10 @@ std::size_t OrphanBlocksContainer::Size() const {
     return lose_ends_.size();
 }
 
+std::size_t OrphanBlocksContainer::DependencySize() const {
+    return block_dep_map_.size();
+}
+
 bool OrphanBlocksContainer::Empty() const {
     return this->Size() == 0;
 }
