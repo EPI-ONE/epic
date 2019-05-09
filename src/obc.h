@@ -1,45 +1,68 @@
 #ifndef __SRC_OBC_H__
 #define __SRC_OBC_H__
 
+#include <map>
 #include <vector>
 
 #include "block.h"
 
+/*!! NOT THREAD SAFE !!*/
 class OrphanBlocksContainer {
 public:
-    OrphanBlocksContainer() : thread_(1) {}
+    /*
+     * constructs:
+     * 1: initializes block_dep_map
+     * 2: initializes lose_ends map
+     */
+    OrphanBlocksContainer() = default;
 
-    bool Add(const BlockPtr& b);
+    /*
+     * clear all maps
+     */
+    ~OrphanBlocksContainer();
 
-    void Remove(const BlockPtr& b);
+    /*
+     * returns the number of blocks
+     * held in this OBC
+     */
+    size_t Size() const;
 
-    bool Contains(const uint256& blockHash) const;
+    /*
+     * this->size() == 0
+     */
+    bool Empty() const;
 
-    inline bool IsEmpty() {
-        return ODict_.empty();
-    }
+    /*
+     * checks if a block is an orphan
+     */
+    bool Contains(const uint256& hash) const;
 
-    size_t size() {
-        size_t size = 0;
-        for (auto& it : solidDegree_) {
-            size += it.second.size();
-        }
-        return size;
-    }
+    /*
+     * adds block to OBC
+     * m_missing: true -> milestone is missing
+     * t_missing: true -> tip is missing
+     * p_missing: true -> prev is missing
+     */
+    void AddBlock(const BlockPtr& block, bool m_missing, bool t_missing, bool p_missing);
 
     /*
      * Submits a task to thread_ that releases any block from OBC
      * that becomes solid with blockHash being its antecedent.
      */
-    void ReleaseBlocks(const uint256& blockHash);
-
-    ~OrphanBlocksContainer();
+    std::optional<std::vector<BlockPtr>> SubmitHash(const uint256& hash);
 
 private:
-    ThreadPool thread_;
-    std::unordered_map<uint256, std::unordered_set<BlockPtr>> ODict_;
-    std::unordered_map<uint8_t, std::unordered_set<uint256>> solidDegree_;
-    std::vector<BlockPtr> updateOne(uint256& blockHash);
+    struct obc_dependency {
+        uint_fast8_t ndeps;
+        std::vector<std::shared_ptr<struct obc_dependency>> deps;
+        BlockPtr block;
+    };
+
+    typedef struct obc_dependency obc_dep;
+    typedef std::shared_ptr<obc_dep> obc_dep_ptr;
+
+    std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;
+    std::multimap<uint256, obc_dep_ptr> lose_ends_;
 };
 
 
