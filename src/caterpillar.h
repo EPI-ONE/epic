@@ -36,9 +36,7 @@ private:
     RocksDBStore dbStore_;
     OrphanBlocksContainer obc_;
 
-    inline bool Exists(const uint256& blockHash) const {
-        return dbStore_.Exists(blockHash) || obc_.Contains(blockHash);
-    }
+    inline bool Exists(const uint256& blockHash) const;
 
     bool CheckPuntuality(const BlockPtr& blk, std::unique_ptr<Block> ms = nullptr) const;
 };
