@@ -25,28 +25,28 @@ public:
 
     void Stop();
 
-    /*
+    /**
      * bind and listen to a local address
      * @param bindAddress
      * @return true if success
      */
     bool Bind(NetAddress& bindAddress);
 
-    /*
+    /**
      * bind and listen to a local address string
      * @param bindAddress
      * @return true if success
      */
     bool Bind(const std::string& bindAddress);
 
-    /*
+    /**
      * connect to a specified address
      * @param connectTo
      * @return true if success
      */
     bool ConnectTo(NetAddress& connectTo);
 
-    /*
+    /**
      * connect to a specified address string
      * @param connectTo
      * @return true if success
@@ -67,13 +67,20 @@ public:
      * event happens
      * @param connection_handle
      */
-    void OnConnectionClosed(void* connection_handle);
+    void OnConnectionClosed(const void* connection_handle);
 
     /*
      * get size of all peers(including not fully connected ones)
      * @return
      */
     size_t GetConnectedPeerSize();
+
+
+    /*
+     * get size of all peers(including not fully connected ones)
+     * @return
+     */
+    size_t GetFullyConnectedPeerSize();
 
     /*
      * send a message to specified peer
@@ -86,6 +93,11 @@ public:
      * @param message
      */
     void SendMessage(NetMessage&& message);
+
+    /**
+     * regularly broadcast local address to peers
+     */
+    void SendLocalAddresses();
 
 private:
     /*
@@ -116,29 +128,50 @@ private:
      */
     Peer* GetPeer(const void* connection_handle);
 
-    /*
+    /**
      * add a peer into peer map
      * @param handle
      * @param peer
      */
     void AddPeer(const void* handle, Peer* peer);
 
-    /*
+    /**
      * add a connected address
      * @param address
      */
     void AddAddr(const NetAddress& address);
 
-    /*
+    /**
      * remove a connected address
      * @param address
      */
     void RemoveAddr(const NetAddress& address);
 
-    /*
+    /**
      * a while loop function to receive and process messages
      */
     void HandleMessage();
+
+    /**
+     * a while loop function to setup outbound connection
+     */
+    void OpenConnection();
+
+    /**
+     * a while loop to check the behaviors of peers and disconnect bad peer
+     */
+    void ScheduleTask();
+
+    /**
+     * check if one pending peer' s connection is timeout
+     */
+    void CheckPendingPeers();
+
+    /**
+     * check and then earse the address in pending peers
+     * @param address
+     */
+    void UpdatePendingPeers(IPAddress& address);
 
     /*
      * default network parameter based on the protocol
@@ -147,10 +180,28 @@ private:
     // possibility of relaying a block to a peer
     constexpr static float kAlpha = 0.5;
 
+    // max outbound size
+    const size_t kMax_outbound = 8;
+
+    // The default timeout between when a connection attempt begins and version
+    // message exchange completes
+    const static int kConnectionSetupTimeout = 3 * 60;
+
+    // broadcast local address per 24h
+    const static long kBroadLocalAddressInterval = 24 * 60 * 60;
+
+    // timeout between sending ping and receiving pong
+    const static long kPingWaitTimeout = 3 * 60;
+
+    // max number of ping failures
+    const static size_t kMaxPingFailures = 3;
+
     /*
-     * TODO: current local network status
+     * current local network status
      */
 
+    // last time of sending local address
+    long lastSendLocalAddressTime;
 
     /*
      * internal data structures
@@ -161,6 +212,9 @@ private:
 
     // a map to save all peers
     std::unordered_map<const void*, Peer*> peerMap_;
+
+    // a map to save pending peers
+    std::unordered_map<IPAddress, uint64_t> pending_peers;
 
     // lock of connected address set
     std::mutex addressLock_;
@@ -177,10 +231,16 @@ private:
     /*
      * threads
      */
+    std::atomic_bool interrupt_ = false;
 
     // handle message
-    std::atomic_bool interrupt_ = false;
     std::thread handleMessageTask_;
+
+    // continuously choose addresses and connect to them
+    std::thread openConnectionTask_;
+
+    // do some periodical tasks
+    std::thread scheduleTask_;
 };
 
 extern std::unique_ptr<PeerManager> peerManager;

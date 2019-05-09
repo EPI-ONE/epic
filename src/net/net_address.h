@@ -7,6 +7,7 @@
 
 #include <arpa/inet.h>
 #include <iostream>
+#include <netdb.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -24,7 +25,9 @@ enum NetworkType {
 
 class IPAddress {
 public:
-    static std::optional<IPAddress> StringToIP(const std::string& ip_string);
+    static std::optional<IPAddress> GetByIP(const std::string& ip_string);
+
+    static std::optional<IPAddress> GetByHostname(const std::string& hostname);
 
     IPAddress() = default;
 
@@ -100,9 +103,13 @@ struct hash<IPAddress> {
 
 class NetAddress : public IPAddress {
 public:
-    static std::optional<NetAddress> StringToNetAddress(const std::string& netaddr_string);
+    static std::optional<NetAddress> GetByIP(const std::string& netaddr_string);
 
-    static std::optional<NetAddress> StringToNetAddress(const std::string& ip, const uint16_t& port);
+    static std::optional<NetAddress> GetByIP(const std::string& ip, const uint16_t& port);
+
+    static std::optional<NetAddress> GetByHostname(const std::string& netaddr_string);
+
+    static std::optional<NetAddress> GetByHostname(const std::string& hostname, const uint16_t& port);
 
     NetAddress() = default;
 

@@ -16,7 +16,7 @@ IPAddress::IPAddress(const struct in6_addr& ip6) {
     //    setIP((const uint8_t *) &(ip6.__u6_addr.__u6_addr8), NET_IPV6);
 }
 
-std::optional<IPAddress> IPAddress::StringToIP(const std::string& ip_string) {
+std::optional<IPAddress> IPAddress::GetByIP(const std::string& ip_string) {
     if (ip_string.find(':') == std::string::npos) {
         struct sockaddr_in sa;
         if (inet_pton(AF_INET, ip_string.c_str(), &sa.sin_addr) != 0) {
@@ -28,6 +28,28 @@ std::optional<IPAddress> IPAddress::StringToIP(const std::string& ip_string) {
             return IPAddress(sa.sin6_addr);
         }
     }
+    return {};
+}
+
+std::optional<IPAddress> IPAddress::GetByHostname(const std::string& hostname) {
+    struct addrinfo hints, *result, *p;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    if (getaddrinfo(hostname.c_str(), nullptr, &hints, &result) != 0) {
+        return {};
+    }
+
+    for (p = result; p != nullptr; p = p->ai_next) {
+        if (p->ai_family == AF_INET) {
+            auto* ip = (struct sockaddr_in*) p->ai_addr;
+            return IPAddress(ip->sin_addr);
+        } else if (p->ai_family == AF_INET6) {
+            auto* ip = (struct sockaddr_in6*) p->ai_addr;
+            return IPAddress(ip->sin6_addr);
+        }
+    }
+
     return {};
 }
 
@@ -183,22 +205,46 @@ NetAddress::NetAddress(const struct in_addr& ip4, uint16_t port) : IPAddress(ip4
 
 NetAddress::NetAddress(const struct in6_addr& ip6, uint16_t port) : IPAddress(ip6), port_(port) {}
 
-std::optional<NetAddress> NetAddress::StringToNetAddress(const std::string& netaddr_string) {
+std::optional<NetAddress> NetAddress::GetByIP(const std::string& netaddr_string) {
     std::string ip;
     int port;
     SplitHostPort(netaddr_string, port, ip);
     if (port != -1) {
-        std::optional<IPAddress> ipAddress = IPAddress::StringToIP(ip);
-        if (ipAddress.has_value()) {
+        std::optional<IPAddress> ipAddress = IPAddress::GetByIP(ip);
+        if (ipAddress) {
+            return NetAddress(*ipAddress, port);
+        }
+    }
+
+    return {};
+}
+
+std::optional<NetAddress> NetAddress::GetByIP(const std::string& ip, const uint16_t& port) {
+    std::optional<IPAddress> ipAddress = IPAddress::GetByIP(ip);
+    if (ipAddress) {
+        return NetAddress(*ipAddress, port);
+    }
+
+    return {};
+}
+
+std::optional<NetAddress> NetAddress::GetByHostname(const std::string& netaddr_string) {
+    std::string hostname;
+    int port;
+    SplitHostPort(netaddr_string, port, hostname);
+
+    if (port != -1) {
+        std::optional<IPAddress> ipAddress = IPAddress::GetByHostname(hostname);
+        if (ipAddress) {
             return NetAddress(*ipAddress, port);
         }
     }
     return {};
 }
 
-std::optional<NetAddress> NetAddress::StringToNetAddress(const std::string& ip, const uint16_t& port) {
-    std::optional<IPAddress> ipAddress = IPAddress::StringToIP(ip);
-    if (ipAddress.has_value()) {
+std::optional<NetAddress> NetAddress::GetByHostname(const std::string& hostname, const uint16_t& port) {
+    std::optional<IPAddress> ipAddress = IPAddress::GetByHostname(hostname);
+    if (ipAddress) {
         return NetAddress(*ipAddress, port);
     }
     return {};

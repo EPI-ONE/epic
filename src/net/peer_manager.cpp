@@ -13,22 +13,39 @@ PeerManager::~PeerManager() {
 void PeerManager::Start() {
     spdlog::info("Starting the Peer Manager...");
     addressManager_->Init();
+
     connectionManager_->RegisterNewConnectionCallback(std::bind(
         &PeerManager::OnConnectionCreated, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
     connectionManager_->RegisterDeleteConnectionCallBack(
         std::bind(&PeerManager::OnConnectionClosed, this, std::placeholders::_1));
+
+    //    Bind(config->GetBindAddress() + ":" + std::to_string(config->GetBindPort()));
+
     connectionManager_->Start();
-    handleMessageTask_ = std::thread(std::bind(&PeerManager::HandleMessage, this));
+
+    handleMessageTask_  = std::thread(std::bind(&PeerManager::HandleMessage, this));
+    scheduleTask_       = std::thread(std::bind(&PeerManager::ScheduleTask, this));
+    openConnectionTask_ = std::thread(std::bind(&PeerManager::OpenConnection, this));
 }
 
 void PeerManager::Stop() {
     spdlog::info("Stopping the Peer Manager...");
-    connectionManager_->Stop();
     interrupt_ = true;
+
+    connectionManager_->Stop();
 
     if (handleMessageTask_.joinable()) {
         handleMessageTask_.join();
     }
+
+    if (scheduleTask_.joinable()) {
+        scheduleTask_.detach();
+    }
+
+    if (openConnectionTask_.joinable()) {
+        openConnectionTask_.detach();
+    }
+
 
     std::unique_lock<std::mutex> lock(peerLock_);
     for (auto peer_entry : peerMap_) {
@@ -40,8 +57,8 @@ void PeerManager::Stop() {
 }
 
 void PeerManager::OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound) {
-    std::optional<NetAddress> net_address = NetAddress::StringToNetAddress(address);
-    assert(net_address);
+    std::optional<NetAddress> net_address = NetAddress::GetByIP(address);
+
     // disconnect if we have connected to the same ip address
     if (HasConnectedTo(*net_address)) {
         connectionManager_->Disconnect(connection_handle);
@@ -51,6 +68,7 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
     Peer* peer = CreatePeer(connection_handle, *net_address, inbound);
 
     AddPeer(connection_handle, peer);
+    UpdatePendingPeers(*net_address);
     AddAddr(peer->address);
     spdlog::info("{} {}   ({} connected)", inbound ? "Accept" : "Connect to", address, GetConnectedPeerSize());
 
@@ -65,7 +83,7 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
     }
 }
 
-void PeerManager::OnConnectionClosed(void* connection_handle) {
+void PeerManager::OnConnectionClosed(const void* connection_handle) {
     Peer* p = nullptr;
     {
         std::unique_lock<std::mutex> lk(peerLock_);
@@ -98,7 +116,7 @@ bool PeerManager::Bind(NetAddress& bindAddress) {
 }
 
 bool PeerManager::Bind(const std::string& bindAddress) {
-    std::optional<NetAddress> opt = NetAddress::StringToNetAddress(bindAddress);
+    std::optional<NetAddress> opt = NetAddress::GetByIP(bindAddress);
     return opt ? Bind(*opt) : false;
 }
 
@@ -107,13 +125,24 @@ bool PeerManager::ConnectTo(NetAddress& connectTo) {
 }
 
 bool PeerManager::ConnectTo(const std::string& connectTo) {
-    std::optional<NetAddress> opt = NetAddress::StringToNetAddress(connectTo);
+    std::optional<NetAddress> opt = NetAddress::GetByIP(connectTo);
     return opt ? ConnectTo(*opt) : false;
 }
 
 size_t PeerManager::GetConnectedPeerSize() {
     std::unique_lock<std::mutex> lk(peerLock_);
     return peerMap_.size();
+}
+
+size_t PeerManager::GetFullyConnectedPeerSize() {
+    std::unique_lock<std::mutex> lk(peerLock_);
+    size_t count = 0;
+    for (auto& it : peerMap_) {
+        if (it.second->isFullyConnected) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 bool PeerManager::HasConnectedTo(const IPAddress& address) {
@@ -143,6 +172,85 @@ void PeerManager::HandleMessage() {
     }
 }
 
+void PeerManager::OpenConnection() {
+    while (!interrupt_) {
+        CheckPendingPeers();
+        if (connectionManager_->GetOutboundNum() + pending_peers.size() > kMax_outbound) {
+            std::this_thread::yield();
+        }
+        auto seed = addressManager_->GetOneSeed();
+        if (seed) {
+            NetAddress seed_address = NetAddress(*seed, config->defaultPort);
+            ConnectTo(seed_address);
+        }
+
+        int num_tries = 0;
+        while (num_tries < 100) {
+            ++num_tries;
+            auto try_to_connect = addressManager_->GetOneAddress(false);
+
+            // means we don't have enough addresses to connect
+            if (!try_to_connect) {
+                std::this_thread::yield();
+                break;
+            }
+
+            // check if we have connected to the address
+            if (HasConnectedTo(*try_to_connect)) {
+                continue;
+            }
+
+            uint64_t now     = time(nullptr);
+            uint64_t lastTry = addressManager_->GetLastTry(*try_to_connect);
+
+            // we don't try to connect to an address twice in 2 minutes
+            if (now - lastTry < 120) {
+                continue;
+            }
+
+            std::cout << "try to connect to " + try_to_connect->ToString();
+            ConnectTo(*try_to_connect);
+            pending_peers.insert(std::make_pair(*try_to_connect, now));
+            addressManager_->SetLastTry(*try_to_connect, now);
+            break;
+        }
+    }
+}
+
+void PeerManager::ScheduleTask() {
+    while (!interrupt_) {
+        sleep(1 * 60);
+        for (auto& it : peerMap_) {
+            Peer* peer = it.second;
+            if (peer->isFullyConnected) {
+                // check ping timeout
+                if (peer->GetLastPingTime() > peer->GetLastPongTime() + kPingWaitTimeout ||
+                    peer->GetNPingFailed() > kMaxPingFailures) {
+                    spdlog::info("[NET:disconnect]: fully connected peer {} ping timeout", peer->address.ToString());
+                    peer->disconnect = true;
+                }
+            } else {
+                if (peer->connected_time + kConnectionSetupTimeout < time(nullptr)) {
+                    spdlog::info("[NET:disconnect]: non-fully connected peer {} version handshake timeout",
+                        peer->address.ToString());
+                    peer->disconnect = true;
+                }
+            }
+
+            if (!peer->disconnect) {
+                peer->SendMessages();
+            }
+
+            // disconnect peers
+            if (peer->disconnect) {
+                connectionManager_->Disconnect(peer->connection_handle);
+                OnConnectionClosed(peer->connection_handle);
+            }
+        }
+        SendLocalAddresses();
+    }
+}
+
 Peer* PeerManager::GetPeer(const void* connection_handle) {
     std::unique_lock<std::mutex> lk(peerLock_);
     auto it = peerMap_.find(connection_handle);
@@ -162,4 +270,40 @@ void PeerManager::AddAddr(const NetAddress& address) {
 void PeerManager::RemoveAddr(const NetAddress& address) {
     std::unique_lock<std::mutex> lk(addressLock_);
     connectedAddress_.erase(address);
+}
+
+void PeerManager::SendLocalAddresses() {
+    if (lastSendLocalAddressTime + kBroadLocalAddressInterval >= time(nullptr)) {
+        return;
+    }
+
+    auto local_address = addressManager_->GetBestLocalAddress();
+    if (local_address.IsRoutable()) {
+        AddressMessage msg = AddressMessage();
+        msg.AddAddress(NetAddress(local_address, config->GetBindPort()));
+        auto data = VStream(msg);
+        for (auto& it : peerMap_) {
+            NetMessage message(it.first, ADDR, data);
+            SendMessage(message);
+        }
+    }
+}
+
+void PeerManager::CheckPendingPeers() {
+    std::unique_lock<std::mutex> lk(addressLock_);
+    for (auto it = pending_peers.begin(); it != pending_peers.end();) {
+        if (it->second + 60 < time(nullptr)) {
+            pending_peers.erase(it++);
+        } else {
+            it++;
+        }
+    }
+}
+
+void PeerManager::UpdatePendingPeers(IPAddress& address) {
+    std::unique_lock<std::mutex> lk(addressLock_);
+    auto it = pending_peers.find(address);
+    if (it != pending_peers.end()) {
+        pending_peers.erase(it);
+    }
 }

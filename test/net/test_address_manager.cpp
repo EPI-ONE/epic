@@ -7,10 +7,10 @@ public:
     AddressManager addressManager;
     std::string addressFilePath = "test_address.toml";
 
-    IPAddress ip1 = *IPAddress::StringToIP("127.0.0.1");
-    IPAddress ip2 = *IPAddress::StringToIP("192.168.0.1");
-    IPAddress ip3 = *IPAddress::StringToIP("100.0.0.4");
-    IPAddress ip4 = *IPAddress::StringToIP("172.4.2.111");
+    IPAddress ip1 = *IPAddress::GetByIP("127.0.0.1");
+    IPAddress ip2 = *IPAddress::GetByIP("192.168.0.1");
+    IPAddress ip3 = *IPAddress::GetByIP("100.0.0.4");
+    IPAddress ip4 = *IPAddress::GetByIP("172.4.2.111");
 
     void SetUp() {
         addressManager.AddNewAddress(ip1);

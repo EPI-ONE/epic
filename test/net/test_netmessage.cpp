@@ -12,8 +12,8 @@
 
 class TestNetMsg : public testing::Test {
 public:
-    NetAddress a1 = *NetAddress::StringToNetAddress("127.0.0.1:7877");
-    NetAddress a2 = *NetAddress::StringToNetAddress("127.0.0.1:8245");
+    NetAddress a1 = *NetAddress::GetByIP("127.0.0.1:7877");
+    NetAddress a2 = *NetAddress::GetByIP("127.0.0.1:8245");
 };
 
 TEST_F(TestNetMsg, Ping) {
