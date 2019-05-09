@@ -29,6 +29,9 @@ void OrphanBlocksContainer::AddBlock(const BlockPtr& block, bool m_missing, bool
     dep->block = block;
     dep->ndeps = 0;
 
+    /* insert new dependency into block_dep_map_ */
+    block_dep_map_.insert_or_assign(block->GetHash(), dep);
+
     /* used in the following three if clauses */
     uint256 hash;
 
@@ -127,6 +130,10 @@ std::optional<std::vector<BlockPtr>> OrphanBlocksContainer::SubmitHash(const uin
          * meaning that the block is return as it is not
          * an orphan anymore */
         result.push_back(cursor->block);
+
+        /* this also means that we have to remove the
+         * dependency from the block_dep_map_ */
+        block_dep_map_.erase(cursor->block->GetHash());
 
         /* further we push all dependencies that dependend
          * on this block onto the stack */
