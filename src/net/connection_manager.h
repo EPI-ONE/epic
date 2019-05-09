@@ -11,6 +11,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 
 #include "blocking_queue.h"
@@ -19,7 +20,17 @@
 
 typedef std::function<void(void* connection_handle, std::string& address, bool inbound)> new_connection_callback_t;
 typedef std::function<void(void* connection_handle)> delete_connection_callback_t;
-typedef std::unordered_map<struct bufferevent*, size_t>::iterator bufferevent_map_iter_t;
+
+typedef struct bufferevent bufferevent_t;
+typedef struct event_base event_base_t;
+typedef struct evconnlistener evconnlistener_t;
+typedef struct evbuffer evbuffer_t;
+
+/*
+ * bool if true means inbound, if false means outbound
+ * size_t is the length of next receive message
+ */
+typedef std::tuple<bool, size_t> bev_info_t;
 
 class ConnectionManager {
 public:
@@ -93,7 +104,7 @@ public:
      * the internal read callback function called by bufferevent
      * @param bev
      */
-    void ReadMessages(struct bufferevent* bev);
+    void ReadMessages(bufferevent_t* bev);
 
     /*
      * create a bufferevent and insert into the bufferevent map
@@ -102,17 +113,23 @@ public:
      * @param options
      * @return bufferevent pointer
      */
-    struct bufferevent* CreateBufferevent(struct event_base* base, evutil_socket_t fd, int options);
+    bufferevent_t* CreateBufferevent(event_base_t* base, evutil_socket_t fd, int options, bool inbound);
 
     /*
      * free the bufferevent memory and erase from the bufferevent map
      * @param bev
      */
-    void FreeBufferevent(struct bufferevent* bev);
+    void FreeBufferevent(bufferevent_t* bev);
+
+    uint32_t GetInboundNum() const;
+
+    uint32_t GetOutboundNum() const;
+
+    uint32_t GetConnectionNum() const;
 
 private:
-    struct event_base* base_                                 = nullptr;
-    struct evconnlistener* listener_                         = nullptr;
+    event_base_t* base_                                      = nullptr;
+    evconnlistener_t* listener_                              = nullptr;
     new_connection_callback_t new_connection_callback_       = nullptr;
     delete_connection_callback_t delete_connection_callback_ = nullptr;
 
@@ -123,14 +140,17 @@ private:
 
     std::mutex bev_mtx_;
 
-    /* the key is bufferevent, the value is the length of next receive message */
-    std::unordered_map<struct bufferevent*, size_t> bufferevent_map_;
+    /* the key is bufferevent, the value store the custom information of the bufferevent */
+    std::unordered_map<bufferevent_t*, bev_info_t> bufferevent_map_;
 
     BlockingQueue<NetMessage> receive_message_queue_;
     BlockingQueue<NetMessage> send_message_queue_;
 
+    uint32_t inbound_num_  = 0;
+    uint32_t outbound_num_ = 0;
+
     void FreeAllBufferevent_();
-    bool isExist_(struct bufferevent* bev);
+    bool isExist_(bufferevent_t* bev);
     void ThreadSendMessage_();
 
     /*
@@ -145,28 +165,28 @@ private:
      * @param next_message_length
      * @return true if successful
      */
-    bool ReadOneMessage_(struct bufferevent* bev, size_t& next_message_length);
+    bool ReadOneMessage_(bufferevent_t* bev, size_t& next_message_length);
 
     /*
      * seek next message length in a buffer
      * @param buf evbuffer
      * @return the message length to be received
      */
-    size_t SeekNextMessageLength_(struct evbuffer* buf);
+    size_t SeekNextMessageLength_(evbuffer_t* buf);
 
     /*
      * seek magic number in a buffer
      * @param buf evbuffer
      * @return true if found and release the buffer before the magic number
      */
-    bool SeekMagicNumber_(struct evbuffer* buf);
+    bool SeekMagicNumber_(evbuffer_t* buf);
 
     /*
      * seek the payload length in a buffer which start with magic number
      * @param buf
      * @return the length of the message payload
      */
-    size_t SeekMessagePayloadLength_(struct evbuffer* buf);
+    size_t SeekMessagePayloadLength_(evbuffer_t* buf);
 };
 
 #endif // EPIC_CONNECTION_MANAGER_H

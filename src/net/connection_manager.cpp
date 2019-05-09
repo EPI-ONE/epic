@@ -8,8 +8,11 @@
 #include "message_header.h"
 #include "spdlog.h"
 
+typedef struct sockaddr sockaddr_t;
+typedef struct sockaddr_in sockaddr_in_t;
+
 #define MAKE_SOCKADDR_IN(var, address, port) \
-    struct sockaddr_in var;                  \
+    sockaddr_in_t var;                       \
     memset(&var, 0, sizeof(var));            \
     var.sin_family      = AF_INET;           \
     var.sin_addr.s_addr = (htonl(address));  \
@@ -20,10 +23,10 @@
  * @param addr sockaddr struct
  * @return string format ip:port
  */
-static std::string Address2String(struct sockaddr* addr) {
+static std::string Address2String(sockaddr_t* addr) {
     char buf[64];
     memset(buf, 0, sizeof(buf));
-    struct sockaddr_in* sin = (struct sockaddr_in*) addr;
+    sockaddr_in_t* sin = (sockaddr_in_t*) addr;
     evutil_inet_ntop(sin->sin_family, &sin->sin_addr, buf, sizeof(buf));
     return std::string(buf) + ":" + std::to_string(ntohs(sin->sin_port));
 }
@@ -33,9 +36,9 @@ static std::string Address2String(struct sockaddr* addr) {
  * @param bev bufferevent pointer
  * @return string format ip:port
  */
-static std::string getRemoteAddress(struct bufferevent* bev) {
+static std::string getRemoteAddress(bufferevent_t* bev) {
     evutil_socket_t socket_id = bufferevent_getfd(bev);
-    struct sockaddr addr;
+    sockaddr_t addr;
     socklen_t len = sizeof(sockaddr);
     getpeername(socket_id, &addr, &len);
 
@@ -47,7 +50,7 @@ static std::string getRemoteAddress(struct bufferevent* bev) {
  * @param bev bufferevent
  * @param ctx custom context used for passing the pointer of the ConnectionManager instance
  */
-static void ReadCallback(struct bufferevent* bev, void* ctx) {
+static void ReadCallback(bufferevent_t* bev, void* ctx) {
     ((ConnectionManager*) ctx)->ReadMessages(bev);
 }
 
@@ -57,7 +60,7 @@ static void ReadCallback(struct bufferevent* bev, void* ctx) {
  * @param events event flag
  * @param ctx custom context used for passing the pointer of the ConnectionManager instance
  */
-static void EventCallback(struct bufferevent* bev, short events, void* ctx) {
+static void EventCallback(bufferevent_t* bev, short events, void* ctx) {
     /* socket connect success */
     if (events & BEV_EVENT_CONNECTED) {
         std::string remote_address = getRemoteAddress(bev);
@@ -90,18 +93,14 @@ static void EventCallback(struct bufferevent* bev, short events, void* ctx) {
  * @param socklen the length of sockaddr
  * @param ctx custom context used for passing the pointer of the ConnectionManager instance
  */
-static void AcceptCallback(struct evconnlistener* listener,
-    evutil_socket_t fd,
-    struct sockaddr* addr,
-    int socklen,
-    void* ctx) {
+static void AcceptCallback(evconnlistener_t* listener, evutil_socket_t fd, sockaddr_t* addr, int socklen, void* ctx) {
     std::string address = Address2String(addr);
     spdlog::info("[net] Socket accepted: {}", address);
 
     /* create bufferevent and set callback */
-    struct event_base* base = evconnlistener_get_base(listener);
-    struct bufferevent* bev =
-        ((ConnectionManager*) ctx)->CreateBufferevent(base, fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    event_base_t* base = evconnlistener_get_base(listener);
+    bufferevent_t* bev =
+        ((ConnectionManager*) ctx)->CreateBufferevent(base, fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE, true);
     bufferevent_setcb(bev, ReadCallback, nullptr, EventCallback, ctx);
     bufferevent_enable(bev, EV_READ);
 
@@ -140,7 +139,7 @@ int ConnectionManager::Listen(uint32_t port, uint32_t local_bind_address) {
         return -1;
     }
 
-    spdlog::info("[net] Start listen on {}", Address2String((struct sockaddr*) &sock_addr_in));
+    spdlog::info("[net] Start listen on {}", Address2String((sockaddr_t*) &sock_addr_in));
 
     return 0;
 }
@@ -151,19 +150,19 @@ int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
     }
 
     /* create bufferevent and set callback */
-    struct bufferevent* bev;
-    bev = CreateBufferevent(base_, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE);
+    bufferevent_t* bev;
+    bev = CreateBufferevent(base_, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE, false);
     bufferevent_setcb(bev, ReadCallback, nullptr, EventCallback, this);
 
     MAKE_SOCKADDR_IN(sock_addr_in, remote, port);
 
-    if (bufferevent_socket_connect(bev, (struct sockaddr*) &sock_addr_in, sizeof(sock_addr_in)) != 0) {
-        spdlog::info("[net] Fail to connect: {}", Address2String((struct sockaddr*) &sock_addr_in));
+    if (bufferevent_socket_connect(bev, (sockaddr_t*) &sock_addr_in, sizeof(sock_addr_in)) != 0) {
+        spdlog::info("[net] Fail to connect: {}", Address2String((sockaddr_t*) &sock_addr_in));
         FreeBufferevent(bev);
         return -1;
     }
 
-    spdlog::info("[net] Try to connect: {}", Address2String((struct sockaddr*) &sock_addr_in));
+    spdlog::info("[net] Try to connect: {}", Address2String((sockaddr_t*) &sock_addr_in));
 
     return 0;
 }
@@ -171,7 +170,7 @@ int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
 void ConnectionManager::Disconnect(const void* connection_handle) {
     if (isExist_((bufferevent*) connection_handle)) {
         FreeBufferevent((bufferevent*) connection_handle);
-        spdlog::info("[net] Active disconnect: {}", getRemoteAddress((struct bufferevent*) connection_handle));
+        spdlog::info("[net] Active disconnect: {}", getRemoteAddress((bufferevent_t*) connection_handle));
     } else {
         spdlog::info("[net] Not found connection handle {}", connection_handle);
     }
@@ -191,6 +190,8 @@ void ConnectionManager::Stop() {
     receive_message_queue_.Quit();
 
     interrupt_send_message_ = true;
+
+    FreeAllBufferevent_();
 
     if (base_) {
         event_base_loopexit(base_, nullptr);
@@ -227,20 +228,20 @@ void ConnectionManager::DeleteConnectionCallback(void* connection_handle) {
     }
 }
 
-struct bufferevent* ConnectionManager::CreateBufferevent(struct event_base* base, evutil_socket_t fd, int options) {
-    struct bufferevent* bev;
+bufferevent_t* ConnectionManager::CreateBufferevent(event_base_t* base, evutil_socket_t fd, int options, bool inbound) {
+    bufferevent_t* bev;
     bev = bufferevent_socket_new(base, fd, options);
-
     bev_mtx_.lock();
-    bufferevent_map_.insert(std::pair<struct bufferevent*, uint32_t>(bev, 0));
+    inbound ? inbound_num_++ : outbound_num_++;
+    bufferevent_map_.insert(std::pair<bufferevent_t*, bev_info_t>(bev, std::make_tuple(inbound, 0)));
     bev_mtx_.unlock();
-
     return bev;
 }
 
-void ConnectionManager::FreeBufferevent(struct bufferevent* bev) {
+void ConnectionManager::FreeBufferevent(bufferevent_t* bev) {
     bev_mtx_.lock();
     if (isExist_(bev)) {
+        std::get<0>(bufferevent_map_.at(bev)) ? inbound_num_-- : outbound_num_--;
         bufferevent_map_.erase(bev);
         bufferevent_free(bev);
     }
@@ -253,7 +254,7 @@ void ConnectionManager::FreeAllBufferevent_() {
     }
 }
 
-bool ConnectionManager::isExist_(struct bufferevent* bev) {
+bool ConnectionManager::isExist_(bufferevent_t* bev) {
     return bufferevent_map_.find(bev) != bufferevent_map_.end();
 }
 
@@ -275,7 +276,7 @@ void ConnectionManager::ThreadSendMessage_() {
 }
 
 void ConnectionManager::WriteOneMessage_(NetMessage& message) {
-    struct evbuffer* send_buffer = evbuffer_new();
+    evbuffer_t* send_buffer = evbuffer_new();
 
     /* write message header bytes */
     evbuffer_add(send_buffer, &message.header, sizeof(message_header_t));
@@ -286,7 +287,7 @@ void ConnectionManager::WriteOneMessage_(NetMessage& message) {
     }
 
     bev_mtx_.lock();
-    bufferevent* bev = (bufferevent*) message.GetConnectionHandle();
+    auto bev = (bufferevent_t*) message.GetConnectionHandle();
     if (isExist_(bev)) {
         bufferevent_write_buffer(bev, send_buffer);
     }
@@ -295,12 +296,12 @@ void ConnectionManager::WriteOneMessage_(NetMessage& message) {
     evbuffer_free(send_buffer);
 }
 
-void ConnectionManager::ReadMessages(struct bufferevent* bev) {
-    while (ReadOneMessage_(bev, bufferevent_map_.at(bev))) {
+void ConnectionManager::ReadMessages(bufferevent_t* bev) {
+    while (ReadOneMessage_(bev, std::get<1>(bufferevent_map_.at(bev)))) {
     }
 }
 
-bool ConnectionManager::SeekMagicNumber_(struct evbuffer* buf) {
+bool ConnectionManager::SeekMagicNumber_(evbuffer_t* buf) {
     size_t data_length    = evbuffer_get_length(buf);
     uint32_t magic_number = GetMagicNumber();
 
@@ -308,22 +309,21 @@ bool ConnectionManager::SeekMagicNumber_(struct evbuffer* buf) {
         return false;
     }
 
-    struct evbuffer_ptr magic_number_pos;
-    magic_number_pos = evbuffer_search(buf, (char*) &magic_number, sizeof(uint32_t), nullptr);
+    struct evbuffer_ptr magic_number_pos = evbuffer_search(buf, (char*) &magic_number, sizeof(uint32_t), nullptr);
 
-    /* not found, remain the last 4 bytes and release the else memory ,
+    /* if not found, remain the last 4 bytes and release the memory else,
      * maybe the 4 bytes include part of magic number, magic number will complete when receive more bytes */
     if (magic_number_pos.pos == -1) {
         evbuffer_drain(buf, data_length - MESSAGE_MAGIC_NUMBER_LENGTH);
         return false;
     }
 
-    /* found , release the memory before the magic number*/
+    /* if found , release the memory before the magic number*/
     evbuffer_drain(buf, magic_number_pos.pos);
     return true;
 }
 
-size_t ConnectionManager::SeekMessagePayloadLength_(struct evbuffer* buf) {
+size_t ConnectionManager::SeekMessagePayloadLength_(evbuffer_t* buf) {
     struct evbuffer_ptr message_length_pos;
     evbuffer_ptr_set(buf, &message_length_pos, MESSAGE_MAGIC_NUMBER_LENGTH + MESSAGE_COMMAND_LENGTH, EVBUFFER_PTR_SET);
 
@@ -332,7 +332,7 @@ size_t ConnectionManager::SeekMessagePayloadLength_(struct evbuffer* buf) {
     return message_length;
 }
 
-size_t ConnectionManager::SeekNextMessageLength_(struct evbuffer* buf) {
+size_t ConnectionManager::SeekNextMessageLength_(evbuffer_t* buf) {
     /* magic number is not found, wait more bytes*/
     if (!SeekMagicNumber_(buf)) {
         return 0;
@@ -349,8 +349,8 @@ size_t ConnectionManager::SeekNextMessageLength_(struct evbuffer* buf) {
     return SeekMessagePayloadLength_(buf) + MESSAGE_HEADER_LENGTH;
 }
 
-bool ConnectionManager::ReadOneMessage_(struct bufferevent* bev, size_t& next_message_length) {
-    struct evbuffer* input_buffer = bufferevent_get_input(bev);
+bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, size_t& next_message_length) {
+    evbuffer_t* input_buffer = bufferevent_get_input(bev);
 
     /* find a new message header and length*/
     if (next_message_length == 0) {
@@ -392,4 +392,16 @@ bool ConnectionManager::ReadOneMessage_(struct bufferevent* bev, size_t& next_me
     }
 
     return false;
+}
+
+uint32_t ConnectionManager::GetInboundNum() const {
+    return inbound_num_;
+}
+
+uint32_t ConnectionManager::GetOutboundNum() const {
+    return outbound_num_;
+}
+
+uint32_t ConnectionManager::GetConnectionNum() const {
+    return inbound_num_ + outbound_num_;
 }
