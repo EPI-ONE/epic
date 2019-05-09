@@ -111,14 +111,25 @@ void LoadConfigFile() {
     }
 
     // seeds
-    auto seeds = configContent->get_table_array("seeds");
-    if (seeds) {
-        for (const auto& seed : *seeds) {
-            auto ip   = seed->get_as<std::string>("ip");
+    auto dns_seeds = configContent->get_table_array("dns_seeds");
+    if (dns_seeds) {
+        for (const auto& seed : *dns_seeds) {
+            auto host = seed->get_as<std::string>("hostname");
             auto port = seed->get_as<uint16_t>("port");
 
-            if (ip && port) {
-                config->AddSeeds(*ip, *port);
+            if (host && port) {
+                config->AddSeedByDNS(*host, *port);
+            }
+        }
+
+        if (config->GetSeedSize() == 0) {
+            auto ip_seeds = configContent->get_table_array("ip_seeds");
+            for (const auto& seed : *dns_seeds) {
+                auto ip   = seed->get_as<std::string>("ip");
+                auto port = seed->get_as<uint16_t>("port");
+                if (ip && port) {
+                    config->AddSeedByIP(*ip, *port);
+                }
             }
         }
     }

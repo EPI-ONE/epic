@@ -14,7 +14,11 @@ interval = 900
 ip = "127.0.0.1"
 port = 7877
 
-[[seeds]]
+[[dns_seeds]]
+hostname = "pascal.ieda.ust.hk"
+port = 7877
+
+[[ip_seeds]]
 ip = "143.89.21.231"
 port = 7877
 

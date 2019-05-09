@@ -8,6 +8,7 @@ AddressManager::AddressManager() {
 void AddressManager::Init() {
     for (const NetAddress& seed : config->GetSeeds()) {
         allSeeds_.insert(seed);
+        seedQueue_.push(seed);
     }
 
     LoadLocalAddresses();
@@ -106,13 +107,13 @@ std::optional<NetAddress> AddressManager::GetOneAddress(bool onlyNew) {
         std::uniform_int_distribution<int> dis2(0, oldAddr_.size() - 1);
         int index = dis2(gen);
         auto it   = oldAddr_.begin();
-        std::next(it, index);
+        std::advance(it, index);
         return NetAddress(it->first, it->second.port);
     } else if (!newAddr_.empty()) {
         std::uniform_int_distribution<int> dis3(0, newAddr_.size() - 1);
         int index = dis3(gen);
         auto it   = newAddr_.begin();
-        std::next(it, index);
+        std::advance(it, index);
         return NetAddress(it->first, it->second.port);
     }
     return {};
@@ -177,7 +178,7 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
                 newAddr_.insert(std::make_pair(
-                    *IPAddress::StringToIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                    *IPAddress::GetByIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
             }
         }
         auto old_table = all_address->get_table_array("old");
@@ -189,7 +190,7 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
                 oldAddr_.insert(std::make_pair(
-                    *IPAddress::StringToIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                    *IPAddress::GetByIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
             }
         }
     }
@@ -289,4 +290,18 @@ void AddressManager::Clear() {
 size_t AddressManager::SizeOfAllAddr() {
     std::unique_lock<std::recursive_mutex> lk(lock_);
     return newAddr_.size() + oldAddr_.size();
+}
+
+std::optional<IPAddress> AddressManager::GetOneSeed() {
+    if (seedQueue_.empty()) {
+        return {};
+    } else {
+        auto seed = seedQueue_.front();
+        seedQueue_.pop();
+        return seed;
+    }
+}
+
+uint64_t AddressManager::GetLastTry(IPAddress& address) {
+    return GetInfo(address)->lastTry;
 }

@@ -28,7 +28,7 @@ public:
     NetAddressInfo() = default;
 
     // port
-    uint16_t port;
+    uint16_t port = 0;
 
     // last time that we tried to connect to the address
     uint64_t lastTry = 0;
@@ -168,6 +168,14 @@ public:
      * load all local addresses(ipv4 and ipv6) from network interfaces
      */
     void LoadLocalAddresses();
+
+    /**
+     * get one seed that hasn't been connected
+     * @return
+     */
+    std::optional<IPAddress> GetOneSeed();
+
+    uint64_t GetLastTry(IPAddress& address);
 
 private:
     /*

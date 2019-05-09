@@ -169,8 +169,8 @@ int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
 
 void ConnectionManager::Disconnect(const void* connection_handle) {
     if (isExist_((bufferevent*) connection_handle)) {
-        FreeBufferevent((bufferevent*) connection_handle);
         spdlog::info("[net] Active disconnect: {}", getRemoteAddress((bufferevent_t*) connection_handle));
+        FreeBufferevent((bufferevent*) connection_handle);
     } else {
         spdlog::info("[net] Not found connection handle {}", connection_handle);
     }

@@ -7,6 +7,7 @@ Peer::Peer(NetAddress& netAddress,
     ConnectionManager* connectionManager,
     AddressManager* addressManager)
     : address(std::move(netAddress)), connection_handle(handle), isSeed(isSeedPeer), isInbound(inbound),
+      connected_time(time(nullptr)), lastPingTime(0), lastPongTime(0), nPingFailed(0),
       connectionManager_(connectionManager), addressManager_(addressManager) {}
 
 Peer::~Peer() {
@@ -79,6 +80,7 @@ void Peer::ProcessPing(const Ping& ping) {
 void Peer::ProcessPong(const Pong& pong) {
     lastPongTime = time(nullptr);
     nPingFailed  = pong.nonce == lastNonce ? 0 : nPingFailed + 1;
+    spdlog::info("receive pong from {}, nonce = ", address.ToString(), pong.nonce);
 }
 
 void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
@@ -181,5 +183,61 @@ void Peer::SendMessage(NetMessage&& message) {
     } catch (std::exception& e) {
         spdlog::warn("{} , failed  to send message to {}, disconnect", e.what(), address.ToString());
         connectionManager_->Disconnect(connection_handle);
+    }
+}
+
+const std::atomic_uint64_t& Peer::GetLastPingTime() const {
+    return lastPingTime;
+}
+
+void Peer::SetLastPingTime(const uint64_t lastPingTime_) {
+    Peer::lastPingTime = lastPingTime_;
+}
+
+const std::atomic_uint64_t& Peer::GetLastPongTime() const {
+    return lastPongTime;
+}
+
+void Peer::SetLastPongTime(const uint64_t lastPongTime_) {
+    Peer::lastPongTime = lastPongTime_;
+}
+
+size_t Peer::GetNPingFailed() const {
+    return nPingFailed;
+}
+
+void Peer::SetNPingFailed(size_t nPingFailed_) {
+    Peer::nPingFailed = nPingFailed_;
+}
+
+void Peer::SendMessages() {
+    SendAddresses();
+    if (isFullyConnected) {
+        SendPing();
+    }
+}
+
+void Peer::SendPing() {
+    if (lastPingTime + kPingSendInterval < time(nullptr)) {
+        lastNonce = time(nullptr);
+        Ping ping(lastNonce);
+        NetMessage msg(connection_handle, PING, VStream(ping));
+        SendMessage(msg);
+        spdlog::info("send ping to {}, nonce = ", address.ToString(), lastNonce);
+    }
+}
+
+void Peer::SendAddresses() {
+    if (lastSendAddressTime + kSendAddressInterval < time(nullptr) && !addrSendQueue.Empty()) {
+        AddressMessage msg;
+        NetAddress addr;
+
+        while (!addrSendQueue.Empty() && msg.addressList.size() < AddressMessage::kMaxAddressSize) {
+            addrSendQueue.Take(addr);
+            msg.AddAddress(addr);
+        }
+
+        SendMessage(NetMessage(connection_handle, ADDR, VStream(msg)));
+        lastSendAddressTime = time(nullptr);
     }
 }

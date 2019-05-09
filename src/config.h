@@ -96,8 +96,15 @@ public:
         dbPath_ = dbPath;
     }
 
-    void AddSeeds(const std::string& ip, const uint16_t& port) {
-        auto address = NetAddress::StringToNetAddress(ip, port);
+    void AddSeedByIP(const std::string& ip, const uint16_t& port) {
+        auto address = NetAddress::GetByIP(ip, port);
+        if (address) {
+            seeds_.push_back(*address);
+        }
+    }
+
+    void AddSeedByDNS(const std::string& hostname, const uint16_t& port) {
+        auto address = NetAddress::GetByHostname(hostname, port);
         if (address) {
             seeds_.push_back(*address);
         }
@@ -105,6 +112,10 @@ public:
 
     std::vector<NetAddress> GetSeeds() const {
         return seeds_;
+    }
+
+    size_t GetSeedSize() const {
+        return seeds_.size();
     }
 
     void ShowConfig() {

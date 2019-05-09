@@ -45,6 +45,33 @@ public:
 
     void SendMessage(NetMessage&& message);
 
+    /**
+     * send scheduled messages(ping, address) to the peer
+     */
+    void SendMessages();
+
+    /**
+     * regularly send ping to the peer
+     */
+    void SendPing();
+
+    /**
+     * regularly send addresses to the peer
+     */
+    void SendAddresses();
+
+    const std::atomic_uint64_t& GetLastPingTime() const;
+
+    void SetLastPingTime(const uint64_t lastPingTime_);
+
+    const std::atomic_uint64_t& GetLastPongTime() const;
+
+    void SetLastPongTime(const uint64_t lastPongTime_);
+
+    size_t GetNPingFailed() const;
+
+    void SetNPingFailed(size_t nPingFailed_);
+
     /*
      * basic information of peer
      */
@@ -60,6 +87,9 @@ public:
 
     // if the peer connects us first
     const bool isInbound;
+
+    // the time when the connection is setup
+    const uint64_t connected_time;
 
     // version message
     VersionMessage* versionMessage = nullptr;
@@ -110,31 +140,20 @@ private:
      * Parameters of network setting
      */
 
-    // broadcast local address per 24h
-    const static long kBroadLocalAddressInterval = 24 * 60 * 60;
+    // interval of sending ping
+    const static uint64_t kPingSendInterval = 2 * 60;
 
     // send addresses to neighbors per 30s
-    const static long kSendAddressInterval = 30;
-
-    // timeout between sending ping and receiving pong
-    const static long kPingWaitTimeout = 2 * 60;
-
-    // interval of sending ping
-    const static long kPingSendInterval = 5 * 60;
-
-    // max number of ping failures
-    const static size_t kMaxPingFailures = 3;
+    const static uint64_t kSendAddressInterval = 30;
 
     // record at most 2000 net addresses
     const static int kMaxAddress = 2000;
 
-    // The default timeout between when a connection attempt begins and version
-    // message exchange completes
-    const static int kConnectionSetupTimeout = 10 * 1000;
-
     // the lowest version number we're willing to accept. Lower than this will
     // result in an immediate disconnect
-    const int kMinProtocolVersion = 0; // TODO to be set
+    // TODO to be set
+    const int kMinProtocolVersion = 0;
+
 
     /*
      * statistic of peer status
@@ -148,9 +167,6 @@ private:
 
     // number of ping failures
     size_t nPingFailed;
-
-    // last time of sending local address
-    long lastSendLocalAddressTime;
 
     // last time of sending addresses
     long lastSendAddressTime;

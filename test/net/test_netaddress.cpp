@@ -14,14 +14,14 @@ TEST_F(TestNetAddress, IPAddress) {
     std::string ip6_1 = "1::8";
     std::string ip6_2 = "2001:2db8:5210:1230:7877:ff00:8942:8329";
 
-    EXPECT_TRUE(ipAddress = IPAddress::StringToIP(ip4_1));
+    EXPECT_TRUE(ipAddress = IPAddress::GetByIP(ip4_1));
     EXPECT_EQ(ipAddress->ToString(), ip4_1);
-    EXPECT_TRUE(ipAddress = IPAddress::StringToIP(ip4_2));
+    EXPECT_TRUE(ipAddress = IPAddress::GetByIP(ip4_2));
     EXPECT_EQ(ipAddress->ToString(), ip4_2);
-    EXPECT_TRUE(ipAddress = IPAddress::StringToIP(ip6_1));
+    EXPECT_TRUE(ipAddress = IPAddress::GetByIP(ip6_1));
     // since the ToString() doesn't support the abbreviation
     EXPECT_EQ(ipAddress->ToString(), "1:0:0:0:0:0:0:8");
-    EXPECT_TRUE(ipAddress = IPAddress::StringToIP(ip6_2));
+    EXPECT_TRUE(ipAddress = IPAddress::GetByIP(ip6_2));
     EXPECT_EQ(ipAddress->ToString(), ip6_2);
 
 
@@ -34,12 +34,12 @@ TEST_F(TestNetAddress, IPAddress) {
     std::string iperr_5 = "asdlkfj::we::::0";
     std::string iperr_6 = "123::6::::2::::9999";
 
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_1));
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_2));
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_3));
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_4));
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_5));
-    EXPECT_FALSE(IPAddress::StringToIP(iperr_6));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_1));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_2));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_3));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_4));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_5));
+    EXPECT_FALSE(IPAddress::GetByIP(iperr_6));
 
 }
 
@@ -48,9 +48,9 @@ TEST_F(TestNetAddress, NetAddress) {
     std::string addr_1 = "127.0.0.4:7877";
     std::string addr_2 = "[2001:2db8:5210:1230:7877:ff00:8942:8329]:1234";
 
-    EXPECT_TRUE(netAddress = NetAddress::StringToNetAddress(addr_1));
+    EXPECT_TRUE(netAddress = NetAddress::GetByIP(addr_1));
     EXPECT_EQ(addr_1, netAddress->ToString());
-    EXPECT_TRUE(netAddress = NetAddress::StringToNetAddress(addr_2));
+    EXPECT_TRUE(netAddress = NetAddress::GetByIP(addr_2));
     EXPECT_EQ(addr_2, netAddress->ToString());
 
     // some wrong ip + port
@@ -60,9 +60,9 @@ TEST_F(TestNetAddress, NetAddress) {
     std::string err_4 = "[123:21ed:123::::1001]:7871:1";
     std::string err_5 = "2001:2db8:5210:1230:7877:ff00:8942:8329:1234";
 
-    EXPECT_FALSE(NetAddress::StringToNetAddress(err_1));
-    EXPECT_FALSE(NetAddress::StringToNetAddress(err_2));
-    EXPECT_FALSE(NetAddress::StringToNetAddress(err_3));
-    EXPECT_FALSE(NetAddress::StringToNetAddress(err_4));
-    EXPECT_FALSE(NetAddress::StringToNetAddress(err_5));
+    EXPECT_FALSE(NetAddress::GetByIP(err_1));
+    EXPECT_FALSE(NetAddress::GetByIP(err_2));
+    EXPECT_FALSE(NetAddress::GetByIP(err_3));
+    EXPECT_FALSE(NetAddress::GetByIP(err_4));
+    EXPECT_FALSE(NetAddress::GetByIP(err_5));
 }
