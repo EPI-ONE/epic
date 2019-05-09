@@ -6,7 +6,7 @@ OrphanBlocksContainer::~OrphanBlocksContainer() {
 }
 
 std::size_t OrphanBlocksContainer::Size() const {
-    return block_dep_map_.size();
+    return lose_ends_.size();
 }
 
 bool OrphanBlocksContainer::Empty() const {
