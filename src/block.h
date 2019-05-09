@@ -52,11 +52,15 @@ struct Milestone {
           blockTarget_(blockTarget), chainwork_(chainwork) {}
 };
 
-class BlockHeader {
+class Block {
 public:
-    BlockHeader();
+    Block();
 
-    BlockHeader(uint32_t version,
+    Block(const Block&) = default;
+
+    Block(uint32_t versionNum);
+
+    Block(uint32_t version,
         uint256 milestoneHash,
         uint256 prevBlockHash,
         uint256 tipBlockHash,
@@ -81,42 +85,6 @@ public:
     void SetPrevHash(const uint256& hash);
 
     void SetTIPHash(const uint256& hash);
-
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(version_);
-        READWRITE(milestoneBlockHash_);
-        READWRITE(prevBlockHash_);
-        READWRITE(tipBlockHash_);
-        READWRITE(time_);
-        READWRITE(diffTarget_);
-        READWRITE(nonce_);
-    }
-
-protected:
-    uint256 milestoneBlockHash_;
-    uint256 prevBlockHash_;
-    uint256 tipBlockHash_;
-
-    uint32_t diffTarget_;
-    uint32_t version_;
-    uint32_t nonce_;
-
-    uint64_t time_;
-};
-
-class Block : public BlockHeader {
-public:
-    Block();
-
-    Block(const Block&) = default;
-
-    Block(uint32_t versionNum);
-
-    Block(const BlockHeader& header);
-
-    void SetNull();
 
     void UnCache();
 
@@ -154,7 +122,7 @@ public:
 
     const uint256& GetTxHash();
 
-    size_t GetOptimalEncodingSize();
+    virtual size_t GetOptimalEncodingSize();
 
     /*
      * Checks whether the block is a registration block.
@@ -193,16 +161,16 @@ public:
     bool CheckPOW();
 
     /*
-     * A simple solver for nonce that makes the blocks hash lower than the
-     * difficulty target. For test purposes only.
-     */
-    void Solve();
-
-    /*
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing
      */
     void RandomizeHash();
+
+    /*
+     * A simple solver for nonce that makes the blocks hash lower than the
+     * difficulty target. For test purposes only.
+     */
+    void Solve();
 
     /*
      * A multi-thread solver for nonce that makes the blocks hash lower than the
@@ -218,15 +186,14 @@ public:
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITEAS(BlockHeader, *this);
-        READWRITE(transaction_);
-        if (ser_action.ForRead() == true) {
-            SetParents();
-        }
+        READWRITE(version_);
+        READWRITE(milestoneBlockHash_);
+        READWRITE(prevBlockHash_);
+        READWRITE(tipBlockHash_);
+        READWRITE(time_);
+        READWRITE(diffTarget_);
+        READWRITE(nonce_);
     }
-
-    void SerializeToDB(VStream& s) const;
-    void DeserializeFromDB(VStream& s);
 
     friend std::string std::to_string(Block& block);
 
@@ -236,6 +203,16 @@ public:
     static Block CreateGenesis();
 
 protected:
+    uint256 milestoneBlockHash_;
+    uint256 prevBlockHash_;
+    uint256 tipBlockHash_;
+
+    uint32_t diffTarget_;
+    uint32_t version_;
+    uint32_t nonce_;
+
+    uint64_t time_;
+
     std::optional<Transaction> transaction_;
     Coin cumulativeReward_;
     mutable uint256 hash_;
@@ -244,8 +221,43 @@ protected:
     uint64_t minerChainHeight_;
     bool isMilestone_ = false;
 
-private:
     size_t optimalEncodingSize_ = 0;
+};
+
+class BlockNet : public Block {
+public:
+    using Block::Block;
+
+    BlockNet(const BlockNet&) = default;
+
+    BlockNet(const Block& b);
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITEAS(Block, *this);
+        READWRITE(transaction_);
+        if (ser_action.ForRead() == true) {
+            SetParents();
+        }
+    }
+
+    size_t GetOptimalEncodingSize();
+};
+
+class BlockDag : public BlockNet {
+public:
+    using BlockNet::BlockNet;
+
+    BlockDag(const BlockDag&) = default;
+
+    BlockDag(const BlockNet& b);
+
+    void Serialize(VStream& s) const;
+
+    void Deserialize(VStream& s);
+
+    size_t GetOptimalEncodingSize();
 };
 
 extern const Block GENESIS;

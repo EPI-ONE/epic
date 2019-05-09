@@ -165,7 +165,7 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
-    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
+    BlockNet block = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
@@ -179,7 +179,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     sinput << block;
     std::string s = sinput.str();
 
-    Block blockFromDeserialization;
+    BlockNet blockFromDeserialization;
     sinput >> blockFromDeserialization;
 
     VStream soutput;
@@ -200,7 +200,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
-    Block block = Block(BlockHeader(1, rand1, zeros, rand2, time(nullptr), 1, 1));
+    BlockDag block = BlockDag(Block(1, rand1, zeros, rand2, time(nullptr), 1, 1));
 
     // Add a tx into the block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
@@ -223,14 +223,14 @@ TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
     block.InvalidateMilestone();
 
     VStream sinput;
-    block.SerializeToDB(sinput);
+    block.Serialize(sinput);
     std::string s = sinput.str();
 
-    Block blockFromUnserialization;
-    blockFromUnserialization.DeserializeFromDB(sinput);
+    BlockDag blockFromUnserialization;
+    blockFromUnserialization.Deserialize(sinput);
 
     VStream soutput;
-    blockFromUnserialization.SerializeToDB(soutput);
+    blockFromUnserialization.Serialize(soutput);
 
     EXPECT_EQ(s, soutput.str());
 }
