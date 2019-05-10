@@ -48,19 +48,19 @@ public:
      * t_missing: true -> tip is missing
      * p_missing: true -> prev is missing
      */
-    void AddBlock(const BlockPtr& block, bool m_missing, bool t_missing, bool p_missing);
+    void AddBlock(const ConstBlockPtr& block, bool m_missing, bool t_missing, bool p_missing);
 
     /*
      * Submits a task to thread_ that releases any block from OBC
      * that becomes solid with blockHash being its antecedent.
      */
-    std::optional<std::vector<BlockPtr>> SubmitHash(const uint256& hash);
+    std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
     struct obc_dependency {
         uint_fast8_t ndeps;
         std::vector<std::shared_ptr<struct obc_dependency>> deps;
-        BlockPtr block;
+        ConstBlockPtr block;
     };
 
     typedef struct obc_dependency obc_dep;

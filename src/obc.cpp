@@ -21,7 +21,7 @@ bool OrphanBlocksContainer::Contains(const uint256& hash) const {
     return block_dep_map_.find(hash) != block_dep_map_.end();
 }
 
-void OrphanBlocksContainer::AddBlock(const BlockPtr& block, bool m_missing, bool t_missing, bool p_missing) {
+void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing, bool t_missing, bool p_missing) {
     /* return if the block is actually not an orphan */
     if (!(m_missing || t_missing || p_missing)) {
         return;
@@ -91,7 +91,7 @@ void OrphanBlocksContainer::AddBlock(const BlockPtr& block, bool m_missing, bool
     }
 }
 
-std::optional<std::vector<BlockPtr>> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
+std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
     auto range = lose_ends_.equal_range(hash);
 
     /* if no lose ends can be tied using this hash return */
@@ -100,7 +100,7 @@ std::optional<std::vector<BlockPtr>> OrphanBlocksContainer::SubmitHash(const uin
     }
 
     std::vector<obc_dep_ptr> stack;
-    std::vector<BlockPtr> result;
+    std::vector<ConstBlockPtr> result;
 
     /* for all deps that have the given hash as a parent/dependency */
     for (auto it = range.first; it != range.second; it++) {

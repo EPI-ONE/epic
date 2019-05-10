@@ -72,8 +72,8 @@ TEST_F(OBCTest, simple_one_block_test) {
      * block in the OBC */
     EXPECT_EQ(obc.Size(), 1);
 
-    const uint256 dep_hash                      = blocks[2].GetHash();
-    std::optional<std::vector<BlockPtr>> result = obc.SubmitHash(dep_hash);
+    const uint256 dep_hash                           = blocks[2].GetHash();
+    std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
 
     /* check if a value was even returned */
     EXPECT_TRUE(result.has_value());
@@ -103,7 +103,7 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     EXPECT_EQ(obc.Size(), 1);
 
     /* submit missing hash */
-    std::optional<std::vector<BlockPtr>> result = obc.SubmitHash(dep_hash);
+    std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
 
     /* check if a value was even returned */
     EXPECT_TRUE(result.has_value());

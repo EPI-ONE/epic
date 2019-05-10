@@ -225,7 +225,7 @@ protected:
 };
 
 /* used in OBC and other storage constructs */
-typedef std::shared_ptr<const Block> BlockPtr;
+typedef std::shared_ptr<const Block> ConstBlockPtr;
 
 class BlockNet : public Block {
 public:
