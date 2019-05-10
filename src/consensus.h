@@ -111,9 +111,9 @@ public:
 
     size_t optimalStorageSize;
 
-    NodeRecord() : optimalStorageSize(0), minerChainHeight(0) {}
-    NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
-    NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
+    NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+    NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+    NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
         cBlock = std::make_shared<BlockNet>(blk);
     }
 

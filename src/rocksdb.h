@@ -24,7 +24,7 @@ public:
 
     bool Exists(const uint256& blockHash) const;
 
-    std::unique_ptr<Block> GetBlock(const uint256& blockHash) const;
+    std::unique_ptr<BlockDag> GetBlock(const uint256& blockHash) const;
 
     bool WriteBlock(const BlockPtr& block) const;
 

@@ -407,6 +407,4 @@ Block Block::CreateGenesis() {
     return genesisBlock;
 }
 
-BlockNet::BlockNet(const Block& b) : Block(b) {}
-
 const Block GENESIS = Block::CreateGenesis();

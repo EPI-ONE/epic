@@ -42,7 +42,7 @@ bool RocksDBStore::Exists(const uint256& blockHash) const {
     return Get(kDefaultColumnFamilyName, keySlice) != "";
 }
 
-std::unique_ptr<Block> RocksDBStore::GetBlock(const uint256& blockHash) const {
+std::unique_ptr<BlockDag> RocksDBStore::GetBlock(const uint256& blockHash) const {
     VStream key;
     key.reserve(32);
     key << blockHash;
@@ -56,10 +56,10 @@ std::unique_ptr<Block> RocksDBStore::GetBlock(const uint256& blockHash) const {
     if (!s.ok()) {
         return nullptr;
     }
-    std::unique_ptr<Block> b;
+    std::unique_ptr<BlockDag> b;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        b = std::make_unique<Block>(value, true);
+        b = std::make_unique<BlockDag>(value);
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -87,7 +87,7 @@ bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
 
     VStream value;
     value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
-    block->SerializeToDB(value);
+    value << block;
     Slice valueSlice(value.data(), value.size());
 
     return Write(kDefaultColumnFamilyName, keySlice, valueSlice);
@@ -105,7 +105,7 @@ bool RocksDBStore::WriteBlocks(const std::vector<BlockPtr> blocks) const {
 
         // Prepare value
         value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
-        block->SerializeToDB(value);
+        value << block;
         Slice valueSlice(value.data(), value.size());
 
         wb.Put(handleMap[kDefaultColumnFamilyName], keySlice, valueSlice);

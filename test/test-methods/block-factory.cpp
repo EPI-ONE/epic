@@ -14,11 +14,6 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
 
     if (numTxInput || numTxOutput) {
         b.AddTransaction(FakeTx(numTxInput, numTxOutput));
-        if (rand() % 2) {
-            b.GetTransaction()->Validate();
-        } else {
-            b.GetTransaction()->Invalidate();
-        }
     }
 
     b.FinalizeHash();
@@ -67,6 +62,12 @@ NodeRecord FakeNodeRecord(const BlockNet& b) {
             // Make it a fake milestone
             rec.InvalidateMilestone();
         }
+    }
+
+    if (rand() % 2) {
+        rec.validity = NodeRecord::VALID;
+    } else {
+        rec.validity = NodeRecord::INVALID;
     }
     return rec;
 }
