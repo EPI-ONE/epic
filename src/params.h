@@ -18,10 +18,6 @@ static constexpr uint32_t INTERVAL      = TARGET_TIMESPAN / TIME_INTERVAL;
 static constexpr uint32_t TPS = 1000;
 // threshold for rejecting an old block
 static constexpr uint32_t PUNTUALITY_THRESHOLD = 2 * 60 * 60;
-// transaction sortition: number of block to go back
-static constexpr uint32_t SORTITION_THRESHOLD = 10 * 1000;
-// transaction sortition: coefficient for computing allowed distance
-static constexpr double SORTITION_COEFFICIENT = 0.01;
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 // max amount of money allowed in one output
@@ -32,7 +28,10 @@ static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // an easy enough difficulty target
 static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
-// initial difficulty target
+// transaction sortition: coefficient for computing allowed distance
+static constexpr size_t SORTITION_COEFFICIENT = 100;
+// transaction sortition: number of block to go back
+static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 
 class Params {
 public:
@@ -54,6 +53,9 @@ public:
     arith_uint256 maxTarget;
     Coin maxMoney;
     Coin reward;
+
+    arith_uint256 sortitionCoefficient;
+    size_t sortitionThreshold;
 
     uint64_t initialDifficulty;
     arith_uint256 initialMsTarget;

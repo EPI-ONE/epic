@@ -10,15 +10,17 @@ const Params& TestNetParams::GetParams() {
 }
 
 TestNetParams::TestNetParams() {
-    targetTimespan   = 100;
-    timeInterval     = TIME_INTERVAL;
-    interval         = targetTimespan / (double) timeInterval;
-    targetTPS        = 100;
-    punctualityThred = PUNTUALITY_THRESHOLD;
-    maxTarget        = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
-    maxMoney         = MAX_MONEY;
-    reward           = 1;
-    initialMsTarget  = arith_uint256(INITIAL_MS_TARGET);
+    targetTimespan       = 100;
+    timeInterval         = TIME_INTERVAL;
+    interval             = targetTimespan / (double) timeInterval;
+    targetTPS            = 100;
+    punctualityThred     = PUNTUALITY_THRESHOLD;
+    maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
+    maxMoney             = MAX_MONEY;
+    reward               = 1;
+    initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
+    sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
+    sortitionThreshold   = SORTITION_THRESHOLD;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]

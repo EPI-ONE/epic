@@ -73,11 +73,13 @@ public:
     }
 
     bool operator==(const ChainState& rhs) const {
+        // clang-format off
         return lastUpdateTime               == rhs.lastUpdateTime &&
                chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
                hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
+        // clang-format on
     }
 
     bool operator!=(const ChainState& another) const {
@@ -143,6 +145,10 @@ public:
         return std::tie(*cblock, cumulativeReward, minerChainHeight) ==
                    std::tie(*(another.cblock), another.cumulativeReward, another.minerChainHeight) &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot));
+    }
+
+    bool operator!=(const NodeRecord& another) const {
+        return !(*this == another);
     }
 
     static NodeRecord CreateGenesisRecord();

@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "block.h"
+#include "consensus.h"
 #include "params.h"
 #include "uint256.h"
-#include "consensus.h"
 
 class Chain {
 public:
@@ -52,6 +52,8 @@ public:
     const std::deque<ChainStatePtr>& GetStates() const {
         return states_; 
     }
+
+    static bool IsValidDistance(const RecordPtr, const arith_uint256);
 
 private:
     // 1 if this chain is main chain, 0 otherwise;
