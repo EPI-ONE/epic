@@ -13,7 +13,7 @@ std::size_t OrphanBlocksContainer::DependencySize() const {
     return block_dep_map_.size();
 }
 
-bool OrphanBlocksContainer::Empty() const {
+bool OrphanBlocksContainer::IsEmpty() const {
     return this->Size() == 0;
 }
 

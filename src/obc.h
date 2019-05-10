@@ -34,9 +34,9 @@ public:
     size_t DependencySize() const;
 
     /*
-     * this->size() == 0
+     * if there are no blocks managed
      */
-    bool Empty() const;
+    bool IsEmpty() const;
 
     /*
      * checks if a block is an orphan
