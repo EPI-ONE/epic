@@ -82,5 +82,4 @@ private:
     std::multimap<uint256, obc_dep_ptr> lose_ends_;
 };
 
-
 #endif
