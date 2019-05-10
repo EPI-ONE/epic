@@ -30,8 +30,8 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
     /* construct new dependency
      * for the new block */
     obc_dep_ptr dep(new obc_dep);
+    dep->ndeps = DependencyCardinality(block, m_missing, t_missing, p_missing);
     dep->block = block;
-    dep->ndeps = 0;
 
     /* insert new dependency into block_dep_map_ */
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
@@ -51,8 +51,6 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
              * the dep is linked to the dependency dep */
             it->second->deps.push_back(dep);
         }
-
-        dep->ndeps++;
     };
 
     if (m_missing) {
@@ -127,4 +125,25 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     }
 
     return result;
+}
+
+uint8_t OrphanBlocksContainer::DependencyCardinality(ConstBlockPtr block,
+    bool m_missing,
+    bool t_missing,
+    bool p_missing) {
+    std::unordered_set<uint256> buff;
+
+    if (m_missing) {
+        buff.insert(block->GetMilestoneHash());
+    }
+
+    if (t_missing) {
+        buff.insert(block->GetTipHash());
+    }
+
+    if (p_missing) {
+        buff.insert(block->GetPrevHash());
+    }
+
+    return buff.size();
 }

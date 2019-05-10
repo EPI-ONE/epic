@@ -2,6 +2,7 @@
 #define __SRC_OBC_H__
 
 #include <map>
+#include <unordered_set>
 #include <vector>
 
 #include "block.h"
@@ -80,6 +81,10 @@ private:
     /* this container maps missing hashes to one or more
      * dependency structs that wait for this one hash */
     std::multimap<uint256, obc_dep_ptr> lose_ends_;
+
+    /* calculates the number of unique missing dependencies
+     * based on the hashes of the missing blocks */
+    static uint8_t DependencyCardinality(ConstBlockPtr block, bool m_missing, bool t_missing, bool p_missing);
 };
 
 #endif
