@@ -39,7 +39,7 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
     /* used in the following three if clauses */
     uint256 hash;
 
-    auto common_insert = [&]() {
+    auto common_insert = [&](uint256&& hash) {
         auto it = block_dep_map_.find(hash);
 
         if (it == block_dep_map_.end()) {
@@ -54,18 +54,15 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
     };
 
     if (m_missing) {
-        hash = block->GetMilestoneHash();
-        common_insert();
+        common_insert(block->GetMilestoneHash());
     }
 
     if (t_missing) {
-        hash = block->GetTipHash();
-        common_insert();
+        common_insert(block->GetTipHash());
     }
 
     if (p_missing) {
-        hash = block->GetPrevHash();
-        common_insert();
+        common_insert(block->GetPrevHash());
     }
 }
 
