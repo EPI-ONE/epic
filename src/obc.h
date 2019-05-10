@@ -51,22 +51,34 @@ public:
     void AddBlock(const ConstBlockPtr& block, bool m_missing, bool t_missing, bool p_missing);
 
     /*
-     * Submits a task to thread_ that releases any block from OBC
-     * that becomes solid with blockHash being its antecedent.
+     * Submits the information that a new block with given hash is available
+     * to the OBC solver which then ties up as many lose ends as possible
+     * with this information
      */
     std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
     struct obc_dependency {
+        /* number of dependencies that must be
+         * found in order for this dependency
+         * to be resolved; max: 3 & min: 0 */
         uint_fast8_t ndeps;
+        /* links to other dependencies that wait
+         * for this one to be resolved*/
         std::vector<std::shared_ptr<struct obc_dependency>> deps;
+        /* pointer to the block that is the
+         * actual orphan */
         ConstBlockPtr block;
     };
 
     typedef struct obc_dependency obc_dep;
     typedef std::shared_ptr<obc_dep> obc_dep_ptr;
 
+    /* this container maps the hash of the orphan block
+     * to its dependency struct */
     std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;
+    /* this container maps missing hashes to one or more
+     * dependency structs that wait for this one hash */
     std::multimap<uint256, obc_dep_ptr> lose_ends_;
 };
 
