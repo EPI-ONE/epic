@@ -108,6 +108,8 @@ public:
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
+
+    static BlockStatus CreateGenesisStat();
 };
 
 extern const BlockStatus GENESISSTAT;

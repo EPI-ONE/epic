@@ -140,4 +140,8 @@ size_t BlockStatus::GetOptimalStorageSize() {
     return optimalStorageSize;
 }
 
-const BlockStatus GENESISSTAT(GENESIS);
+BlockStatus BlockStatus::CreateGenesisStat() {
+    return BlockStatus(GENESIS);
+}
+
+const BlockStatus GENESISSTAT = BlockStatus::CreateGenesisStat();

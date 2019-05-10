@@ -81,7 +81,7 @@ public:
 
     const uint256& GetTxHash();
 
-    virtual size_t GetOptimalEncodingSize() const;
+    size_t GetOptimalEncodingSize() const;
 
     /*
      * Checks whether the block is a registration block.
@@ -142,7 +142,7 @@ public:
      */
     void SetParents();
 
-    virtual size_t CalculateOptimalEncodingSize();
+    size_t CalculateOptimalEncodingSize();
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -174,9 +174,6 @@ protected:
     std::optional<Transaction> transaction_;
 };
 
-/* used in OBC and other storage constructs */
-typedef std::shared_ptr<const Block> ConstBlockPtr;
-
 class BlockNet : public Block {
 public:
     using Block::Block;
@@ -196,9 +193,6 @@ public:
             CalculateOptimalEncodingSize();
         }
     }
-
-protected:
-    size_t CalculateOptimalEncodingSize();
 };
 
 extern const Block GENESIS;

@@ -48,14 +48,14 @@ public:
     /*
      * adds block to OBC
      */
-    void AddBlock(const ConstBlockPtr& block, uint8_t missing_mask);
+    void AddBlock(const cBlockPtr& block, uint8_t missing_mask);
 
     /*
      * Submits the information that a new block with given hash is available
      * to the OBC solver which then ties up as many lose ends as possible
      * with this information
      */
-    std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
+    std::optional<std::vector<cBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
     struct obc_dependency {
@@ -68,7 +68,7 @@ private:
         std::vector<std::shared_ptr<struct obc_dependency>> deps;
         /* pointer to the block that is the
          * actual orphan */
-        ConstBlockPtr block;
+        cBlockPtr block;
     };
 
     typedef struct obc_dependency obc_dep;
