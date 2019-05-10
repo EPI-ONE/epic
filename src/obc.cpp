@@ -39,55 +39,35 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
     /* used in the following three if clauses */
     uint256 hash;
 
-    if (m_missing) {
-        hash    = block->GetMilestoneHash();
+    auto common_insert = [&]() {
         auto it = block_dep_map_.find(hash);
 
         if (it == block_dep_map_.end()) {
-            /* if the milestone is not in this OBC
+            /* if the dependency is not in this OBC
              * then the dep is a lose end */
             lose_ends_.insert({hash, dep});
         } else {
-            /* if the milestone is in the OBC
-             * the dep is linked to the milestone dep */
+            /* if the dependency is in the OBC
+             * the dep is linked to the dependency dep */
             it->second->deps.push_back(dep);
         }
 
         dep->ndeps++;
+    };
+
+    if (m_missing) {
+        hash = block->GetMilestoneHash();
+        common_insert();
     }
 
     if (t_missing) {
-        hash    = block->GetTipHash();
-        auto it = block_dep_map_.find(hash);
-
-        if (it == block_dep_map_.end()) {
-            /* if the tip block is not in this OBC
-             * then the dep is a lose end */
-            lose_ends_.insert({hash, dep});
-        } else {
-            /* if the tip block is in the OBC
-             * the dep is linked to the tip block dep */
-            it->second->deps.push_back(dep);
-        }
-
-        dep->ndeps++;
+        hash = block->GetTipHash();
+        common_insert();
     }
 
     if (p_missing) {
-        hash    = block->GetPrevHash();
-        auto it = block_dep_map_.find(hash);
-
-        if (it == block_dep_map_.end()) {
-            /* if the prev block is not in this OBC
-             * then the dep is a lose end */
-            lose_ends_.insert({hash, dep});
-        } else {
-            /* if the prev block is in the OBC
-             * the dep is linked to the prev block dep */
-            it->second->deps.push_back(dep);
-        }
-
-        dep->ndeps++;
+        hash = block->GetPrevHash();
+        common_insert();
     }
 }
 
