@@ -85,10 +85,6 @@ private:
     /* this container maps missing hashes to one or more
      * dependency structs that wait for this one hash */
     std::multimap<uint256, obc_dep_ptr> lose_ends_;
-
-    /* calculates the number of unique missing dependencies
-     * based on the hashes of the missing blocks */
-    static uint8_t DependencyCardinality(ConstBlockPtr block, uint8_t missing_mask);
 };
 
 #endif

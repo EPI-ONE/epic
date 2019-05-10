@@ -30,14 +30,16 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     /* construct new dependency
      * for the new block */
     obc_dep_ptr dep(new obc_dep);
-    dep->ndeps = DependencyCardinality(block, missing_mask);
     dep->block = block;
 
     /* insert new dependency into block_dep_map_ */
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
 
+    std::unordered_set<uint256> unique_missing_hashes;
+
     auto common_insert = [&](uint256&& hash) {
         auto it = block_dep_map_.find(hash);
+        unique_missing_hashes.insert(hash);
 
         if (it == block_dep_map_.end()) {
             /* if the dependency is not in this OBC
@@ -61,6 +63,8 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     if (missing_mask & P_MISSING) {
         common_insert(block->GetPrevHash());
     }
+
+    dep->ndeps = unique_missing_hashes.size();
 }
 
 std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
@@ -118,22 +122,4 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     }
 
     return result;
-}
-
-uint8_t OrphanBlocksContainer::DependencyCardinality(ConstBlockPtr block, uint8_t missing_mask) {
-    std::unordered_set<uint256> buff;
-
-    if (missing_mask & M_MISSING) {
-        buff.insert(block->GetMilestoneHash());
-    }
-
-    if (missing_mask & T_MISSING) {
-        buff.insert(block->GetTipHash());
-    }
-
-    if (missing_mask & P_MISSING) {
-        buff.insert(block->GetPrevHash());
-    }
-
-    return buff.size();
 }
