@@ -36,9 +36,6 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     /* insert new dependency into block_dep_map_ */
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
 
-    /* used in the following three if clauses */
-    uint256 hash;
-
     auto common_insert = [&](uint256&& hash) {
         auto it = block_dep_map_.find(hash);
 
