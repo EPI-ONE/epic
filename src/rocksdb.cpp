@@ -86,7 +86,7 @@ bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
     Slice keySlice(key.data(), key.size());
 
     VStream value;
-    value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
+    value.reserve(block->GetOptimalEncodingSize());
     value << block;
     Slice valueSlice(value.data(), value.size());
 
@@ -104,7 +104,7 @@ bool RocksDBStore::WriteBlocks(const std::vector<BlockPtr> blocks) const {
         Slice keySlice(key.data(), key.size());
 
         // Prepare value
-        value.reserve(block->GetOptimalEncodingSize() + MAX_ADDITIONAL_STORAGE_SIZE);
+        value.reserve(block->GetOptimalEncodingSize());
         value << block;
         Slice valueSlice(value.data(), value.size());
 
