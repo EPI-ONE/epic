@@ -82,14 +82,13 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
         /* push it onto the stack as it might
          * be used later on */
         stack.push_back(it->second);
-
-        /* if the addition of the given hash
-         * would tie this lose end remove the
-         * dependency from the lose ends map*/
-        if (it->second->ndeps == 1) {
-            lose_ends_.erase(it);
-        }
     }
+
+    /* the addition of the given hash
+     * ties lose ends therefore the
+     * corresponding dependencies have
+     * to be removed from lose_ends_ */
+    lose_ends_.erase(range.first, range.second);
 
     obc_dep_ptr cursor;
     while (!stack.empty()) {
