@@ -55,7 +55,7 @@ void Block::UnCache() {
     hash_.SetNull();
 }
 
-bool Block::Verify() {
+bool Block::Verify() const {
     // checks pow
     if (!CheckPOW()) {
         return false;
@@ -226,7 +226,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
     return target;
 }
 
-bool Block::CheckPOW() {
+bool Block::CheckPOW() const {
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
@@ -234,11 +234,11 @@ bool Block::CheckPOW() {
         spdlog::info(s);
         return false;
     }
-    FinalizeHash();
+
     arith_uint256 blkHash = UintToArith256(hash_);
 
     if (blkHash > target) {
-        spdlog::info("Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target));
+        spdlog::info(strprintf("Hash %s is higher than target: %s v.s. %s", std::to_string(GetHash()), std::to_string(target)));
         return false;
     }
 

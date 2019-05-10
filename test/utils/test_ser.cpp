@@ -193,6 +193,9 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     for (const TxOutput& output : ptrTx->GetOutputs()) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
+
+    // Check encoding size
+    EXPECT_EQ(VStream(blockFromDeserialization).size(), blockFromDeserialization.GetOptimalEncodingSize());
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlockStatus) {

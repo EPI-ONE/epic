@@ -53,7 +53,7 @@ public:
 
     void UnCache();
 
-    bool Verify();
+    bool Verify() const;
 
     void AddTransaction(Transaction tx);
 
@@ -117,7 +117,7 @@ public:
      * A complete syntax checking should also check the validity of the diff
      * target which is not considered here.
      */
-    bool CheckPOW();
+    bool CheckPOW() const;
 
     /*
      * Only to be used for debugging when validity of the
