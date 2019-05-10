@@ -6,8 +6,8 @@ enum MilestoneStatus : uint8_t {
     IS_FAKE_MILESTONE,
 };
 
-class BlockStatus;
-typedef std::shared_ptr<BlockStatus> BlkStatPtr;
+class BlockDAG;
+typedef std::shared_ptr<BlockDAG> BlkStatPtr;
 
 class ChainState {
 public:
@@ -76,7 +76,11 @@ public:
     }
 };
 
-class BlockStatus {
+/*
+ * A structure that contains a shared_ptr<const BlockNet> that will
+ * be passed to different chains
+ */
+class BlockDAG {
 public:
     enum Validity : uint8_t {
         UNKNOWN = 0,
@@ -96,9 +100,9 @@ public:
 
     size_t optimalStorageSize;
 
-    BlockStatus() : optimalStorageSize(0), minerChainHeight(0) {}
-    BlockStatus(const cBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
-    BlockStatus(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
+    BlockDAG() : optimalStorageSize(0), minerChainHeight(0) {}
+    BlockDAG(const cBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
+    BlockDAG(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
         cBlock = std::make_shared<BlockNet>(blk);
     }
 
@@ -109,7 +113,7 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
-    static BlockStatus CreateGenesisStat();
+    static BlockDAG CreateGenesisStat();
 };
 
-extern const BlockStatus GENESISSTAT;
+extern const BlockDAG GENESISSTAT;

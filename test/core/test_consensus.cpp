@@ -6,12 +6,12 @@
 
 typedef Tasm::Listing Listing;
 
-std::shared_ptr<BlockStatus> BlockFactory(uint32_t _time) {
+std::shared_ptr<BlockDAG> BlockFactory(uint32_t _time) {
     auto pb = std::make_shared<BlockNet>();
     pb->SetDifficultyTarget(params.maxTarget.GetCompact());
     pb->SetTime(_time);
     pb->Solve();
-    return std::make_shared<BlockStatus>(pb);
+    return std::make_shared<BlockDAG>(pb);
 }
 
 class TestConsensus : public testing::Test {};
@@ -61,12 +61,12 @@ TEST_F(TestConsensus, SyntaxChecking) {
     EXPECT_FALSE(block.Verify());
 }
 
-TEST_F(TestConsensus, BlockStatusOptimalStorageEncodingSize) {
-    BlockStatus bs = GENESISSTAT;
+TEST_F(TestConsensus, BlockDAGOptimalStorageEncodingSize) {
+    BlockDAG bs = GENESISSTAT;
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
     BlockNet b1 = FakeBlock();
-    BlockStatus bs1(b1);
+    BlockDAG bs1(b1);
 
     // test without a tx
     EXPECT_EQ(VStream(bs1).size(), bs1.GetOptimalStorageSize());
@@ -78,7 +78,7 @@ TEST_F(TestConsensus, BlockStatusOptimalStorageEncodingSize) {
         tx.AddOutput(TxOutput(i, Tasm::Listing(VStream(i))));
     }
     b1.AddTransaction(tx);
-    BlockStatus bs2(b1);
+    BlockDAG bs2(b1);
     EXPECT_EQ(VStream(bs2).size(), bs2.GetOptimalStorageSize());
 }
 
@@ -120,12 +120,12 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     std::default_random_engine generator;
     std::uniform_int_distribution<uint32_t> distribution(1,30);
 
-    arrayMs[1] = std::make_shared<ChainState>((BlockFactory(simulatedTime)), arrayMs[0]);
+    arrayMs[1] = std::make_shared<ChainState>(BlockFactory(simulatedTime), arrayMs[0]);
 
     size_t LOOPS = 100;
     for (int i=2; i< LOOPS; i++) {
         simulatedTime += distribution(generator);
-        arrayMs[i] = std::make_shared<ChainState>((BlockFactory(simulatedTime)), arrayMs[i-1]);
+        arrayMs[i] = std::make_shared<ChainState>(BlockFactory(simulatedTime), arrayMs[i-1]);
         ASSERT_EQ(i, arrayMs[i]->height);
         if (((i+1) % params.timeInterval) == 0) {
             ASSERT_NE(arrayMs[i-1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);

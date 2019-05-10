@@ -55,12 +55,12 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     lastUpdateTime = blockUpdateTime;
 }
 
-void BlockStatus::InvalidateMilestone() {
+void BlockDAG::InvalidateMilestone() {
     isMilestone = false;
     snapshot.reset();
 }
 
-void BlockStatus::LinkChainState(ChainState& ss) {
+void BlockDAG::LinkChainState(ChainState& ss) {
     if (snapshot.use_count() == 0) {
         snapshot = std::make_shared<ChainState>(ss);
     } else {
@@ -70,7 +70,7 @@ void BlockStatus::LinkChainState(ChainState& ss) {
     isMilestone = true;
 }
 
-void BlockStatus::Serialize(VStream& s) const {
+void BlockDAG::Serialize(VStream& s) const {
     s << *cBlock;
     s << VARINT(cumulativeReward.GetValue());
     s << VARINT(minerChainHeight);
@@ -92,7 +92,7 @@ void BlockStatus::Serialize(VStream& s) const {
     }
 }
 
-void BlockStatus::Deserialize(VStream& s) {
+void BlockDAG::Deserialize(VStream& s) {
     BlockNet b;
     s >> b;
     cBlock = std::make_shared<BlockNet>(b);
@@ -114,7 +114,7 @@ void BlockStatus::Deserialize(VStream& s) {
     }
 }
 
-size_t BlockStatus::GetOptimalStorageSize() {
+size_t BlockDAG::GetOptimalStorageSize() {
     if (optimalStorageSize > 0) {
         return optimalStorageSize;
     }
@@ -140,8 +140,8 @@ size_t BlockStatus::GetOptimalStorageSize() {
     return optimalStorageSize;
 }
 
-BlockStatus BlockStatus::CreateGenesisStat() {
-    return BlockStatus(GENESIS);
+BlockDAG BlockDAG::CreateGenesisStat() {
+    return BlockDAG(GENESIS);
 }
 
-const BlockStatus GENESISSTAT = BlockStatus::CreateGenesisStat();
+const BlockDAG GENESISSTAT = BlockDAG::CreateGenesisStat();

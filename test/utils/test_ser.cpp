@@ -198,7 +198,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     EXPECT_EQ(VStream(blockFromDeserialization).size(), blockFromDeserialization.GetOptimalEncodingSize());
 }
 
-TEST_F(TestSer, SerializeEqDeserializeBlockStatus) {
+TEST_F(TestSer, SerializeEqDeserializeBlockDAG) {
     BlockNet blk = BlockNet(1, rand1, zeros, rand2, time(nullptr), 1, 1);
 
     // Add a tx into the block
@@ -208,8 +208,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlockStatus) {
     tx.AddOutput(TxOutput(100, randomBytes));
     blk.AddTransaction(tx);
 
-    // Construct BlockStatus
-    BlockStatus block(blk);
+    // Construct BlockDAG
+    BlockDAG block(blk);
     block.minerChainHeight = 100;
     block.cumulativeReward = 0;
 
@@ -225,7 +225,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlockStatus) {
     block.Serialize(sinput);
     std::string s = sinput.str();
 
-    BlockStatus blockFromUnserialization;
+    BlockDAG blockFromUnserialization;
     blockFromUnserialization.Deserialize(sinput);
 
     VStream soutput;
