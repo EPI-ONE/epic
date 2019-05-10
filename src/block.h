@@ -242,6 +242,9 @@ protected:
     size_t optimalEncodingSize_ = 0;
 };
 
+/* used in OBC and other storage constructs */
+typedef std::shared_ptr<const Block> ConstBlockPtr;
+
 class BlockNet : public Block {
 public:
     using Block::Block;
