@@ -120,5 +120,5 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     EXPECT_EQ(obc.DependencySize(), 1);
 
     /* check if that remaining block is 9*/
-    EXPECT_TRUE(obc.Contains(rem_hash));
+    EXPECT_TRUE(obc.IsOrphan(rem_hash));
 }

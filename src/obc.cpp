@@ -17,7 +17,7 @@ bool OrphanBlocksContainer::IsEmpty() const {
     return this->Size() == 0;
 }
 
-bool OrphanBlocksContainer::Contains(const uint256& hash) const {
+bool OrphanBlocksContainer::IsOrphan(const uint256& hash) const {
     return block_dep_map_.find(hash) != block_dep_map_.end();
 }
 

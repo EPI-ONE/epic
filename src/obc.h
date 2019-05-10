@@ -37,18 +37,13 @@ public:
 
     /*
      * returns the number dependencies
-     * managed by the OBC */
+     * managed by the OBC
+     */
     size_t DependencySize() const;
 
-    /*
-     * if there are no blocks managed
-     */
     bool IsEmpty() const;
 
-    /*
-     * checks if a block is an orphan
-     */
-    bool Contains(const uint256& hash) const;
+    bool IsOrphan(const uint256& hash) const;
 
     /*
      * adds block to OBC
