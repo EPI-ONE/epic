@@ -55,7 +55,7 @@ void Block::UnCache() {
     hash_.SetNull();
 }
 
-bool Block::Verify() const {
+bool Block::Verify() {
     // checks pow
     if (!CheckPOW()) {
         return false;
@@ -134,20 +134,12 @@ void Block::SetMinerChainHeight(uint32_t height) {
     minerChainHeight_ = height;
 }
 
-void Block::SetCumulativeReward(Coin coin) {
-    cumulativeReward_ = coin;
-}
-
 void Block::ResetReward() {
     cumulativeReward_ = ZERO_COIN;
 }
 
 void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
-}
-
-const uint32_t Block::GetDifficultyTarget() const {
-    return diffTarget_;
 }
 
 void Block::SetTime(uint64_t time) {
@@ -182,27 +174,23 @@ void Block::SetMilestoneInstance(Milestone& ms) {
     isMilestone_ = true;
 }
 
-const std::shared_ptr<Milestone>& Block::GetMilestoneInstance() const {
-    return milestone_;
-}
-
 const uint256& Block::GetHash() const {
     return hash_;
 }
 
-void Block::FinalizeHash() const {
+void Block::FinalizeHash() {
     if (hash_.IsNull())
         CalculateHash();
 }
 
-void Block::CalculateHash() const {
+void Block::CalculateHash() {
     VStream s;
     Block::Serialize(s);
     GetTxHash().Serialize(s);
     hash_ = Hash<1>(s);
 }
 
-const uint256& Block::GetTxHash() const {
+const uint256& Block::GetTxHash() {
     if (!HasTransaction()) {
         return Hash::GetZeroHash();
     }
@@ -210,7 +198,7 @@ const uint256& Block::GetTxHash() const {
     return transaction_->GetHash();
 }
 
-size_t Block::GetOptimalEncodingSize() const {
+size_t Block::GetOptimalEncodingSize() {
     if (optimalEncodingSize_ > 0) {
         return optimalEncodingSize_;
     }
@@ -242,7 +230,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
     return target;
 }
 
-bool Block::CheckPOW() const {
+bool Block::CheckPOW() {
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
@@ -280,10 +268,6 @@ void Block::Solve() {
         nonce_++;
         CalculateHash();
     }
-}
-
-void Block::RandomizeHash() const {
-    hash_.randomize();
 }
 
 void Block::Solve(ThreadPool& solverPool) {
@@ -332,9 +316,6 @@ void Block::Solve(ThreadPool& solverPool) {
 }
 
 void Block::SetParents() {
-    if (!HasTransaction()) {
-        return;
-    }
     transaction_->SetParent(this);
     for (TxInput& input : transaction_->GetInputs()) {
         input.SetParent(&*transaction_);
@@ -358,21 +339,9 @@ std::string std::to_string(Block& block) {
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
 
     if (block.HasTransaction()) {
-        s += strprintf("  with %s\n", to_string(*(block.transaction_)));
+        s += "   with transaction:\n";
+        s += std::to_string(*(block.transaction_));
     }
-
-    if (block.milestone_ != nullptr) {
-        s += "   with milestone link {\n";
-        s += strprintf("     height: %s \n", block.milestone_->height_);
-        s += strprintf("     chainwork: %s \n", block.milestone_->chainwork_.GetCompact());
-        s += strprintf("     last update time: %s \n", block.milestone_->lastUpdateTime_);
-        s += strprintf("     ms target: %s \n", block.milestone_->milestoneTarget_.GetCompact());
-        s += strprintf("     block target: %s \n", block.milestone_->blockTarget_.GetCompact());
-        s += strprintf("     hash rate: %s \n", block.milestone_->hashRate_);
-        s += "   }\n";
-    }
-
-    s += " }";
 
     return s;
 }
@@ -388,7 +357,6 @@ void Block::SerializeMilestone(VStream& s, Milestone& milestone) {
 
 void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
     ::Deserialize(s, VARINT(milestone.height_));
-    //    uint32_t compactChainwork = ser_readdata32(s);
     milestone.chainwork_.SetCompact(ser_readdata32(s));
     milestone.lastUpdateTime_ = ser_readdata64(s);
     milestone.milestoneTarget_.SetCompact(ser_readdata32(s));

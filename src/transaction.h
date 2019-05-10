@@ -134,7 +134,7 @@ public:
 
     Transaction& AddOutput(TxOutput&& output);
 
-    void FinalizeHash() const;
+    void FinalizeHash();
 
     const TxInput& GetInput(size_t index) const;
 
@@ -185,7 +185,7 @@ private:
     std::vector<TxInput> inputs_;
     std::vector<TxOutput> outputs_;
 
-    mutable uint256 hash_;
+    uint256 hash_;
     Coin fee_;
     Validity status_;
 

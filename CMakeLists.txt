@@ -93,10 +93,6 @@ aux_source_directory(test/tasm TEST_TASM_SRCS)
 aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 aux_source_directory(test/core TEST_CORE_SRCS)
 aux_source_directory(test/support TEST_SUPPORT_SRCS)
-aux_source_directory(test/test-methods TEST_METHODS_SRCS)
-
-include_directories(test)
-
 set(TEST_CODE
         ${TEST_NET_SRCS}
         ${TEST_UTILS_SRCS}
@@ -104,7 +100,6 @@ set(TEST_CODE
         ${TEST_CRYPTO_SRCS}
         ${TEST_CORE_SRCS}
         ${TEST_SUPPORT_SRCS}
-        ${TEST_METHODS_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
 
