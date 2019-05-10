@@ -60,11 +60,6 @@ private:
      */
     unsigned char vch[PUBLIC_KEY_SIZE];
 
-    /**
-     * need this handle to verify in public key
-     */
-    // ECCVerifyHandle handle;
-
     //! Compute the length of a pubkey with a given first byte.
     unsigned int static GetLen(unsigned char chHeader) {
         if (chHeader == 2 || chHeader == 3)

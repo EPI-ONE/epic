@@ -21,36 +21,54 @@ enum MilestoneStatus : uint8_t {
     IS_FAKE_MILESTONE,
 };
 
-struct Milestone {
-    uint64_t lastUpdateTime_;
-    uint64_t hashRate_;
-    uint64_t height_;
+typedef struct Milestone {
+    uint64_t height;
+    uint64_t lastUpdateTime;
+    uint64_t hashRate;
 
-    arith_uint256 milestoneTarget_;
-    arith_uint256 blockTarget_;
-    arith_uint256 chainwork_;
+    arith_uint256 chainwork;
+    arith_uint256 blockTarget;
+    arith_uint256 milestoneTarget;
 
-    std::shared_ptr<Milestone> pprevious_;
-    std::shared_ptr<Milestone> pnext_;
-
+    std::shared_ptr<Milestone> pprevious;
+    std::weak_ptr<Milestone> pnext;
+    
     // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<std::pair<std::shared_ptr<Block>, uint64_t>> vblockstore_;
-    std::unordered_map<uint256, uint256> pubkeySnapshot_;
+    std::vector<std::shared_ptr<Block>> vblockstore;
+    std::vector<uint256> pubkeySnapshot;
 
-    /* deault constructor */
-    Milestone() = default;
+    // constructor of a milestone of genesis.
+    Milestone();
+    // constructor of a milestone with all data fields
+    Milestone(std::shared_ptr<Block>, std::shared_ptr<Milestone>);
+    // copy constructor
+    Milestone(const Milestone&) = default;
 
-    /* standard constructor that only
-     * initializes the first six members */
+    /* simple constructor (now for test only) */
     Milestone(uint64_t lastUpdateTime,
         uint64_t hashRate,
         uint64_t height,
         arith_uint256 milestoneTarget,
         arith_uint256 blockTarget,
         arith_uint256 chainwork)
-        : lastUpdateTime_(lastUpdateTime), hashRate_(hashRate), height_(height), milestoneTarget_(milestoneTarget),
-          blockTarget_(blockTarget), chainwork_(chainwork) {}
-};
+        : lastUpdateTime(lastUpdateTime), hashRate(hashRate), height(height), milestoneTarget(milestoneTarget),
+          blockTarget(blockTarget), chainwork(chainwork) {}
+
+    inline bool IsDiffTransition() const {
+        return ((height + 1) % params.interval) == 0;
+    }
+
+    void UpdateDifficulty(uint64_t blockUpdateTime);
+
+    inline uint64_t GetBlockDifficulty() const {
+        return (arith_uint256(params.maxTarget) / (blockTarget + 1)).GetLow64();
+    }
+
+    inline uint64_t GetMsDifficulty() const {
+        return (arith_uint256(params.maxTarget) / (milestoneTarget + 1)).GetLow64();
+    }
+
+} Milestone;
 
 class Block {
 public:

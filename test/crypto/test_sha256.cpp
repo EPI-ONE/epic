@@ -5,7 +5,7 @@
 #include "sha256.h"
 #include "stream.h"
 
-class SHA256Test : public testing::Test {
+class TestSHA256 : public testing::Test {
 protected:
     VStream data;
     void SetUp() {
@@ -23,23 +23,23 @@ protected:
     }
 };
 
-TEST_F(SHA256Test, NATIVE_SHA_TEST) {
+TEST_F(TestSHA256, NATIVE_SHA_TEST) {
     EXPECT_TRUE(SHA256SelfTest());
 }
 
-TEST_F(SHA256Test, SINGLE_HASH_TEST) {
+TEST_F(TestSHA256, SINGLE_HASH_TEST) {
     uint256 result   = Hash<1>(data);
     uint256 expected = uint256S("8240ab53aa340ac4112daaed9fed59ef0790bdd02925335361f79b9ffd9c788a");
     EXPECT_EQ(expected, result);
 }
 
-TEST_F(SHA256Test, DOUBLE_HASH_TEST) {
+TEST_F(TestSHA256, DOUBLE_HASH_TEST) {
     uint256 result   = Hash<2>(data);
     uint256 expected = uint256S("8d7b5da15ca6f77535c4612a887d25e66e7578c233e0049663b9e7df75a843a5");
     EXPECT_EQ(expected, result);
 }
 
-TEST_F(SHA256Test, ZERO_HASH) {
+TEST_F(TestSHA256, ZERO_HASH) {
     VStream s;
     uint256 result   = Hash<1>(s);
     uint256 expected = uint256S("55b852781b9995a44c939b64e441ae2724b96f99c8f4fb9a141cfc9842c4b0e3");

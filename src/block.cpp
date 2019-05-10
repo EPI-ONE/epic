@@ -1,5 +1,61 @@
 #include "block.h"
 
+
+Milestone::Milestone() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
+    milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
+    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
+    hashRate        = GetMsDifficulty() / params.timeInterval;
+}
+
+ Milestone::Milestone(std::shared_ptr<Block> pblock, std::shared_ptr<Milestone> previous) : pprevious(previous) {
+    pblock->SetMilestoneInstance(*this);
+    if (pprevious != nullptr) {
+        height    = pprevious->height + 1;
+        chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->GetHash()));
+
+         lastUpdateTime  = pprevious->lastUpdateTime;
+        milestoneTarget = pprevious->milestoneTarget;
+        blockTarget     = pprevious->blockTarget;
+
+         UpdateDifficulty(pblock->GetTime());
+    } else {
+        // TODO: go somewhere to find the height
+    }
+}
+
+ void Milestone::UpdateDifficulty(const uint64_t blockUpdateTime) {
+    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = params.targetTimespan;
+    if (timespan < targetTimespan / 4) {
+        timespan = targetTimespan / 4;
+    }
+    if (timespan > targetTimespan * 4) {
+        timespan = targetTimespan * 4;
+    }
+
+     if (height == 1) {
+        lastUpdateTime = blockUpdateTime;
+        timespan = params.timeInterval;
+    }
+
+     if (!IsDiffTransition()) {
+        hashRate = ((height + 1) % params.interval) * GetMsDifficulty() / timespan;
+        return;
+    }
+
+     hashRate        = params.interval * GetMsDifficulty() / timespan;
+    milestoneTarget = milestoneTarget * timespan / targetTimespan;
+    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS);
+    blockTarget *= params.timeInterval;
+
+     if (blockTarget > params.maxTarget) {
+        // in case that it is not difficult in this round
+        blockTarget     = params.maxTarget;
+        milestoneTarget = blockTarget * arith_uint256(params.timeInterval / params.targetTPS);
+    }
+
+     lastUpdateTime = blockUpdateTime;
+}
+
 Block::Block() {
     SetNull();
 }
@@ -347,21 +403,21 @@ std::string std::to_string(Block& block) {
 }
 
 void Block::SerializeMilestone(VStream& s, Milestone& milestone) {
-    ::Serialize(s, VARINT(milestone.height_));
-    ::Serialize(s, milestone.chainwork_.GetCompact());
-    ::Serialize(s, milestone.lastUpdateTime_);
-    ::Serialize(s, milestone.milestoneTarget_.GetCompact());
-    ::Serialize(s, milestone.blockTarget_.GetCompact());
-    ::Serialize(s, VARINT(milestone.hashRate_));
+    ::Serialize(s, VARINT(milestone.height));
+    ::Serialize(s, milestone.chainwork.GetCompact());
+    ::Serialize(s, milestone.lastUpdateTime);
+    ::Serialize(s, milestone.milestoneTarget.GetCompact());
+    ::Serialize(s, milestone.blockTarget.GetCompact());
+    ::Serialize(s, VARINT(milestone.hashRate));
 }
 
 void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
-    ::Deserialize(s, VARINT(milestone.height_));
-    milestone.chainwork_.SetCompact(ser_readdata32(s));
-    milestone.lastUpdateTime_ = ser_readdata64(s);
-    milestone.milestoneTarget_.SetCompact(ser_readdata32(s));
-    milestone.blockTarget_.SetCompact(ser_readdata32(s));
-    ::Deserialize(s, VARINT(milestone.hashRate_));
+    ::Deserialize(s, VARINT(milestone.height));
+    milestone.chainwork.SetCompact(ser_readdata32(s));
+    milestone.lastUpdateTime = ser_readdata64(s);
+    milestone.milestoneTarget.SetCompact(ser_readdata32(s));
+    milestone.blockTarget.SetCompact(ser_readdata32(s));
+    ::Deserialize(s, VARINT(milestone.hashRate));
 }
 
 Block Block::CreateGenesis() {
@@ -463,12 +519,12 @@ size_t BlockDag::GetOptimalEncodingSize() {
     optimalEncodingSize_ += 1;
 
     if (milestone_ != nullptr) {
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->height_);
+        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->height);
         optimalEncodingSize_ += 4;
         optimalEncodingSize_ += 8;
         optimalEncodingSize_ += 4;
         optimalEncodingSize_ += 4;
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->hashRate_);
+        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->hashRate);
     }
 
     return optimalEncodingSize_;

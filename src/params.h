@@ -4,6 +4,8 @@
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <array>
+#include <string>
 
 #include "arith_uint256.h"
 #include "coin.h"
@@ -31,9 +33,12 @@ static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // an easy enough difficulty target
 static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
+// initial difficulty target
 
 class Params {
 public:
+    static inline const std::string INITIAL_MS_TARGET = "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21";
+
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
         SECRET_KEY,
@@ -50,6 +55,9 @@ public:
     arith_uint256 maxTarget;
     Coin maxMoney;
     Coin reward;
+
+    uint64_t initialDifficulty;
+    arith_uint256 initialMsTarget;
 
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
 

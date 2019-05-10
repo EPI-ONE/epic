@@ -179,4 +179,11 @@ struct std::hash<uint256> {
     }
 };
 
+template <>
+struct std::equal_to<uint256> {
+    bool operator()(const uint256& lhs, const uint256& rhs) const {
+        return lhs == rhs; 
+    }
+};
+
 #endif // BITCOIN_UINT256_H
