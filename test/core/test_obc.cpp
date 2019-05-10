@@ -91,16 +91,19 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     /* hash missing */
     const uint256 dep_hash = blocks[8].GetHash();
 
+    /* hash of the block that must remain in OBC (9) */
+    const uint256 rem_hash = blocks[9].GetHash();
+
     /* fill OBC */
     obc.AddBlock(std::make_shared<const Block>(blocks[7]), false, true, false);
     obc.AddBlock(std::make_shared<const Block>(blocks[1]), false, false, true);
     obc.AddBlock(std::make_shared<const Block>(blocks[0]), false, false, true);
-    obc.AddBlock(std::make_shared<const Block>(blocks[9]), false, false, true);
+    obc.AddBlock(std::make_shared<const Block>(blocks[9]), false, true, true);
 
-    /* since we only have one lose
-     * end, node 7, the size should
-     * be equal to one */
-    EXPECT_EQ(obc.Size(), 1);
+    /* we have two lose end 7 & 9
+     * therefore the obc.Size should
+     * be equal to two */
+    EXPECT_EQ(obc.Size(), 2);
 
     /* submit missing hash */
     std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
@@ -108,9 +111,14 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     /* check if a value was even returned */
     EXPECT_TRUE(result.has_value());
 
-    /* check if there were exactly four values returned*/
-    EXPECT_EQ(result.value().size(), 4);
+    /* check if there were exactly three
+     * values returned as the lose end 9
+     * is not tied since it has two deps */
+    EXPECT_EQ(result.value().size(), 3);
 
-    /* check if the OBC is empty now */
-    EXPECT_EQ(obc.DependencySize(), 0);
+    /* check if the OBC has one element left */
+    EXPECT_EQ(obc.DependencySize(), 1);
+
+    /* check if that remaining block is 9*/
+    EXPECT_TRUE(obc.Contains(rem_hash));
 }
