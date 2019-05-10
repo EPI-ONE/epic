@@ -7,6 +7,13 @@
 
 #include "block.h"
 
+/* bitmask for indicating missing dependencies */
+enum OBC_DEP_STATUS : uint8_t {
+    M_MISSING = 1 << 0,
+    T_MISSING = 1 << 1,
+    P_MISSING = 1 << 2,
+};
+
 /*!! NOT THREAD SAFE !!*/
 class OrphanBlocksContainer {
 public:
@@ -45,11 +52,8 @@ public:
 
     /*
      * adds block to OBC
-     * m_missing: true -> milestone is missing
-     * t_missing: true -> tip is missing
-     * p_missing: true -> prev is missing
      */
-    void AddBlock(const ConstBlockPtr& block, bool m_missing, bool t_missing, bool p_missing);
+    void AddBlock(const ConstBlockPtr& block, uint8_t missing_mask);
 
     /*
      * Submits the information that a new block with given hash is available
@@ -84,7 +88,7 @@ private:
 
     /* calculates the number of unique missing dependencies
      * based on the hashes of the missing blocks */
-    static uint8_t DependencyCardinality(ConstBlockPtr block, bool m_missing, bool t_missing, bool p_missing);
+    static uint8_t DependencyCardinality(ConstBlockPtr block, uint8_t missing_mask);
 };
 
 #endif

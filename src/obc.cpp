@@ -21,16 +21,16 @@ bool OrphanBlocksContainer::Contains(const uint256& hash) const {
     return block_dep_map_.find(hash) != block_dep_map_.end();
 }
 
-void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing, bool t_missing, bool p_missing) {
+void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing_mask) {
     /* return if the block is actually not an orphan */
-    if (!(m_missing || t_missing || p_missing)) {
+    if (missing_mask == 0) {
         return;
     }
 
     /* construct new dependency
      * for the new block */
     obc_dep_ptr dep(new obc_dep);
-    dep->ndeps = DependencyCardinality(block, m_missing, t_missing, p_missing);
+    dep->ndeps = DependencyCardinality(block, missing_mask);
     dep->block = block;
 
     /* insert new dependency into block_dep_map_ */
@@ -53,15 +53,15 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, bool m_missing,
         }
     };
 
-    if (m_missing) {
+    if (missing_mask & M_MISSING) {
         common_insert(block->GetMilestoneHash());
     }
 
-    if (t_missing) {
+    if (missing_mask & T_MISSING) {
         common_insert(block->GetTipHash());
     }
 
-    if (p_missing) {
+    if (missing_mask & P_MISSING) {
         common_insert(block->GetPrevHash());
     }
 }
@@ -123,21 +123,18 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     return result;
 }
 
-uint8_t OrphanBlocksContainer::DependencyCardinality(ConstBlockPtr block,
-    bool m_missing,
-    bool t_missing,
-    bool p_missing) {
+uint8_t OrphanBlocksContainer::DependencyCardinality(ConstBlockPtr block, uint8_t missing_mask) {
     std::unordered_set<uint256> buff;
 
-    if (m_missing) {
+    if (missing_mask & M_MISSING) {
         buff.insert(block->GetMilestoneHash());
     }
 
-    if (t_missing) {
+    if (missing_mask & T_MISSING) {
         buff.insert(block->GetTipHash());
     }
 
-    if (p_missing) {
+    if (missing_mask & P_MISSING) {
         buff.insert(block->GetPrevHash());
     }
 
