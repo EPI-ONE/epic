@@ -70,7 +70,6 @@ const Transaction* TxOutput::GetParentTx() const {
 Transaction::Transaction() {
     inputs_  = std::vector<TxInput>();
     outputs_ = std::vector<TxOutput>();
-    status_  = UNKNOWN;
 }
 
 Transaction::Transaction(const Transaction& tx) {
@@ -79,7 +78,6 @@ Transaction::Transaction(const Transaction& tx) {
     outputs_     = tx.outputs_;
     fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
-    status_      = tx.status_;
     FinalizeHash();
 
     // Set parents for the copied inputs and outputs
@@ -160,22 +158,6 @@ bool Transaction::IsRegistration() const {
 
 bool Transaction::IsFirstRegistration() const {
     return inputs_.size() == 1 && inputs_.front().IsFirstRegistration() && outputs_.front().value == ZERO_COIN;
-}
-
-void Transaction::Validate() {
-    status_ = VALID;
-}
-
-void Transaction::Invalidate() {
-    status_ = INVALID;
-}
-
-void Transaction::SetStatus(Transaction::Validity&& status) {
-    status_ = status;
-}
-
-Transaction::Validity Transaction::GetStatus() const {
-    return status_;
 }
 
 void Transaction::SetParent(const Block* const blk) {
