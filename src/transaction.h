@@ -173,6 +173,23 @@ private:
     const Block* parentBlock_;
 };
 
+typedef std::shared_ptr<const Transaction> ConstTxPtr;
+
+template <>
+struct std::hash<std::shared_ptr<const Transaction>> {
+    size_t operator()(const std::shared_ptr<const Transaction>& value) const {
+        return value->GetHash().GetCheapHash();
+    }
+};
+
+template <>
+struct std::equal_to<std::shared_ptr<const Transaction>> {
+    bool operator()(const std::shared_ptr<const Transaction>& lhs,
+        const std::shared_ptr<const Transaction>& rhs) const {
+        return lhs->GetHash() == rhs->GetHash();
+    }
+};
+
 namespace std {
 string to_string(const TxOutPoint& outpoint);
 string to_string(const TxInput& input);
