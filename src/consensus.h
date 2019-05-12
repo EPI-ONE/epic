@@ -116,6 +116,9 @@ public:
     NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
         cBlock = std::make_shared<BlockNet>(blk);
     }
+    NodeRecord(VStream& s) {
+        s >> *this;
+    }
 
     void LinkChainState(ChainState&);
     size_t GetOptimalStorageSize();
@@ -124,7 +127,7 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
-    friend bool operator==(NodeRecord& a, NodeRecord& b) {
+    friend bool operator==(const NodeRecord& a, const NodeRecord& b) {
         return *(a.cBlock) == *(b.cBlock)
                 && a.cumulativeReward == b.cumulativeReward
                 && ((a.snapshot == nullptr || b.snapshot == nullptr) ? true : (*(a.snapshot) == *(b.snapshot)))
@@ -139,5 +142,7 @@ string to_string(const NodeRecord&);
 } // namespace std
 
 extern const NodeRecord GENESIS_RECORD;
+
+typedef std::shared_ptr<NodeRecord> RecordPtr;
 
 #endif /* ifndef __SRC_CONSENSUS_H__ */

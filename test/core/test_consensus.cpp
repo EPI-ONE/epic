@@ -17,7 +17,7 @@ std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
 
 class TestConsensus : public testing::Test {};
 
-TEST_F(ConsensusTest, SyntaxChecking) {
+TEST_F(TestConsensus, SyntaxChecking) {
     BlockNet b = GENESIS;
     EXPECT_TRUE(b.Verify());
 

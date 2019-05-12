@@ -8,5 +8,6 @@ ConstBlockPtr FakeBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool solve =
 Transaction FakeTx(int numTxInput, int numTxOutput);
 NodeRecord FakeNodeRecord(const BlockNet&);
 NodeRecord FakeNodeRecord(int numTxInput = 0, int numTxOutput = 0, bool solve = false);
+RecordPtr FakeRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool solve = false);
 
 #endif /* ifndef __TEST_TEST-METHODS_BLOCK-FACTORY_H__ */

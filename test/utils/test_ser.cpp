@@ -195,6 +195,8 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     }
 
     BlockNet block2(soutput);
+
+    // check parent pointers
     ptrTx = &*block2.GetTransaction();
     EXPECT_EQ(&block2, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
@@ -206,7 +208,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     }
 
     // Check encoding size
-    EXPECT_EQ(VStream(blockFromDeserialization).size(), blockFromDeserialization.GetOptimalEncodingSize());
+    EXPECT_EQ(VStream(block2).size(), block2.GetOptimalEncodingSize());
 }
 
 TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "block.h"
+#include "consensus.h"
 #include "file_utils.h"
 #include "rocksdb/db.h"
 #include "rocksdb/options.h"
@@ -22,13 +23,13 @@ public:
 
     RocksDBStore(std::string dbPath);
 
-    bool Exists(const uint256& blockHash) const;
+    bool Exists(const uint256&) const;
 
-    std::unique_ptr<BlockDag> GetBlock(const uint256& blockHash) const;
+    std::unique_ptr<NodeRecord> GetRecord(const uint256&) const;
 
-    bool WriteBlock(const BlockPtr& block) const;
+    bool WriteRecord(const RecordPtr&) const;
 
-    bool WriteBlocks(const std::vector<BlockPtr> blocks) const;
+    bool WriteRecords(const std::vector<RecordPtr>&) const;
 
     ~RocksDBStore();
 

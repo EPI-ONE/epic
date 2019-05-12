@@ -42,7 +42,7 @@ bool RocksDBStore::Exists(const uint256& blockHash) const {
     return Get(kDefaultColumnFamilyName, keySlice) != "";
 }
 
-std::unique_ptr<BlockDag> RocksDBStore::GetBlock(const uint256& blockHash) const {
+std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) const {
     VStream key;
     key.reserve(32);
     key << blockHash;
@@ -56,10 +56,10 @@ std::unique_ptr<BlockDag> RocksDBStore::GetBlock(const uint256& blockHash) const
     if (!s.ok()) {
         return nullptr;
     }
-    std::unique_ptr<BlockDag> b;
+    std::unique_ptr<NodeRecord> b;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        b = std::make_unique<BlockDag>(value);
+        b = std::make_unique<NodeRecord>(value);
     } catch (const std::exception&) {
         return nullptr;
     }
@@ -79,33 +79,33 @@ const std::string RocksDBStore::Get(const std::string& column, const std::string
     return Get(column, Slice(key));
 }
 
-bool RocksDBStore::WriteBlock(const BlockPtr& block) const {
+bool RocksDBStore::WriteRecord(const RecordPtr& record) const {
     VStream key;
     key.reserve(32);
-    key << block->GetHash();
+    key << record->cBlock->GetHash();
     Slice keySlice(key.data(), key.size());
 
     VStream value;
-    value.reserve(block->GetOptimalEncodingSize());
-    value << block;
+    value.reserve(record->GetOptimalStorageSize());
+    value << *(record->cBlock);
     Slice valueSlice(value.data(), value.size());
 
     return Write(kDefaultColumnFamilyName, keySlice, valueSlice);
 }
 
-bool RocksDBStore::WriteBlocks(const std::vector<BlockPtr> blocks) const {
+bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
     class WriteBatch wb;
     VStream key;
     key.reserve(32);
     VStream value;
-    for (const auto& block : blocks) {
+    for (const auto& record : records) {
         // Prepare key
-        key << block->GetHash();
+        key << record->cBlock->GetHash();
         Slice keySlice(key.data(), key.size());
 
         // Prepare value
-        value.reserve(block->GetOptimalEncodingSize());
-        value << block;
+        value.reserve(record->GetOptimalStorageSize());
+        value << *(record->cBlock);
         Slice valueSlice(value.data(), value.size());
 
         wb.Put(handleMap[kDefaultColumnFamilyName], keySlice, valueSlice);

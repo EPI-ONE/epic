@@ -131,21 +131,6 @@ std::optional<Transaction>& Block::GetTransaction() {
     return transaction_;
 }
 
-<<<<<<< HEAD
-=======
-void Block::SetMinerChainHeight(uint32_t height) {
-    minerChainHeight_ = height;
-}
-
-void Block::SetCumulativeReward(Coin coin) {
-    cumulativeReward_ = coin;
-}
-
-void Block::ResetReward() {
-    cumulativeReward_ = ZERO_COIN;
-}
-
->>>>>>> Fixed a bug that causes write_batch_blocks failed
 void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
@@ -405,6 +390,14 @@ Block Block::CreateGenesis() {
     // std::cout << std::to_string(genesisBlock) << std::endl;
 
     return genesisBlock;
+}
+
+BlockNet::BlockNet(const Block& b) {
+    SetParents();
+}
+
+BlockNet::BlockNet(VStream& payload) {
+    payload >> *this;
 }
 
 const Block GENESIS = Block::CreateGenesis();

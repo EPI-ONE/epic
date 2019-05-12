@@ -2,7 +2,7 @@
 
 typedef Tasm::Listing Listing;
 
-Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
+Block FakeBlock(int numTxInput, int numTxOutput, bool solve) {
     uint256 r1;
     r1.randomize();
     uint256 r2;
@@ -27,8 +27,7 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool db, bool solve) {
 }
 
 ConstBlockPtr FakeBlockPtr(int numTxInput, int numTxOutput, bool solve) {
-    ConstBlockPtr b = std::make_shared<BlockNet>(FakeBlock(numTxInput, numTxOutput, solve));
-    return b;
+    return std::make_shared<BlockNet>(FakeBlock(numTxInput, numTxOutput, solve));
 }
 
 Transaction FakeTx(int numTxInput, int numTxOutput) {
@@ -74,4 +73,8 @@ NodeRecord FakeNodeRecord(const BlockNet& b) {
 
 NodeRecord FakeNodeRecord(int numTxInput, int numTxOutput, bool solve) {
     return FakeNodeRecord(FakeBlock(numTxInput, numTxOutput, solve));
+}
+
+RecordPtr FakeRecordPtr(int numTxInput, int numTxOutput, bool solve) {
+    return std::make_shared<NodeRecord>(FakeNodeRecord(numTxInput, numTxOutput, solve));
 }

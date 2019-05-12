@@ -186,9 +186,10 @@ public:
 
     void write(const char* pch, size_t nSize) {
         // Write to the end of the buffer
-        size_t end = size();
-        chars_.resize(end + nSize);
-        memcpy(&chars_[end], pch, nSize);
+        // size_t end = size();
+        // chars_.resize(end + nSize);
+        // memcpy(&chars_[end], pch, nSize);
+        chars_.insert(chars_.end(), pch, pch + nSize);
     }
 
     template <typename T>

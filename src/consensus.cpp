@@ -145,7 +145,7 @@ std::string std::to_string(const NodeRecord& rec) {
     std::string s = "NodeRecord {\n";
     s += strprintf("   contained block: \n %s", std::to_string(*(rec.cBlock)));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
-    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward);
+    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
     if (rec.snapshot != nullptr) {
         s += "   with chain state snapshot {\n";

@@ -41,7 +41,7 @@ public:
 class TestRocksDB : public testing::Test {
 public:
     static TestImplRocksDBStore* db;
-    static std::vector<BlockPtr> blocks;
+    static std::vector<RecordPtr> records;
     static std::vector<uint256> keys;
     static size_t size;
 
@@ -61,9 +61,9 @@ protected:
         // blocks.reserve(size);
         // keys.reserve(size);
         for (int i = 0; i < size; ++i) {
-            BlockPtr b = FakeBlockPtr(rand() % 100 + 1, rand() % 100 + 1, true);
-            blocks[i]  = b;
-            keys[i]    = b->GetHash();
+            RecordPtr rec = FakeRecordPtr(rand() % 100 + 1, rand() % 100 + 1);
+            records[i]  = rec;
+            keys[i]    = rec->cBlock->GetHash();
         }
     }
 
@@ -76,7 +76,7 @@ protected:
         std::string cmd = "exec rm -r " + PREFIX;
         system(cmd.c_str());
         delete db;
-        blocks.clear();
+        records.clear();
         keys.clear();
     }
 
@@ -97,7 +97,7 @@ protected:
 
 TestImplRocksDBStore* TestRocksDB::db     = nullptr;
 size_t TestRocksDB::size                  = 1000;
-std::vector<BlockPtr> TestRocksDB::blocks = std::vector<BlockPtr>(size);
+std::vector<RecordPtr> TestRocksDB::records = std::vector<RecordPtr>(size);
 std::vector<uint256> TestRocksDB::keys    = std::vector<uint256>(size);
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
@@ -127,29 +127,30 @@ TEST_F(TestRocksDB, batch_insertion) {
 }
 
 TEST_F(TestRocksDB, write_single_block) {
-    BlockPtr b = FakeBlockPtr(1, 1, true);
-    EXPECT_TRUE(db->WriteBlock(b));
+    RecordPtr rec = FakeRecordPtr(1, 1);
+    std::cout << "=======================" << rec->GetOptimalStorageSize();
+    EXPECT_TRUE(db->WriteRecord(rec));
 
-    std::unique_ptr<Block> value = db->GetBlock(b->GetHash());
-    EXPECT_EQ(*b, *value);
+    std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cBlock->GetHash());
+    EXPECT_EQ(*rec, *value);
 }
 
 TEST_F(TestRocksDB, write_batch_blocks) {
-    EXPECT_TRUE(db->WriteBlocks(blocks));
+    EXPECT_TRUE(db->WriteRecords(records));
 
     for (int i = 0; i < size; ++i) {
-        auto pblock = db->GetBlock(keys[i]);
-        EXPECT_EQ(*blocks[i], *pblock);
+        auto pblock = db->GetRecord(keys[i]);
+        EXPECT_EQ(*records[i], *pblock);
     }
 }
 
 TEST_F(TestRocksDB, write_blocks_one_by_one) {
     for (int i = 0; i < size; ++i) {
-        EXPECT_TRUE(db->WriteBlock(blocks[i]));
+        EXPECT_TRUE(db->WriteRecord(records[i]));
     }
 
     for (int i = 0; i < size; ++i) {
-        auto pblock = db->GetBlock(keys[i]);
-        EXPECT_EQ(*blocks[i], *pblock);
+        auto pblock = db->GetRecord(keys[i]);
+        EXPECT_EQ(*records[i], *pblock);
     }
 }
