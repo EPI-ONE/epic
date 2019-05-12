@@ -27,6 +27,7 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     if (timespan < targetTimespan / 4) {
         timespan = targetTimespan / 4;
     }
+
     if (timespan > targetTimespan * 4) {
         timespan = targetTimespan * 4;
     }

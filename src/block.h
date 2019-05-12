@@ -11,6 +11,9 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
+extern const Block GENESIS;
+static constexpr std::size_t HEADER_SIZE = 116;
+
 namespace std {
 string to_string(Block& block);
 } // namespace std
@@ -79,7 +82,9 @@ public:
 
     void CalculateHash();
 
-    const uint256& GetTxHash();
+    const uint256& FinalizeTxHash();
+
+    const uint256& GetTxHash() const;
 
     size_t GetOptimalEncodingSize() const;
 
@@ -195,9 +200,6 @@ public:
     }
 };
 
-extern const Block GENESIS;
-static constexpr std::size_t HEADER_SIZE = 116;
-
-typedef std::shared_ptr<const BlockNet> cBlockPtr;
+typedef std::shared_ptr<const BlockNet> ConstBlockPtr;
 
 #endif //__SRC_BLOCK_H__

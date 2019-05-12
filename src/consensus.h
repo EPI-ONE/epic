@@ -91,7 +91,7 @@ public:
         INVALID,
     };
 
-    cBlockPtr cBlock;
+    ConstBlockPtr cBlock;
 
     Coin cumulativeReward;
     uint64_t minerChainHeight;
@@ -104,7 +104,7 @@ public:
     size_t optimalStorageSize;
 
     NodeRecord() : optimalStorageSize(0), minerChainHeight(0) {}
-    NodeRecord(const cBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
+    NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
     NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
         cBlock = std::make_shared<BlockNet>(blk);
     }

@@ -164,15 +164,20 @@ void Block::FinalizeHash() {
 void Block::CalculateHash() {
     VStream s;
     Block::Serialize(s);
-    GetTxHash().Serialize(s);
+    FinalizeTxHash().Serialize(s);
     hash_ = Hash<1>(s);
 }
 
-const uint256& Block::GetTxHash() {
+const uint256& Block::FinalizeTxHash() {
     if (!HasTransaction()) {
         return Hash::GetZeroHash();
     }
+
     transaction_->FinalizeHash();
+    return transaction_->GetHash();
+}
+
+const uint256& Block::GetTxHash() const {
     return transaction_->GetHash();
 }
 
