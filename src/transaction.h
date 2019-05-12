@@ -120,12 +120,6 @@ private:
 
 class Transaction {
 public:
-    enum Validity : uint8_t {
-        UNKNOWN = 0,
-        VALID,
-        INVALID,
-    };
-
     Transaction();
 
     Transaction(const Transaction& tx);
@@ -156,14 +150,6 @@ public:
 
     bool IsFirstRegistration() const;
 
-    void Validate();
-
-    void Invalidate();
-
-    void SetStatus(Validity&& status);
-
-    Validity GetStatus() const;
-
     void SetParent(const Block* const blk);
 
     const Block* GetParentBlock() const;
@@ -187,7 +173,6 @@ private:
 
     uint256 hash_;
     Coin fee_;
-    Validity status_;
 
     const Block* parentBlock_;
 };

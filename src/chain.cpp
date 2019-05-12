@@ -2,10 +2,10 @@
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
-    vmilestones_   = {std::make_shared<Milestone>()};
+    vmilestones_   = {std::make_shared<ChainState>()};
 }
 
-std::shared_ptr<Milestone> Chain::GetChainHead() const {
+std::shared_ptr<ChainState> Chain::GetChainHead() const {
     return vmilestones_.front();
 }
 

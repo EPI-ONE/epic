@@ -56,7 +56,7 @@ TEST_F(OBCTest, wrong_argument_test) {
     OrphanBlocksContainer obc;
 
     /* add a block to an OBC that is actually not an orphan */
-    obc.AddBlock(std::make_shared<const Block>(blocks[0]), 0);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[0]), 0);
 
     /* since the added block is no
      * orphan we expect an empty OBC */
@@ -66,7 +66,7 @@ TEST_F(OBCTest, wrong_argument_test) {
 TEST_F(OBCTest, simple_one_block_test) {
     OrphanBlocksContainer obc;
 
-    obc.AddBlock(std::make_shared<const Block>(blocks[0]), M_MISSING);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[0]), M_MISSING);
 
     /* now we should have one
      * block in the OBC */
@@ -95,10 +95,10 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     const uint256 rem_hash = blocks[9].GetHash();
 
     /* fill OBC */
-    obc.AddBlock(std::make_shared<const Block>(blocks[7]), T_MISSING);
-    obc.AddBlock(std::make_shared<const Block>(blocks[1]), P_MISSING);
-    obc.AddBlock(std::make_shared<const Block>(blocks[0]), P_MISSING);
-    obc.AddBlock(std::make_shared<const Block>(blocks[9]), T_MISSING | P_MISSING);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[7]), T_MISSING);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[1]), P_MISSING);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[0]), P_MISSING);
+    obc.AddBlock(std::make_shared<const BlockNet>(blocks[9]), T_MISSING | P_MISSING);
 
     /* we have two lose end 7 & 9
      * therefore the obc.Size should

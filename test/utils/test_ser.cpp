@@ -1,12 +1,8 @@
 #include <gtest/gtest.h>
 #include <optional>
 
-#include "block.h"
+#include "consensus.h"
 #include "key.h"
-#include "pubkey.h"
-#include "stream.h"
-#include "tasm.h"
-#include "transaction.h"
 
 typedef Tasm::Listing Listing;
 
@@ -197,27 +193,30 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     for (const TxOutput& output : ptrTx->GetOutputs()) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
+
+    // Check encoding size
+    EXPECT_EQ(VStream(blockFromDeserialization).size(), blockFromDeserialization.GetOptimalEncodingSize());
 }
 
-TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
-    BlockDag block = BlockDag(Block(1, rand1, zeros, rand2, time(nullptr), 1, 1));
+TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
+    BlockNet blk = BlockNet(1, rand1, zeros, rand2, time(nullptr), 1, 1);
 
     // Add a tx into the block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
     Transaction tx      = Transaction();
     tx.AddInput(TxInput(outpoint, randomBytes));
     tx.AddOutput(TxOutput(100, randomBytes));
-    block.AddTransaction(tx);
-    tx.Validate();
+    blk.AddTransaction(tx);
 
-    // Set extra info
-    block.SetMinerChainHeight(100);
-    block.ResetReward();
+    // Construct NodeRecord
+    NodeRecord block(blk);
+    block.minerChainHeight = 100;
+    block.cumulativeReward = 0;
 
-    // Link a ms instance
-    Milestone ms(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
+    // Link the chain state
+    ChainState state(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
         arith_uint256(0X3E8));
-    block.SetMilestoneInstance(ms);
+    block.LinkChainState(state);
 
     // Make it a fake milestone
     block.InvalidateMilestone();
@@ -226,7 +225,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlockToDB) {
     block.Serialize(sinput);
     std::string s = sinput.str();
 
-    BlockDag blockFromUnserialization;
+    NodeRecord blockFromUnserialization;
     blockFromUnserialization.Deserialize(sinput);
 
     VStream soutput;

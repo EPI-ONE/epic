@@ -1,61 +1,5 @@
 #include "block.h"
 
-
-Milestone::Milestone() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
-    milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
-    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
-    hashRate        = GetMsDifficulty() / params.timeInterval;
-}
-
- Milestone::Milestone(std::shared_ptr<Block> pblock, std::shared_ptr<Milestone> previous) : pprevious(previous) {
-    pblock->SetMilestoneInstance(*this);
-    if (pprevious != nullptr) {
-        height    = pprevious->height + 1;
-        chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->GetHash()));
-
-         lastUpdateTime  = pprevious->lastUpdateTime;
-        milestoneTarget = pprevious->milestoneTarget;
-        blockTarget     = pprevious->blockTarget;
-
-         UpdateDifficulty(pblock->GetTime());
-    } else {
-        // TODO: go somewhere to find the height
-    }
-}
-
- void Milestone::UpdateDifficulty(const uint64_t blockUpdateTime) {
-    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = params.targetTimespan;
-    if (timespan < targetTimespan / 4) {
-        timespan = targetTimespan / 4;
-    }
-    if (timespan > targetTimespan * 4) {
-        timespan = targetTimespan * 4;
-    }
-
-     if (height == 1) {
-        lastUpdateTime = blockUpdateTime;
-        timespan = params.timeInterval;
-    }
-
-     if (!IsDiffTransition()) {
-        hashRate = ((height + 1) % params.interval) * GetMsDifficulty() / timespan;
-        return;
-    }
-
-     hashRate        = params.interval * GetMsDifficulty() / timespan;
-    milestoneTarget = milestoneTarget * timespan / targetTimespan;
-    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS);
-    blockTarget *= params.timeInterval;
-
-     if (blockTarget > params.maxTarget) {
-        // in case that it is not difficult in this round
-        blockTarget     = params.maxTarget;
-        milestoneTarget = blockTarget * arith_uint256(params.timeInterval / params.targetTPS);
-    }
-
-     lastUpdateTime = blockUpdateTime;
-}
-
 Block::Block() {
     SetNull();
 }
@@ -111,7 +55,7 @@ void Block::UnCache() {
     hash_.SetNull();
 }
 
-bool Block::Verify() {
+bool Block::Verify() const {
     // checks pow
     if (!CheckPOW()) {
         return false;
@@ -176,6 +120,7 @@ void Block::AddTransaction(Transaction tx) {
     transaction_.reset();
     transaction_ = tx;
     transaction_->SetParent(this);
+    CalculateOptimalEncodingSize();
 }
 
 bool Block::HasTransaction() const {
@@ -184,14 +129,6 @@ bool Block::HasTransaction() const {
 
 std::optional<Transaction>& Block::GetTransaction() {
     return transaction_;
-}
-
-void Block::SetMinerChainHeight(uint32_t height) {
-    minerChainHeight_ = height;
-}
-
-void Block::ResetReward() {
-    cumulativeReward_ = ZERO_COIN;
 }
 
 void Block::SetDifficultyTarget(uint32_t target) {
@@ -215,21 +152,6 @@ const uint32_t Block::GetNonce() const {
     return nonce_;
 }
 
-void Block::InvalidateMilestone() {
-    isMilestone_ = false;
-    milestone_.reset();
-}
-
-void Block::SetMilestoneInstance(Milestone& ms) {
-    if (milestone_.use_count() == 0) {
-        milestone_ = std::make_shared<Milestone>(ms);
-    } else {
-        milestone_.reset(&ms);
-    }
-
-    isMilestone_ = true;
-}
-
 const uint256& Block::GetHash() const {
     return hash_;
 }
@@ -242,25 +164,48 @@ void Block::FinalizeHash() {
 void Block::CalculateHash() {
     VStream s;
     Block::Serialize(s);
-    GetTxHash().Serialize(s);
+    FinalizeTxHash().Serialize(s);
     hash_ = Hash<1>(s);
 }
 
-const uint256& Block::GetTxHash() {
+const uint256& Block::FinalizeTxHash() {
     if (!HasTransaction()) {
         return Hash::GetZeroHash();
     }
+
     transaction_->FinalizeHash();
     return transaction_->GetHash();
 }
 
-size_t Block::GetOptimalEncodingSize() {
-    if (optimalEncodingSize_ > 0) {
+const uint256& Block::GetTxHash() const {
+    return transaction_->GetHash();
+}
+
+size_t Block::CalculateOptimalEncodingSize() {
+    optimalEncodingSize_ = HEADER_SIZE + 1;
+    if (!HasTransaction())
         return optimalEncodingSize_;
+
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
+    for (const TxInput& input : transaction_->GetInputs()) {
+        size_t listingDataSize    = input.listingContent.data.size();
+        size_t listingProgramSize = input.listingContent.program.size();
+        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
-    optimalEncodingSize_ = HEADER_SIZE;
+    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
+    for (const TxOutput& output : transaction_->GetOutputs()) {
+        size_t listingDataSize    = output.listingContent.data.size();
+        size_t listingProgramSize = output.listingContent.program.size();
+        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+    }
 
+    return optimalEncodingSize_;
+}
+
+size_t Block::GetOptimalEncodingSize() const {
     return optimalEncodingSize_;
 }
 
@@ -286,7 +231,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
     return target;
 }
 
-bool Block::CheckPOW() {
+bool Block::CheckPOW() const {
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
@@ -294,11 +239,11 @@ bool Block::CheckPOW() {
         spdlog::info(s);
         return false;
     }
-    FinalizeHash();
+
     arith_uint256 blkHash = UintToArith256(hash_);
 
     if (blkHash > target) {
-        spdlog::info("Hash is higher than target: " + std::to_string(GetHash()) + " vs " + std::to_string(target));
+        spdlog::info(strprintf("Hash %s is higher than target: %s v.s. %s", std::to_string(GetHash()), std::to_string(target)));
         return false;
     }
 
@@ -402,24 +347,6 @@ std::string std::to_string(Block& block) {
     return s;
 }
 
-void Block::SerializeMilestone(VStream& s, Milestone& milestone) {
-    ::Serialize(s, VARINT(milestone.height));
-    ::Serialize(s, milestone.chainwork.GetCompact());
-    ::Serialize(s, milestone.lastUpdateTime);
-    ::Serialize(s, milestone.milestoneTarget.GetCompact());
-    ::Serialize(s, milestone.blockTarget.GetCompact());
-    ::Serialize(s, VARINT(milestone.hashRate));
-}
-
-void Block::DeserializeMilestone(VStream& s, Milestone& milestone) {
-    ::Deserialize(s, VARINT(milestone.height));
-    milestone.chainwork.SetCompact(ser_readdata32(s));
-    milestone.lastUpdateTime = ser_readdata64(s);
-    milestone.milestoneTarget.SetCompact(ser_readdata32(s));
-    milestone.blockTarget.SetCompact(ser_readdata32(s));
-    ::Deserialize(s, VARINT(milestone.hashRate));
-}
-
 Block Block::CreateGenesis() {
     Block genesisBlock(GENESIS_BLOCK_VERSION);
     Transaction tx;
@@ -440,12 +367,11 @@ Block Block::CreateGenesis() {
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesisBlock.AddTransaction(tx);
-    genesisBlock.SetMinerChainHeight(0);
-    genesisBlock.ResetReward();
     genesisBlock.SetDifficultyTarget(0x1d00ffffL);
     genesisBlock.SetTime(1548078136L);
     genesisBlock.SetNonce(2081807681);
     genesisBlock.FinalizeHash();
+    genesisBlock.CalculateOptimalEncodingSize();
 
     // The following commented lines were used for mining a genesis block
     // int numThreads = 44;
@@ -458,106 +384,6 @@ Block Block::CreateGenesis() {
     return genesisBlock;
 }
 
-BlockDag::BlockDag(const BlockNet& b) : BlockNet(b) {}
-
-void BlockDag::Serialize(VStream& s) const {
-    BlockNet::Serialize(s);
-    s << VARINT(cumulativeReward_.GetValue());
-    s << VARINT(minerChainHeight_);
-
-    if (HasTransaction()) {
-        s << (uint8_t) transaction_->GetStatus();
-    }
-
-    if (isMilestone_) {
-        s << (uint8_t) IS_TRUE_MILESTONE;
-    } else if (milestone_ != nullptr) {
-        s << (uint8_t) IS_FAKE_MILESTONE;
-    } else {
-        s << (uint8_t) IS_NOT_MILESTONE;
-    }
-
-    if (milestone_ != nullptr) {
-        SerializeMilestone(s, *milestone_);
-    }
-}
-
-void BlockDag::Deserialize(VStream& s) {
-    BlockNet::Deserialize(s);
-    uint64_t r;
-    s >> VARINT(r);
-    cumulativeReward_ = Coin(r);
-    s >> VARINT(minerChainHeight_);
-
-    if (HasTransaction()) {
-        transaction_->SetStatus((Transaction::Validity) ser_readdata8(s));
-    }
-
-    enum MilestoneStatus msFlag = (MilestoneStatus) ser_readdata8(s);
-    isMilestone_                = msFlag == IS_TRUE_MILESTONE;
-
-    if (msFlag > 0) {
-        // TODO: store the milestone object in some kind of cache
-        milestone_ = std::make_shared<Milestone>();
-        // s >> *milestone_;
-        DeserializeMilestone(s, *milestone_);
-    }
-}
-
-size_t BlockDag::GetOptimalEncodingSize() {
-    if (optimalEncodingSize_ > 0) {
-        return optimalEncodingSize_;
-    }
-    BlockNet::GetOptimalEncodingSize();
-    optimalEncodingSize_ += GetSizeOfVarInt(cumulativeReward_.GetValue());
-    optimalEncodingSize_ += GetSizeOfVarInt(minerChainHeight_);
-
-    if (HasTransaction()) {
-        optimalEncodingSize_ += 1;
-    }
-
-    optimalEncodingSize_ += 1;
-
-    if (milestone_ != nullptr) {
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->height);
-        optimalEncodingSize_ += 4;
-        optimalEncodingSize_ += 8;
-        optimalEncodingSize_ += 4;
-        optimalEncodingSize_ += 4;
-        optimalEncodingSize_ += GetSizeOfVarInt(milestone_->hashRate);
-    }
-
-    return optimalEncodingSize_;
-}
-
 BlockNet::BlockNet(const Block& b) : Block(b) {}
-
-size_t BlockNet::GetOptimalEncodingSize() {
-    if (optimalEncodingSize_ > 0) {
-        return optimalEncodingSize_;
-    }
-
-    optimalEncodingSize_ = HEADER_SIZE + 1; // 1 is for the flag for whether there is a tx
-    if (!HasTransaction())
-        return optimalEncodingSize_;
-
-    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
-    for (const TxInput& input : transaction_->GetInputs()) {
-        size_t listingDataSize    = input.listingContent.data.size();
-        size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
-    }
-
-    optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
-    for (const TxOutput& output : transaction_->GetOutputs()) {
-        size_t listingDataSize    = output.listingContent.data.size();
-        size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
-    }
-
-    return optimalEncodingSize_;
-}
 
 const Block GENESIS = Block::CreateGenesis();

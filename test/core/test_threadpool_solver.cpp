@@ -19,8 +19,6 @@ TEST_F(ThreadPoolSolverTest, simple_test) {
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     block.AddTransaction(tx);
-    block.SetMinerChainHeight(0);
-    block.ResetReward();
     block.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
 
 

@@ -11,64 +11,12 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
+extern const Block GENESIS;
+static constexpr std::size_t HEADER_SIZE = 116;
+
 namespace std {
 string to_string(Block& block);
 } // namespace std
-
-enum MilestoneStatus : uint8_t {
-    IS_NOT_MILESTONE = 0,
-    IS_TRUE_MILESTONE,
-    IS_FAKE_MILESTONE,
-};
-
-typedef struct Milestone {
-    uint64_t height;
-    uint64_t lastUpdateTime;
-    uint64_t hashRate;
-
-    arith_uint256 chainwork;
-    arith_uint256 blockTarget;
-    arith_uint256 milestoneTarget;
-
-    std::shared_ptr<Milestone> pprevious;
-    std::weak_ptr<Milestone> pnext;
-    
-    // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<std::shared_ptr<Block>> vblockstore;
-    std::vector<uint256> pubkeySnapshot;
-
-    // constructor of a milestone of genesis.
-    Milestone();
-    // constructor of a milestone with all data fields
-    Milestone(std::shared_ptr<Block>, std::shared_ptr<Milestone>);
-    // copy constructor
-    Milestone(const Milestone&) = default;
-
-    /* simple constructor (now for test only) */
-    Milestone(uint64_t lastUpdateTime,
-        uint64_t hashRate,
-        uint64_t height,
-        arith_uint256 milestoneTarget,
-        arith_uint256 blockTarget,
-        arith_uint256 chainwork)
-        : lastUpdateTime(lastUpdateTime), hashRate(hashRate), height(height), milestoneTarget(milestoneTarget),
-          blockTarget(blockTarget), chainwork(chainwork) {}
-
-    inline bool IsDiffTransition() const {
-        return ((height + 1) % params.interval) == 0;
-    }
-
-    void UpdateDifficulty(uint64_t blockUpdateTime);
-
-    inline uint64_t GetBlockDifficulty() const {
-        return (arith_uint256(params.maxTarget) / (blockTarget + 1)).GetLow64();
-    }
-
-    inline uint64_t GetMsDifficulty() const {
-        return (arith_uint256(params.maxTarget) / (milestoneTarget + 1)).GetLow64();
-    }
-
-} Milestone;
 
 class Block {
 public:
@@ -86,7 +34,9 @@ public:
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {}
+        tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+            CalculateOptimalEncodingSize();
+        }
 
     void SetNull();
 
@@ -106,17 +56,13 @@ public:
 
     void UnCache();
 
-    bool Verify();
+    bool Verify() const;
 
     void AddTransaction(Transaction tx);
 
     bool HasTransaction() const;
 
     std::optional<Transaction>& GetTransaction();
-
-    void SetMinerChainHeight(uint32_t height);
-
-    void ResetReward();
 
     void SetDifficultyTarget(uint32_t target);
 
@@ -130,17 +76,17 @@ public:
 
     void InvalidateMilestone();
 
-    void SetMilestoneInstance(Milestone& ms);
-
     const uint256& GetHash() const;
 
     void FinalizeHash();
 
     void CalculateHash();
 
-    const uint256& GetTxHash();
+    const uint256& FinalizeTxHash();
 
-    virtual size_t GetOptimalEncodingSize();
+    const uint256& GetTxHash() const;
+
+    size_t GetOptimalEncodingSize() const;
 
     /*
      * Checks whether the block is a registration block.
@@ -176,7 +122,7 @@ public:
      * A complete syntax checking should also check the validity of the diff
      * target which is not considered here.
      */
-    bool CheckPOW();
+    bool CheckPOW() const;
 
     /*
      * Only to be used for debugging when validity of the
@@ -201,6 +147,8 @@ public:
      */
     void SetParents();
 
+    size_t CalculateOptimalEncodingSize();
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -215,35 +163,21 @@ public:
 
     friend std::string std::to_string(Block& block);
 
-    static void SerializeMilestone(VStream& s, Milestone& milestone);
-    static void DeserializeMilestone(VStream& s, Milestone& milestone);
-
     static Block CreateGenesis();
 
 protected:
+    uint256 hash_;
+    size_t optimalEncodingSize_;
+
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-
     uint32_t diffTarget_;
     uint32_t version_;
     uint32_t nonce_;
-
     uint64_t time_;
-
     std::optional<Transaction> transaction_;
-    Coin cumulativeReward_;
-    mutable uint256 hash_;
-
-    std::shared_ptr<Milestone> milestone_;
-    uint64_t minerChainHeight_;
-    bool isMilestone_ = false;
-
-    size_t optimalEncodingSize_ = 0;
 };
-
-/* used in OBC and other storage constructs */
-typedef std::shared_ptr<const Block> ConstBlockPtr;
 
 class BlockNet : public Block {
 public:
@@ -260,28 +194,12 @@ public:
         READWRITE(transaction_);
         if (ser_action.ForRead() == true) {
             SetParents();
+            FinalizeHash();
+            CalculateOptimalEncodingSize();
         }
     }
-
-    size_t GetOptimalEncodingSize();
 };
 
-class BlockDag : public BlockNet {
-public:
-    using BlockNet::BlockNet;
-
-    BlockDag(const BlockDag&) = default;
-
-    BlockDag(const BlockNet& b);
-
-    void Serialize(VStream& s) const;
-
-    void Deserialize(VStream& s);
-
-    size_t GetOptimalEncodingSize();
-};
-
-extern const Block GENESIS;
-static constexpr std::size_t HEADER_SIZE = 116;
+typedef std::shared_ptr<const BlockNet> ConstBlockPtr;
 
 #endif //__SRC_BLOCK_H__
