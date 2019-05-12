@@ -143,7 +143,7 @@ size_t NodeRecord::GetOptimalStorageSize() {
 
 std::string std::to_string(const NodeRecord& rec) {
     std::string s = "NodeRecord {\n";
-    s += strprintf("   contained block: \n %s", std::to_string(*(rec.cBlock)));
+    s += strprintf("  contained%s \n", std::to_string(*(rec.cBlock)));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
@@ -158,7 +158,12 @@ std::string std::to_string(const NodeRecord& rec) {
         s += "   }\n";
     }
 
-    s += strprintf("   status: %s \n }", rec.validity);
+    static const std::string enumName[] = {
+        "UNKNOWN",
+        "VALID",
+        "INVALID"
+    };
+    s += strprintf("   status: %s \n }", enumName[rec.validity]);
 
     return s;
 }

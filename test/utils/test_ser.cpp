@@ -224,7 +224,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     // Construct NodeRecord
     NodeRecord block(blk);
     block.minerChainHeight = 100;
-    block.cumulativeReward = 0;
+    block.cumulativeReward = 10;
 
     // Link the chain state
     ChainState state(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
@@ -238,11 +238,11 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.Serialize(sinput);
     std::string s = sinput.str();
 
-    NodeRecord blockFromUnserialization;
-    blockFromUnserialization.Deserialize(sinput);
+    NodeRecord block1;
+    block1.Deserialize(sinput);
 
     VStream soutput;
-    blockFromUnserialization.Serialize(soutput);
+    block1.Serialize(soutput);
 
     EXPECT_EQ(s, soutput.str());
 }

@@ -113,11 +113,11 @@ public:
 
     NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
     NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
-    NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
+    NodeRecord(const BlockNet& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
         cBlock = std::make_shared<BlockNet>(blk);
     }
     NodeRecord(VStream& s) {
-        s >> *this;
+        Deserialize(s);
     }
 
     void LinkChainState(ChainState&);
@@ -128,10 +128,10 @@ public:
     void Deserialize(VStream& s);
 
     friend bool operator==(const NodeRecord& a, const NodeRecord& b) {
-        return *(a.cBlock) == *(b.cBlock)
-                && a.cumulativeReward == b.cumulativeReward
-                && ((a.snapshot == nullptr || b.snapshot == nullptr) ? true : (*(a.snapshot) == *(b.snapshot)))
-                && a.minerChainHeight == b.minerChainHeight;
+        return *(a.cBlock) == *(b.cBlock) &&
+               a.cumulativeReward == b.cumulativeReward &&
+               ((a.snapshot == nullptr || b.snapshot == nullptr) ? true : (*(a.snapshot) == *(b.snapshot))) &&
+               a.minerChainHeight == b.minerChainHeight;
     }
 
     static NodeRecord CreateGenesisRecord();

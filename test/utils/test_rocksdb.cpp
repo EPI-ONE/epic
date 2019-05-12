@@ -62,8 +62,8 @@ protected:
         // keys.reserve(size);
         for (int i = 0; i < size; ++i) {
             RecordPtr rec = FakeRecordPtr(rand() % 100 + 1, rand() % 100 + 1);
-            records[i]  = rec;
-            keys[i]    = rec->cBlock->GetHash();
+            records[i]    = rec;
+            keys[i]       = rec->cBlock->GetHash();
         }
     }
 
@@ -95,10 +95,10 @@ protected:
     }
 };
 
-TestImplRocksDBStore* TestRocksDB::db     = nullptr;
-size_t TestRocksDB::size                  = 1000;
+TestImplRocksDBStore* TestRocksDB::db       = nullptr;
+size_t TestRocksDB::size                    = 1000;
 std::vector<RecordPtr> TestRocksDB::records = std::vector<RecordPtr>(size);
-std::vector<uint256> TestRocksDB::keys    = std::vector<uint256>(size);
+std::vector<uint256> TestRocksDB::keys      = std::vector<uint256>(size);
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     const std::string column = "default";
@@ -128,7 +128,6 @@ TEST_F(TestRocksDB, batch_insertion) {
 
 TEST_F(TestRocksDB, write_single_block) {
     RecordPtr rec = FakeRecordPtr(1, 1);
-    std::cout << "=======================" << rec->GetOptimalStorageSize();
     EXPECT_TRUE(db->WriteRecord(rec));
 
     std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cBlock->GetHash());

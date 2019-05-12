@@ -2,7 +2,7 @@
 
 typedef Tasm::Listing Listing;
 
-Block FakeBlock(int numTxInput, int numTxOutput, bool solve) {
+BlockNet FakeBlock(int numTxInput, int numTxOutput, bool solve) {
     uint256 r1;
     r1.randomize();
     uint256 r2;
@@ -10,7 +10,7 @@ Block FakeBlock(int numTxInput, int numTxOutput, bool solve) {
     uint256 r3;
     r3.randomize();
 
-    Block b = Block(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
+    BlockNet b(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
 
     if (numTxInput || numTxOutput) {
         b.AddTransaction(FakeTx(numTxInput, numTxOutput));
@@ -68,6 +68,7 @@ NodeRecord FakeNodeRecord(const BlockNet& b) {
     } else {
         rec.validity = NodeRecord::INVALID;
     }
+
     return rec;
 }
 

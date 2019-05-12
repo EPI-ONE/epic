@@ -15,7 +15,7 @@ extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
-string to_string(Block& block);
+string to_string(const Block&);
 } // namespace std
 
 class Block {
@@ -41,8 +41,6 @@ public:
     void SetNull();
 
     bool IsNull() const;
-
-    void RandomizeHash();
 
     uint256 GetMilestoneHash() const;
 
@@ -132,7 +130,7 @@ public:
      * Only to be used for debugging when validity of the
      * block does not matter e.g DFS testing
      */
-    void RandomizeHash() const;
+    void RandomizeHash();
 
     /*
      * A simple solver for nonce that makes the blocks hash lower than the
@@ -172,7 +170,7 @@ public:
         return a.hash_ == b.hash_;
     }
 
-    friend std::string std::to_string(Block& block);
+    friend std::string std::to_string(const Block&);
 
     static Block CreateGenesis();
 

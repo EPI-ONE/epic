@@ -104,17 +104,17 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     return *this;
 }
 
-void Transaction::FinalizeHash() const {
+void Transaction::FinalizeHash() {
     if (hash_.IsNull())
         hash_ = Hash<1>(VStream(*this));
 }
 
 const TxInput& Transaction::GetInput(size_t index) const {
-    return inputs_.at(index);
+    return inputs_[index];
 }
 
 const TxOutput& Transaction::GetOutput(size_t index) const {
-    return outputs_.at(index);
+    return outputs_[index];
 }
 
 const std::vector<TxInput>& Transaction::GetInputs() const {
@@ -206,20 +206,20 @@ std::string std::to_string(const TxOutput& output) {
     return str += " }";
 }
 
-std::string std::to_string(Transaction& tx) {
+std::string std::to_string(const Transaction& tx) {
     std::string s;
     s += "Transaction { \n";
     s += strprintf("     hash: %s \n", std::to_string(tx.GetHash()));
 
     for (int i = 0; i < tx.GetInputs().size(); ++i) {
         s += "     ";
-        s += std::to_string(tx.GetInputs()[i]);
+        s += std::to_string(tx.GetInput(i));
         s += "\n";
     }
 
     for (int j = 0; j < tx.GetOutputs().size(); ++j) {
         s += "     ";
-        s += std::to_string(tx.GetOutputs()[j]);
+        s += std::to_string(tx.GetOutput(j));
         s += "\n";
     }
 

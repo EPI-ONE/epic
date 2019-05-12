@@ -87,7 +87,7 @@ bool RocksDBStore::WriteRecord(const RecordPtr& record) const {
 
     VStream value;
     value.reserve(record->GetOptimalStorageSize());
-    value << *(record->cBlock);
+    value << *record;
     Slice valueSlice(value.data(), value.size());
 
     return Write(kDefaultColumnFamilyName, keySlice, valueSlice);
@@ -105,7 +105,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
 
         // Prepare value
         value.reserve(record->GetOptimalStorageSize());
-        value << *(record->cBlock);
+        value << *record;
         Slice valueSlice(value.data(), value.size());
 
         wb.Put(handleMap[kDefaultColumnFamilyName], keySlice, valueSlice);

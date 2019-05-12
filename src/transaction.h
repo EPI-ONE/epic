@@ -128,7 +128,7 @@ public:
 
     Transaction& AddOutput(TxOutput&& output);
 
-    void FinalizeHash() const;
+    void FinalizeHash();
 
     const TxInput& GetInput(size_t index) const;
 
@@ -171,7 +171,7 @@ private:
     std::vector<TxInput> inputs_;
     std::vector<TxOutput> outputs_;
 
-    mutable uint256 hash_;
+    uint256 hash_;
     Coin fee_;
 
     const Block* parentBlock_;
@@ -181,7 +181,7 @@ namespace std {
 string to_string(const TxOutPoint& outpoint);
 string to_string(const TxInput& input);
 string to_string(const TxOutput& output);
-string to_string(Transaction& tx);
+string to_string(const Transaction& tx);
 } // namespace std
 
 #endif //__SRC_TRANSACTION_H__
