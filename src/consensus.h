@@ -1,3 +1,6 @@
+#ifndef __SRC_CONSENSUS_H__
+#define __SRC_CONSENSUS_H__
+
 #include "block.h"
 
 enum MilestoneStatus : uint8_t {
@@ -6,8 +9,8 @@ enum MilestoneStatus : uint8_t {
     IS_FAKE_MILESTONE,
 };
 
-class BlockDAG;
-typedef std::shared_ptr<BlockDAG> BlkStatPtr;
+class NodeRecord;
+typedef std::shared_ptr<NodeRecord> BlkStatPtr;
 
 class ChainState {
 public:
@@ -80,7 +83,7 @@ public:
  * A structure that contains a shared_ptr<const BlockNet> that will
  * be passed to different chains
  */
-class BlockDAG {
+class NodeRecord {
 public:
     enum Validity : uint8_t {
         UNKNOWN = 0,
@@ -100,9 +103,9 @@ public:
 
     size_t optimalStorageSize;
 
-    BlockDAG() : optimalStorageSize(0), minerChainHeight(0) {}
-    BlockDAG(const cBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
-    BlockDAG(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
+    NodeRecord() : optimalStorageSize(0), minerChainHeight(0) {}
+    NodeRecord(const cBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
+    NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
         cBlock = std::make_shared<BlockNet>(blk);
     }
 
@@ -113,7 +116,9 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
-    static BlockDAG CreateGenesisStat();
+    static NodeRecord CreateGenesisStat();
 };
 
-extern const BlockDAG GENESISSTAT;
+extern const NodeRecord GENESISSTAT;
+
+#endif /* ifndef __SRC_CONSENSUS_H__ */
