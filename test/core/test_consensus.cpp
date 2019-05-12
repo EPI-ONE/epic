@@ -62,7 +62,7 @@ TEST_F(TestConsensus, SyntaxChecking) {
 }
 
 TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
-    NodeRecord bs = GENESISSTAT;
+    NodeRecord bs = GENESIS_RECORD;
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
     BlockNet b1 = FakeBlock();

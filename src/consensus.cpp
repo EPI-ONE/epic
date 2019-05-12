@@ -141,8 +141,8 @@ size_t NodeRecord::GetOptimalStorageSize() {
     return optimalStorageSize;
 }
 
-NodeRecord NodeRecord::CreateGenesisStat() {
+NodeRecord NodeRecord::CreateGenesisRecord() {
     return NodeRecord(GENESIS);
 }
 
-const NodeRecord GENESISSTAT = NodeRecord::CreateGenesisStat();
+const NodeRecord GENESIS_RECORD = NodeRecord::CreateGenesisRecord();

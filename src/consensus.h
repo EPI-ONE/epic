@@ -116,9 +116,9 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
-    static NodeRecord CreateGenesisStat();
+    static NodeRecord CreateGenesisRecord();
 };
 
-extern const NodeRecord GENESISSTAT;
+extern const NodeRecord GENESIS_RECORD;
 
 #endif /* ifndef __SRC_CONSENSUS_H__ */
