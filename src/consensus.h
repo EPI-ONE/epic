@@ -27,7 +27,7 @@ public:
     // constructor of a milestone of genesis.
     ChainState();
     // constructor of a milestone with all data fields
-    ChainState(RecordPtr, std::shared_ptr<ChainState>);
+    ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous);
     // copy constructor
     ChainState(const ChainState&) = default;
 

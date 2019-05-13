@@ -325,6 +325,7 @@ void Block::SetParents() {
     if (!HasTransaction()) {
         return;
     }
+
     transaction_->SetParent(this);
     for (TxInput& input : transaction_->GetInputs()) {
         input.SetParent(&*transaction_);

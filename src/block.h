@@ -163,11 +163,12 @@ public:
         READWRITE(nonce_);
     }
 
-    friend bool operator==(const Block& a, const Block& b) {
-        if (a.GetHash().IsNull() || b.GetHash().IsNull()) {
+    bool operator==(const Block& another) const {
+        if (GetHash().IsNull() || another.GetHash().IsNull()) {
             return false;
         }
-        return a.hash_ == b.hash_;
+
+        return hash_ == another.hash_;
     }
 
     friend std::string std::to_string(const Block&);

@@ -8,7 +8,7 @@ ChainState::ChainState() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwo
 
 ChainState::ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
     pblock->LinkChainState(*this);
-    if (pprevious != nullptr) {
+    if (pprevious) {
         height    = pprevious->height + 1;
         chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->cBlock->GetHash()));
 
@@ -147,7 +147,7 @@ std::string std::to_string(const NodeRecord& rec) {
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
-    if (rec.snapshot != nullptr) {
+    if (rec.snapshot) {
         s += "   with chain state snapshot {\n";
         s += strprintf("     height: %s \n", rec.snapshot->height);
         s += strprintf("     chainwork: %s \n", rec.snapshot->chainwork.GetCompact());
@@ -163,6 +163,7 @@ std::string std::to_string(const NodeRecord& rec) {
         "VALID",
         "INVALID"
     };
+
     s += strprintf("   status: %s \n }", enumName[rec.validity]);
 
     return s;
