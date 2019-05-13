@@ -130,10 +130,6 @@ public:
 
     void FinalizeHash();
 
-    const TxInput& GetInput(size_t index) const;
-
-    const TxOutput& GetOutput(size_t index) const;
-
     const std::vector<TxInput>& GetInputs() const;
 
     std::vector<TxInput>& GetInputs();

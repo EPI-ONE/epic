@@ -109,14 +109,6 @@ void Transaction::FinalizeHash() {
         hash_ = Hash<1>(VStream(*this));
 }
 
-const TxInput& Transaction::GetInput(size_t index) const {
-    return inputs_[index];
-}
-
-const TxOutput& Transaction::GetOutput(size_t index) const {
-    return outputs_[index];
-}
-
 const std::vector<TxInput>& Transaction::GetInputs() const {
     return inputs_;
 }
@@ -211,15 +203,15 @@ std::string std::to_string(const Transaction& tx) {
     s += "Transaction { \n";
     s += strprintf("     hash: %s \n", std::to_string(tx.GetHash()));
 
-    for (int i = 0; i < tx.GetInputs().size(); ++i) {
+    for (const auto& input : tx.GetInputs()) {
         s += "     ";
-        s += std::to_string(tx.GetInput(i));
+        s += std::to_string(input);
         s += "\n";
     }
 
-    for (int j = 0; j < tx.GetOutputs().size(); ++j) {
+    for (const auto& output : tx.GetOutputs()) {
         s += "     ";
-        s += std::to_string(tx.GetOutput(j));
+        s += std::to_string(output);
         s += "\n";
     }
 

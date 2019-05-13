@@ -71,7 +71,7 @@ TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
 
 TEST_F(TestConsensus, UTXO) {
     BlockNet b  = FakeBlock(1, 67);
-    UTXO utxo   = UTXO(b.GetTransaction()->GetOutput(66), 66);
+    UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
     arith_uint256 bHash = UintToArith256(b.GetHash());
