@@ -34,7 +34,7 @@ public:
     ~RocksDBStore();
 
 protected:
-    mutable std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
+    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
     rocksdb::DB* db;
     std::string DBPATH;
 

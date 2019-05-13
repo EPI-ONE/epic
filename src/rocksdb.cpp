@@ -52,7 +52,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     // See https://rocksdb.org/blog/2017/08/24/pinnableslice.html
     PinnableSlice valueSlice;
 
-    Status s = db->Get(ReadOptions(), handleMap[kDefaultColumnFamilyName], keySlice, &valueSlice);
+    Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
     if (!s.ok()) {
         return nullptr;
     }
@@ -68,7 +68,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
 
 const std::string RocksDBStore::Get(const std::string& column, const Slice& key) const {
     std::string value;
-    Status s = db->Get(ReadOptions(), handleMap[column], key, &value);
+    Status s = db->Get(ReadOptions(), handleMap.at(column), key, &value);
     if (s.ok()) {
         return value;
     }
@@ -108,7 +108,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
         value << *record;
         Slice valueSlice(value.data(), value.size());
 
-        wb.Put(handleMap[kDefaultColumnFamilyName], keySlice, valueSlice);
+        wb.Put(db->DefaultColumnFamily(), keySlice, valueSlice);
 
         key.clear();
         value.clear();
@@ -117,7 +117,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
 }
 
 bool RocksDBStore::Write(const std::string& column, const Slice& key, const Slice& value) const {
-    return db->Put(WriteOptions(), handleMap[column], key, value).ok();
+    return db->Put(WriteOptions(), handleMap.at(column), key, value).ok();
 }
 
 bool RocksDBStore::Write(const std::string& column, const std::string& key, const std::string& value) const {
@@ -127,14 +127,14 @@ bool RocksDBStore::Write(const std::string& column, const std::string& key, cons
 const void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
     class WriteBatch wb;
     for (auto const& [key, value] : batch) {
-        wb.Put(handleMap[column], key, value);
+        wb.Put(handleMap.at(column), key, value);
     }
     bool ok = db->Write(WriteOptions(), &wb).ok();
     assert(ok);
 }
 
 void RocksDBStore::Delete(const std::string& column, const std::string& key) const {
-    bool ok = db->Delete(WriteOptions(), handleMap[column], key).ok();
+    bool ok = db->Delete(WriteOptions(), handleMap.at(column), key).ok();
     assert(ok);
 }
 
