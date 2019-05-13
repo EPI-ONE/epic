@@ -3,14 +3,9 @@
 
 #include "block.h"
 
-enum MilestoneStatus : uint8_t {
-    IS_NOT_MILESTONE = 0,
-    IS_TRUE_MILESTONE,
-    IS_FAKE_MILESTONE,
-};
-
 class NodeRecord;
-typedef std::shared_ptr<NodeRecord> BlkStatPtr;
+extern const NodeRecord GENESIS_RECORD;
+typedef std::shared_ptr<NodeRecord> RecordPtr;
 
 class ChainState {
 public:
@@ -26,13 +21,13 @@ public:
     std::weak_ptr<ChainState> pnext;
 
     // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<BlkStatPtr> vblockstore;
+    std::vector<RecordPtr> vblockstore;
     std::vector<uint256> pubkeySnapshot;
 
     // constructor of a milestone of genesis.
     ChainState();
     // constructor of a milestone with all data fields
-    ChainState(BlkStatPtr, std::shared_ptr<ChainState>);
+    ChainState(RecordPtr, std::shared_ptr<ChainState>);
     // copy constructor
     ChainState(const ChainState&) = default;
 
@@ -99,6 +94,12 @@ public:
         INVALID,
     };
 
+    enum MilestoneStatus : uint8_t {
+        IS_NOT_MILESTONE = 0,
+        IS_TRUE_MILESTONE,
+        IS_FAKE_MILESTONE,
+    };
+
     ConstBlockPtr cBlock;
 
     Coin cumulativeReward;
@@ -140,9 +141,5 @@ public:
 namespace std {
 string to_string(const NodeRecord&);
 } // namespace std
-
-extern const NodeRecord GENESIS_RECORD;
-
-typedef std::shared_ptr<NodeRecord> RecordPtr;
 
 #endif /* ifndef __SRC_CONSENSUS_H__ */

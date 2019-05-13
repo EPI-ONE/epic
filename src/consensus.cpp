@@ -6,7 +6,7 @@ ChainState::ChainState() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwo
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(BlkStatPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
+ChainState::ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
     pblock->LinkChainState(*this);
     if (pprevious != nullptr) {
         height    = pprevious->height + 1;
