@@ -1,3 +1,4 @@
+#include <atomic>
 #include <connection_manager.h>
 #include <gtest/gtest.h>
 
@@ -5,10 +6,10 @@ class TestConnectionManager : public testing::Test {
 public:
     ConnectionManager server;
     ConnectionManager client;
-    bool test_connect_run = false;
-    bool test_connect_inbound;
-    void* test_connect_handle = nullptr;
-    bool test_disconnect_run  = false;
+    std::atomic_bool test_connect_run = false;
+    std::atomic_bool test_connect_inbound;
+    std::atomic<void*> test_connect_handle = nullptr;
+    std::atomic_bool test_disconnect_run   = false;
     std::vector<void*> handle_vector;
     std::string test_address;
 
@@ -48,7 +49,7 @@ TEST_F(TestConnectionManager, Listen) {
     EXPECT_EQ(server.Listen(12345), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 12345), 0);
 
-    usleep(10000);
+    usleep(50000);
 
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, true);
@@ -66,7 +67,7 @@ TEST_F(TestConnectionManager, Connect) {
     EXPECT_EQ(server.Listen(7890), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 7890), 0);
 
-    usleep(10000);
+    usleep(50000);
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, false);
     EXPECT_EQ(test_address, "127.0.0.1:7890");
@@ -84,7 +85,7 @@ TEST_F(TestConnectionManager, Disconnect) {
     EXPECT_EQ(server.Listen(51234), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 51234), 0);
 
-    usleep(10000);
+    usleep(50000);
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, true);
     EXPECT_EQ(server.GetInboundNum(), 1);
@@ -92,7 +93,7 @@ TEST_F(TestConnectionManager, Disconnect) {
     EXPECT_EQ(server.GetConnectionNum(), 1);
     server.Disconnect(test_connect_handle);
 
-    usleep(10000);
+    usleep(50000);
     EXPECT_EQ(test_disconnect_run, true);
     EXPECT_EQ(server.GetInboundNum(), 0);
     EXPECT_EQ(server.GetOutboundNum(), 0);
@@ -108,8 +109,7 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     EXPECT_EQ(server.Listen(51001), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 51001), 0);
 
-    while (!test_connect_run) {
-    };
+    usleep(50000);
 
     int data_len       = 4 * 1000 * 1000 - 24;
     uint32_t test_type = 0x55555555;
@@ -142,9 +142,7 @@ TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
     EXPECT_EQ(server.Listen(51010), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 51010), 0);
 
-    while (!test_connect_run) {
-        usleep(1000);
-    }
+    usleep(50000);
 
     uint32_t test_type = 0xAAAAAAAA;
 
@@ -169,8 +167,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
     EXPECT_EQ(server.Listen(51020), 0);
     EXPECT_EQ(client.Connect(0x7f000001, 51020), 0);
 
-    while (!test_connect_run) {
-    }
+    usleep(50000);
 
     int data_len = 2000;
     int num      = 3;
@@ -210,7 +207,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         EXPECT_EQ(client[i].Connect(0x7f000001, 51030), 0);
     }
 
-    usleep(10000);
+    usleep(50000);
     EXPECT_EQ(server.GetInboundNum(), 3);
     EXPECT_EQ(server.GetOutboundNum(), 0);
     EXPECT_EQ(server.GetConnectionNum(), 3);
@@ -225,7 +222,7 @@ TEST_F(TestConnectionManager, MultiClient) {
 
         NetMessage send_message(handle_vector.at(i), message_type, payload);
         client[i].SendMessage(send_message);
-        usleep(10000);
+        usleep(50000);
     }
 
     for (int i = 0; i < client_num; i++) {
