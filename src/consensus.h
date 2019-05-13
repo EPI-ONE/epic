@@ -3,6 +3,8 @@
 
 #include "block.h"
 
+#include <tuple>
+
 class NodeRecord;
 extern const NodeRecord GENESIS_RECORD;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
@@ -20,13 +22,13 @@ public:
     std::shared_ptr<ChainState> pprevious;
     std::weak_ptr<ChainState> pnext;
 
-    // a vector consists of blocks with its offset w.r.t this level set of this milestone
+    // a vector consists of blocks in the level set of this chain state
     std::vector<RecordPtr> vblockstore;
     std::vector<uint256> pubkeySnapshot;
 
-    // constructor of a milestone of genesis.
+    // constructor of a chain state of genesis.
     ChainState();
-    // constructor of a milestone with all data fields
+    // constructor of a chain state with all data fields
     ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous);
     // copy constructor
     ChainState(const ChainState&) = default;
@@ -73,12 +75,11 @@ public:
         ::Deserialize(s, VARINT(hashRate));
     }
 
-    friend bool operator==(const ChainState& a, const ChainState& b) {
-        return a.lastUpdateTime == b.lastUpdateTime &&
-               a.chainwork.GetCompact() == b.chainwork.GetCompact() &&
-               a.hashRate == b.hashRate &&
-               a.milestoneTarget.GetCompact() == b.milestoneTarget.GetCompact() &&
-               a.blockTarget.GetCompact() == b.blockTarget.GetCompact();
+    bool operator==(const ChainState& rhs) const {
+        return std::forward_as_tuple(lastUpdateTime, chainwork.GetCompact(), hashRate, milestoneTarget.GetCompact(),
+                   blockTarget.GetCompact()) == std::forward_as_tuple(rhs.lastUpdateTime, rhs.chainwork.GetCompact(),
+                                                    rhs.hashRate, rhs.milestoneTarget.GetCompact(),
+                                                    rhs.blockTarget.GetCompact());
     }
 };
 
@@ -128,11 +129,10 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
-    friend bool operator==(const NodeRecord& a, const NodeRecord& b) {
-        return *(a.cBlock) == *(b.cBlock) &&
-               a.cumulativeReward == b.cumulativeReward &&
-               ((a.snapshot == nullptr || b.snapshot == nullptr) ? true : (*(a.snapshot) == *(b.snapshot))) &&
-               a.minerChainHeight == b.minerChainHeight;
+    bool operator==(const NodeRecord& another) const {
+        return std::tie(*cBlock, cumulativeReward, minerChainHeight) ==
+                   std::tie(*(another.cBlock), another.cumulativeReward, another.minerChainHeight) &&
+               ((snapshot == nullptr || another.snapshot == nullptr) ? true : (*(snapshot) == *(another.snapshot)));
     }
 
     static NodeRecord CreateGenesisRecord();

@@ -50,6 +50,7 @@ inline uint160 Hash160(const VStream& vch) {
 namespace Hash {
 const uint256& GetZeroHash();
 const uint256& GetDoubleZeroHash();
+static constexpr uint32_t SIZE = 32;
 } // namespace Hash
 
 #endif

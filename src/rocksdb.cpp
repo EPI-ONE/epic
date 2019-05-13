@@ -36,15 +36,15 @@ RocksDBStore::RocksDBStore(std::string dbPath) {
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
     VStream key;
-    key.reserve(32);
+    key.reserve(Hash::SIZE);
     key << blockHash;
     Slice keySlice(key.data(), key.size());
-    return Get(kDefaultColumnFamilyName, keySlice) != "";
+    return Get(kDefaultColumnFamilyName, keySlice).empty();
 }
 
 std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) const {
     VStream key;
-    key.reserve(32);
+    key.reserve(Hash::SIZE);
     key << blockHash;
     Slice keySlice(key.data(), key.size());
 
@@ -56,14 +56,14 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     if (!s.ok()) {
         return nullptr;
     }
-    std::unique_ptr<NodeRecord> b;
+    std::unique_ptr<NodeRecord> pnodeRecord;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        b = std::make_unique<NodeRecord>(value);
+        pnodeRecord = std::make_unique<NodeRecord>(value);
     } catch (const std::exception&) {
         return nullptr;
     }
-    return b;
+    return pnodeRecord;
 }
 
 const std::string RocksDBStore::Get(const std::string& column, const Slice& key) const {
@@ -81,7 +81,7 @@ const std::string RocksDBStore::Get(const std::string& column, const std::string
 
 bool RocksDBStore::WriteRecord(const RecordPtr& record) const {
     VStream key;
-    key.reserve(32);
+    key.reserve(Hash::SIZE);
     key << record->cBlock->GetHash();
     Slice keySlice(key.data(), key.size());
 
@@ -96,7 +96,7 @@ bool RocksDBStore::WriteRecord(const RecordPtr& record) const {
 bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
     class WriteBatch wb;
     VStream key;
-    key.reserve(32);
+    key.reserve(Hash::SIZE);
     VStream value;
     for (const auto& record : records) {
         // Prepare key
