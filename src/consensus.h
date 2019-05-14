@@ -3,8 +3,6 @@
 
 #include "block.h"
 
-#include <tuple>
-
 class NodeRecord;
 extern const NodeRecord GENESIS_RECORD;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
@@ -19,6 +17,8 @@ public:
     arith_uint256 blockTarget;
     arith_uint256 milestoneTarget;
 
+    // TODO: remove these two pointers as ChainState
+    //       instances will be stored in deque in Chain
     std::shared_ptr<ChainState> pprevious;
     std::weak_ptr<ChainState> pnext;
 
@@ -113,14 +113,10 @@ public:
 
     size_t optimalStorageSize;
 
-    NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
-    NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
-    NodeRecord(const BlockNet& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
-        cBlock = std::make_shared<BlockNet>(blk);
-    }
-    NodeRecord(VStream& s) {
-        Deserialize(s);
-    }
+    NodeRecord();
+    NodeRecord(const ConstBlockPtr&);
+    NodeRecord(const BlockNet&);
+    NodeRecord(VStream&);
 
     void LinkChainState(ChainState&);
     size_t GetOptimalStorageSize();

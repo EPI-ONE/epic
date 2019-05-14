@@ -16,19 +16,25 @@ RocksDBStore::RocksDBStore(std::string dbPath) {
         if (columnName == kDefaultColumnFamilyName) {
             cOptions.OptimizeForPointLookup(500L);
         }
+
         descriptors.push_back(ColumnFamilyDescriptor(columnName, cOptions));
     }
+
     // Set options
     DBOptions dbOptions;
     dbOptions.db_log_dir                     = DBPATH + "/log";
     dbOptions.create_if_missing              = true;
     dbOptions.create_missing_column_families = true;
     dbOptions.IncreaseParallelism(2);
-    // Open DB and store handles into a map
+
     std::vector<ColumnFamilyHandle*> handles;
+
+    // Open DB
     if (!DB::Open(dbOptions, DBPATH, descriptors, &handles, &db).ok()) {
         throw "DB initialization failed";
     }
+
+    // Store handles into a map
     InitHandleMap(handles);
     handles.clear();
     descriptors.clear();
@@ -56,6 +62,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     if (!s.ok()) {
         return nullptr;
     }
+
     std::unique_ptr<NodeRecord> pnodeRecord;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -63,6 +70,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     } catch (const std::exception&) {
         return nullptr;
     }
+
     return pnodeRecord;
 }
 
@@ -72,6 +80,7 @@ const std::string RocksDBStore::Get(const std::string& column, const Slice& key)
     if (s.ok()) {
         return value;
     }
+
     return "";
 }
 
@@ -98,6 +107,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
     VStream key;
     key.reserve(Hash::SIZE);
     VStream value;
+
     for (const auto& record : records) {
         // Prepare key
         key << record->cBlock->GetHash();
@@ -113,6 +123,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
         key.clear();
         value.clear();
     }
+
     return db->Write(WriteOptions(), &wb).ok();
 }
 
@@ -125,10 +136,12 @@ bool RocksDBStore::Write(const std::string& column, const std::string& key, cons
 }
 
 const void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
+    // Prepare WriteBatch
     class WriteBatch wb;
     for (auto const& [key, value] : batch) {
         wb.Put(handleMap.at(column), key, value);
     }
+
     bool ok = db->Write(WriteOptions(), &wb).ok();
     assert(ok);
 }
@@ -139,15 +152,18 @@ void RocksDBStore::Delete(const std::string& column, const std::string& key) con
 }
 
 RocksDBStore::~RocksDBStore() {
+    // delete column falimy handles
     for (auto entry = handleMap.begin(); entry != handleMap.end(); ++entry) {
         delete entry->second;
     }
     handleMap.clear();
+
     delete db;
 }
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
     handleMap.reserve(COLUMN_NAMES.size());
+
     auto keyIter = COLUMN_NAMES.begin();
     auto valIter = handles.begin();
     while (keyIter != COLUMN_NAMES.end() && valIter != handles.end()) {
@@ -155,5 +171,6 @@ void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
         ++keyIter;
         ++valIter;
     }
+
     assert(!handleMap.empty());
 }

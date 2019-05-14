@@ -1,6 +1,10 @@
 #include "consensus.h"
 
-ChainState::ChainState() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
+////////////////
+// ChainState
+//
+ChainState::ChainState()
+    : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
     milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
     blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
     hashRate        = GetMsDifficulty() / params.timeInterval;
@@ -54,6 +58,22 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     }
 
     lastUpdateTime = blockUpdateTime;
+}
+
+////////////////
+// NodeRecord
+//
+NodeRecord::NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+
+NodeRecord::NodeRecord(const ConstBlockPtr& blk)
+    : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+
+NodeRecord::NodeRecord(const BlockNet& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
+    cBlock = std::make_shared<BlockNet>(blk);
+}
+
+NodeRecord::NodeRecord(VStream& s) {
+    Deserialize(s);
 }
 
 void NodeRecord::InvalidateMilestone() {
@@ -158,11 +178,7 @@ std::string std::to_string(const NodeRecord& rec) {
         s += "   }\n";
     }
 
-    static const std::string enumName[] = {
-        "UNKNOWN",
-        "VALID",
-        "INVALID"
-    };
+    static const std::string enumName[] = {"UNKNOWN", "VALID", "INVALID"};
 
     s += strprintf("   status: %s \n }", enumName[rec.validity]);
 

@@ -94,7 +94,9 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     for (int i = 2; i < LOOPS; i++) {
         simulatedTime += distribution(generator);
         arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i - 1]);
+
         ASSERT_EQ(i, arrayMs[i]->height);
+
         if (((i + 1) % params.timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
             ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
@@ -102,6 +104,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         } else if (((i + 1) % params.timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
+
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }

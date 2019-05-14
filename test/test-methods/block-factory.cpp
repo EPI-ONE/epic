@@ -32,6 +32,7 @@ ConstBlockPtr FakeBlockPtr(int numTxInput, int numTxOutput, bool solve) {
 
 Transaction FakeTx(int numTxInput, int numTxOutput) {
     Transaction tx;
+
     int maxPos = rand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
         uint256 inputH;
@@ -42,6 +43,7 @@ Transaction FakeTx(int numTxInput, int numTxOutput) {
     for (int i = 0; i < numTxOutput; ++i) {
         tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
     }
+
     return tx;
 }
 

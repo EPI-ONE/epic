@@ -189,7 +189,6 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());
     }
-
     for (const TxOutput& output : ptrTx->GetOutputs()) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
@@ -202,7 +201,6 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());
     }
-
     for (const TxOutput& output : ptrTx->GetOutputs()) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
