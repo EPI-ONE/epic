@@ -1,14 +1,18 @@
 #include "consensus.h"
 
-ChainState::ChainState() : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
+////////////////
+// ChainState
+//
+ChainState::ChainState()
+    : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
     milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
     blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(BlkStatPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
+ChainState::ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous) : pprevious(previous) {
     pblock->LinkChainState(*this);
-    if (pprevious != nullptr) {
+    if (pprevious) {
         height    = pprevious->height + 1;
         chainwork = pprevious->chainwork + (params.maxTarget / UintToArith256(pblock->cBlock->GetHash()));
 
@@ -54,6 +58,22 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     }
 
     lastUpdateTime = blockUpdateTime;
+}
+
+////////////////
+// NodeRecord
+//
+NodeRecord::NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+
+NodeRecord::NodeRecord(const ConstBlockPtr& blk)
+    : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+
+NodeRecord::NodeRecord(const BlockNet& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
+    cBlock = std::make_shared<BlockNet>(blk);
+}
+
+NodeRecord::NodeRecord(VStream& s) {
+    Deserialize(s);
 }
 
 void NodeRecord::InvalidateMilestone() {
@@ -139,6 +159,30 @@ size_t NodeRecord::GetOptimalStorageSize() {
     }
 
     return optimalStorageSize;
+}
+
+std::string std::to_string(const NodeRecord& rec) {
+    std::string s = "NodeRecord {\n";
+    s += strprintf("  contained%s \n", std::to_string(*(rec.cBlock)));
+    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
+    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
+
+    if (rec.snapshot) {
+        s += "   with chain state snapshot {\n";
+        s += strprintf("     height: %s \n", rec.snapshot->height);
+        s += strprintf("     chainwork: %s \n", rec.snapshot->chainwork.GetCompact());
+        s += strprintf("     last update time: %s \n", rec.snapshot->lastUpdateTime);
+        s += strprintf("     ms target: %s \n", rec.snapshot->milestoneTarget.GetCompact());
+        s += strprintf("     block target: %s \n", rec.snapshot->blockTarget.GetCompact());
+        s += strprintf("     hash rate: %s \n", rec.snapshot->hashRate);
+        s += "   }\n";
+    }
+
+    static const std::string enumName[] = {"UNKNOWN", "VALID", "INVALID"};
+
+    s += strprintf("   status: %s \n }", enumName[rec.validity]);
+
+    return s;
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {

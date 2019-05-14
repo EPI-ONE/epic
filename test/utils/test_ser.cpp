@@ -175,27 +175,38 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     sinput << block;
     std::string s = sinput.str();
 
-    BlockNet blockFromDeserialization;
-    sinput >> blockFromDeserialization;
+    BlockNet block1;
+    sinput >> block1;
 
     VStream soutput;
-    soutput << blockFromDeserialization;
+    soutput << block1;
 
     EXPECT_EQ(s, soutput.str());
 
     // Check parent pointers
-    Transaction* ptrTx = &*blockFromDeserialization.GetTransaction();
-    EXPECT_EQ(&blockFromDeserialization, ptrTx->GetParentBlock());
+    Transaction* ptrTx = &*block1.GetTransaction();
+    EXPECT_EQ(&block1, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());
     }
+    for (const TxOutput& output : ptrTx->GetOutputs()) {
+        EXPECT_EQ(ptrTx, output.GetParentTx());
+    }
 
+    BlockNet block2(soutput);
+
+    // check parent pointers
+    ptrTx = &*block2.GetTransaction();
+    EXPECT_EQ(&block2, ptrTx->GetParentBlock());
+    for (const TxInput& input : ptrTx->GetInputs()) {
+        EXPECT_EQ(ptrTx, input.GetParentTx());
+    }
     for (const TxOutput& output : ptrTx->GetOutputs()) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
 
     // Check encoding size
-    EXPECT_EQ(VStream(blockFromDeserialization).size(), blockFromDeserialization.GetOptimalEncodingSize());
+    EXPECT_EQ(VStream(block2).size(), block2.GetOptimalEncodingSize());
 }
 
 TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
@@ -211,7 +222,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     // Construct NodeRecord
     NodeRecord block(blk);
     block.minerChainHeight = 100;
-    block.cumulativeReward = 0;
+    block.cumulativeReward = 10;
 
     // Link the chain state
     ChainState state(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(), arith_uint256(0).GetCompact(),
@@ -225,11 +236,11 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.Serialize(sinput);
     std::string s = sinput.str();
 
-    NodeRecord blockFromUnserialization;
-    blockFromUnserialization.Deserialize(sinput);
+    NodeRecord block1;
+    block1.Deserialize(sinput);
 
     VStream soutput;
-    blockFromUnserialization.Serialize(soutput);
+    block1.Serialize(soutput);
 
     EXPECT_EQ(s, soutput.str());
 }

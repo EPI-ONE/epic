@@ -109,14 +109,6 @@ void Transaction::FinalizeHash() {
         hash_ = Hash<1>(VStream(*this));
 }
 
-const TxInput& Transaction::GetInput(size_t index) const {
-    return inputs_.at(index);
-}
-
-const TxOutput& Transaction::GetOutput(size_t index) const {
-    return outputs_.at(index);
-}
-
 const std::vector<TxInput>& Transaction::GetInputs() const {
     return inputs_;
 }
@@ -185,7 +177,7 @@ std::string std::to_string(const TxOutPoint& outpoint) {
 
 std::string std::to_string(const TxInput& input) {
     std::string str;
-    str += "TxInput{ ";
+    str += "TxInput { ";
 
     if (input.IsRegistration()) {
         str += "REGISTRATION ";
@@ -200,29 +192,29 @@ std::string std::to_string(const TxInput& input) {
 
 std::string std::to_string(const TxOutput& output) {
     std::string str;
-    str += "TxOut{ ";
+    str += "TxOut { ";
     str += strprintf("value=%d, listing content = %s", output.value.GetValue(), std::to_string(output.listingContent));
 
     return str += " }";
 }
 
-std::string std::to_string(Transaction& tx) {
+std::string std::to_string(const Transaction& tx) {
     std::string s;
     s += "Transaction { \n";
-    s += strprintf("   hash: %s \n", std::to_string(tx.GetHash()));
+    s += strprintf("     hash: %s \n", std::to_string(tx.GetHash()));
 
-    for (int i = 0; i < tx.GetInputs().size(); ++i) {
-        s += "   ";
-        s += std::to_string(tx.GetInputs()[i]);
+    for (const auto& input : tx.GetInputs()) {
+        s += "     ";
+        s += std::to_string(input);
         s += "\n";
     }
 
-    for (int j = 0; j < tx.GetOutputs().size(); ++j) {
-        s += "   ";
-        s += std::to_string(tx.GetOutputs()[j]);
+    for (const auto& output : tx.GetOutputs()) {
+        s += "     ";
+        s += std::to_string(output);
         s += "\n";
     }
 
-    s += " }\n";
+    s += "   }\n";
     return s;
 }

@@ -3,14 +3,9 @@
 
 #include "block.h"
 
-enum MilestoneStatus : uint8_t {
-    IS_NOT_MILESTONE = 0,
-    IS_TRUE_MILESTONE,
-    IS_FAKE_MILESTONE,
-};
-
 class NodeRecord;
-typedef std::shared_ptr<NodeRecord> BlkStatPtr;
+extern const NodeRecord GENESIS_RECORD;
+typedef std::shared_ptr<NodeRecord> RecordPtr;
 
 class ChainState {
 public:
@@ -22,17 +17,19 @@ public:
     arith_uint256 blockTarget;
     arith_uint256 milestoneTarget;
 
+    // TODO: remove these two pointers as ChainState
+    //       instances will be stored in deque in Chain
     std::shared_ptr<ChainState> pprevious;
     std::weak_ptr<ChainState> pnext;
 
-    // a vector consists of blocks with its offset w.r.t this level set of this milestone
-    std::vector<BlkStatPtr> vblockstore;
+    // a vector consists of blocks in the level set of this chain state
+    std::vector<RecordPtr> vblockstore;
     std::vector<uint256> pubkeySnapshot;
 
-    // constructor of a milestone of genesis.
+    // constructor of a chain state of genesis.
     ChainState();
-    // constructor of a milestone with all data fields
-    ChainState(BlkStatPtr, std::shared_ptr<ChainState>);
+    // constructor of a chain state with all data fields
+    ChainState(RecordPtr pblock, std::shared_ptr<ChainState> previous);
     // copy constructor
     ChainState(const ChainState&) = default;
 
@@ -77,6 +74,14 @@ public:
         blockTarget.SetCompact(ser_readdata32(s));
         ::Deserialize(s, VARINT(hashRate));
     }
+
+    bool operator==(const ChainState& rhs) const {
+        return lastUpdateTime               == rhs.lastUpdateTime &&
+               chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
+               hashRate                     == rhs.hashRate &&
+               milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
+               blockTarget.GetCompact()     == blockTarget.GetCompact();
+    }
 };
 
 /*
@@ -91,6 +96,12 @@ public:
         INVALID,
     };
 
+    enum MilestoneStatus : uint8_t {
+        IS_NOT_MILESTONE = 0,
+        IS_TRUE_MILESTONE,
+        IS_FAKE_MILESTONE,
+    };
+
     ConstBlockPtr cBlock;
 
     Coin cumulativeReward;
@@ -103,11 +114,10 @@ public:
 
     size_t optimalStorageSize;
 
-    NodeRecord() : optimalStorageSize(0), minerChainHeight(0) {}
-    NodeRecord(const ConstBlockPtr& blk) : cBlock(blk), optimalStorageSize(0), minerChainHeight(0) {}
-    NodeRecord(const Block& blk) : optimalStorageSize(0), minerChainHeight(0) {
-        cBlock = std::make_shared<BlockNet>(blk);
-    }
+    NodeRecord();
+    NodeRecord(const ConstBlockPtr&);
+    NodeRecord(const BlockNet&);
+    NodeRecord(VStream&);
 
     void LinkChainState(ChainState&);
     size_t GetOptimalStorageSize();
@@ -116,9 +126,17 @@ public:
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
 
+    bool operator==(const NodeRecord& another) const {
+        return std::tie(*cBlock, cumulativeReward, minerChainHeight) ==
+                   std::tie(*(another.cBlock), another.cumulativeReward, another.minerChainHeight) &&
+               ((snapshot == nullptr || another.snapshot == nullptr) ? true : (*(snapshot) == *(another.snapshot)));
+    }
+
     static NodeRecord CreateGenesisRecord();
 };
 
-extern const NodeRecord GENESIS_RECORD;
+namespace std {
+string to_string(const NodeRecord&);
+} // namespace std
 
 #endif /* ifndef __SRC_CONSENSUS_H__ */

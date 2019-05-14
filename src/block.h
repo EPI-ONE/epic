@@ -15,7 +15,7 @@ extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
-string to_string(Block& block);
+string to_string(const Block&);
 } // namespace std
 
 class Block {
@@ -34,9 +34,9 @@ public:
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-        tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
-            CalculateOptimalEncodingSize();
-        }
+          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+        CalculateOptimalEncodingSize();
+    }
 
     void SetNull();
 
@@ -48,17 +48,17 @@ public:
 
     uint256 GetTipHash() const;
 
-    void SetMilestoneHash(const uint256& hash);
+    void SetMilestoneHash(const uint256&);
 
-    void SetPrevHash(const uint256& hash);
+    void SetPrevHash(const uint256&);
 
-    void SetTIPHash(const uint256& hash);
+    void SetTIPHash(const uint256&);
 
     void UnCache();
 
     bool Verify() const;
 
-    void AddTransaction(Transaction tx);
+    void AddTransaction(Transaction);
 
     bool HasTransaction() const;
 
@@ -66,11 +66,13 @@ public:
 
     void SetDifficultyTarget(uint32_t target);
 
-    void SetTime(uint64_t time);
+    const uint32_t GetDifficultyTarget() const;
+
+    void SetTime(uint64_t);
 
     const uint64_t GetTime() const;
 
-    void SetNonce(uint32_t nonce);
+    void SetNonce(uint32_t);
 
     const uint32_t GetNonce() const;
 
@@ -161,7 +163,15 @@ public:
         READWRITE(nonce_);
     }
 
-    friend std::string std::to_string(Block& block);
+    bool operator==(const Block& another) const {
+        if (GetHash().IsNull() || another.GetHash().IsNull()) {
+            return false;
+        }
+
+        return hash_ == another.hash_;
+    }
+
+    friend std::string std::to_string(const Block&);
 
     static Block CreateGenesis();
 
@@ -186,6 +196,8 @@ public:
     BlockNet(const BlockNet&) = default;
 
     BlockNet(const Block& b);
+
+    BlockNet(VStream&);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>

@@ -135,6 +135,10 @@ void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
 
+const uint32_t Block::GetDifficultyTarget() const {
+    return diffTarget_;
+}
+
 void Block::SetTime(uint64_t time) {
     time_ = time;
 }
@@ -243,7 +247,8 @@ bool Block::CheckPOW() const {
     arith_uint256 blkHash = UintToArith256(hash_);
 
     if (blkHash > target) {
-        spdlog::info(strprintf("Hash %s is higher than target: %s v.s. %s", std::to_string(GetHash()), std::to_string(target)));
+        spdlog::info(
+            strprintf("Hash %s is higher than target: %s v.s. %s", std::to_string(GetHash()), std::to_string(target)));
         return false;
     }
 
@@ -317,6 +322,10 @@ void Block::Solve(ThreadPool& solverPool) {
 }
 
 void Block::SetParents() {
+    if (!HasTransaction()) {
+        return;
+    }
+
     transaction_->SetParent(this);
     for (TxInput& input : transaction_->GetInputs()) {
         input.SetParent(&*transaction_);
@@ -327,7 +336,7 @@ void Block::SetParents() {
     }
 }
 
-std::string std::to_string(Block& block) {
+std::string std::to_string(const Block& block) {
     std::string s;
     s += " Block { \n";
     s += strprintf("   hash: %s \n", std::to_string(block.GetHash()));
@@ -340,9 +349,10 @@ std::string std::to_string(Block& block) {
     s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
 
     if (block.HasTransaction()) {
-        s += "   with transaction:\n";
-        s += std::to_string(*(block.transaction_));
+        s += strprintf("  with %s\n", std::to_string(*(block.transaction_)));
     }
+
+    s += " }";
 
     return s;
 }
@@ -384,6 +394,12 @@ Block Block::CreateGenesis() {
     return genesisBlock;
 }
 
-BlockNet::BlockNet(const Block& b) : Block(b) {}
+BlockNet::BlockNet(const Block& b) : Block(b) {
+    SetParents();
+}
+
+BlockNet::BlockNet(VStream& payload) {
+    payload >> *this;
+}
 
 const Block GENESIS = Block::CreateGenesis();

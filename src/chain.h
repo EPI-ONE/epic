@@ -47,7 +47,7 @@ private:
     bool IsMilestone(const std::shared_ptr<Block> pblock);
 
     // when we add a milestone block to this chain, we start verification
-    std::shared_ptr<ChainState> MilestoneVerify(const BlkStatPtr pblock);
+    std::shared_ptr<ChainState> MilestoneVerify(const RecordPtr pblock);
 
     // do validity check on the block
     void Validate(const std::shared_ptr<Block> pblock);

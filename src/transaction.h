@@ -130,10 +130,6 @@ public:
 
     void FinalizeHash();
 
-    const TxInput& GetInput(size_t index) const;
-
-    const TxOutput& GetOutput(size_t index) const;
-
     const std::vector<TxInput>& GetInputs() const;
 
     std::vector<TxInput>& GetInputs();
@@ -181,7 +177,7 @@ namespace std {
 string to_string(const TxOutPoint& outpoint);
 string to_string(const TxInput& input);
 string to_string(const TxOutput& output);
-string to_string(Transaction& tx);
+string to_string(const Transaction& tx);
 } // namespace std
 
 #endif //__SRC_TRANSACTION_H__
