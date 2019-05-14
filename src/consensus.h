@@ -76,10 +76,11 @@ public:
     }
 
     bool operator==(const ChainState& rhs) const {
-        return std::forward_as_tuple(lastUpdateTime, chainwork.GetCompact(), hashRate, milestoneTarget.GetCompact(),
-                   blockTarget.GetCompact()) == std::forward_as_tuple(rhs.lastUpdateTime, rhs.chainwork.GetCompact(),
-                                                    rhs.hashRate, rhs.milestoneTarget.GetCompact(),
-                                                    rhs.blockTarget.GetCompact());
+        return lastUpdateTime               == rhs.lastUpdateTime &&
+               chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
+               hashRate                     == rhs.hashRate &&
+               milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
+               blockTarget.GetCompact()     == blockTarget.GetCompact();
     }
 };
 
