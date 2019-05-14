@@ -52,7 +52,7 @@ public:
 
     void SetPrevHash(const uint256&);
 
-    void SetTIPHash(const uint256&);
+    void SetTipHash(const uint256&);
 
     void UnCache();
 
@@ -80,15 +80,17 @@ public:
 
     const uint256& GetHash() const;
 
-    void FinalizeHash() const;
+    void FinalizeHash();
 
-    void CalculateHash() const;
+    void CalculateHash();
 
     const uint256& FinalizeTxHash();
 
     const uint256& GetTxHash() const;
 
     size_t GetOptimalEncodingSize() const;
+
+    size_t CalculateOptimalEncodingSize();
 
     /*
      * Checks whether the block is a registration block.
@@ -149,8 +151,6 @@ public:
      */
     void SetParents();
 
-    size_t CalculateOptimalEncodingSize();
-
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -179,13 +179,13 @@ protected:
     uint256 hash_;
     size_t optimalEncodingSize_;
 
+    uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
     uint32_t diffTarget_;
-    uint32_t version_;
-    uint32_t nonce_;
     uint64_t time_;
+    uint32_t nonce_;
     std::optional<Transaction> transaction_;
 };
 

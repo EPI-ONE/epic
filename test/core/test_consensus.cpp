@@ -1,10 +1,12 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <random>
 
+#include "caterpillar.h"
 #include "chain.h"
+#include "dag_manager.h"
 #include "test-methods/block-factory.h"
 #include "utxo.h"
-#include "test-methods/block-factory.h"
 
 std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
     auto pb = std::make_shared<BlockNet>();
@@ -113,4 +115,58 @@ TEST_F(TestConsensus, Chain) {
     Chain chain1{};
     Chain chain2(false);
     ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+}
+
+TEST_F(TestConsensus, AddNewBlocks) {
+    ///////////////////////////
+    // Prepare for test data
+    //
+    std::size_t n = 10;
+    std::vector<ConstBlockPtr> blocks;
+    blocks.reserve(n);
+
+    // Construct a fully connected and syntatical valid random graph
+    // Make the genesis first
+    blocks.emplace_back(std::make_shared<BlockNet>(GENESIS));
+
+    for (std::size_t i = 1; i < n; ++i) {
+        BlockNet b = FakeBlock(rand() % 10, rand() % 10);
+        b.SetMilestoneHash(GENESIS.GetHash());
+        b.SetPrevHash(blocks[rand() % i]->GetHash());
+        b.SetTipHash(blocks[rand() % i]->GetHash());
+        b.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
+
+        // Special transaction on the first registration block
+        if (b.GetPrevHash() == GENESIS.GetHash()) {
+            Transaction tx;
+            tx.AddInput(TxInput(Hash::GetZeroHash(), UNCONNECTED));
+            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing()));
+            b.AddTransaction(tx);
+        }
+        b.Solve();
+
+        blocks.emplace_back(std::make_shared<BlockNet>(b));
+    }
+
+    // Shuffle order of blocks to make some of them not solid
+    auto rng = std::default_random_engine{};
+    std::shuffle(std::begin(blocks), std::end(blocks), rng);
+
+    // Add GENESIS to the front
+    blocks.emplace(blocks.begin(), std::make_shared<BlockNet>(GENESIS));
+
+    ///////////////////////////
+    // Test starts here
+    //
+    static std::string PREFIX = "test_consensus/";
+    std::ostringstream os;
+    os << time(nullptr);
+    std::string filename = PREFIX + os.str();
+    Caterpillar CAT(filename);
+    CAT.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    for (const auto& block : blocks) {
+        CAT.AddNewBlock(block, nullptr);
+    }
+
+    EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
 }

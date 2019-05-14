@@ -27,6 +27,8 @@ public:
 
     std::unique_ptr<NodeRecord> GetRecord(const uint256&) const;
 
+    bool WriteBlock(const ConstBlockPtr&) const;
+
     bool WriteRecord(const RecordPtr&) const;
 
     bool WriteRecords(const std::vector<RecordPtr>&) const;

@@ -1,30 +1,26 @@
 #include "caterpillar.h"
 
-// TODO: add real functions
-bool OrphanBlocksContainer::Add(const BlockPtr& b) {
-    return false;
+Caterpillar::Caterpillar(std::string& dbPath) : dbStore_(dbPath), verifyThread_(1), obcThread_(1) {
+    verifyThread_.Start();
+    obcThread_.Start();
 }
 
-void OrphanBlocksContainer::Remove(const BlockPtr& b) {}
-
-bool OrphanBlocksContainer::Contains(const uint256& blockHash) const {
-    return false;
+Caterpillar::~Caterpillar() {
+    verifyThread_.Stop();
+    obcThread_.Stop();
+    dbStore_.~RocksDBStore();
+    obc_.~OrphanBlocksContainer();
 }
 
-void OrphanBlocksContainer::ReleaseBlocks(const uint256& blockHash) {}
-// end of TODO
-
-OrphanBlocksContainer::~OrphanBlocksContainer() {
-    thread_.Stop();
-    ODict_.clear();
-    solidDegree_.clear();
+bool Caterpillar::StoreRecord(const RecordPtr& rec) const {
+    return dbStore_.WriteRecord(rec);
 }
 
-Caterpillar::Caterpillar(std::string& dbPath) : dbStore_(dbPath), thread_(1) {
-    thread_.Start();
-}
+bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
+    if (*blk == GENESIS) {
+        return false;
+    }
 
-bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
     if (Exists(blk->GetHash())) {
         return false;
     }
@@ -42,41 +38,56 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
     uint256 prevHash = blk->GetPrevHash();
     uint256 tipHash  = blk->GetTipHash();
 
+    bool mDB  = dbStore_.Exists(msHash);
+    bool pDB  = dbStore_.Exists(prevHash);
+    bool tDB  = dbStore_.Exists(tipHash);
+    bool mOBC = obc_.IsOrphan(msHash);
+    bool pOBC = obc_.IsOrphan(prevHash);
+    bool tOBC = obc_.IsOrphan(tipHash);
+
+    static auto mask = [](bool m, bool p, bool t) {
+        // random comment to break clang format
+        return ((m << 0) | (p << 2) | (t << 1));
+    };
+
     // First, check if we already received its preceding blocks
-    if (Exists(msHash) && Exists(prevHash) && Exists(tipHash)) {
-        if (obc_.Contains(msHash) || obc_.Contains(prevHash) || obc_.Contains(tipHash)) {
-            obc_.Add(blk);
+    if ((mDB || mOBC) && (pDB || pOBC) && (tDB || tOBC)) {
+        if (mOBC || pOBC || tOBC) {
+            obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk, mask(mDB, pDB, tDB)));
             return false;
         }
     } else {
         // We have not received at least one of its parents.
 
         // Drop if the block is too old
-        if (dbStore_.Exists(msHash) && !CheckPuntuality(blk)) {
+        DBRecord ms = dbStore_.GetRecord(msHash);
+        if (ms && !CheckPuntuality(blk, ms)) {
             return false;
         }
         // Abort and send GetBlock requests.
-        obc_.Add(blk);
+        obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk, mask(mDB, pDB, tDB)));
 
-        DAG.RequestInv(Hash::GetZeroHash(), 5, peer);
+        if (peer) {
+            DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
+        }
 
         return false;
     }
 
     // Check difficulty target ///////////////////////
 
-    std::unique_ptr<Block> ms = dbStore_.GetBlock(msHash);
-    if (ms == nullptr) {
-        spdlog::info(strprintf("Block %s has missing milestone link %s", std::to_string(blk->GetHash()),
-            std::to_string(blk->GetMilestoneHash())));
+    DBRecord ms = dbStore_.GetRecord(msHash);
+    if (!ms) {
+        spdlog::info(strprintf(
+            "Block %s has missing milestone link %s", std::to_string(blk->GetHash()), std::to_string(msHash)));
         return false;
     }
 
-    if (ms->GetMilestoneInstance() == nullptr) {
+    if (!(ms->snapshot)) {
         spdlog::info(strprintf("Block %s has invalid milestone link", std::to_string(blk->GetHash())));
     }
 
-    uint32_t expectedTarget = ms->GetMilestoneInstance()->blockTarget_.GetCompact();
+    uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
     if (blk->GetDifficultyTarget() != expectedTarget) {
         spdlog::info(strprintf("Block %s has unexpected change in difficulty: current %s v.s. expected %s",
             std::to_string(blk->GetHash()), blk->GetDifficultyTarget(), expectedTarget));
@@ -85,26 +96,24 @@ bool Caterpillar::AddNewBlock(const BlockPtr& blk, const Peer& peer) {
 
     // Check punctuality /////////////////////////////
 
-    if (!CheckPuntuality(blk, std::move(ms))) {
+    if (!CheckPuntuality(blk, ms)) {
         return false;
     }
 
     // End of online verification
     //////////////////////////////////////////////////
 
-    DAG.AddBlockToPending(blk);
-    obc_.ReleaseBlocks(blk->GetHash());
+    dbStore_.WriteBlock(blk);
+    DAG->AddBlockToPending(blk);
+    ReleaseBlocks(blk->GetHash());
 
     return true;
 }
 
-bool Caterpillar::CheckPuntuality(const BlockPtr& blk, std::unique_ptr<Block> ms) const {
+bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const DBRecord& ms) const {
     if (ms == nullptr) {
-        ms.reset(dbStore_.GetBlock(blk->GetMilestoneHash()).release());
-        if (ms == nullptr) {
-            // Should not happen
-            return false;
-        }
+        // Should not happen
+        return false;
     }
 
     if (blk->IsFirstRegistration()) {
@@ -115,15 +124,24 @@ bool Caterpillar::CheckPuntuality(const BlockPtr& blk, std::unique_ptr<Block> ms
         return true;
     }
 
-    if (blk->GetTime() - ms->GetTime() > params.punctualityThred) {
+    if (blk->GetTime() - ms->cBlock->GetTime() > params.punctualityThred) {
         spdlog::info(strprintf("Block %s is too old.", std::to_string(blk->GetHash())));
         return false;
     }
     return true;
 }
 
-Caterpillar::~Caterpillar() {
-    thread_.Stop();
-    dbStore_.~RocksDBStore();
-    obc_.~OrphanBlocksContainer();
+DBRecord Caterpillar::GetBlock(const uint256& blkHash) const {
+    return dbStore_.GetRecord(blkHash);
+}
+
+void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
+    obcThread_.Execute([&blkHash, this]() {
+        auto releasedBlocks = obc_.SubmitHash(blkHash);
+        if (releasedBlocks) {
+            for (const auto& blk : *releasedBlocks) {
+                verifyThread_.Submit(std::bind(&Caterpillar::AddNewBlock, this, blk, nullptr));
+            }
+        }
+    });
 }

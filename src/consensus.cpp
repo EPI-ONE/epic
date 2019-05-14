@@ -82,12 +82,7 @@ void NodeRecord::InvalidateMilestone() {
 }
 
 void NodeRecord::LinkChainState(ChainState& ss) {
-    if (snapshot.use_count() == 0) {
-        snapshot = std::make_shared<ChainState>(ss);
-    } else {
-        snapshot.reset(&ss);
-    }
-
+    snapshot = std::make_shared<ChainState>(ss);
     isMilestone = true;
 }
 
@@ -186,7 +181,10 @@ std::string std::to_string(const NodeRecord& rec) {
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
-    return NodeRecord(GENESIS);
+    NodeRecord genesis(GENESIS);
+    static ChainState genesisState;
+    genesis.LinkChainState(genesisState);
+    return genesis;
 }
 
 const NodeRecord GENESIS_RECORD = NodeRecord::CreateGenesisRecord();

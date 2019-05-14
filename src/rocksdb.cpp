@@ -45,7 +45,7 @@ bool RocksDBStore::Exists(const uint256& blockHash) const {
     key.reserve(Hash::SIZE);
     key << blockHash;
     Slice keySlice(key.data(), key.size());
-    return Get(kDefaultColumnFamilyName, keySlice).empty();
+    return !Get(kDefaultColumnFamilyName, keySlice).empty();
 }
 
 std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) const {
@@ -86,6 +86,20 @@ std::string RocksDBStore::Get(const std::string& column, const Slice& key) const
 
 std::string RocksDBStore::Get(const std::string& column, const std::string& key) const {
     return Get(column, Slice(key));
+}
+
+bool RocksDBStore::WriteBlock(const ConstBlockPtr& block) const {
+    VStream key;
+    key.reserve(Hash::SIZE);
+    key << block->GetHash();
+    Slice keySlice(key.data(), key.size());
+
+    VStream value;
+    value.reserve(block->GetOptimalEncodingSize());
+    value << *block;
+    Slice valueSlice(value.data(), value.size());
+
+    return Write(kDefaultColumnFamilyName, keySlice, valueSlice);
 }
 
 bool RocksDBStore::WriteRecord(const RecordPtr& record) const {

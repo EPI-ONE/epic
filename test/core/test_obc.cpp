@@ -2,6 +2,15 @@
 
 #include "obc.h"
 
+class TestImpOBC : public OrphanBlocksContainer {
+public:
+    TestImpOBC() : OrphanBlocksContainer() {}
+    std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash) {
+        return OrphanBlocksContainer::SubmitHash(hash);
+    }
+
+};
+
 class OBCTest : public testing::Test {
 public:
     std::vector<Block> blocks;
@@ -43,12 +52,12 @@ public:
         blocks[7].SetPrevHash(blocks[4].GetHash());
         blocks[9].SetPrevHash(blocks[1].GetHash());
 
-        blocks[0].SetTIPHash(blocks[3].GetHash());
-        blocks[1].SetTIPHash(blocks[6].GetHash());
-        blocks[2].SetTIPHash(blocks[6].GetHash());
-        blocks[3].SetTIPHash(blocks[6].GetHash());
-        blocks[7].SetTIPHash(blocks[8].GetHash());
-        blocks[9].SetTIPHash(blocks[3].GetHash());
+        blocks[0].SetTipHash(blocks[3].GetHash());
+        blocks[1].SetTipHash(blocks[6].GetHash());
+        blocks[2].SetTipHash(blocks[6].GetHash());
+        blocks[3].SetTipHash(blocks[6].GetHash());
+        blocks[7].SetTipHash(blocks[8].GetHash());
+        blocks[9].SetTipHash(blocks[3].GetHash());
     }
 };
 
@@ -64,7 +73,7 @@ TEST_F(OBCTest, wrong_argument_test) {
 }
 
 TEST_F(OBCTest, simple_one_block_test) {
-    OrphanBlocksContainer obc;
+    TestImpOBC obc;
 
     obc.AddBlock(std::make_shared<const BlockNet>(blocks[0]), M_MISSING);
 
@@ -86,7 +95,7 @@ TEST_F(OBCTest, simple_one_block_test) {
 }
 
 TEST_F(OBCTest, complex_secondary_deps_test) {
-    OrphanBlocksContainer obc;
+    TestImpOBC obc;
 
     /* hash missing */
     const uint256 dep_hash = blocks[8].GetHash();

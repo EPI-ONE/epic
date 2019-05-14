@@ -11,10 +11,14 @@
 
 class DAGManager {
 public:
-    static DAGManager& GetDAGManager() {
-        static DAGManager DAG;
+    static const std::unique_ptr<DAGManager>& GetDAGManager() {
+        static const auto DAG = std::make_unique<DAGManager>();
         return DAG;
     }
+
+    // TODO: For test only. Remove this in the future
+    //       when AddBlockToPending becomes real
+    std::vector<ConstBlockPtr> pending;
 
     // A list of hashes we've sent out in GetData requests.
     // It can be operated by multi threads.
@@ -30,7 +34,7 @@ public:
 
     // Indicator of whether we are synching with some peer.
     // Needs atomic set and get operations since is accessible by multiple threads.
-    std::atomic_flag isBatchSynching = false;
+    std::atomic<bool> isBatchSynching;
 
     // The peer we are synching with. Null if isBatchSynching is false.
     Peer* syncingPeer;
@@ -40,7 +44,7 @@ public:
     // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
     // and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
     // sending queue according to the BlockLocator constructed by peer.
-    void RequestInv(const uint256& fromHash, const size_t& len, const Peer& peer);
+    void RequestInv(const uint256& fromHash, const size_t& len, const Peer* peer);
 
     // Called by Peer and sets a list of inventory as the callback to the task.
     void AssembleInv(GetBlockTask& task);
@@ -52,7 +56,7 @@ public:
     void GetBundle(GetDataTask& task);
 
     // Adds a newly received block that has past syntax checking to the corresponding chain.
-    void AddBlockToPending(const BlockPtr& block);
+    void AddBlockToPending(const ConstBlockPtr& block);
 
     size_t GetBestMilestoneHeight();
 
@@ -77,5 +81,7 @@ private:
     // Rolls back and rebuild the ledger if neccessary.
     void SwitchChain();
 };
+
+static auto& DAG = DAGManager::GetDAGManager();
 
 #endif // __SRC_DAG_MANAGER_H__

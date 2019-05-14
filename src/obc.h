@@ -58,6 +58,7 @@ public:
     std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
+    ThreadPool thread_;
     struct obc_dependency {
         /* number of dependencies that must be
          * found in order for this dependency

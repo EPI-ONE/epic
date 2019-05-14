@@ -46,7 +46,7 @@ void Block::SetPrevHash(const uint256& hash) {
     prevBlockHash_ = hash;
 }
 
-void Block::SetTIPHash(const uint256& hash) {
+void Block::SetTipHash(const uint256& hash) {
     tipBlockHash_ = hash;
 }
 
@@ -56,6 +56,13 @@ void Block::UnCache() {
 }
 
 bool Block::Verify() const {
+    // checks version
+    if (version_ != GENESIS_BLOCK_VERSION) {
+        spdlog::info(strprintf("Block with wrong version %s v.s. expected %s [%s]", version_, GENESIS_BLOCK_VERSION,
+            std::to_string(hash_)));
+        return false;
+    }
+
     // checks pow
     if (!CheckPOW()) {
         return false;
@@ -64,21 +71,21 @@ bool Block::Verify() const {
     // checks if the time of block is too far in the future
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
-        spdlog::info(strprintf("Block %s too advanced in the future: %s (%s) v.s. allowed %s (%s)",
-            std::to_string(hash_), ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime));
+        spdlog::info(strprintf("Block too advanced in the future: %s (%s) v.s. allowed %s (%s) [%s]",
+            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_)));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         spdlog::info(
-            strprintf("Block %s with size %s larger than MAX_BLOCK_SIZE", std::to_string(hash_), optimalEncodingSize_));
+            strprintf("Block with size %s larger than MAX_BLOCK_SIZE [%s]", optimalEncodingSize_, std::to_string(hash_)));
         return false;
     }
 
     if (HasTransaction()) {
         if (transaction_->GetInputs().empty() || transaction_->GetOutputs().empty()) {
-            spdlog::info(strprintf("Block %s contains empty inputs or outputs", std::to_string(hash_)));
+            spdlog::info(strprintf("Block contains empty inputs or outputs [%s]", std::to_string(hash_)));
             return false;
         }
 
@@ -86,7 +93,7 @@ bool Block::Verify() const {
         std::unordered_set<TxOutPoint> outpoints = {};
         for (const TxInput& input : transaction_->GetInputs()) {
             if (outpoints.find(input.outpoint) != outpoints.end()) {
-                spdlog::info(strprintf("Block %s contains duplicated outpoints", std::to_string(hash_)));
+                spdlog::info(strprintf("Block contains duplicated outpoints [%s]", std::to_string(hash_)));
                 return false;
             }
             outpoints.insert(input.outpoint);
@@ -99,14 +106,14 @@ bool Block::Verify() const {
         // Must contain a tx
         if (!HasTransaction()) {
             spdlog::info(
-                strprintf("Block %s is the first registration but does not contain a tx", std::to_string(hash_)));
+                strprintf("Block is the first registration but does not contain a tx [%s]", std::to_string(hash_)));
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
             spdlog::info(
-                strprintf("Block %s is the first registration but conatains invalid tx", std::to_string(hash_)));
+                strprintf("Block is the first registration but conatains invalid tx [%s]", std::to_string(hash_)));
             return false;
         }
     }
@@ -160,12 +167,12 @@ const uint256& Block::GetHash() const {
     return hash_;
 }
 
-void Block::FinalizeHash() const {
+void Block::FinalizeHash() {
     if (hash_.IsNull())
         CalculateHash();
 }
 
-void Block::CalculateHash() const {
+void Block::CalculateHash() {
     VStream s;
     Block::Serialize(s);
     FinalizeTxHash().Serialize(s);
