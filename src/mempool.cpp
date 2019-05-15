@@ -24,10 +24,9 @@ bool MemPool::IsEmpty() const {
  * we have to improve this method; TODO optimize */
 std::optional<ConstTxPtr> MemPool::GetTransaction(const uint256& BlockHash, const arith_uint256& threshold) {
     arith_uint256 base_hash = UintToArith256(BlockHash);
-    arith_uint256 distance;
 
     for (const auto& tx : mempool_) {
-        distance = base_hash ^ UintToArith256(tx->GetHash());
+        auto distance = base_hash ^ UintToArith256(tx->GetHash());
         if (distance <= threshold) {
             return tx;
         }
