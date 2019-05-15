@@ -25,6 +25,10 @@ public:
      * for the given value */
     bool Erase(ConstTxPtr value);
 
+    std::size_t Size() const;
+
+    bool IsEmpty() const;
+
     /* retrives the first transaction from the pool that has
      * a sortition distance smaller or equal to the threshold given */
     std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& threshold);
