@@ -29,7 +29,7 @@ public:
         return RocksDBStore::Write(column, key, value);
     }
 
-    const void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
+    void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
         RocksDBStore::WriteBatch(column, batch);
     }
 

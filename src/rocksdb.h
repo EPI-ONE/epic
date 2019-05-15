@@ -40,15 +40,15 @@ protected:
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
-    const std::string Get(const std::string& column, const rocksdb::Slice& key) const;
+    std::string Get(const std::string& column, const rocksdb::Slice& key) const;
 
-    const std::string Get(const std::string& column, const std::string& key) const;
+    std::string Get(const std::string& column, const std::string& key) const;
 
     bool Write(const std::string& column, const rocksdb::Slice& key, const rocksdb::Slice& value) const;
 
     bool Write(const std::string& column, const std::string& key, const std::string& value) const;
 
-    const void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const;
+    void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const;
 
     void Delete(const std::string& column, const std::string& key) const;
 };

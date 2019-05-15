@@ -135,7 +135,7 @@ void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }
 
-const uint32_t Block::GetDifficultyTarget() const {
+uint32_t Block::GetDifficultyTarget() const {
     return diffTarget_;
 }
 
@@ -143,7 +143,7 @@ void Block::SetTime(uint64_t time) {
     time_ = time;
 }
 
-const uint64_t Block::GetTime() const {
+uint64_t Block::GetTime() const {
     return time_;
 }
 
@@ -152,7 +152,7 @@ void Block::SetNonce(uint32_t nonce) {
     nonce_ = nonce;
 }
 
-const uint32_t Block::GetNonce() const {
+uint32_t Block::GetNonce() const {
     return nonce_;
 }
 

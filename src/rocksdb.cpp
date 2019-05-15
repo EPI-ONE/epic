@@ -74,7 +74,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     return pnodeRecord;
 }
 
-const std::string RocksDBStore::Get(const std::string& column, const Slice& key) const {
+std::string RocksDBStore::Get(const std::string& column, const Slice& key) const {
     std::string value;
     Status s = db->Get(ReadOptions(), handleMap.at(column), key, &value);
     if (s.ok()) {
@@ -84,7 +84,7 @@ const std::string RocksDBStore::Get(const std::string& column, const Slice& key)
     return "";
 }
 
-const std::string RocksDBStore::Get(const std::string& column, const std::string& key) const {
+std::string RocksDBStore::Get(const std::string& column, const std::string& key) const {
     return Get(column, Slice(key));
 }
 
@@ -135,7 +135,7 @@ bool RocksDBStore::Write(const std::string& column, const std::string& key, cons
     return Write(column, Slice(key), Slice(value));
 }
 
-const void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
+void RocksDBStore::WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const {
     // Prepare WriteBatch
     class WriteBatch wb;
     for (auto const& [key, value] : batch) {
