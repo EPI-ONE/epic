@@ -4,7 +4,7 @@ Block::Block() {
     SetNull();
 }
 
-Block::Block(uint32_t versionNum) {
+Block::Block(uint32_t versionNum) : Block() {
     version_            = versionNum;
     milestoneBlockHash_ = Hash::GetZeroHash();
     prevBlockHash_      = Hash::GetZeroHash();

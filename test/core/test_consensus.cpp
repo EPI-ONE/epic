@@ -121,7 +121,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 3;
+    std::size_t n = 100;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 
@@ -160,10 +160,10 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Test starts here
     //
-    static std::string PREFIX = "test_consensus/";
+    std::string prefix = "test_consensus/";
     std::ostringstream os;
     os << time(nullptr);
-    std::string filename = PREFIX + os.str();
+    std::string filename = prefix + os.str();
     Caterpillar CAT(filename);
 
     // Initialize DB and pending with genesis block
@@ -178,6 +178,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
 
-    std::string cmd = "exec rm -r " + PREFIX;
+    std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());
 }

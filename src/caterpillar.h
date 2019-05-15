@@ -17,21 +17,26 @@ public:
     Caterpillar() = delete;
     Caterpillar(std::string& dbPath);
 
-    // API for other modules for searching a block
+    /* API for other modules for searching a block */
     DBRecord GetBlock(const uint256&) const;
 
     bool StoreRecord(const RecordPtr&) const;
 
-    // flush records to db
-    void Store(const std::vector<NodeRecord>& vblock);
+    /* Flush records to db. Called by DAGManager only. */
+    void Store(const std::vector<NodeRecord>&);
 
-    /* Submits tasks to a single thread in which it checks its syntax.
-     * If the block passes the checking, add them to the corresponding chain in dag_manager.
-     * Returns true only if the new block successfully updates pending.
+    /*
+     * Submits tasks to a single thread in which it checks its syntax.
+     * If the block passes the checking, add them to pendings in dag_manager.
+     * Returns true only if the new block is successfully submitted to pendings.
      */
     bool AddNewBlock(const ConstBlockPtr& block, const Peer* peer);
 
-    // For test only
+    /*
+     * Blocks the main thread from going forward
+     * before CAT completes all the tasks
+     * For test only.
+     */
     void Stop() {
         while (obcThread_.GetTaskSize() > 0) {
             std::this_thread::yield();

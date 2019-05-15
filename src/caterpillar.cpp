@@ -8,8 +8,6 @@ Caterpillar::Caterpillar(std::string& dbPath) : dbStore_(dbPath), verifyThread_(
 Caterpillar::~Caterpillar() {
     verifyThread_.Stop();
     obcThread_.Stop();
-    dbStore_.~RocksDBStore();
-    obc_.~OrphanBlocksContainer();
 }
 
 bool Caterpillar::StoreRecord(const RecordPtr& rec) const {

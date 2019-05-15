@@ -1,5 +1,4 @@
 #include "obc.h"
-#include "caterpillar.h"
 
 OrphanBlocksContainer::~OrphanBlocksContainer() {
     block_dep_map_.clear();
