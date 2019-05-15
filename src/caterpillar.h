@@ -2,6 +2,7 @@
 #define __SRC_CATERPILLAR_H__
 
 #include <list>
+#include <memory>
 #include <vector>
 
 #include "block.h"
@@ -15,7 +16,7 @@ typedef std::unique_ptr<NodeRecord> DBRecord;
 class Caterpillar {
 public:
     Caterpillar() = delete;
-    Caterpillar(std::string& dbPath);
+    Caterpillar(const std::string& dbPath);
 
     /* API for other modules for searching a block */
     DBRecord GetBlock(const uint256&) const;
@@ -53,4 +54,5 @@ private:
     void ReleaseBlocks(const uint256&);
 };
 
+extern std::unique_ptr<Caterpillar> cat;
 #endif // __SRC_CATERPILLAR_H__

@@ -1,6 +1,8 @@
 #include "init.h"
 
+
 std::unique_ptr<Config> config;
+std::unique_ptr<Caterpillar> cat;
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -23,6 +25,8 @@ void Init(int argc, char* argv[]) {
     InitLogger();
 
     config->ShowConfig();
+
+    cat = std::make_unique<Caterpillar>(config->GetDBPath());
 }
 
 void SetupCommandline(cxxopts::Options& options) {
