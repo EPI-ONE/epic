@@ -146,3 +146,15 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
         }
     });
 }
+
+void Caterpillar::Stop() {
+    while (obcThread_.GetTaskSize() > 0) {
+        std::this_thread::yield();
+    }
+    obcThread_.Stop();
+
+    while (verifyThread_.GetTaskSize() > 0) {
+        std::this_thread::yield();
+    }
+    verifyThread_.Stop();
+}

@@ -34,20 +34,11 @@ public:
 
     /*
      * Blocks the main thread from going forward
-     * before CAT completes all the tasks
-     * For test only.
+     * until CAT completes all the tasks
+     *
+     * FOR TEST ONLY!
      */
-    void Stop() {
-        while (obcThread_.GetTaskSize() > 0) {
-            std::this_thread::yield();
-        }
-        obcThread_.Stop();
-
-        while (verifyThread_.GetTaskSize() > 0) {
-            std::this_thread::yield();
-        }
-        verifyThread_.Stop();
-    }
+    void Stop();
 
     ~Caterpillar();
 
