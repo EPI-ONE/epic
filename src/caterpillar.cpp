@@ -45,7 +45,9 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
         bool tOBC = obc_.IsOrphan(tipHash);
 
         static auto mask = [](bool m, bool p, bool t) {
-            // random comment to break clang format
+            // m = exists milestone hash
+            // p = exists prev hash
+            // t = exists tip hash
             return ((!m << 0) | (!p << 2) | (!t << 1));
         };
 
