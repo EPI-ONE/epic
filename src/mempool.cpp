@@ -1,7 +1,7 @@
 #include "mempool.h"
 
-void MemPool::Insert(ConstTxPtr value) {
-    mempool_.insert(value);
+bool MemPool::Insert(ConstTxPtr value) {
+    return std::get<1>(mempool_.insert(value));
 }
 
 bool MemPool::Contains(ConstTxPtr value) const {

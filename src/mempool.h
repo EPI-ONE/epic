@@ -12,7 +12,7 @@ class MemPool {
 public:
     MemPool() = default;
 
-    void Insert(ConstTxPtr value);
+    bool Insert(ConstTxPtr value);
 
     bool Contains(ConstTxPtr value) const;
 
