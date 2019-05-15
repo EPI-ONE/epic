@@ -20,14 +20,14 @@ public:
 
     bool Contains(ConstTxPtr value) const;
 
-    /* retrives the first transaction from the pool that has
-     * a sortition distance smaller or equal to the distance given */
-    std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& distance);
-
     /* removes all transaction for which
      * std::equal_to<ConstTxPtr> is true
      * for the given value */
     bool Erase(ConstTxPtr value);
+
+    /* retrives the first transaction from the pool that has
+     * a sortition distance smaller or equal to the distance given */
+    std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& distance);
 
 private:
     /* the set is locked into memory using the locked allocator;
