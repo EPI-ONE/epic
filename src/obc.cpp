@@ -2,7 +2,6 @@
 #include "caterpillar.h"
 
 OrphanBlocksContainer::~OrphanBlocksContainer() {
-    thread_.Stop();
     block_dep_map_.clear();
     lose_ends_.clear();
 }

@@ -31,6 +31,12 @@ public:
      */
     bool AddNewBlock(const ConstBlockPtr& block, const Peer* peer);
 
+    // For test only
+    void Stop() {
+        verifyThread_.Stop();
+        obcThread_.Stop();
+    }
+
     ~Caterpillar();
 
 private:

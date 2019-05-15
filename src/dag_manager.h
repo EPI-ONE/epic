@@ -82,6 +82,6 @@ private:
     void SwitchChain();
 };
 
-static auto& DAG = DAGManager::GetDAGManager();
+static const auto& DAG = DAGManager::GetDAGManager();
 
 #endif // __SRC_DAG_MANAGER_H__

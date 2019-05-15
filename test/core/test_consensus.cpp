@@ -121,16 +121,17 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 10;
+    std::size_t n = 3;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 
     // Construct a fully connected and syntatical valid random graph
     // Make the genesis first
-    blocks.emplace_back(std::make_shared<BlockNet>(GENESIS));
+    auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
+    blocks.emplace_back(genesisPtr);
 
     for (std::size_t i = 1; i < n; ++i) {
-        BlockNet b = FakeBlock(rand() % 10, rand() % 10);
+        BlockNet b = FakeBlock(rand() % 11 + 1, rand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
         b.SetPrevHash(blocks[rand() % i]->GetHash());
         b.SetTipHash(blocks[rand() % i]->GetHash());
@@ -153,7 +154,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::shuffle(std::begin(blocks), std::end(blocks), rng);
 
     // Add GENESIS to the front
-    blocks.emplace(blocks.begin(), std::make_shared<BlockNet>(GENESIS));
+    // Note that now we have 2 GENESIS in blocks
+    blocks.emplace(blocks.begin(), genesisPtr);
 
     ///////////////////////////
     // Test starts here
@@ -163,10 +165,19 @@ TEST_F(TestConsensus, AddNewBlocks) {
     os << time(nullptr);
     std::string filename = PREFIX + os.str();
     Caterpillar CAT(filename);
+
+    // Initialize DB and pending with genesis block
     CAT.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
+
     for (const auto& block : blocks) {
         CAT.AddNewBlock(block, nullptr);
     }
 
+    CAT.Stop();
+
     EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
+
+    std::string cmd = "exec rm -r " + PREFIX;
+    system(cmd.c_str());
 }

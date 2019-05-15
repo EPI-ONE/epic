@@ -9,6 +9,6 @@ void DAGManager::RequestInv(const uint256& fromHash, const size_t& len, const Pe
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // TODO: For test only!
-    //       Must be changed in the future.
+    //       MUST be changed in the future.
     pending.push_back(block);
 }
