@@ -85,7 +85,7 @@ private:
 
     instruction YieldInstructionNChannel(const std::vector<uint8_t> program) {
         return [=](VStream& data, std::size_t ip) {
-            std::size_t ip_p = 0;
+            std::size_t ip_p = ip;
             uint8_t op;
 
             do {
