@@ -118,6 +118,14 @@ void LoadConfigFile() {
             }
         }
     }
+
+    auto db_config = configContent->get_table("db");
+    if (db_config) {
+        auto db_path = db_config->get_as<std::string>("path");
+        if (db_path) {
+            config->SetDBPath(*db_path);
+        }
+    }
 }
 
 void InitLogger() {

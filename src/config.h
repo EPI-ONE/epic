@@ -88,6 +88,14 @@ public:
         bindPort_ = bindPort;
     }
 
+    const std::string& GetDBPath() const {
+        return dbPath_;
+    }
+
+    void SetDBPath(const std::string& dbPath) {
+        dbPath_ = dbPath;
+    }
+
     void AddSeeds(const std::string& ip, const uint16_t& port) {
         auto address = NetAddress::StringToNetAddress(ip, port);
         if (address) {
@@ -110,6 +118,7 @@ public:
         ss << "interval of saving address = " << saveInterval_ << " seconds" << std::endl;
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
+        ss << "dbpath = " << dbPath_ << std::endl;
         ss << "seeds = [" << std::endl;
 
         for (const NetAddress& addr : seeds_) {
@@ -139,6 +148,9 @@ private:
     uint16_t bindPort_       = defaultPort;
 
     std::vector<NetAddress> seeds_;
+
+    // db
+    std::string dbPath_ = "db/";
 };
 
 extern std::unique_ptr<Config> config;
