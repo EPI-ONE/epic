@@ -84,6 +84,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
 
         if (!(ms->snapshot)) {
             spdlog::info(strprintf("Block has invalid milestone link [%s]", std::to_string(blk->GetHash())));
+            return false;
         }
 
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
