@@ -78,18 +78,18 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
         DBRecord ms = dbStore_.GetRecord(msHash);
         if (!ms) {
             spdlog::info(strprintf(
-                "Block %s has missing milestone link %s", std::to_string(blk->GetHash()), std::to_string(msHash)));
+                "Block has missing milestone link %s [%s]", std::to_string(msHash), std::to_string(blk->GetHash())));
             return false;
         }
 
         if (!(ms->snapshot)) {
-            spdlog::info(strprintf("Block %s has invalid milestone link", std::to_string(blk->GetHash())));
+            spdlog::info(strprintf("Block has invalid milestone link [%s]", std::to_string(blk->GetHash())));
         }
 
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
-            spdlog::info(strprintf("Block %s has unexpected change in difficulty: current %s v.s. expected %s",
-                std::to_string(blk->GetHash()), blk->GetDifficultyTarget(), expectedTarget));
+            spdlog::info(strprintf("Block has unexpected change in difficulty: current %s v.s. expected %s [%s]",
+                blk->GetDifficultyTarget(), expectedTarget));
             return false;
         }
 
@@ -126,7 +126,7 @@ bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const DBRecord& ms) 
     }
 
     if (blk->GetTime() - ms->cBlock->GetTime() > params.punctualityThred) {
-        spdlog::info(strprintf("Block %s is too old.", std::to_string(blk->GetHash())));
+        spdlog::info(strprintf("Block is too old [%s]", std::to_string(blk->GetHash())));
         return false;
     }
     return true;
