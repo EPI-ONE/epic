@@ -50,10 +50,6 @@ public:
         return YieldInstructionNChannel(Preprocessor(program));
     }
 
-    instruction YieldDebugInstruction(const std::vector<uint8_t> program) {
-        return YieldInstructionMChannel(Preprocessor(program), {SUCCESS}, {SUCCESS});
-    }
-
     std::vector<uint8_t> Preprocessor(const std::vector<uint8_t>& program_) {
         std::vector<uint8_t> program = program_;
         if (program.back() != SUCCESS) {
@@ -68,16 +64,12 @@ public:
         return YieldInstruction(l.program)(l.data, 0);
     }
 
-    int ExecDebugListing(Listing l) {
-        return YieldDebugInstruction(l.program)(l.data, 0);
-    }
-
     void SetOp(uint8_t ip, instruction i) {
         is_[ip] = i;
     }
 
-    void CompileSetOp(uint8_t ip, std::vector<uint8_t> op, bool debug = false) {
-        is_[ip] = debug ? YieldDebugInstruction(op) : YieldInstruction(op);
+    void CompileSetOp(uint8_t ip, std::vector<uint8_t> op) {
+        is_[ip] = YieldInstruction(op);
     }
 
 private:
@@ -94,27 +86,6 @@ private:
             } while (op != FAIL && op != SUCCESS);
 
             return op;
-        };
-    }
-
-    instruction YieldInstructionMChannel(const std::vector<uint8_t>& program,
-        const std::vector<uint8_t>& uchannel,
-        const std::vector<uint8_t>& lchannel) {
-        instruction iuc = YieldInstructionNChannel(uchannel);
-        instruction luc = YieldInstructionNChannel(lchannel);
-
-        return [=](VStream& data, std::size_t ip) {
-            std::size_t ip_p = 0;
-            uint8_t op;
-
-            do {
-                iuc(data, 0);
-                op   = program[ip_p];
-                ip_p = is_[op](data, ip_p);
-                luc(data, 0);
-            } while (op != 0);
-
-            return ip + 1;
         };
     }
 };
