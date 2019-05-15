@@ -148,6 +148,10 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
     });
 }
 
+bool Caterpillar::Exists(const uint256& blkHash) const {
+    return dbStore_.Exists(blkHash) || obc_.IsOrphan(blkHash);
+}
+
 void Caterpillar::Stop() {
     while (obcThread_.GetTaskSize() > 0) {
         std::this_thread::yield();

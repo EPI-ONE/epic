@@ -48,10 +48,7 @@ private:
     RocksDBStore dbStore_;
     OrphanBlocksContainer obc_;
 
-    inline bool Exists(const uint256& blockHash) const {
-        return dbStore_.Exists(blockHash) || obc_.IsOrphan(blockHash);
-    }
-
+    bool Exists(const uint256&) const;
     bool CheckPuntuality(const ConstBlockPtr& blk, const DBRecord& ms) const;
     void ReleaseBlocks(const uint256&);
 };
