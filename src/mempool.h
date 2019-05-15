@@ -26,8 +26,8 @@ public:
     bool Erase(ConstTxPtr value);
 
     /* retrives the first transaction from the pool that has
-     * a sortition distance smaller or equal to the distance given */
-    std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& distance);
+     * a sortition distance smaller or equal to the threshold given */
+    std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& threshold);
 
 private:
     /* the set is locked into memory using the locked allocator;

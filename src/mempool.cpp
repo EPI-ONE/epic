@@ -11,3 +11,19 @@ bool MemPool::Contains(ConstTxPtr value) const {
 bool MemPool::Erase(ConstTxPtr value) {
     return mempool_.erase(value) > 0;
 }
+
+/* for phase one linear search seems to be fine but later on
+ * we have to improve this method; TODO optimize */
+std::optional<ConstTxPtr> MemPool::GetTransaction(const uint256& BlockHash, const arith_uint256& threshold) {
+    arith_uint256 base_hash = UintToArith256(BlockHash);
+    arith_uint256 distance;
+
+    for (const auto& tx : mempool_) {
+        distance = base_hash ^ UintToArith256(tx->GetHash());
+        if (distance <= threshold) {
+            return tx;
+        }
+    }
+
+    return {};
+}
