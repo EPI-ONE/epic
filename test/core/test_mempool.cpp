@@ -43,7 +43,12 @@ TEST_F(MemPoolTest, simple_test) {
     EXPECT_TRUE(pool.Contains(transactions[2]));
     EXPECT_FALSE(pool.Contains(transactions[3]));
 
-    pool.Erase(transactions[1]);
+    /* check if the delete was successful */
+    EXPECT_TRUE(pool.Erase(transactions[1]));
+
+    /* check that a not existent element can
+     * not be deleted */
+    EXPECT_FALSE(pool.Erase(transactions[3]));
 
     /* after erasing the mempool should not
      * contain the transaction anymore */
