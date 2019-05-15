@@ -61,6 +61,8 @@ public:
 
     std::size_t size() const;
 
+    size_t GetTaskSize() const;
+
     /**
      * execute a callable which has the operator () without return value, if you want to pass the arguments,
      * you should use std::bind or lambda function
