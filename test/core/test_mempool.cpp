@@ -53,3 +53,30 @@ TEST_F(MemPoolTest, simple_test) {
      * transactions in the pool */
     EXPECT_EQ(pool.Size(), 2);
 }
+
+TEST_F(MemPoolTest, get_transaction_test) {
+    MemPool pool;
+
+    /* hash used to simulate block */
+    uint256 hash;
+    hash.randomize();
+
+    /* this transaction is used to
+     * simulate three cases:
+     * 1. d(bhash, thash) < threshold
+     * 2. d(bhash, thash) = threshold
+     * 3. d(bhash, thash) > threshold */
+    pool.Insert(transactions[0]);
+
+    /* = */
+    arith_uint256 threshold = UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(hash);
+    EXPECT_TRUE(pool.GetTransaction(hash, threshold).has_value());
+
+    /* > */
+    threshold += 1;
+    EXPECT_TRUE(pool.GetTransaction(hash, threshold).has_value());
+
+    /* < */
+    threshold -= 2;
+    EXPECT_FALSE(pool.GetTransaction(hash, threshold).has_value());
+}
