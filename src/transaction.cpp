@@ -144,6 +144,10 @@ const uint256& Transaction::GetHash() const {
     return hash_;
 }
 
+void Transaction::RandomizeHash() {
+    hash_.randomize();
+}
+
 bool Transaction::IsRegistration() const {
     return inputs_.size() == 1 && inputs_.front().IsRegistration();
 }
