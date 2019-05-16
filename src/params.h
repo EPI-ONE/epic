@@ -4,7 +4,6 @@
 #include <array>
 #include <iostream>
 #include <sstream>
-#include <array>
 #include <string>
 
 #include "arith_uint256.h"
@@ -61,7 +60,7 @@ public:
 
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
 
-    const unsigned char GetKeyPrefix(KeyPrefixType type) const;
+    unsigned char GetKeyPrefix(KeyPrefixType type) const;
 
 protected:
     Params() = default;

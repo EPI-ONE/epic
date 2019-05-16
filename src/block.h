@@ -66,15 +66,15 @@ public:
 
     void SetDifficultyTarget(uint32_t target);
 
-    const uint32_t GetDifficultyTarget() const;
+    uint32_t GetDifficultyTarget() const;
 
     void SetTime(uint64_t);
 
-    const uint64_t GetTime() const;
+    uint64_t GetTime() const;
 
     void SetNonce(uint32_t);
 
-    const uint32_t GetNonce() const;
+    uint32_t GetNonce() const;
 
     void InvalidateMilestone();
 
