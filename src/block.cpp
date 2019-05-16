@@ -113,7 +113,7 @@ bool Block::Verify() const {
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
             spdlog::info(
-                strprintf("Block is the first registration but conatains invalid tx [%s]", std::to_string(hash_)));
+                "Block is the first registration but conatains invalid tx [{}]", std::to_string(hash_));
             return false;
         }
     }

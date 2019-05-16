@@ -122,7 +122,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 1000;
+    std::size_t n = 100;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 

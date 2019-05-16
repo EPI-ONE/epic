@@ -53,6 +53,7 @@ private:
     bool IsSolid(const uint256&) const;
     bool IsWeaklySolid(const ConstBlockPtr&) const;
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
+    void Cache(const ConstBlockPtr&) const;
     bool CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const;
     void ReleaseBlocks(const uint256&);
 };

@@ -51,7 +51,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            StoredRecord ms = dbStore_.GetRecord(msHash);
+            StoredRecord ms = GetBlock(msHash);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
@@ -68,9 +68,9 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
 
         // Check difficulty target ///////////////////////
 
-        StoredRecord ms = dbStore_.GetRecord(msHash);
+        StoredRecord ms = GetBlock(msHash);
         if (!ms) {
-            spdlog::info("Block has missing milestone link {} [{}]", std::to_string(msHash),
+            spdlog::info("Block is missing milestone link {} [{}]", std::to_string(msHash),
                 std::to_string(blk->GetHash()));
             return false;
         }
@@ -96,11 +96,12 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
         // End of online verification
         //////////////////////////////////////////////////
 
-        dbStore_.WriteBlock(blk);
+        Cache(blk);
         DAG->AddBlockToPending(blk);
         ReleaseBlocks(blk->GetHash());
 
         return true;
+
     }).get();
     // clang-format on
 }
@@ -156,6 +157,10 @@ bool Caterpillar::IsWeaklySolid(const ConstBlockPtr& blk) const {
 bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
     return obc_.IsOrphan(blk->GetMilestoneHash()) || obc_.IsOrphan(blk->GetPrevHash()) ||
            obc_.IsOrphan(blk->GetTipHash());
+}
+
+void Caterpillar::Cache(const ConstBlockPtr& blk) const {
+    dbStore_.WriteBlock(blk);
 }
 
 void Caterpillar::Stop() {
