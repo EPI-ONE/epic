@@ -172,17 +172,17 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::ostringstream os;
     os << time(nullptr);
     std::string filename = prefix + os.str();
-    Caterpillar CAT(filename);
+    Caterpillar cat(filename);
 
     // Initialize DB and pending with genesis block
-    CAT.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    cat.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
     DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
-        CAT.AddNewBlock(block, nullptr);
+        cat.AddNewBlock(block, nullptr);
     }
 
-    CAT.Stop();
+    cat.Stop();
 
     EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
 

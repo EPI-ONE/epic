@@ -58,5 +58,6 @@ private:
     void ReleaseBlocks(const uint256&);
 };
 
-extern std::unique_ptr<Caterpillar> cat;
+extern std::unique_ptr<Caterpillar> CAT;
+
 #endif // __SRC_CATERPILLAR_H__

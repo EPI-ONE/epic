@@ -2,7 +2,7 @@
 
 
 std::unique_ptr<Config> config;
-std::unique_ptr<Caterpillar> cat;
+std::unique_ptr<Caterpillar> CAT;
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -26,7 +26,7 @@ void Init(int argc, char* argv[]) {
 
     config->ShowConfig();
 
-    cat = std::make_unique<Caterpillar>(config->GetDBPath());
+    CAT = std::make_unique<Caterpillar>(config->GetDBPath());
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -159,5 +159,5 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
     }
 }
 void ShutDown() {
-    cat.reset();
+    CAT.reset();
 }
