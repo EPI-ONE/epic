@@ -2,6 +2,6 @@
 
 int main(int argc, char** argv) {
     Init(argc, argv);
-    cat.reset();
+    ShutDown();
     return 0;
 }

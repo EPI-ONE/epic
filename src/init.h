@@ -16,6 +16,8 @@ enum : uint8_t {
 
 void Init(int argc, char* argv[]);
 
+void ShutDown();
+
 void LoadConfigFile();
 
 void SetupCommandline(cxxopts::Options& options);

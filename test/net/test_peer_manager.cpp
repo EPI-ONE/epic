@@ -16,7 +16,9 @@ public:
         delete[] s[0];
         delete[] s;
     }
-
+    static void TearDownTestCase() {
+        ShutDown();
+    }
     void SetUp() {
         server.Start();
         client.Start();
