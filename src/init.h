@@ -1,6 +1,7 @@
 #ifndef __SRC_INIT_H__
 #define __SRC_INIT_H__
 
+#include "caterpillar.h"
 #include "config.h"
 #include "cpptoml.h"
 #include "cxxopts.hpp"
@@ -14,6 +15,8 @@ enum : uint8_t {
 };
 
 void Init(int argc, char* argv[]);
+
+void ShutDown();
 
 void LoadConfigFile();
 

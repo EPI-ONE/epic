@@ -10,7 +10,7 @@ BlockNet FakeBlock(int numTxInput, int numTxOutput, bool solve) {
     uint256 r3;
     r3.randomize();
 
-    BlockNet b(1, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
+    BlockNet b(GENESIS_BLOCK_VERSION, r1, r2, r3, time(nullptr), 0x1f00ffffL, 0);
 
     if (numTxInput || numTxOutput) {
         b.AddTransaction(FakeTx(numTxInput, numTxOutput));

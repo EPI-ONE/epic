@@ -1,6 +1,8 @@
 #include "init.h"
 
+
 std::unique_ptr<Config> config;
+std::unique_ptr<Caterpillar> CAT;
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -23,6 +25,8 @@ void Init(int argc, char* argv[]) {
     InitLogger();
 
     config->ShowConfig();
+
+    CAT = std::make_unique<Caterpillar>(config->GetDBPath());
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -118,6 +122,14 @@ void LoadConfigFile() {
             }
         }
     }
+
+    auto db_config = configContent->get_table("db");
+    if (db_config) {
+        auto db_path = db_config->get_as<std::string>("path");
+        if (db_path) {
+            config->SetDBPath(*db_path);
+        }
+    }
 }
 
 void InitLogger() {
@@ -145,4 +157,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         std::cerr << "Please check your config setting" << std::endl;
         exit(LOG_INIT_FAILURE);
     }
+}
+void ShutDown() {
+    CAT.reset();
 }

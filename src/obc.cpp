@@ -18,14 +18,12 @@ bool OrphanBlocksContainer::IsEmpty() const {
 }
 
 bool OrphanBlocksContainer::IsOrphan(const uint256& hash) const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return block_dep_map_.find(hash) != block_dep_map_.end();
 }
 
-void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing_mask) {
-    /* return if the block is actually not an orphan */
-    if (missing_mask == 0) {
-        return;
-    }
+void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
+    uint8_t missing_mask) { /* return if the block is actually not an orphan */
 
     /* construct new dependency
      * for the new block */
@@ -33,7 +31,9 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     dep->block = block;
 
     /* insert new dependency into block_dep_map_ */
+    std::unique_lock<std::shared_mutex> writer(mutex_);
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
+    writer.unlock();
 
     std::unordered_set<uint256> unique_missing_hashes;
 
@@ -52,6 +52,7 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
         }
     };
 
+    std::shared_lock<std::shared_mutex> reader(mutex_);
     if (missing_mask & M_MISSING) {
         common_insert(block->GetMilestoneHash());
     }
@@ -63,6 +64,7 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     if (missing_mask & P_MISSING) {
         common_insert(block->GetPrevHash());
     }
+    reader.unlock();
 
     dep->ndeps = unique_missing_hashes.size();
 }
@@ -112,7 +114,9 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
 
         /* this also means that we have to remove the
          * dependency from the block_dep_map_ */
+        std::unique_lock<std::shared_mutex> lock(mutex_);
         block_dep_map_.erase(cursor->block->GetHash());
+        lock.unlock();
 
         /* further we push all dependencies that dependend
          * on this block onto the stack */

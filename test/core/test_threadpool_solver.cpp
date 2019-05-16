@@ -9,7 +9,7 @@ TEST_F(ThreadPoolSolverTest, simple_test) {
      * Create a basic block to solve
      */
     Transaction tx;
-    Block block;
+    Block block(GENESIS_BLOCK_VERSION);
 
     std::string hexStr("0123456789ABCDEF");
     auto vs = VStream(ParseHex(hexStr));

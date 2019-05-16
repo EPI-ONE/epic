@@ -19,8 +19,7 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 TEST_F(DFSTest, complex_test) {
     Chain chain;
 
-    std::size_t n = 10;
-    std::vector<Block> blocks;
+    std::size_t n = 10; std::vector<Block> blocks;
     blocks.reserve(n);
 
     for (std::size_t i = 0; i < n; i++) {
@@ -56,12 +55,12 @@ TEST_F(DFSTest, complex_test) {
     blocks[7].SetPrevHash(blocks[4].GetHash());
     blocks[9].SetPrevHash(blocks[1].GetHash());
 
-    blocks[0].SetTIPHash(blocks[3].GetHash());
-    blocks[1].SetTIPHash(blocks[6].GetHash());
-    blocks[2].SetTIPHash(blocks[6].GetHash());
-    blocks[3].SetTIPHash(blocks[6].GetHash());
-    blocks[7].SetTIPHash(blocks[8].GetHash());
-    blocks[9].SetTIPHash(blocks[3].GetHash());
+    blocks[0].SetTipHash(blocks[3].GetHash());
+    blocks[1].SetTipHash(blocks[6].GetHash());
+    blocks[2].SetTipHash(blocks[6].GetHash());
+    blocks[3].SetTipHash(blocks[6].GetHash());
+    blocks[7].SetTipHash(blocks[8].GetHash());
+    blocks[9].SetTipHash(blocks[3].GetHash());
 
     /* populate the pending Block
      * map for the first time */

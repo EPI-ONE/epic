@@ -49,3 +49,7 @@ void ThreadPool::Stop() {
 std::size_t ThreadPool::size() const {
     return workers_.size();
 }
+
+size_t ThreadPool::GetTaskSize() const {
+    return task_queue_.Size();
+}

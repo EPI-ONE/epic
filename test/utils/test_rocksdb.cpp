@@ -50,12 +50,11 @@ protected:
 
     // One set up before all test cases
     static void SetUpTestCase() {
-        std::string filename;
         // Get the current time and make into a temp file name
         std::ostringstream os;
         os << time(nullptr);
-        filename = PREFIX + os.str();
-        db       = new TestImplRocksDBStore(filename);
+        std::string filename = PREFIX + os.str();
+        db                   = new TestImplRocksDBStore(filename);
 
         // Initialize batch blocks and keys
         // blocks.reserve(size);

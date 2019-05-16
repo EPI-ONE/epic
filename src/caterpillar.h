@@ -2,25 +2,62 @@
 #define __SRC_CATERPILLAR_H__
 
 #include <list>
+#include <memory>
 #include <vector>
 
 #include "block.h"
+#include "dag_manager.h"
+#include "obc.h"
+#include "rocksdb.h"
+#include "threadpool.h"
+
+typedef std::unique_ptr<NodeRecord> StoredRecord;
 
 class Caterpillar {
 public:
-    // will return a pointer-like structure later
-    Block* GetBlock(const uint256 bhash) const;
+    Caterpillar() = delete;
+    Caterpillar(const std::string& dbPath);
 
-    // flush blocks to db + file storage system
-    void Store(const std::vector<Block*> vblock);
+    /* API for other modules for searching a block */
+    StoredRecord GetBlock(const uint256&) const;
 
-    // Submits tasks to a single thread in which it topological sorts the blocks
-    // and then check their syntax. If all block pass the checking, add them
-    // to the corresponding chain in dag_manager.
-    void AddNewBlocks(const std::list<const Block> graph);
+    bool StoreRecord(const RecordPtr&) const;
+
+    /* Flush records to db. Called by DAGManager only. */
+    void Store(const std::vector<NodeRecord>&);
+
+    /*
+     * Submits tasks to a single thread in which it checks its syntax.
+     * If the block passes the checking, add them to pendings in dag_manager.
+     * Returns true only if the new block is successfully submitted to pendings.
+     */
+    bool AddNewBlock(const ConstBlockPtr& block, const Peer* peer);
+
+    /*
+     * Blocks the main thread from going forward
+     * until CAT completes all the tasks
+     *
+     * FOR TEST ONLY!
+     */
+    void Stop();
+
+    ~Caterpillar();
 
 private:
-    std::list<Block&> TopologicalSort(const std::list<const Block&> graph);
+    ThreadPool verifyThread_;
+    ThreadPool obcThread_;
+    RocksDBStore dbStore_;
+    OrphanBlocksContainer obc_;
+
+    bool Exists(const uint256&) const;
+    bool IsSolid(const uint256&) const;
+    bool IsWeaklySolid(const ConstBlockPtr&) const;
+    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
+    void Cache(const ConstBlockPtr&) const;
+    bool CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const;
+    void ReleaseBlocks(const uint256&);
 };
+
+extern std::unique_ptr<Caterpillar> CAT;
 
 #endif // __SRC_CATERPILLAR_H__
