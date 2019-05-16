@@ -4,6 +4,7 @@
 #include <map>
 #include <unordered_set>
 #include <vector>
+#include <shared_mutex>
 
 #include "block.h"
 
@@ -58,6 +59,7 @@ public:
     std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
+    mutable std::shared_mutex mutex_;
     struct obc_dependency {
         /* number of dependencies that must be
          * found in order for this dependency

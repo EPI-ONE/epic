@@ -1,10 +1,5 @@
 #include "caterpillar.h"
 
-#define EXISTS(hash) (dbStore_.Exists(hash) || obc_.IsOrphan(hash))
-#define DBEXISTS(hash) (dbStore_.Exists(hash))
-#define ALL_EXISTS(m, p, t) (EXISTS(m) && EXISTS(p) && EXISTS(t))
-#define ANY_IS_ORPHAN(m, p, t) (obc_.IsOrphan(m) || obc_.IsOrphan(p) || obc_.IsOrphan(t))
-
 Caterpillar::Caterpillar(const std::string& dbPath) : dbStore_(dbPath), verifyThread_(1), obcThread_(1) {
     verifyThread_.Start();
     obcThread_.Start();
@@ -22,93 +17,92 @@ bool Caterpillar::StoreRecord(const RecordPtr& rec) const {
 bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
     // clang-format off
     return verifyThread_.Submit([&blk, peer, this]() {
-            // clang-format on
-            if (*blk == GENESIS) {
-                return false;
-            }
+        if (*blk == GENESIS) {
+            return false;
+        }
 
-            if (Exists(blk->GetHash())) {
-                return false;
-            }
+        if (Exists(blk->GetHash())) {
+            return false;
+        }
 
-            //////////////////////////////////////////////////
-            // Start of online verification
+        //////////////////////////////////////////////////
+        // Start of online verification
 
-            if (!blk->Verify()) {
-                return false;
-            }
+        if (!blk->Verify()) {
+            return false;
+        }
 
-            // Check solidity ////////////////////////////////
+        // Check solidity ////////////////////////////////
 
-            uint256 msHash   = blk->GetMilestoneHash();
-            uint256 prevHash = blk->GetPrevHash();
-            uint256 tipHash  = blk->GetTipHash();
+        const uint256& msHash   = blk->GetMilestoneHash();
+        const uint256& prevHash = blk->GetPrevHash();
+        const uint256& tipHash  = blk->GetTipHash();
 
-            static auto mask = [](bool m, bool p, bool t) { return ((!m << 0) | (!p << 2) | (!t << 1)); };
+        static auto mask = [](bool m, bool p, bool t) { return ((!m << 0) | (!p << 2) | (!t << 1)); };
 
-            // First, check if we already received its preceding blocks
-            if (ALL_EXISTS(msHash, prevHash, tipHash)) {
-                if (ANY_IS_ORPHAN(msHash, prevHash, tipHash)) {
-                    obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk,
-                        mask(DBEXISTS(msHash), DBEXISTS(prevHash), DBEXISTS(tipHash))));
-                    return false;
-                }
-            } else {
-                // We have not received at least one of its parents.
-
-                // Drop if the block is too old
-                StoredRecord ms = dbStore_.GetRecord(msHash);
-                if (ms && !CheckPuntuality(blk, ms)) {
-                    return false;
-                }
-                // Abort and send GetBlock requests.
+        // First, check if we already received its preceding blocks
+        if (IsWeaklySolid(blk)) {
+            if (AnyLinkIsOrphan(blk)) {
                 obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk,
-                    mask(DBEXISTS(msHash), DBEXISTS(prevHash), DBEXISTS(tipHash))));
-
-                if (peer) {
-                    DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
-                }
-
+                    mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
                 return false;
             }
+        } else {
+            // We have not received at least one of its parents.
 
-            // Check difficulty target ///////////////////////
-
+            // Drop if the block is too old
             StoredRecord ms = dbStore_.GetRecord(msHash);
-            if (!ms) {
-                spdlog::info("Block has missing milestone link {} [{}]", std::to_string(msHash),
-                    std::to_string(blk->GetHash()));
+            if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
+            // Abort and send GetBlock requests.
+            obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk,
+                mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
 
-            if (!(ms->snapshot)) {
-                spdlog::info("Block has invalid milestone link [{}]", std::to_string(blk->GetHash()));
-                return false;
+            if (peer) {
+                DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
             }
 
-            uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
-            if (blk->GetDifficultyTarget() != expectedTarget) {
-                spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                    blk->GetDifficultyTarget(), expectedTarget);
-                return false;
-            }
+            return false;
+        }
 
-            // Check punctuality /////////////////////////////
+        // Check difficulty target ///////////////////////
 
-            if (!CheckPuntuality(blk, ms)) {
-                return false;
-            }
+        StoredRecord ms = dbStore_.GetRecord(msHash);
+        if (!ms) {
+            spdlog::info("Block has missing milestone link {} [{}]", std::to_string(msHash),
+                std::to_string(blk->GetHash()));
+            return false;
+        }
 
-            // End of online verification
-            //////////////////////////////////////////////////
+        if (!(ms->snapshot)) {
+            spdlog::info("Block has invalid milestone link [{}]", std::to_string(blk->GetHash()));
+            return false;
+        }
 
-            dbStore_.WriteBlock(blk);
-            DAG->AddBlockToPending(blk);
-            ReleaseBlocks(blk->GetHash());
+        uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
+        if (blk->GetDifficultyTarget() != expectedTarget) {
+            spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
+                blk->GetDifficultyTarget(), expectedTarget);
+            return false;
+        }
 
-            return true;
-        })
-        .get();
+        // Check punctuality /////////////////////////////
+
+        if (!CheckPuntuality(blk, ms)) {
+            return false;
+        }
+
+        // End of online verification
+        //////////////////////////////////////////////////
+
+        dbStore_.WriteBlock(blk);
+        DAG->AddBlockToPending(blk);
+        ReleaseBlocks(blk->GetHash());
+
+        return true;
+    }).get();
+    // clang-format on
 }
 
 bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const {
@@ -149,6 +143,19 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
 
 bool Caterpillar::Exists(const uint256& blkHash) const {
     return dbStore_.Exists(blkHash) || obc_.IsOrphan(blkHash);
+}
+
+bool Caterpillar::IsSolid(const uint256& blkHash) const {
+    return dbStore_.Exists(blkHash);
+}
+
+bool Caterpillar::IsWeaklySolid(const ConstBlockPtr& blk) const {
+    return Exists(blk->GetMilestoneHash()) && Exists(blk->GetPrevHash()) && Exists(blk->GetTipHash());
+}
+
+bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
+    return obc_.IsOrphan(blk->GetMilestoneHash()) || obc_.IsOrphan(blk->GetPrevHash()) ||
+           obc_.IsOrphan(blk->GetTipHash());
 }
 
 void Caterpillar::Stop() {

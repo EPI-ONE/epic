@@ -50,6 +50,9 @@ private:
     OrphanBlocksContainer obc_;
 
     bool Exists(const uint256&) const;
+    bool IsSolid(const uint256&) const;
+    bool IsWeaklySolid(const ConstBlockPtr&) const;
+    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
     bool CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const;
     void ReleaseBlocks(const uint256&);
 };
