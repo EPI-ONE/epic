@@ -11,7 +11,7 @@
 #include "rocksdb.h"
 #include "threadpool.h"
 
-typedef std::unique_ptr<NodeRecord> DBRecord;
+typedef std::unique_ptr<NodeRecord> StoredRecord;
 
 class Caterpillar {
 public:
@@ -19,7 +19,7 @@ public:
     Caterpillar(const std::string& dbPath);
 
     /* API for other modules for searching a block */
-    DBRecord GetBlock(const uint256&) const;
+    StoredRecord GetBlock(const uint256&) const;
 
     bool StoreRecord(const RecordPtr&) const;
 
@@ -50,7 +50,7 @@ private:
     OrphanBlocksContainer obc_;
 
     bool Exists(const uint256&) const;
-    bool CheckPuntuality(const ConstBlockPtr& blk, const DBRecord& ms) const;
+    bool CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const;
     void ReleaseBlocks(const uint256&);
 };
 

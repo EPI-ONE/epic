@@ -58,8 +58,8 @@ void Block::UnCache() {
 bool Block::Verify() const {
     // checks version
     if (version_ != GENESIS_BLOCK_VERSION) {
-        spdlog::info(strprintf("Block with wrong version %s v.s. expected %s [%s]", version_, GENESIS_BLOCK_VERSION,
-            std::to_string(hash_)));
+        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GENESIS_BLOCK_VERSION,
+            std::to_string(hash_));
         return false;
     }
 
@@ -71,21 +71,21 @@ bool Block::Verify() const {
     // checks if the time of block is too far in the future
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
-        spdlog::info(strprintf("Block too advanced in the future: %s (%s) v.s. allowed %s (%s) [%s]",
-            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_)));
+        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]",
+            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         spdlog::info(
-            strprintf("Block with size %s larger than MAX_BLOCK_SIZE [%s]", optimalEncodingSize_, std::to_string(hash_)));
+            "Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
         return false;
     }
 
     if (HasTransaction()) {
         if (transaction_->GetInputs().empty() || transaction_->GetOutputs().empty()) {
-            spdlog::info(strprintf("Block contains empty inputs or outputs [%s]", std::to_string(hash_)));
+            spdlog::info("Block contains empty inputs or outputs [{}]", std::to_string(hash_));
             return false;
         }
 
@@ -93,7 +93,7 @@ bool Block::Verify() const {
         std::unordered_set<TxOutPoint> outpoints = {};
         for (const TxInput& input : transaction_->GetInputs()) {
             if (outpoints.find(input.outpoint) != outpoints.end()) {
-                spdlog::info(strprintf("Block contains duplicated outpoints [%s]", std::to_string(hash_)));
+                spdlog::info("Block contains duplicated outpoints [{}]", std::to_string(hash_));
                 return false;
             }
             outpoints.insert(input.outpoint);
@@ -106,7 +106,7 @@ bool Block::Verify() const {
         // Must contain a tx
         if (!HasTransaction()) {
             spdlog::info(
-                strprintf("Block is the first registration but does not contain a tx [%s]", std::to_string(hash_)));
+                "Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
             return false;
         }
 
@@ -255,7 +255,7 @@ bool Block::CheckPOW() const {
 
     if (blkHash > target) {
         spdlog::info(
-            strprintf("Hash %s is higher than target: %s v.s. %s", std::to_string(GetHash()), std::to_string(target)));
+            "Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
         return false;
     }
 

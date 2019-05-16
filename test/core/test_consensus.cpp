@@ -7,6 +7,7 @@
 #include "dag_manager.h"
 #include "test-methods/block-factory.h"
 #include "utxo.h"
+#include "key.h"
 
 std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
     auto pb = std::make_shared<BlockNet>();
@@ -121,15 +122,16 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 100;
+    std::size_t n = 10;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 
-    // Construct a fully connected and syntatical valid random graph
     // Make the genesis first
     auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
     blocks.emplace_back(genesisPtr);
 
+    // Construct a fully connected and syntatical valid random graph
+    ECC_Start();
     for (std::size_t i = 1; i < n; ++i) {
         BlockNet b = FakeBlock(rand() % 11 + 1, rand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
@@ -141,13 +143,19 @@ TEST_F(TestConsensus, AddNewBlocks) {
         if (b.GetPrevHash() == GENESIS.GetHash()) {
             Transaction tx;
             tx.AddInput(TxInput(Hash::GetZeroHash(), UNCONNECTED));
-            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing()));
-            b.AddTransaction(tx);
+
+            CKey seckey = CKey();
+            seckey.MakeNewKey(true);
+            CPubKey pubkey = seckey.GetPubKey();
+            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
+            VStream v(pubkeyHash);
+            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v))); b.AddTransaction(tx);
         }
         b.Solve();
 
         blocks.emplace_back(std::make_shared<BlockNet>(b));
     }
+    ECC_Stop();
 
     // Shuffle order of blocks to make some of them not solid
     auto rng = std::default_random_engine{};
