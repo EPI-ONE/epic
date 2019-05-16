@@ -46,8 +46,8 @@ TEST_F(TestConnectionManager, Listen) {
     server.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
         std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-    EXPECT_EQ(server.Listen(12345), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 12345), 0);
+    ASSERT_EQ(server.Listen(12345), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 12345), 0);
 
     usleep(50000);
 
@@ -64,8 +64,8 @@ TEST_F(TestConnectionManager, Connect) {
 
     test_connect_inbound = true;
 
-    EXPECT_EQ(server.Listen(7890), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 7890), 0);
+    ASSERT_EQ(server.Listen(7890), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 7890), 0);
 
     usleep(50000);
     EXPECT_EQ(test_connect_run, true);
@@ -82,8 +82,8 @@ TEST_F(TestConnectionManager, Disconnect) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(51234), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 51234), 0);
+    ASSERT_EQ(server.Listen(51234), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 51234), 0);
 
     usleep(50000);
     EXPECT_EQ(test_connect_run, true);
@@ -106,8 +106,8 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(51001), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 51001), 0);
+    ASSERT_EQ(server.Listen(51001), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 51001), 0);
 
     usleep(50000);
 
@@ -139,8 +139,8 @@ TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(51010), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 51010), 0);
+    ASSERT_EQ(server.Listen(51010), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 51010), 0);
 
     usleep(50000);
 
@@ -164,8 +164,8 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
-    EXPECT_EQ(server.Listen(51020), 0);
-    EXPECT_EQ(client.Connect(0x7f000001, 51020), 0);
+    ASSERT_EQ(server.Listen(51020), 0);
+    ASSERT_EQ(client.Connect(0x7f000001, 51020), 0);
 
     usleep(50000);
 
@@ -195,7 +195,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 }
 
 TEST_F(TestConnectionManager, MultiClient) {
-    EXPECT_EQ(server.Listen(51030), 0);
+    ASSERT_EQ(server.Listen(51030), 0);
 
     int client_num = 3;
     ConnectionManager client[client_num];
@@ -204,7 +204,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         client[i].RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestMultiClientNewCallback, this,
             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         client[i].Start();
-        EXPECT_EQ(client[i].Connect(0x7f000001, 51030), 0);
+        ASSERT_EQ(client[i].Connect(0x7f000001, 51030), 0);
     }
 
     usleep(50000);
