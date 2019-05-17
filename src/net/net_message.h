@@ -13,13 +13,13 @@ public:
     message_header_t header;
     VStream payload;
 
-    NetMessage() : connection_handle_(nullptr), header({0, 0, 0, 0}) {}
+    NetMessage() : header({0, 0, 0, 0}), connection_handle_(nullptr) {}
 
     NetMessage(void* handle, message_header_t& message_header, VStream& data)
-        : connection_handle_(handle), header(message_header), payload(std::move(data)) {}
+        : header(message_header), payload(std::move(data)), connection_handle_(handle) {}
 
     NetMessage(const void* handle, uint32_t message_type, VStream&& data)
-        : connection_handle_(handle), payload(std::move(data)) {
+        : payload(std::move(data)), connection_handle_(handle) {
         header.magic_number   = GetMagicNumber();
         header.type           = message_type;
         header.payload_length = payload.size();
@@ -27,7 +27,7 @@ public:
     }
 
     NetMessage(const void* handle, uint32_t message_type, VStream& data)
-        : connection_handle_(handle), payload(std::move(data)) {
+        : payload(std::move(data)), connection_handle_(handle) {
         header.magic_number   = GetMagicNumber();
         header.type           = message_type;
         header.payload_length = payload.size();

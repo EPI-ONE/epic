@@ -4,7 +4,7 @@
 // ChainState
 //
 ChainState::ChainState()
-    : height(0), lastUpdateTime(GENESIS.GetTime()), chainwork(arith_uint256(0)), pprevious(nullptr) {
+    : height(0), chainwork(arith_uint256(0)), lastUpdateTime(GENESIS.GetTime()), pprevious(nullptr) {
     milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
     blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
     hashRate        = GetMsDifficulty() / params.timeInterval;
@@ -63,12 +63,12 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cBlock(blk), optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {}
+    : cBlock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
 
-NodeRecord::NodeRecord(const BlockNet& blk) : optimalStorageSize(0), minerChainHeight(0), validity(UNKNOWN) {
+NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {
     cBlock = std::make_shared<BlockNet>(blk);
 }
 
@@ -112,7 +112,7 @@ void NodeRecord::Deserialize(VStream& s) {
     BlockNet b;
     s >> b;
     cBlock = std::make_shared<BlockNet>(b);
-    uint64_t r;
+    uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);
     s >> VARINT(minerChainHeight);

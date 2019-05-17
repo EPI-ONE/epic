@@ -45,7 +45,7 @@ TEST_F(TestNetMsg, AddressMessage) {
     AddressMessage addressMessage1;
     addressMessage1.Deserialize(os);
     EXPECT_EQ(addressMessage.addressList.size(), addressMessage1.addressList.size());
-    for (int i = 0; i < addressMessage.addressList.size(); i++) {
+    for (size_t i = 0; i < addressMessage.addressList.size(); i++) {
         EXPECT_EQ(addressMessage.addressList[i], addressMessage1.addressList[i]);
     }
 }

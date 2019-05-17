@@ -229,7 +229,6 @@ void AddressManager::LoadLocalAddresses() {
         if (!ifa->ifa_addr) {
             continue;
         }
-        uint_fast32_t w;
         uint32_t score = 0;
         IPAddress ip;
         if (ifa->ifa_addr->sa_family == AF_INET) { // check it is IP4

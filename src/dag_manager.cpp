@@ -5,7 +5,7 @@ DAGManager::DAGManager() {
     isBatchSynching = false;
 }
 
-void DAGManager::RequestInv(const uint256& fromHash, const size_t& len, const Peer* peer) {}
+void DAGManager::RequestInv(const uint256&, const size_t&, const Peer*) {}
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // TODO: For test only!

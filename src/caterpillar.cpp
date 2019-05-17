@@ -1,6 +1,6 @@
 #include "caterpillar.h"
 
-Caterpillar::Caterpillar(const std::string& dbPath) : dbStore_(dbPath), verifyThread_(1), obcThread_(1) {
+Caterpillar::Caterpillar(const std::string& dbPath) : verifyThread_(1), obcThread_(1), dbStore_(dbPath) {
     verifyThread_.Start();
     obcThread_.Start();
 }

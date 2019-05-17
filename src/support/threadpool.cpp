@@ -29,7 +29,7 @@ void ThreadPool::SetThreadSize(size_t size) {
 }
 
 void ThreadPool::Start() {
-    for (int i = 0; i < workers_.capacity(); i++) {
+    for (size_t i = 0; i < workers_.capacity(); i++) {
         workers_.emplace_back(&ThreadPool::WorkerThread, this);
     }
 }

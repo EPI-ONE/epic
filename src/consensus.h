@@ -10,12 +10,12 @@ typedef std::shared_ptr<NodeRecord> RecordPtr;
 class ChainState {
 public:
     uint64_t height;
+    arith_uint256 chainwork;
     uint64_t lastUpdateTime;
+    arith_uint256 milestoneTarget;
+    arith_uint256 blockTarget;
     uint64_t hashRate;
 
-    arith_uint256 chainwork;
-    arith_uint256 blockTarget;
-    arith_uint256 milestoneTarget;
 
     // TODO: remove these two pointers as ChainState
     //       instances will be stored in deque in Chain
@@ -40,8 +40,8 @@ public:
         arith_uint256 milestoneTarget,
         arith_uint256 blockTarget,
         arith_uint256 chainwork)
-        : lastUpdateTime(lastUpdateTime), hashRate(hashRate), height(height), milestoneTarget(milestoneTarget),
-          blockTarget(blockTarget), chainwork(chainwork) {}
+        : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
+          blockTarget(blockTarget), hashRate(hashRate) {}
 
     inline bool IsDiffTransition() const {
         return ((height + 1) % params.interval) == 0;
@@ -80,7 +80,7 @@ public:
                chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
                hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
-               blockTarget.GetCompact()     == blockTarget.GetCompact();
+               blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
     }
 };
 

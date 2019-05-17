@@ -81,6 +81,8 @@ public:
     // this function current only support ipv4
     uint32_t GetIpInt() const;
 
+    virtual ~IPAddress() = default;
+
 protected:
     // Serialize
     unsigned char ip[16];

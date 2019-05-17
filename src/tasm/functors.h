@@ -6,14 +6,15 @@
 #include <unistd.h>
 
 #include "../utils/stream.h"
+#include "pubkey.h"
 #include "tasm/tasm.h"
 #include "uint256.h"
 
 std::array<instruction, 256> functors = {
     // FALSE
-    ([](VStream& data, std::size_t ip) { return 0; }),
+    ([](VStream&, std::size_t) { return 0; }),
     // TRUE
-    ([](VStream& data, std::size_t ip) { return 0; }),
+    ([](VStream&, std::size_t) { return 0; }),
     // VERIFY
     ([](VStream& data, std::size_t ip) {
         uint160 pubkeyHash;

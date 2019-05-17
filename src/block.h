@@ -34,7 +34,7 @@ public:
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+          tipBlockHash_(tipBlockHash), diffTarget_(difficultyTarget), time_(time), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
 

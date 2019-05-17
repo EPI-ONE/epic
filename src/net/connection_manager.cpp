@@ -93,7 +93,7 @@ static void EventCallback(bufferevent_t* bev, short events, void* ctx) {
  * @param socklen the length of sockaddr
  * @param ctx custom context used for passing the pointer of the ConnectionManager instance
  */
-static void AcceptCallback(evconnlistener_t* listener, evutil_socket_t fd, sockaddr_t* addr, int socklen, void* ctx) {
+static void AcceptCallback(evconnlistener_t* listener, evutil_socket_t fd, sockaddr_t* addr, int, void* ctx) {
     std::string address = Address2String(addr);
     spdlog::info("[net] Socket accepted: {}", address);
 
