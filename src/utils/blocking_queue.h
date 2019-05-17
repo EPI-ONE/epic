@@ -1,8 +1,8 @@
 #ifndef EPIC_BLOCKING_QUEUE_H
 #define EPIC_BLOCKING_QUEUE_H
 
+#include <atomic>
 #include <condition_variable>
-#include <iostream>
 #include <queue>
 #include <vector>
 
@@ -54,9 +54,10 @@ public:
     }
 
     void Quit() {
+        std::lock_guard<std::mutex> lock(mtx_);
         quit_ = true;
-        empty_.notify_all();
         full_.notify_all();
+        empty_.notify_all();
     }
 
 private:
@@ -65,7 +66,7 @@ private:
     std::condition_variable empty_;
     std::queue<T> queue_;
     size_t capacity_;
-    bool quit_ = false;
+    std::atomic_bool quit_ = false;
 };
 
 
