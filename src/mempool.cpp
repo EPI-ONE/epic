@@ -1,6 +1,8 @@
 #include "mempool.h"
 
 bool MemPool::Insert(ConstTxPtr value) {
+    /* TODO: in future version we have to
+     * check UTXO for incoming transaction */
     return std::get<1>(mempool_.insert(value));
 }
 
