@@ -66,7 +66,6 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     seckey.MakeNewKey(true);
     maliciousSeckey.MakeNewKey(true);
     CPubKey pubkey              = seckey.GetPubKey();
-    uint160 pubkeyHash          = Hash160<1>(pubkey.begin(), pubkey.end());
     CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
     uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
     std::string randstr         = "frog learns chess";
@@ -161,7 +160,6 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             seckey.MakeNewKey(true);
             maliciousSeckey.MakeNewKey(true);
             CPubKey pubkey              = seckey.GetPubKey();
-            uint160 pubkeyHash          = Hash160<1>(pubkey.begin(), pubkey.end());
             CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
             uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
             uint256 msg                 = Hash<1>(randstr[i].cbegin(), randstr[i].cend());

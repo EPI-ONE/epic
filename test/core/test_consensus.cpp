@@ -93,7 +93,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     arrayMs[1] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[0]);
 
     size_t LOOPS = 100;
-    for (int i = 2; i < LOOPS; i++) {
+    for (size_t i = 2; i < LOOPS; i++) {
         simulatedTime += distribution(generator);
         arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i - 1]);
 

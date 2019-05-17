@@ -6,8 +6,8 @@
 #ifndef BITCOIN_SUPPORT_ALLOCATORS_SECURE_H
 #define BITCOIN_SUPPORT_ALLOCATORS_SECURE_H
 
-#include "lockedpool.h"
 #include "cleanse.h"
+#include "lockedpool.h"
 
 #include <string>
 
@@ -29,17 +29,14 @@ struct secure_allocator : public std::allocator<T> {
     secure_allocator() noexcept {}
     secure_allocator(const secure_allocator& a) noexcept : base(a) {}
     template <typename U>
-    secure_allocator(const secure_allocator<U>& a) noexcept : base(a)
-    {
-    }
+    secure_allocator(const secure_allocator<U>& a) noexcept : base(a) {}
     ~secure_allocator() noexcept {}
     template <typename _Other>
     struct rebind {
         typedef secure_allocator<_Other> other;
     };
 
-    T* allocate(std::size_t n, const void* hint = 0)
-    {
+    T* allocate(std::size_t n, const void* = 0) {
         T* allocation = static_cast<T*>(LockedPoolManager::Instance().alloc(sizeof(T) * n));
         if (!allocation) {
             throw std::bad_alloc();
@@ -47,8 +44,7 @@ struct secure_allocator : public std::allocator<T> {
         return allocation;
     }
 
-    void deallocate(T* p, std::size_t n)
-    {
+    void deallocate(T* p, std::size_t n) {
         if (p != nullptr) {
             memory_cleanse(p, sizeof(T) * n);
         }
@@ -57,6 +53,6 @@ struct secure_allocator : public std::allocator<T> {
 };
 
 // This is exactly like std::string, but with a custom allocator.
-typedef std::basic_string<char, std::char_traits<char>, secure_allocator<char> > SecureString;
+typedef std::basic_string<char, std::char_traits<char>, secure_allocator<char>> SecureString;
 
 #endif // BITCOIN_SUPPORT_ALLOCATORS_SECURE_H

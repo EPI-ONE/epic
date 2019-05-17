@@ -37,7 +37,7 @@ public:
         test_disconnect_run = true;
     }
 
-    void TestMultiClientNewCallback(void* connection_handle, std::string& address, bool inbound) {
+    void TestMultiClientNewCallback(void* connection_handle, std::string&, bool) {
         handle_vector.push_back(connection_handle);
     }
 };
@@ -128,7 +128,7 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     EXPECT_EQ(receive_message.header.type, test_type);
     EXPECT_EQ(receive_message.header.payload_length, data_len);
 
-    for (int i = 0; i < receive_message.payload.size(); i++) {
+    for (size_t i = 0; i < receive_message.payload.size(); i++) {
         EXPECT_EQ(receive_message.payload[i], 'A');
     }
 }
@@ -188,7 +188,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
         EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
         EXPECT_EQ(receive_message.header.type, i);
         EXPECT_EQ(receive_message.header.payload_length, data_len);
-        for (int j = 0; j < receive_message.payload.size(); j++) {
+        for (size_t j = 0; j < receive_message.payload.size(); j++) {
             EXPECT_EQ(receive_message.payload[j], 'A' + i);
         }
     }
@@ -231,7 +231,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
         EXPECT_EQ(receive_message.header.type, message_type);
         EXPECT_EQ(receive_message.header.payload_length, data_len);
-        for (int j = 0; j < receive_message.payload.size(); j++) {
+        for (size_t j = 0; j < receive_message.payload.size(); j++) {
             EXPECT_EQ(receive_message.payload[j], 'A' + i);
         }
     }

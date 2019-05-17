@@ -6,7 +6,7 @@ Peer::Peer(NetAddress& netAddress,
     bool isSeedPeer,
     ConnectionManager* connectionManager,
     AddressManager* addressManager)
-    : address(std::move(netAddress)), connection_handle(handle), isInbound(inbound), isSeed(isSeedPeer),
+    : address(std::move(netAddress)), connection_handle(handle), isSeed(isSeedPeer), isInbound(inbound),
       connectionManager_(connectionManager), addressManager_(addressManager) {}
 
 Peer::~Peer() {

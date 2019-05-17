@@ -888,7 +888,7 @@ protected:
 public:
     explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {}
 
-    void write(const char* psz, size_t _nSize) {
+    void write(const char*, size_t _nSize) {
         this->nSize += _nSize;
     }
 
@@ -913,7 +913,7 @@ public:
 };
 
 template <typename Stream>
-void SerializeMany(Stream& s) {}
+void SerializeMany(Stream&) {}
 
 template <typename Stream, typename Arg, typename... Args>
 void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
@@ -922,7 +922,7 @@ void SerializeMany(Stream& s, const Arg& arg, const Args&... args) {
 }
 
 template <typename Stream>
-inline void DeserializeMany(Stream& s) {}
+inline void DeserializeMany(Stream&) {}
 
 template <typename Stream, typename Arg, typename... Args>
 inline void DeserializeMany(Stream& s, Arg&& arg, Args&&... args) {
@@ -931,12 +931,12 @@ inline void DeserializeMany(Stream& s, Arg&& arg, Args&&... args) {
 }
 
 template <typename Stream, typename... Args>
-inline void SerReadWriteMany(Stream& s, CSerActionSerialize ser_action, const Args&... args) {
+inline void SerReadWriteMany(Stream& s, CSerActionSerialize, const Args&... args) {
     ::SerializeMany(s, args...);
 }
 
 template <typename Stream, typename... Args>
-inline void SerReadWriteMany(Stream& s, CSerActionDeserialize ser_action, Args&&... args) {
+inline void SerReadWriteMany(Stream& s, CSerActionDeserialize, Args&&... args) {
     ::DeserializeMany(s, args...);
 }
 

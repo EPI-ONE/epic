@@ -59,7 +59,7 @@ protected:
         // Initialize batch blocks and keys
         // blocks.reserve(size);
         // keys.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             RecordPtr rec = FakeRecordPtr(rand() % 100 + 1, rand() % 100 + 1);
             records[i]    = rec;
             keys[i]       = rec->cBlock->GetHash();
@@ -136,18 +136,18 @@ TEST_F(TestRocksDB, write_single_block) {
 TEST_F(TestRocksDB, write_batch_blocks) {
     EXPECT_TRUE(db->WriteRecords(records));
 
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         auto pblock = db->GetRecord(keys[i]);
         EXPECT_EQ(*records[i], *pblock);
     }
 }
 
 TEST_F(TestRocksDB, write_blocks_one_by_one) {
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         EXPECT_TRUE(db->WriteRecord(records[i]));
     }
 
-    for (int i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
         auto pblock = db->GetRecord(keys[i]);
         EXPECT_EQ(*records[i], *pblock);
     }
