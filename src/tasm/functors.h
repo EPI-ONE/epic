@@ -5,10 +5,8 @@
 #include <functional>
 #include <unistd.h>
 
-#include "../utils/stream.h"
 #include "pubkey.h"
 #include "tasm/tasm.h"
-#include "uint256.h"
 
 std::array<instruction, 256> functors = {
     // FALSE
