@@ -7,7 +7,6 @@
 
 #include "opcodes.h"
 #include "stream.h"
-#include "utils/serialize.h"
 #include "utilstrencodings.h"
 
 typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;

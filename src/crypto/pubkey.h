@@ -10,7 +10,6 @@
 #include "hash.h"
 #include "params.h"
 #include "serialize.h"
-#include "uint256.h"
 
 #include <optional>
 #include <stdexcept>
