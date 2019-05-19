@@ -12,8 +12,7 @@
 #include <mutex>
 #include <unordered_map>
 
-/*
- * OS-dependent allocation and deallocation of locked/pinned memory pages.
+/* OS-dependent allocation and deallocation of locked/pinned memory pages.
  * Abstract base class.
  */
 class LockedPageAllocator {
@@ -234,5 +233,9 @@ private:
     static LockedPoolManager* _instance;
     static std::once_flag init_flag;
 };
+
+/* checks if the host system has ulimit -l
+ * set to unlimited */
+bool UnlimitedLockedMemory();
 
 #endif // BITCOIN_SUPPORT_LOCKEDPOOL_H

@@ -329,3 +329,17 @@ void LockedPoolManager::CreateInstance() {
     static LockedPoolManager instance(std::move(allocator));
     LockedPoolManager::_instance = &instance;
 }
+
+bool UnlimitedLockedMemory() {
+#ifdef RLIMIT_MEMLOCK
+    struct rlimit rlim;
+
+    if (getrlimit(RLIMIT_MEMLOCK, &rlim) != 0) {
+        throw std::runtime_error("failed to query RLIMIT_MEMLOCK");
+    }
+
+    return rlim.rlim_cur == RLIM_INFINITY;
+#else
+    return true;
+#endif
+}
