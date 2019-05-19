@@ -18,11 +18,17 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
       recordHistory_(chain.recordHistory_) {
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
+    assert(recordHistory_.at(target));
 
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
-        // TODO: add logic to pendingBlocks_ and recordHistory_ now
+        for (const auto& h : (*it)->GetRecordHashes()) {
+            pendingBlocks_.insert({h, recordHistory_[h]->cblock});
+            recordHistory_.erase(h);
+            // TODO: roll back UTXOs
+        }
         states_.erase(std::next(it).base());
     }
+    // note that we don't do any verification here
 }
 
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
@@ -98,3 +104,66 @@ bool Chain::IsValidDistance(const RecordPtr b, const arith_uint256 ms_hashrate) 
     auto allowed_distance = (params.maxTarget / params.sortitionCoefficient) * S / (ms_hashrate * t);
     return current_distance <= allowed_distance;
 }
+
+void Chain::Verify(const ConstBlockPtr pblock) {
+    // get a path for validation by the post ordered DFS search
+    std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
+
+    std::vector<RecordPtr> recs;
+    std::vector<uint256> hashes;
+    recs.reserve(blocksToValidate.size());
+    hashes.reserve(blocksToValidate.size());
+
+    for (const auto& b : blocksToValidate) {
+        recs.emplace_back(std::make_shared<NodeRecord>(b));
+        hashes.emplace_back(b->GetHash());
+    }
+    auto state = make_shared_ChainState(GetChainHead(), *recs.back(), std::move(hashes));
+
+    // validate each block in order
+    for (auto& rec : recs) {
+        if (!rec->cblock->IsFirstRegistration())  {
+            if (auto update = Validate(*rec)) {
+                // TODO: remove UTXO from chain
+                state->UpdateTXOC(std::move(*update));
+            } else {
+                rec->validity = NodeRecord::INVALID;
+                // TODO: we may add log here
+            }
+        }
+        recordHistory_.insert({rec->cblock->GetHash(), rec});
+    }
+    states_.emplace_back(state);
+}
+
+std::optional<TXOC> Chain::Validate(NodeRecord& record) {
+    auto pblock = record.cblock;
+    std::optional<TXOC> result;
+    if (pblock->HasTransaction()) {
+        if (pblock->IsRegistration()) {
+            result = ValidateRedemption(record);
+        } else {
+            result = ValidateTx(record);
+        }
+    }
+    record.UpdateReward(recordHistory_[pblock->GetHash()]->cumulativeReward);
+    return result;
+}
+
+std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
+    Coin valueIn{};
+    Coin valueOut{};
+    auto tx = record.cblock->GetTransaction();
+    
+    // check Transaction distance 
+
+    // update TXOC
+    uint64 sigOps = 0;
+    TXOC txoc{};
+    return {};
+}
+
+std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
+    return {};
+}
+

@@ -9,10 +9,9 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& lvsHash)
+ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHash_(lvsHash) {
-    auto msBlock = rec.cblock;
     chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
@@ -60,7 +59,7 @@ ChainStatePtr make_shared_ChainState() {
 }
 
 ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
-    auto pcs = std::make_shared<ChainState>(previous, record, std::move(hashes));
+    auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(hashes));
     record.LinkChainState(pcs);
     return pcs;
 }

@@ -19,7 +19,7 @@ public:
     // constructor of a chain state of genesis.
     ChainState();
     // constructor of a chain state with all data fields
-    ChainState(std::shared_ptr<ChainState>, const NodeRecord&, std::vector<uint256>&&);
+    ChainState(std::shared_ptr<ChainState>, const ConstBlockPtr&, std::vector<uint256>&&);
     // constructor of a chain state by vstream
     ChainState(VStream&);
     // copy constructor
@@ -55,6 +55,12 @@ public:
         return lvsHash_.back(); 
     }
 
+    const std::vector<uint256>& GetTXOC() const {
+        return txoc_;
+    }
+
+    void UpdateTXOC(TXOC&&, std::unordered_map<uint256, UTXO>&, std::unordered_set<uint256>&); 
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
@@ -89,7 +95,8 @@ public:
 private:
     // a vector consists of hashes of blocks in level set of this chain state
     std::vector<uint256> lvsHash_;
-    // TODO: a vector of TXOC: changes on transaction outputs from previous chain state
+    // a vector of TXOC: changes on transaction outputs from previous chain state
+    TXOC txoc_;
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
 };
@@ -97,7 +104,7 @@ private:
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
 ChainStatePtr make_shared_ChainState();
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
+ChainStatePtr make_shared_ChainState(ChainStatePtr previous, const NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
  * A structure that contains a shared_ptr<const BlockNet> that will
@@ -137,6 +144,8 @@ public:
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
+    // TODO
+    void UpdateReward(Coin coin&);
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);

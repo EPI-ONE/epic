@@ -134,7 +134,7 @@ bool Block::HasTransaction() const {
     return transaction_.has_value();
 }
 
-std::optional<Transaction>& Block::GetTransaction() {
+const std::optional<Transaction>& Block::GetTransaction() const {
     return transaction_;
 }
 

@@ -2,6 +2,7 @@
 #define __SRC_CHAIN_H__
 
 #include <deque>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -9,6 +10,7 @@
 #include "consensus.h"
 #include "params.h"
 #include "uint256.h"
+#include "utxo.h"
 
 class Chain {
 public:
@@ -66,16 +68,21 @@ private:
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
     // store blocks verified in this chain
     std::unordered_map<uint256, RecordPtr> recordHistory_;
+    // the unspent ledger 
+    std::unordered_map<uint256, UTXO> ledger_;
+    // the spent ledger 
+    std::unordered_set<uint256> removedledger_;
 
     bool IsMilestone(const ConstBlockPtr pblock);
 
     // when we add a milestone block to this chain, we start verification
     // TODO: should return tx ouput changes
-    void Verify(std::vector<RecordPtr>&);
-
+    void Verify(const ConstBlockPtr);
     // do validity check on the block
-    // TODO: should return tx ouput changes
-    void Validate(NodeRecord& record);
+    std::optional<TXOC> Validate(NodeRecord& record);
+    // offline verification for transactions
+    std::optional<TXOC> ValidateRedemption(NodeRecord& record);
+    std::optional<TXOC> ValidateTx(NodeRecord& record);
 };
 
 typedef std::unique_ptr<Chain> ChainPtr;

@@ -61,7 +61,7 @@ public:
 
     bool HasTransaction() const;
 
-    std::optional<Transaction>& GetTransaction();
+    const std::optional<Transaction>& GetTransaction();
 
     void SetDifficultyTarget(uint32_t target);
 
