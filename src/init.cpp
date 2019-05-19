@@ -24,6 +24,15 @@ void Init(int argc, char* argv[]) {
     // init logger
     InitLogger();
 
+    /* warn the user if there is only a limited
+     * amount of lockable memory; the reason being
+     * that this limits the amount private keys
+     * that can be stored securely */
+    if (!UnlimitedLockedMemory()) {
+        std::clog << "WARNING: amount of lockable memory is limited\n"
+                  << "we suggest to increase ulimit of 'max locked memory' " << std::endl;
+    }
+
     config->ShowConfig();
 
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());

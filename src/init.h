@@ -6,6 +6,7 @@
 #include "cpptoml.h"
 #include "cxxopts.hpp"
 #include "file_utils.h"
+#include "lockedpool.h"
 #include "params.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
