@@ -122,12 +122,17 @@ static void printchunk(char* base, size_t sz, bool used) {
     std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << base << " 0x" << std::hex << std::setw(16)
               << std::setfill('0') << sz << " 0x" << used << std::endl;
 }
+
 void Arena::walk() const {
-    for (const auto& chunk : chunks_used)
+    for (const auto& chunk : chunks_used) {
         printchunk(chunk.first, chunk.second, true);
+    }
+
     std::cout << std::endl;
-    for (const auto& chunk : chunks_free)
+    for (const auto& chunk : chunks_free) {
         printchunk(chunk.first, chunk.second, false);
+    }
+
     std::cout << std::endl;
 }
 #endif
@@ -165,23 +170,30 @@ PosixLockedPageAllocator::PosixLockedPageAllocator() {
 #endif
 
 void* PosixLockedPageAllocator::AllocateLocked(size_t len, bool* lockingSuccess) {
-    void* addr;
-    len  = align_up(len, page_size);
-    addr = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    len        = align_up(len, page_size);
+    void* addr = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
     if (addr == MAP_FAILED) {
         return nullptr;
     }
+
     if (addr) {
         *lockingSuccess = mlock(addr, len) == 0;
     }
+
     return addr;
 }
+
 void PosixLockedPageAllocator::FreeLocked(void* addr, size_t len) {
     len = align_up(len, page_size);
+    /* since this is the last action performed on the memory
+     * it makes sense to use memory_cleanse with the final
+     * option enabled */
     memory_cleanse<true>(addr, len);
     munlock(addr, len);
     munmap(addr, len);
 }
+
 size_t PosixLockedPageAllocator::GetLimit() {
 #ifdef RLIMIT_MEMLOCK
     struct rlimit rlim;
@@ -242,6 +254,7 @@ void LockedPool::free(void* ptr) {
 LockedPool::Stats LockedPool::stats() const {
     std::lock_guard<std::mutex> lock(mutex);
     LockedPool::Stats r{0, 0, 0, cumulative_bytes_locked, 0, 0};
+
     for (const auto& arena : arenas) {
         Arena::Stats i = arena.stats();
         r.used += i.used;
@@ -250,25 +263,28 @@ LockedPool::Stats LockedPool::stats() const {
         r.chunks_used += i.chunks_used;
         r.chunks_free += i.chunks_free;
     }
+
     return r;
 }
 
 bool LockedPool::new_arena(size_t size, size_t align) {
     bool locked;
-    // If this is the first arena, handle this specially: Cap the upper size
-    // by the process limit. This makes sure that the first arena will at least
-    // be locked. An exception to this is if the process limit is 0:
-    // in this case no memory can be locked at all so we'll skip past this logic.
+    /* If this is the first arena, handle this specially: Cap the upper size
+     * by the process limit. This makes sure that the first arena will at least
+     * be locked. An exception to this is if the process limit is 0:
+     * in this case no memory can be locked at all so we'll skip past this logic. */
     if (arenas.empty()) {
         size_t limit = allocator->GetLimit();
         if (limit > 0) {
             size = std::min(size, limit);
         }
     }
+
     void* addr = allocator->AllocateLocked(size, &locked);
     if (!addr) {
         return false;
     }
+
     if (locked) {
         cumulative_bytes_locked += size;
     } else if (lf_cb) { // Call the locking-failed callback if locking failed
@@ -278,6 +294,7 @@ bool LockedPool::new_arena(size_t size, size_t align) {
             return false;
         }
     }
+
     arenas.emplace_back(allocator.get(), addr, size, align);
     return true;
 }
