@@ -27,7 +27,9 @@ public:
 
     std::unique_ptr<NodeRecord> GetRecord(const uint256&) const;
 
-    bool WriteBlock(const ConstBlockPtr&) const;
+    std::unique_ptr<BlockNet> GetBlockCache(const uint256&) const;
+
+    bool WriteBlockCache(const ConstBlockPtr&) const;
 
     bool WriteRecord(const RecordPtr&) const;
 
@@ -50,9 +52,9 @@ protected:
 
     bool Write(const std::string& column, const std::string& key, const std::string& value) const;
 
-    void WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const;
+    bool WriteBatch(const std::string& column, const std::map<std::string, std::string>& batch) const;
 
-    void Delete(const std::string& column, const std::string& key) const;
+    bool Delete(const std::string& column, const std::string& key) const;
 };
 
 #endif /* ifndef __SRC_ROCKSDB_H__ */
