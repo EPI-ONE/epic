@@ -22,6 +22,7 @@ public:
     /* API for other modules for searching a block */
     StoredRecord GetRecord(const uint256&) const;
     BlockCache GetBlockCache(const uint256&) const;
+    bool IsSolid(const uint256&) const;
 
     bool StoreRecord(const RecordPtr&) const;
 
@@ -52,7 +53,6 @@ private:
     OrphanBlocksContainer obc_;
 
     bool Exists(const uint256&) const;
-    bool IsSolid(const uint256&) const;
     bool IsWeaklySolid(const ConstBlockPtr&) const;
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
     void Cache(const ConstBlockPtr&) const;

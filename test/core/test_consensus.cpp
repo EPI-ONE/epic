@@ -186,6 +186,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
+        EXPECT_TRUE(cat.IsSolid(bhash));
         auto blkCache = cat.GetBlockCache(bhash);
         EXPECT_TRUE(blkCache);
     }
