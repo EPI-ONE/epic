@@ -51,7 +51,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            StoredRecord ms = GetBlock(msHash);
+            StoredRecord ms = GetRecord(msHash);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
@@ -68,7 +68,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
 
         // Check difficulty target ///////////////////////
 
-        StoredRecord ms = GetBlock(msHash);
+        StoredRecord ms = GetRecord(msHash);
         if (!ms) {
             spdlog::info("Block is missing milestone link {} [{}]", std::to_string(msHash),
                 std::to_string(blk->GetHash()));
@@ -127,8 +127,12 @@ bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& 
     return true;
 }
 
-StoredRecord Caterpillar::GetBlock(const uint256& blkHash) const {
+StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
     return dbStore_.GetRecord(blkHash);
+}
+
+BlockCache Caterpillar::GetBlockCache(const uint256& blkHash) const {
+    return dbStore_.GetBlockCache(blkHash);
 }
 
 void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
@@ -160,7 +164,7 @@ bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
 }
 
 void Caterpillar::Cache(const ConstBlockPtr& blk) const {
-    dbStore_.WriteBlock(blk);
+    dbStore_.WriteBlockCache(blk);
 }
 
 void Caterpillar::Stop() {

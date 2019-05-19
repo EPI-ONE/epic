@@ -184,6 +184,12 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     cat.Stop();
 
+    for (const auto& blk : blocks) {
+        auto bhash = blk->GetHash();
+        auto blkCache = cat.GetBlockCache(bhash);
+        EXPECT_TRUE(blkCache);
+    }
+
     EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
 
     std::string cmd = "exec rm -r " + prefix;
