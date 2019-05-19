@@ -5,7 +5,6 @@
 #include <unordered_set>
 
 #include "arith_uint256.h"
-#include "locked.h"
 #include "transaction.h"
 
 class MemPool {
@@ -34,10 +33,7 @@ public:
     std::optional<ConstTxPtr> GetTransaction(const uint256& BlockHash, const arith_uint256& threshold);
 
 private:
-    /* the set is locked into memory using the locked allocator;
-     * this has the beneficial effect that it can never be swapped out */
-    std::unordered_set<ConstTxPtr, std::hash<ConstTxPtr>, std::equal_to<ConstTxPtr>, locked_allocator<ConstTxPtr>>
-        mempool_;
+    std::unordered_set<ConstTxPtr> mempool_;
 };
 
 #endif
