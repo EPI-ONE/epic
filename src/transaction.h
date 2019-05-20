@@ -114,7 +114,7 @@ public:
         READWRITE(listingContent);
     }
 
-private:
+protected:
     const Transaction* parentTx_;
 };
 

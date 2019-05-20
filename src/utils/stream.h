@@ -58,7 +58,6 @@ public:
         READWRITE(chars_);
     }
 
-
     VStream& operator+=(const VStream& b) {
         chars_.insert(chars_.end(), b.cbegin(), b.cend());
         return *this;
