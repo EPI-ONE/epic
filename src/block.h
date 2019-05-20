@@ -15,7 +15,7 @@ extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
-string to_string(const Block& b, bool showtx = false);
+string to_string(const Block& b, bool showtx = true);
 } // namespace std
 
 class Block {

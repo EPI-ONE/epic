@@ -10,24 +10,24 @@ public:
 
 TEST_F(DFSTest, empty_pending_blocks_map) {
     Chain chain;
-    Block block_0;
-    block_0.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
-    block_0.Solve();
+    ConstBlockPtr block_0 = fac.CreateBlockPtr();
+    //block_0.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
+    //block_0.Solve();
 
     chain.AddPendingBlock(block_0);
-    auto graph = chain.GetSortedSubgraph(std::make_shared<const Block>(block_0));
+    auto graph = chain.GetSortedSubgraph(block_0);
     ASSERT_EQ(chain.GetPendingBlockCount(), 0);
     ASSERT_EQ(graph.size(), 1);
 }
 
 TEST_F(DFSTest, complex_test) {
     Chain chain;
+    std::size_t N = 10; 
+    std::vector<BlockNet> blocks;
+    blocks.reserve(N);
 
-    std::size_t n = 10; std::vector<Block> blocks;
-    blocks.reserve(n);
-
-    for (std::size_t i = 0; i < n; i++) {
-        blocks.push_back(fac.CreateBlock());
+    for (std::size_t i = 0; i < N; i++) {
+        blocks.emplace_back(fac.CreateBlockNet());
 
         // time is used as the node id
         blocks[i].SetTime(i);
@@ -63,16 +63,18 @@ TEST_F(DFSTest, complex_test) {
     blocks[7].SetTipHash(blocks[8].GetHash());
     blocks[9].SetTipHash(blocks[3].GetHash());
 
+    std::vector<ConstBlockPtr> vpblocks(N);
     /* populate the pending Block
      * map for the first time */
-    for (std::size_t i = 0; i < n; i++) {
-        chain.AddPendingBlock(blocks[i]);
+    for (std::size_t i = 0; i < N; i++) {
+        vpblocks[i] = std::make_shared<BlockNet>(blocks[i]);
+        chain.AddPendingBlock(vpblocks[i]);
     }
 
     /*
      * first test class with 0 as pivot
      */
-    auto graph = chain.GetSortedSubgraph(blocks[0]);
+    auto graph = chain.GetSortedSubgraph(vpblocks[0]);
 
     /* simple test to check if the right
      * amount of nodes are left after execution */
@@ -94,8 +96,8 @@ TEST_F(DFSTest, complex_test) {
      * map for the second time for
      * second test case and the assert
      * that no duplicates were inserted*/
-    for (std::size_t i = 0; i < n; i++) {
-        chain.AddPendingBlock(blocks[i]);
+    for (std::size_t i = 0; i < N; i++) {
+        chain.AddPendingBlock(vpblocks[i]);
     }
 
     // size check
@@ -104,7 +106,7 @@ TEST_F(DFSTest, complex_test) {
     /*
      * second test class with 9 as pivot
      */
-    graph = chain.GetSortedSubgraph(blocks[9]);
+    graph = chain.GetSortedSubgraph(vpblocks[9]);
 
     /* simple test to check if the right
      * amount of nodes are left after execution */

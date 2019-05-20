@@ -16,11 +16,11 @@ public:
 };
 
 TEST_F(TestConsensus, SyntaxChecking) {
-    Block b = GENESIS;
+    BlockNet b = GENESIS;
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    Block block = Block(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
+    BlockNet block = BlockNet(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 

@@ -16,7 +16,6 @@ public:
     arith_uint256 blockTarget;
     uint64_t hashRate;
 
-
     // constructor of a chain state of genesis.
     ChainState();
     // constructor of a chain state with all data fields
@@ -49,11 +48,11 @@ public:
     }
 
     const std::vector<uint256>& GetRecordHashes() const {
-        return vrecordHash_;
+        return lvsHash_;
     }
 
     const uint256& GetMilestoneHash() const {
-        return vrecordHash_.back();
+        return lvsHash_.back(); 
     }
 
     ADD_SERIALIZE_METHODS;
@@ -87,7 +86,7 @@ public:
 
 private:
     // a vector consists of hashes of blocks in level set of this chain state
-    std::vector<uint256> vrecordHash_;
+    std::vector<uint256> lvsHash_;
     // TODO: a vector of TXOC: changes on transaction outputs from previous chain state
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
@@ -133,7 +132,7 @@ public:
     NodeRecord(const BlockNet&);
     NodeRecord(VStream&);
 
-    void LinkChainState(ChainStatePtr);
+    void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
 

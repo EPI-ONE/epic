@@ -9,9 +9,9 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& recHash)
+ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
-      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), vrecordHash_(recHash) {
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHash_(lvsHash) {
     auto msBlock = rec.cblock;
     chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
@@ -86,7 +86,7 @@ void NodeRecord::InvalidateMilestone() {
     snapshot.reset();
 }
 
-void NodeRecord::LinkChainState(ChainStatePtr pcs) {
+void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
     snapshot    = pcs;
     isMilestone = true;
 }

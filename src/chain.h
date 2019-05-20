@@ -23,17 +23,14 @@ public:
     Chain(const Chain& chain, ConstBlockPtr pfork);
 
     // now for test only
-    Chain(const std::deque<ChainStatePtr>& dqcs, bool ismain=false) : ismainchain_(ismain), dqChainStates_(dqcs) {}
+    Chain(const std::deque<ChainStatePtr>& states, bool ismain=false) : ismainchain_(ismain), states_(states) {}
 
-    ~Chain();
     // add block to this chain
     void AddBlock(ConstBlockPtr pblock);
 
     ChainStatePtr GetChainHead() const;
 
     void AddPendingBlock(ConstBlockPtr pblock);
-    /* for test only now */
-    void AddPendingBlock(const Block& block);
 
     void RemovePendingBlock(const uint256& hash);
 
@@ -42,9 +39,7 @@ public:
     std::size_t GetPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
-    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const Block& pblock);
-
-    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const std::shared_ptr<const Block> pblock);
+    std::vector<ConstBlockPtr> GetSortedSubgraph(ConstBlockPtr pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
         return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
@@ -55,7 +50,7 @@ public:
     }
 
     const std::deque<ChainStatePtr>& GetStates() const {
-        return dqChainStates_; 
+        return states_; 
     }
 
 private:
@@ -64,13 +59,13 @@ private:
 
     // store a (probabily recent) list of milestones
     // TODO: thinking of a lifetime mechanism for it
-    std::deque<ChainStatePtr> dqChainStates_;
+    std::deque<ChainStatePtr> states_;
     // store blocks not yet verified in this chain
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
     // store blocks verified in this chain
     std::unordered_map<uint256, RecordPtr> recordHistory_;
 
-    bool IsMilestone(const std::shared_ptr<BlockNet> pblock);
+    bool IsMilestone(const ConstBlockPtr pblock);
 
     // when we add a milestone block to this chain, we start verification
     // TODO: should return tx ouput changes

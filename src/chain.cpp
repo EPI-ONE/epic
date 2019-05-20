@@ -3,41 +3,31 @@
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
     recordHistory_ = {};
-    dqChainStates_ = {std::make_shared<ChainState>()};
+    states_ = {std::make_shared<ChainState>()};
 }
 
 ChainStatePtr Chain::GetChainHead() const {
-    return dqChainStates_.back();
+    return states_.back();
 }
 
 Chain::Chain(const Chain& chain)
-    : ismainchain_(false), dqChainStates_(chain.dqChainStates_), pendingBlocks_(chain.pendingBlocks_) {}
+    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
 
 Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
-    : ismainchain_(false), dqChainStates_(chain.dqChainStates_), pendingBlocks_(chain.pendingBlocks_), recordHistory_(chain.recordHistory_){
+    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_), recordHistory_(chain.recordHistory_){
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
 
-    for (auto it = dqChainStates_.rbegin(); (*it)->GetMilestoneHash() != target && it != dqChainStates_.rend(); it++) {
+    for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
         // TODO: add logic to pendingBlocks_ and recordHistory_ now
-        dqChainStates_.erase(std::next(it).base());
+        states_.erase(std::next(it).base());
     }
-}
-
-Chain::~Chain() {
-    dqChainStates_.clear();
-    pendingBlocks_.clear();
-    recordHistory_.clear();
 }
 
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
 }
     
-void Chain::AddPendingBlock(const Block& block) {
-    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<const BlockNet>(block));
-}
-
 void Chain::RemovePendingBlock(const uint256& hash) {
     pendingBlocks_.erase(hash);
 }
@@ -50,14 +40,10 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<std::shared_ptr<const Block>> Chain::GetSortedSubgraph(const Block& pblock) {
-    return GetSortedSubgraph(std::make_shared<const Block>(pblock));
-}
-
-std::vector<std::shared_ptr<const Block>> Chain::GetSortedSubgraph(const std::shared_ptr<const Block> pblock) {
-    std::vector<std::shared_ptr<const Block>> stack = {pblock};
-    std::vector<std::shared_ptr<const Block>> result;
-    std::shared_ptr<const Block> cursor;
+std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+    std::vector<ConstBlockPtr> stack = {pblock};
+    std::vector<ConstBlockPtr> result;
+    ConstBlockPtr cursor;
 
     /* reserve a good chunk of memory for efficiency;
      * please note that n/2 is a not really precise
