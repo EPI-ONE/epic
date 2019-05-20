@@ -131,7 +131,7 @@ bool RocksDBStore::WriteBlockCache(const ConstBlockPtr& block) const {
 bool RocksDBStore::WriteRecord(const RecordPtr& record) const {
     VStream key;
     key.reserve(Hash::SIZE);
-    key << record->cBlock->GetHash();
+    key << record->cblock->GetHash();
     Slice keySlice(key.data(), key.size());
 
     VStream value;
@@ -150,7 +150,7 @@ bool RocksDBStore::WriteRecords(const std::vector<RecordPtr>& records) const {
 
     for (const auto& record : records) {
         // Prepare key
-        key << record->cBlock->GetHash();
+        key << record->cblock->GetHash();
         Slice keySlice(key.data(), key.size());
 
         // Prepare value

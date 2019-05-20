@@ -126,5 +126,5 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecor
 
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous) {
     auto pRec = CreateConsecutiveRecordPtr();
-    return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cBlock->GetHash()});
+    return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }

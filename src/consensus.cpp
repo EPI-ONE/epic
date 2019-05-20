@@ -12,13 +12,13 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
 ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& recHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), vrecordHash_(recHash) {
-    auto msBlock = rec.cBlock;
+    auto msBlock = rec.cblock;
     chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
 
 ChainState::ChainState(VStream& payload) {
-    payload >> *this; 
+    payload >> *this;
 }
 
 void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
@@ -71,10 +71,10 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
 NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cBlock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
 
 NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {
-    cBlock = std::make_shared<BlockNet>(blk);
+    cblock = std::make_shared<BlockNet>(blk);
 }
 
 NodeRecord::NodeRecord(VStream& s) {
@@ -92,11 +92,11 @@ void NodeRecord::LinkChainState(ChainStatePtr pcs) {
 }
 
 void NodeRecord::Serialize(VStream& s) const {
-    s << *cBlock;
+    s << *cblock;
     s << VARINT(cumulativeReward.GetValue());
     s << VARINT(minerChainHeight);
 
-    if (cBlock->HasTransaction()) {
+    if (cblock->HasTransaction()) {
         s << (uint8_t) validity;
     }
 
@@ -114,13 +114,13 @@ void NodeRecord::Serialize(VStream& s) const {
 }
 
 void NodeRecord::Deserialize(VStream& s) {
-    cBlock = std::make_shared<BlockNet>(s);
+    cblock = std::make_shared<BlockNet>(s);
     uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);
     s >> VARINT(minerChainHeight);
 
-    if (cBlock->HasTransaction()) {
+    if (cblock->HasTransaction()) {
         validity = (Validity) ser_readdata8(s);
     }
 
@@ -136,11 +136,11 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize > 0) {
         return optimalStorageSize;
     }
-    optimalStorageSize = cBlock->GetOptimalEncodingSize();
+    optimalStorageSize = cblock->GetOptimalEncodingSize();
     optimalStorageSize += GetSizeOfVarInt(cumulativeReward.GetValue());
     optimalStorageSize += GetSizeOfVarInt(minerChainHeight);
 
-    if (cBlock->HasTransaction()) {
+    if (cblock->HasTransaction()) {
         optimalStorageSize += 1;
     }
 
@@ -172,7 +172,7 @@ std::string std::to_string(const ChainState& cs) {
 
 std::string std::to_string(const NodeRecord& rec, bool showtx) {
     std::string s = "NodeRecord {\n";
-    s += strprintf("   contained%s \n", std::to_string(*(rec.cBlock), showtx));
+    s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 

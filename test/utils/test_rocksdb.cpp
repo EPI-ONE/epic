@@ -61,7 +61,7 @@ protected:
         for (size_t i = 0; i < size; ++i) {
             RecordPtr rec = fac->CreateRecordPtr(fac->GetRand() % 100 + 1, fac->GetRand() % 100 + 1, true);
             records[i]    = rec;
-            keys[i]       = rec->cBlock->GetHash();
+            keys[i]       = rec->cblock->GetHash();
         }
     }
 
@@ -116,7 +116,7 @@ TEST_F(TestRocksDB, write_single_block) {
     RecordPtr rec = fac->CreateRecordPtr(1, 1, true);
     ASSERT_TRUE(db->WriteRecord(rec));
 
-    std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cBlock->GetHash());
+    std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cblock->GetHash());
     ASSERT_EQ(*rec, *value);
 }
 

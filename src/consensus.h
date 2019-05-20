@@ -53,7 +53,7 @@ public:
     }
 
     const uint256& GetMilestoneHash() const {
-        return vrecordHash_.back(); 
+        return vrecordHash_.back();
     }
 
     ADD_SERIALIZE_METHODS;
@@ -81,7 +81,7 @@ public:
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
     }
 
-    bool operator!=(const ChainState& another) const { 
+    bool operator!=(const ChainState& another) const {
         return !(*this == another);
     }
 
@@ -116,7 +116,7 @@ public:
         IS_FAKE_MILESTONE,
     };
 
-    ConstBlockPtr cBlock;
+    ConstBlockPtr cblock;
 
     Coin cumulativeReward;
     uint64_t minerChainHeight;
@@ -141,8 +141,8 @@ public:
     void Deserialize(VStream& s);
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(*cBlock, cumulativeReward, minerChainHeight) ==
-                   std::tie(*(another.cBlock), another.cumulativeReward, another.minerChainHeight) &&
+        return std::tie(*cblock, cumulativeReward, minerChainHeight) ==
+                   std::tie(*(another.cblock), another.cumulativeReward, another.minerChainHeight) &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot));
     }
 
