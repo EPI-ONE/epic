@@ -14,7 +14,7 @@ bool Caterpillar::StoreRecord(const RecordPtr& rec) const {
     return dbStore_.WriteRecord(rec);
 }
 
-bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, const Peer* peer) {
+bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> peer) {
     // clang-format off
     return verifyThread_.Submit([&blk, peer, this]() {
         if (*blk == GENESIS) {

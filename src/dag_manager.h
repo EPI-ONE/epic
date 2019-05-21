@@ -5,10 +5,10 @@
 #include <list>
 
 #include "chain.h"
-#include "peer.h"
 #include "task.h"
 #include "uint256.h"
 
+class Peer;
 class DAGManager {
 public:
     static const std::unique_ptr<DAGManager>& GetDAGManager() {
@@ -37,20 +37,20 @@ public:
     std::atomic<bool> isBatchSynching;
 
     // The peer we are synching with. Null if isBatchSynching is false.
-    Peer* syncingPeer;
+    std::shared_ptr<Peer> syncingPeer;
 
     DAGManager();
 
     // Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
     // and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
     // sending queue according to the BlockLocator constructed by peer.
-    void RequestInv(const uint256& fromHash, const size_t& len, const Peer* peer);
+    void RequestInv(const uint256& fromHash, const size_t& len, std::shared_ptr<Peer> peer);
 
     // Called by Peer and sets a list of inventory as the callback to the task.
     void AssembleInv(GetBlockTask& task);
 
     // Called by batchSync to create a GetDataTask for a given hash.
-    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, const Peer& peer);
+    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, std::shared_ptr<Peer> peer);
 
     // Called by Peer and sets a Bundle as the callback to the task.
     void GetBundle(GetDataTask& task);
@@ -62,7 +62,7 @@ public:
 
     // Methods are called when the synchronization status is changed:
     // on to off and off to on. Modifies the atomic_flag isBatchSynching.
-    void StartBatchSync(Peer& peer);
+    void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
 private:
@@ -70,7 +70,7 @@ private:
     // to preDownloading (if it's not empty) or a peer's task queue. If preDownloading
     // is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
     // Whenever a task is sent to peer, add the hash of the task in the downloading list.
-    void BatchSync(std::list<uint256>& requests, Peer& requestFrom);
+    void BatchSync(std::list<uint256>& requests, std::shared_ptr<Peer> requestFrom);
 
     // Removes a verified ms hash from the downloading queue, and start another
     // round of batch sync when the downloading queue is empty.
