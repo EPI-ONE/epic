@@ -108,20 +108,25 @@ set(TEST_CODE
         )
 set(TEST_MAIN test/main.cpp)
 
+add_library(epiccore STATIC ${SRC_CODE})
+
 # generate executable
-add_executable(epic ${SRC_CODE} ${SRC_MAIN})
-add_executable(epictest ${TEST_MAIN} ${SRC_CODE} ${TEST_CODE})
+add_executable(epic  ${SRC_MAIN})
+add_executable(epictest ${TEST_MAIN}  ${TEST_CODE})
 
-target_link_libraries(epic ${LIBEVENT_LIBRARIES})
-target_link_libraries(epic ${ROCKSDB_LIBRARIES})
-target_link_libraries(epic ${Secp256k1_LIBRARY})
-target_link_libraries(epic ${GMP_LIBRARY})
+target_link_libraries(epiccore ${LIBEVENT_LIBRARIES})
+target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
+target_link_libraries(epiccore ${Secp256k1_LIBRARY})
+target_link_libraries(epiccore ${GMP_LIBRARY})
 
-target_link_libraries(epictest ${LIBEVENT_LIBRARIES})
+
+target_link_libraries(epic epiccore)
+add_dependencies(epic epiccore)
+
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(epictest ${ROCKSDB_LIBRARIES})
-target_link_libraries(epictest ${Secp256k1_LIBRARY})
-target_link_libraries(epictest ${GMP_LIBRARY})
+target_link_libraries(epictest epiccore)
+add_dependencies(epictest epiccore)
+
 
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)
