@@ -4,7 +4,7 @@
 #include <string>
 
 #include "rocksdb.h"
-#include "test-methods/block-factory.h"
+#include "test_factory.h"
 
 // Temporary db folder prefix
 static std::string PREFIX = "test_rocks/";
@@ -44,6 +44,7 @@ public:
     static std::vector<RecordPtr> records;
     static std::vector<uint256> keys;
     static size_t size;
+    static TestFactory* fac;
 
 protected:
     // Shared resource across all test cases
@@ -53,16 +54,14 @@ protected:
         // Get the current time and make into a temp file name
         std::ostringstream os;
         os << time(nullptr);
-        std::string filename = PREFIX + os.str();
-        db                   = new TestImplRocksDBStore(filename);
-
+        auto filename = PREFIX + os.str();
+        db            = new TestImplRocksDBStore(filename);
+        fac           = new TestFactory();
         // Initialize batch blocks and keys
-        // blocks.reserve(size);
-        // keys.reserve(size);
         for (size_t i = 0; i < size; ++i) {
-            RecordPtr rec = FakeRecordPtr(rand() % 100 + 1, rand() % 100 + 1);
+            RecordPtr rec = fac->CreateRecordPtr(fac->GetRand() % 100 + 1, fac->GetRand() % 100 + 1, true);
             records[i]    = rec;
-            keys[i]       = rec->cBlock->GetHash();
+            keys[i]       = rec->cblock->GetHash();
         }
     }
 
@@ -75,26 +74,14 @@ protected:
         std::string cmd = "exec rm -r " + PREFIX;
         system(cmd.c_str());
         delete db;
+        delete fac;
         records.clear();
         keys.clear();
-    }
-
-    // Creates a random string using numbers and alphabet with given length
-    const std::string RandomString(const int len) {
-        static const char alph[] = "0123456789"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "abcdefghijklmnopqrstuvwxyz";
-        char s[len + 1];
-        for (int i = 0; i < len; ++i) {
-            s[i] = alph[rand() % (sizeof(alph) - 1)];
-        }
-        s[len] = 0;
-        std::string result(s);
-        return result;
     }
 };
 
 TestImplRocksDBStore* TestRocksDB::db       = nullptr;
+TestFactory* TestRocksDB::fac               = nullptr;
 size_t TestRocksDB::size                    = 1000;
 std::vector<RecordPtr> TestRocksDB::records = std::vector<RecordPtr>(size);
 std::vector<uint256> TestRocksDB::keys      = std::vector<uint256>(size);
@@ -104,51 +91,51 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
     std::string key          = "a random key";
     std::string value        = "a random value";
     // Insert
-    EXPECT_TRUE(db->Write(column, key, value));
-    EXPECT_EQ(value, db->Get(column, key));
+    ASSERT_TRUE(db->Write(column, key, value));
+    ASSERT_EQ(value, db->Get(column, key));
     // Delete
     db->Delete(column, key);
-    EXPECT_EQ("", db->Get(column, key));
+    ASSERT_EQ("", db->Get(column, key));
 }
 
 TEST_F(TestRocksDB, batch_insertion) {
     const std::string column                 = "default";
     std::map<std::string, std::string> batch = {};
     for (int i = 0; i < 1000; ++i) {
-        auto key   = RandomString(32);
-        auto value = RandomString(500);
+        auto key   = fac->GetRandomString(32);
+        auto value = fac->GetRandomString(500);
         batch[key] = value;
     }
     db->WriteBatch(column, batch);
     for (auto const& [key, value] : batch) {
-        EXPECT_EQ(value, db->Get(column, key));
+        ASSERT_EQ(value, db->Get(column, key));
     }
 }
 
 TEST_F(TestRocksDB, write_single_block) {
-    RecordPtr rec = FakeRecordPtr(1, 1);
-    EXPECT_TRUE(db->WriteRecord(rec));
+    RecordPtr rec = fac->CreateRecordPtr(1, 1, true);
+    ASSERT_TRUE(db->WriteRecord(rec));
 
-    std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cBlock->GetHash());
-    EXPECT_EQ(*rec, *value);
+    std::unique_ptr<NodeRecord> value = db->GetRecord(rec->cblock->GetHash());
+    ASSERT_EQ(*rec, *value);
 }
 
 TEST_F(TestRocksDB, write_batch_blocks) {
-    EXPECT_TRUE(db->WriteRecords(records));
+    ASSERT_TRUE(db->WriteRecords(records));
 
     for (size_t i = 0; i < size; ++i) {
         auto pblock = db->GetRecord(keys[i]);
-        EXPECT_EQ(*records[i], *pblock);
+        ASSERT_EQ(*records[i], *pblock);
     }
 }
 
 TEST_F(TestRocksDB, write_blocks_one_by_one) {
     for (size_t i = 0; i < size; ++i) {
-        EXPECT_TRUE(db->WriteRecord(records[i]));
+        ASSERT_TRUE(db->WriteRecord(records[i]));
     }
 
     for (size_t i = 0; i < size; ++i) {
         auto pblock = db->GetRecord(keys[i]);
-        EXPECT_EQ(*records[i], *pblock);
+        ASSERT_EQ(*records[i], *pblock);
     }
 }

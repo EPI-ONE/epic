@@ -1,6 +1,7 @@
 #ifndef __SRC_CHAIN_H__
 #define __SRC_CHAIN_H__
 
+#include <deque>
 #include <unordered_map>
 #include <vector>
 
@@ -14,15 +15,22 @@ public:
     Chain() : Chain(false) {}
     Chain(bool mainchain);
     Chain(const Chain&);
+
+    // Create a forked chain from $chain which has the new fork in $pfork;
+    // In other words, the last common chain state is the previous one of the last record of $forkedRecord.
+    // Moreover, it does not contain the corresponding chain state of this $pfork.
+    // We have to further verify it to update chain state.
+    Chain(const Chain& chain, ConstBlockPtr pfork);
+
+    // now for test only
+    Chain(const std::deque<ChainStatePtr>& states, bool ismain=false) : ismainchain_(ismain), states_(states) {}
+
     // add block to this chain
-    void AddBlock(const std::shared_ptr<const Block> pblock);
+    void AddBlock(ConstBlockPtr pblock);
 
-    // find the most recent common milestone compared with the other chain
-    std::shared_ptr<ChainState> FindSplit(std::shared_ptr<const Chain> pchain) const;
+    ChainStatePtr GetChainHead() const;
 
-    std::shared_ptr<ChainState> GetChainHead() const;
-
-    void AddPendingBlock(Block& block);
+    void AddPendingBlock(ConstBlockPtr pblock);
 
     void RemovePendingBlock(const uint256& hash);
 
@@ -31,26 +39,43 @@ public:
     std::size_t GetPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
-    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const Block& pblock);
+    std::vector<ConstBlockPtr> GetSortedSubgraph(ConstBlockPtr pblock);
 
-    std::vector<std::shared_ptr<const Block>> GetSortedSubgraph(const std::shared_ptr<const Block> pblock);
+    friend inline bool operator<(const Chain& a, const Chain& b) {
+        return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
+    }
+
+    inline bool IsMainChain() const {
+        return ismainchain_;
+    }
+
+    const std::deque<ChainStatePtr>& GetStates() const {
+        return states_; 
+    }
 
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
 
-    // store a (probabily recent) list of chain snapshots on milestones
-    std::vector<std::shared_ptr<ChainState>> vmilestones_;
+    // store a (probabily recent) list of milestones
+    // TODO: thinking of a lifetime mechanism for it
+    std::deque<ChainStatePtr> states_;
     // store blocks not yet verified in this chain
-    std::unordered_map<uint256, std::shared_ptr<const Block>> pendingBlocks_;
+    std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
+    // store blocks verified in this chain
+    std::unordered_map<uint256, RecordPtr> recordHistory_;
 
-    bool IsMilestone(const std::shared_ptr<Block> pblock);
+    bool IsMilestone(const ConstBlockPtr pblock);
 
     // when we add a milestone block to this chain, we start verification
-    std::shared_ptr<ChainState> MilestoneVerify(const RecordPtr pblock);
+    // TODO: should return tx ouput changes
+    void Verify(std::vector<RecordPtr>&);
 
     // do validity check on the block
-    void Validate(const std::shared_ptr<Block> pblock);
+    // TODO: should return tx ouput changes
+    void Validate(NodeRecord& record);
 };
+
+typedef std::unique_ptr<Chain> ChainPtr;
 
 #endif // __SRC_CHAIN_H__

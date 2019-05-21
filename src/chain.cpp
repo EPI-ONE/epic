@@ -2,17 +2,32 @@
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
-    vmilestones_   = {std::make_shared<ChainState>()};
+    recordHistory_ = {};
+    states_ = {std::make_shared<ChainState>()};
 }
 
-std::shared_ptr<ChainState> Chain::GetChainHead() const {
-    return vmilestones_.front();
+ChainStatePtr Chain::GetChainHead() const {
+    return states_.back();
 }
 
-void Chain::AddPendingBlock(Block& block) {
-    pendingBlocks_.insert_or_assign(block.GetHash(), std::make_shared<Block>(block));
+Chain::Chain(const Chain& chain)
+    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
+
+Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
+    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_), recordHistory_(chain.recordHistory_){
+    ChainStatePtr cursor = chain.GetChainHead();
+    uint256 target       = pfork->GetMilestoneHash();
+
+    for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
+        // TODO: add logic to pendingBlocks_ and recordHistory_ now
+        states_.erase(std::next(it).base());
+    }
 }
 
+void Chain::AddPendingBlock(ConstBlockPtr pblock) {
+    pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+}
+    
 void Chain::RemovePendingBlock(const uint256& hash) {
     pendingBlocks_.erase(hash);
 }
@@ -25,14 +40,10 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<std::shared_ptr<const Block>> Chain::GetSortedSubgraph(const Block& pblock) {
-    return GetSortedSubgraph(std::make_shared<const Block>(pblock));
-}
-
-std::vector<std::shared_ptr<const Block>> Chain::GetSortedSubgraph(const std::shared_ptr<const Block> pblock) {
-    std::vector<std::shared_ptr<const Block>> stack = {pblock};
-    std::vector<std::shared_ptr<const Block>> result;
-    std::shared_ptr<const Block> cursor;
+std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+    std::vector<ConstBlockPtr> stack = {pblock};
+    std::vector<ConstBlockPtr> result;
+    ConstBlockPtr cursor;
 
     /* reserve a good chunk of memory for efficiency;
      * please note that n/2 is a not really precise

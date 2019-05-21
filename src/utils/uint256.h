@@ -86,19 +86,6 @@ public:
                ((uint64_t) ptr[7]) << 56;
     }
 
-    void randomize() {
-        std::size_t n = WIDTH > 8 ? 8 : WIDTH;
-
-        /* draw 64 bit */
-        unsigned long long x;
-        while (!_rdrand64_step(&x))
-            ;
-
-        for (std::size_t i = 0; i < n; i++) {
-            data[i] = ((uint8_t*) &x)[i];
-        }
-    }
-
     template <typename Stream>
     void Serialize(Stream& s) const {
         s.write((char*) data, sizeof(data));

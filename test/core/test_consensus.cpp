@@ -2,32 +2,25 @@
 #include <gtest/gtest.h>
 #include <random>
 
+#include "block.h"
 #include "caterpillar.h"
 #include "chain.h"
 #include "dag_manager.h"
-#include "test-methods/block-factory.h"
-#include "utxo.h"
 #include "key.h"
+#include "test_factory.h"
+#include "utxo.h"
 
-std::shared_ptr<NodeRecord> NodeFactory(uint32_t _time) {
-    auto pb = std::make_shared<BlockNet>();
-    pb->SetDifficultyTarget(params.maxTarget.GetCompact());
-    pb->SetTime(_time);
-    pb->Solve();
-    return std::make_shared<NodeRecord>(pb);
-}
-
-class TestConsensus : public testing::Test {};
+class TestConsensus : public testing::Test {
+public:
+    TestFactory fac;
+};
 
 TEST_F(TestConsensus, SyntaxChecking) {
     BlockNet b = GENESIS;
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    uint256 rand256;
-    rand256.randomize();
-    uint256 zeros;
-    BlockNet block = Block(1, rand256, zeros, rand256, time(nullptr), 1, 1);
+    BlockNet block = BlockNet(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 
@@ -35,7 +28,7 @@ TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
     NodeRecord bs = GENESIS_RECORD;
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
-    BlockNet b1 = FakeBlock();
+    BlockNet b1 = fac.CreateBlockNet();
     NodeRecord bs1(b1);
 
     // test without a tx
@@ -56,7 +49,7 @@ TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
     BlockNet b = GENESIS;
     EXPECT_EQ(VStream(b).size(), b.GetOptimalEncodingSize());
 
-    BlockNet b1 = FakeBlock();
+    BlockNet b1 = fac.CreateBlockNet();
 
     // test without a tx
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
@@ -72,7 +65,7 @@ TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
 }
 
 TEST_F(TestConsensus, UTXO) {
-    BlockNet b  = FakeBlock(1, 67);
+    BlockNet b  =  fac.CreateBlockNet(1, 67);
     UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
@@ -83,30 +76,21 @@ TEST_F(TestConsensus, UTXO) {
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     std::array<std::shared_ptr<ChainState>, 100> arrayMs;
-    arrayMs[0] = std::make_shared<ChainState>();
+    arrayMs[0] = make_shared_ChainState();
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    uint32_t simulatedTime = 1556784921L; // arbitrarily take a starting point
-    std::default_random_engine generator;
-    std::uniform_int_distribution<uint32_t> distribution(1, 30);
-
-    arrayMs[1] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[0]);
-
     size_t LOOPS = 100;
-    for (size_t i = 2; i < LOOPS; i++) {
-        simulatedTime += distribution(generator);
-        arrayMs[i] = std::make_shared<ChainState>(NodeFactory(simulatedTime), arrayMs[i - 1]);
-
+    for (size_t i = 1; i < LOOPS; i++) {
+        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i-1]);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % params.timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
             ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
             ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if (((i + 1) % params.timeInterval) != 1) {
+        } else if (i > 1 && ((i + 1) % params.timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
-
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
@@ -114,8 +98,28 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 
 TEST_F(TestConsensus, Chain) {
     Chain chain1{};
-    Chain chain2(false);
+    Chain chain2{false};
     ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+
+    // construct the main chain and fork
+    std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};
+    ConstBlockPtr forkblk;
+    ChainStatePtr split;
+    for (int i = 1; i < 10; i++) { // reach height 9
+        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1]));
+        if (i == 5) {
+            // create a forked chain state at height 5
+            auto blk = fac.CreateBlock();
+            split    = dqcs[i];
+            blk.SetMilestoneHash(split->GetMilestoneHash());
+            blk.Solve();
+            forkblk = std::make_shared<const BlockNet>(blk);
+        }
+    }
+    Chain chain{dqcs, true}, fork{chain, forkblk};
+
+    ASSERT_EQ(fork.GetChainHead()->height, 5);
+    ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
 TEST_F(TestConsensus, AddNewBlocks) {
@@ -133,7 +137,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     // Construct a fully connected and syntatical valid random graph
     ECC_Start();
     for (std::size_t i = 1; i < n; ++i) {
-        BlockNet b = FakeBlock(rand() % 11 + 1, rand() % 11 + 1);
+        BlockNet b = fac.CreateBlockNet(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
         b.SetPrevHash(blocks[rand() % i]->GetHash());
         b.SetTipHash(blocks[rand() % i]->GetHash());

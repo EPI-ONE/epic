@@ -22,15 +22,15 @@ public:
 
     // A list of hashes we've sent out in GetData requests.
     // It can be operated by multi threads.
-    std::list<uint256> downloading;
+    std::vector<uint256> downloading;
 
     // A list of tasks we've prepared to deliver to a Peer.
     // Operated by multi threads.
-    std::list<GetDataTask> preDownloading;
+    std::vector<GetDataTask> preDownloading;
 
     // A list of milestone chains, with first element being the main chain
     // and others being forked chains.
-    std::list<Chain> milestoneChains;
+    std::priority_queue<ChainPtr> milestoneChains;
 
     // Indicator of whether we are synching with some peer.
     // Needs atomic set and get operations since is accessible by multiple threads.
@@ -77,9 +77,8 @@ private:
     // Returns whether the hash is removed successfully.
     bool UpdateDownloadingQueue(uint256& hash);
 
-    // Swaps a forked chain with the main chain if the forked chain wins a competition.
-    // Rolls back and rebuild the ledger if neccessary.
-    void SwitchChain();
+    // Delete the chain who loses in the race competition
+    void DeleteChain(ChainPtr);
 };
 
 static const auto& DAG = DAGManager::GetDAGManager();
