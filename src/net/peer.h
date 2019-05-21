@@ -62,11 +62,11 @@ public:
 
     const std::atomic_uint64_t& GetLastPingTime() const;
 
-    void SetLastPingTime(const uint64_t lastPingTime_);
+    void SetLastPingTime(uint64_t lastPingTime_);
 
     const std::atomic_uint64_t& GetLastPongTime() const;
 
-    void SetLastPongTime(const uint64_t lastPongTime_);
+    void SetLastPongTime(uint64_t lastPongTime_);
 
     size_t GetNPingFailed() const;
 

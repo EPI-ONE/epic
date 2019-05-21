@@ -3,6 +3,7 @@
 
 #include <ctime>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -107,13 +108,13 @@ private:
      * @param inbound
      * @return
      */
-    Peer* CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
+    std::shared_ptr<Peer> CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
 
     /*
      * release resources of a peer and then delete it
      * @param peer
      */
-    void DeletePeer(Peer* peer);
+    void DeletePeer(const std::shared_ptr<Peer>& peer);
 
     /*
      * check if we have connected to the ip address
@@ -126,14 +127,14 @@ private:
      * @param connection_handle
      * @return
      */
-    Peer* GetPeer(const void* connection_handle);
+    std::shared_ptr<Peer> GetPeer(const void* connection_handle);
 
     /**
      * add a peer into peer map
      * @param handle
      * @param peer
      */
-    void AddPeer(const void* handle, Peer* peer);
+    void AddPeer(const void* handle, const std::shared_ptr<Peer>& peer);
 
     /**
      * add a connected address
@@ -201,17 +202,17 @@ private:
      */
 
     // last time of sending local address
-    long lastSendLocalAddressTime;
+    long lastSendLocalAddressTime{0};
 
     /*
      * internal data structures
      */
 
     // peers' lock
-    std::mutex peerLock_;
+    std::recursive_mutex peerLock_;
 
     // a map to save all peers
-    std::unordered_map<const void*, Peer*> peerMap_;
+    std::unordered_map<const void*, std::shared_ptr<Peer>> peerMap_;
 
     // a map to save pending peers
     std::unordered_map<IPAddress, uint64_t> pending_peers;

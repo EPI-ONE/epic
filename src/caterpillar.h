@@ -34,7 +34,7 @@ public:
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
      */
-    bool AddNewBlock(const ConstBlockPtr& block, const Peer* peer);
+    bool AddNewBlock(const ConstBlockPtr& block, std::shared_ptr<Peer> peer);
 
     /*
      * Blocks the main thread from going forward

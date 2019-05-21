@@ -45,15 +45,6 @@ void PeerManager::Stop() {
     if (openConnectionTask_.joinable()) {
         openConnectionTask_.detach();
     }
-
-
-    std::unique_lock<std::mutex> lock(peerLock_);
-    for (auto peer_entry : peerMap_) {
-        delete peer_entry.second;
-    }
-
-    peerMap_.clear();
-    connectedAddress_.clear();
 }
 
 void PeerManager::OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound) {
@@ -65,7 +56,7 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
         return;
     }
 
-    Peer* peer = CreatePeer(connection_handle, *net_address, inbound);
+    auto peer = CreatePeer(connection_handle, *net_address, inbound);
 
     AddPeer(connection_handle, peer);
     UpdatePendingPeers(*net_address);
@@ -84,31 +75,25 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
 }
 
 void PeerManager::OnConnectionClosed(const void* connection_handle) {
-    Peer* p = nullptr;
     {
-        std::unique_lock<std::mutex> lk(peerLock_);
+        std::unique_lock<std::recursive_mutex> lk(peerLock_);
         auto peer = peerMap_.find(connection_handle)->second;
         if (peer) {
-            p = peer;
+            RemoveAddr(peer->address);
+            DeletePeer(peer);
             peerMap_.erase(connection_handle);
         }
     }
-    if (p) {
-        RemoveAddr(p->address);
-        DeletePeer(p);
-    }
 }
 
-Peer* PeerManager::CreatePeer(void* connection_handle, NetAddress& address, bool inbound) {
-    Peer* peer = new Peer(address, connection_handle, inbound, addressManager_->IsSeedAddress(address),
+std::shared_ptr<Peer> PeerManager::CreatePeer(void* connection_handle, NetAddress& address, bool inbound) {
+    return std::make_shared<Peer>(address, connection_handle, inbound, addressManager_->IsSeedAddress(address),
         connectionManager_, addressManager_);
-    return peer;
 }
 
-void PeerManager::DeletePeer(Peer* peer) {
+void PeerManager::DeletePeer(const std::shared_ptr<Peer>& peer) {
     spdlog::info("{} Peer died,  ({} connected)", peer->address.ToString(), GetConnectedPeerSize());
     // TODO remove some tasks or data from peer
-    delete peer;
 }
 
 bool PeerManager::Bind(NetAddress& bindAddress) {
@@ -130,12 +115,12 @@ bool PeerManager::ConnectTo(const std::string& connectTo) {
 }
 
 size_t PeerManager::GetConnectedPeerSize() {
-    std::unique_lock<std::mutex> lk(peerLock_);
+    std::unique_lock<std::recursive_mutex> lk(peerLock_);
     return peerMap_.size();
 }
 
 size_t PeerManager::GetFullyConnectedPeerSize() {
-    std::unique_lock<std::mutex> lk(peerLock_);
+    std::unique_lock<std::recursive_mutex> lk(peerLock_);
     size_t count = 0;
     for (auto& it : peerMap_) {
         if (it.second->isFullyConnected) {
@@ -162,7 +147,7 @@ void PeerManager::HandleMessage() {
     while (!interrupt_) {
         NetMessage msg;
         if (connectionManager_->ReceiveMessage(msg)) {
-            Peer* msg_from = GetPeer(msg.GetConnectionHandle());
+            auto msg_from = GetPeer(msg.GetConnectionHandle());
             if (!msg_from) {
                 spdlog::warn("can't find the peer with the handle {}", msg.GetConnectionHandle());
                 continue;
@@ -221,7 +206,7 @@ void PeerManager::ScheduleTask() {
     while (!interrupt_) {
         sleep(1 * 60);
         for (auto& it : peerMap_) {
-            Peer* peer = it.second;
+            std::shared_ptr<Peer> peer = it.second;
             if (peer->isFullyConnected) {
                 // check ping timeout
                 if (peer->GetLastPingTime() > peer->GetLastPongTime() + kPingWaitTimeout ||
@@ -251,14 +236,14 @@ void PeerManager::ScheduleTask() {
     }
 }
 
-Peer* PeerManager::GetPeer(const void* connection_handle) {
-    std::unique_lock<std::mutex> lk(peerLock_);
+std::shared_ptr<Peer> PeerManager::GetPeer(const void* connection_handle) {
+    std::unique_lock<std::recursive_mutex> lk(peerLock_);
     auto it = peerMap_.find(connection_handle);
     return it == peerMap_.end() ? nullptr : it->second;
 }
 
-void PeerManager::AddPeer(const void* handle, Peer* peer) {
-    std::unique_lock<std::mutex> lk(peerLock_);
+void PeerManager::AddPeer(const void* handle, const std::shared_ptr<Peer>& peer) {
+    std::unique_lock<std::recursive_mutex> lk(peerLock_);
     peerMap_.insert(std::make_pair(handle, peer));
 }
 

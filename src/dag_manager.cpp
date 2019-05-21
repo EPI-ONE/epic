@@ -1,11 +1,11 @@
 #include "dag_manager.h"
 
 DAGManager::DAGManager() {
-    syncingPeer = nullptr;
+    syncingPeer     = nullptr;
     isBatchSynching = false;
 }
 
-void DAGManager::RequestInv(const uint256&, const size_t&, const Peer*) {}
+void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer> peer) {}
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // TODO: For test only!
