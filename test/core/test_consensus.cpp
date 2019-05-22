@@ -182,7 +182,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     // Initialize DB and pending with genesis block
     cat.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
+    DAG.AddBlockToPending(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
         cat.AddNewBlock(block, nullptr);
@@ -197,7 +197,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         EXPECT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
+    EXPECT_EQ(DAG.GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());

@@ -60,7 +60,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
                 mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
 
             if (peer) {
-                DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
+                DAG.RequestInv(Hash::GetZeroHash(), 5, peer);
             }
 
             return false;
@@ -97,7 +97,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
         //////////////////////////////////////////////////
 
         Cache(blk);
-        DAG->AddBlockToPending(blk);
+        DAG.AddBlockToPending(blk);
         ReleaseBlocks(blk->GetHash());
 
         return true;

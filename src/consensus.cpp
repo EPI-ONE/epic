@@ -114,7 +114,7 @@ void NodeRecord::Serialize(VStream& s) const {
 }
 
 void NodeRecord::Deserialize(VStream& s) {
-    cblock = std::make_shared<BlockNet>(s);
+    cblock     = std::make_shared<BlockNet>(s);
     uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);
@@ -128,7 +128,7 @@ void NodeRecord::Deserialize(VStream& s) {
     isMilestone                 = msFlag == IS_TRUE_MILESTONE;
 
     if (msFlag > 0) {
-        snapshot = std::make_shared<ChainState>(s);
+        snapshot                = std::make_shared<ChainState>(s);
     }
 }
 

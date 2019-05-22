@@ -22,7 +22,7 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 
 TEST_F(DFSTest, complex_test) {
     Chain chain;
-    std::size_t N = 10; 
+    std::size_t N = 10;
     std::vector<BlockNet> blocks;
     blocks.reserve(N);
 
@@ -82,15 +82,15 @@ TEST_F(DFSTest, complex_test) {
     ASSERT_EQ(graph.size(), 9);
 
     /* check if the result matches the expectation */
-    ASSERT_EQ(graph[0]->GetTime(), 8);
-    ASSERT_EQ(graph[1]->GetTime(), 5);
-    ASSERT_EQ(graph[2]->GetTime(), 4);
-    ASSERT_EQ(graph[3]->GetTime(), 6);
-    ASSERT_EQ(graph[4]->GetTime(), 2);
-    ASSERT_EQ(graph[5]->GetTime(), 7);
-    ASSERT_EQ(graph[6]->GetTime(), 1);
-    ASSERT_EQ(graph[7]->GetTime(), 3);
-    ASSERT_EQ(graph[8]->GetTime(), 0);
+    ASSERT_EQ(graph[0]->cblock->GetTime(), 8);
+    ASSERT_EQ(graph[1]->cblock->GetTime(), 5);
+    ASSERT_EQ(graph[2]->cblock->GetTime(), 4);
+    ASSERT_EQ(graph[3]->cblock->GetTime(), 6);
+    ASSERT_EQ(graph[4]->cblock->GetTime(), 2);
+    ASSERT_EQ(graph[5]->cblock->GetTime(), 7);
+    ASSERT_EQ(graph[6]->cblock->GetTime(), 1);
+    ASSERT_EQ(graph[7]->cblock->GetTime(), 3);
+    ASSERT_EQ(graph[8]->cblock->GetTime(), 0);
 
     /* populate the pending Block
      * map for the second time for
@@ -114,12 +114,12 @@ TEST_F(DFSTest, complex_test) {
     ASSERT_EQ(graph.size(), 8);
 
     /* check if the result matches the expectation */
-    ASSERT_EQ(graph[0]->GetTime(), 8);
-    ASSERT_EQ(graph[1]->GetTime(), 5);
-    ASSERT_EQ(graph[2]->GetTime(), 4);
-    ASSERT_EQ(graph[3]->GetTime(), 7);
-    ASSERT_EQ(graph[4]->GetTime(), 6);
-    ASSERT_EQ(graph[5]->GetTime(), 1);
-    ASSERT_EQ(graph[6]->GetTime(), 3);
-    ASSERT_EQ(graph[7]->GetTime(), 9);
+    ASSERT_EQ(graph[0]->cblock->GetTime(), 8);
+    ASSERT_EQ(graph[1]->cblock->GetTime(), 5);
+    ASSERT_EQ(graph[2]->cblock->GetTime(), 4);
+    ASSERT_EQ(graph[3]->cblock->GetTime(), 7);
+    ASSERT_EQ(graph[4]->cblock->GetTime(), 6);
+    ASSERT_EQ(graph[5]->cblock->GetTime(), 1);
+    ASSERT_EQ(graph[6]->cblock->GetTime(), 3);
+    ASSERT_EQ(graph[7]->cblock->GetTime(), 9);
 }

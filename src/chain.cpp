@@ -4,7 +4,7 @@
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
     recordHistory_ = {};
-    states_        = {std::make_shared<ChainState>()};
+    states_        = {GENESIS_RECORD.snapshot};
 }
 
 ChainStatePtr Chain::GetChainHead() const {
@@ -25,8 +25,9 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     }
 }
 
-void Chain::AddPendingBlock(ConstBlockPtr pblock) {
+MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+    return IsMilestone(pblock);
 }
 
 void Chain::RemovePendingBlock(const uint256& hash) {
@@ -41,9 +42,9 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+std::vector<RecordPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
     std::vector<ConstBlockPtr> stack = {pblock};
-    std::vector<ConstBlockPtr> result;
+    std::vector<RecordPtr> result;
     ConstBlockPtr cursor;
 
     /* reserve a good chunk of memory for efficiency;
@@ -75,7 +76,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) 
 
         uint256 cursorHash = cursor->GetHash();
         pendingBlocks_.erase(cursorHash);
-        result.push_back(cursor);
+        result.push_back(std::make_shared<NodeRecord>(cursor));
         stack.pop_back();
     }
 
@@ -98,3 +99,25 @@ bool Chain::IsValidDistance(const RecordPtr b, const arith_uint256 ms_hashrate) 
     auto allowed_distance = (params.maxTarget / params.sortitionCoefficient) * S / (ms_hashrate * t);
     return current_distance <= allowed_distance;
 }
+
+bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+}
+
+MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
+    auto entry = recordHistory_.find(pblock->GetMilestoneHash());
+
+    if (entry != recordHistory_.end()) {
+        auto& ms = entry->second->snapshot;
+        if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
+            return IS_TRUE_MILESTONE;
+        }
+        if (ms && CheckMsPOW(pblock, ms)) {
+            return IS_FAKE_MILESTONE;
+        }
+    }
+    return IS_NOT_MILESTONE;
+}
+
+void Chain::Verify(std::vector<RecordPtr>&) {}
+void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
