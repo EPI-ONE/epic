@@ -32,8 +32,7 @@ public:
         int value;
 
     public:
-        Bar(int value_) : value(value_) {
-        }
+        Bar(int value_) : value(value_) {}
         int f4() {
             return value;
         }

@@ -20,7 +20,8 @@ TEST_F(TestConsensus, SyntaxChecking) {
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    BlockNet block = BlockNet(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
+    BlockNet block =
+        BlockNet(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 
@@ -65,7 +66,7 @@ TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
 }
 
 TEST_F(TestConsensus, UTXO) {
-    BlockNet b  =  fac.CreateBlockNet(1, 67);
+    BlockNet b  = fac.CreateBlockNet(1, 67);
     UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
@@ -81,7 +82,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 
     size_t LOOPS = 100;
     for (size_t i = 1; i < LOOPS; i++) {
-        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i-1]);
+        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1]);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % params.timeInterval) == 0) {
@@ -150,10 +151,11 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
             CKey seckey = CKey();
             seckey.MakeNewKey(true);
-            CPubKey pubkey = seckey.GetPubKey();
+            CPubKey pubkey     = seckey.GetPubKey();
             uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
             VStream v(pubkeyHash);
-            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v))); b.AddTransaction(tx);
+            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v)));
+            b.AddTransaction(tx);
         }
         b.Solve();
 

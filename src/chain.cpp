@@ -1,20 +1,21 @@
 #include "chain.h"
+#include "caterpillar.h"
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
     recordHistory_ = {};
-    states_ = {std::make_shared<ChainState>()};
+    states_        = {std::make_shared<ChainState>()};
 }
 
 ChainStatePtr Chain::GetChainHead() const {
     return states_.back();
 }
 
-Chain::Chain(const Chain& chain)
-    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
+Chain::Chain(const Chain& chain) : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
 
 Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
-    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_), recordHistory_(chain.recordHistory_){
+    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
+      recordHistory_(chain.recordHistory_) {
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
 
@@ -27,7 +28,7 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
 }
-    
+
 void Chain::RemovePendingBlock(const uint256& hash) {
     pendingBlocks_.erase(hash);
 }
@@ -80,4 +81,20 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) 
 
     result.shrink_to_fit();
     return result;
+}
+
+bool Chain::IsValidDistance(const RecordPtr b, const arith_uint256 ms_hashrate) {
+    auto current_distance = UintToArith256(b->cblock->GetTxHash()) ^ UintToArith256(b->cblock->GetPrevHash());
+    arith_uint256 S       = 0;
+    arith_uint256 t       = 0;
+
+    auto curr = CAT->GetRecord(b->cblock->GetPrevHash());
+    for (size_t i = 0; i < params.sortitionThreshold && *curr != GENESIS_RECORD;
+         ++i, curr = CAT->GetRecord(curr->cblock->GetPrevHash())) {
+        S += curr->cblock->GetChainWork();
+        t = curr->cblock->GetTime();
+    }
+
+    auto allowed_distance = (params.maxTarget / params.sortitionCoefficient) * S / (ms_hashrate * t);
+    return current_distance <= allowed_distance;
 }
