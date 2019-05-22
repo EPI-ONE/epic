@@ -6,7 +6,7 @@
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
     recordHistory_ = {};
-    states_        = {std::make_shared<ChainState>()};
+    states_        = {GENESIS_RECORD.snapshot};
 }
 
 ChainStatePtr Chain::GetChainHead() const {
@@ -33,8 +33,9 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     // note that we don't do any verification here
 }
 
-void Chain::AddPendingBlock(ConstBlockPtr pblock) {
+MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+    return IsMilestone(pblock);
 }
 
 void Chain::RemovePendingBlock(const uint256& hash) {
@@ -275,3 +276,24 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
     }
     return result->second;
 }
+
+bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+}
+
+MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
+    auto entry = recordHistory_.find(pblock->GetMilestoneHash());
+
+    if (entry != recordHistory_.end()) {
+        auto& ms = entry->second->snapshot;
+        if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
+            return IS_TRUE_MILESTONE;
+        }
+        if (ms && CheckMsPOW(pblock, ms)) {
+            return IS_FAKE_MILESTONE;
+        }
+    }
+    return IS_NOT_MILESTONE;
+}
+
+void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}

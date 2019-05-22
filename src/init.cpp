@@ -1,6 +1,5 @@
 #include "init.h"
 
-
 std::unique_ptr<Config> config;
 std::unique_ptr<Caterpillar> CAT;
 
