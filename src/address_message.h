@@ -2,6 +2,7 @@
 #define __SRC_ADDRESS_MESSAGE_H__
 
 #include <net_address.h>
+#include <utils/stream.h>
 #include <vector>
 
 #include "serialize.h"
@@ -14,11 +15,11 @@ public:
 
     AddressMessage() = default;
 
-    explicit AddressMessage(std::vector<NetAddress>& address_list) : addressList(std::move(address_list)) {}
-
-    ~AddressMessage() {
-        addressList.clear();
+    explicit AddressMessage(VStream& stream) {
+        Deserialize(stream);
     }
+
+    explicit AddressMessage(std::vector<NetAddress>& address_list) : addressList(std::move(address_list)) {}
 
     void AddAddress(NetAddress& addr) {
         addressList.push_back(addr);

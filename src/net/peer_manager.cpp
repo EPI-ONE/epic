@@ -175,7 +175,7 @@ void PeerManager::HandleMessage() {
                 spdlog::warn("can't find the peer with the handle {}", msg.GetConnectionHandle());
                 continue;
             }
-            msg_from->ProcessMessage(msg);
+            (*msg_from)->ProcessMessage(msg);
         }
     }
 }
@@ -270,10 +270,13 @@ void PeerManager::ScheduleTask() {
     }
 }
 
-std::shared_ptr<Peer> PeerManager::GetPeer(const void* connection_handle) {
+std::optional<PeerPtr> PeerManager::GetPeer(const void* connection_handle) {
     std::unique_lock<std::recursive_mutex> lk(peerLock_);
     auto it = peerMap_.find(connection_handle);
-    return it == peerMap_.end() ? nullptr : it->second;
+    if (it == peerMap_.end()) {
+        return {};
+    }
+    return it->second;
 }
 
 void PeerManager::AddPeer(const void* handle, const std::shared_ptr<Peer>& peer) {
@@ -310,5 +313,32 @@ void PeerManager::SendLocalAddresses() {
             NetMessage message(it.first, ADDR, data);
             SendMessage(message);
         }
+    }
+}
+
+void PeerManager::CheckPendingPeers() {
+    std::unique_lock<std::mutex> lk(addressLock_);
+    for (auto it = pending_peers.begin(); it != pending_peers.end();) {
+        if (it->second + 60 < time(nullptr)) {
+            pending_peers.erase(it++);
+        } else {
+            it++;
+        }
+    }
+}
+
+void PeerManager::UpdatePendingPeers(IPAddress& address) {
+    std::unique_lock<std::mutex> lk(addressLock_);
+    auto it = pending_peers.find(address);
+    if (it != pending_peers.end()) {
+        pending_peers.erase(it);
+    }
+}
+
+void PeerManager::RelayBlock(ConstBlockPtr block, PeerPtr msg_from) {
+    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    for (auto& it : peerMap_) {
+        NetMessage msg(msg_from->connection_handle, BLOCK, VStream(block));
+        it.second->SendMessage(msg);
     }
 }

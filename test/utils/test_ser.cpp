@@ -5,6 +5,7 @@
 #include "consensus.h"
 #include "key.h"
 
+
 typedef Tasm::Listing Listing;
 
 class TestSer : public testing::Test {
@@ -279,3 +280,4 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
 }
+

@@ -1,19 +1,21 @@
 #include "init.h"
-#include "dag_manager.h"
-#include "rpc_server.h"
 
 #include <atomic>
-#include <net/peer_manager.h>
 #include <csignal>
+#include <net/peer_manager.h>
 
-std::unique_ptr<Config> config;
+#include "dag_manager.h"
+#include "peer_manager.h"
+#include "rpc_server.h"
 
 Block GENESIS;
 NodeRecord GENESIS_RECORD;
+std::unique_ptr<Config> config;
+std::unique_ptr<PeerManager> peerManager;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
-std::unique_ptr<PeerManager> peer_manager;
 std::unique_ptr<RPCServer> rpc_server;
+
 static std::atomic_bool b_shutdown = false;
 typedef void (*signal_handler_t)(int);
 
@@ -82,9 +84,10 @@ void Init(int argc, char* argv[]) {
     }
 
     file::SetDataDirPrefix(config->GetRoot());
-    CAT          = std::make_unique<Caterpillar>(config->GetDBPath());
-    DAG          = std::make_unique<DAGManager>();
-    peer_manager = std::make_unique<PeerManager>();
+    CAT         = std::make_unique<Caterpillar>(config->GetDBPath());
+    DAG         = std::make_unique<DAGManager>();
+    peerManager = std::make_unique<PeerManager>();
+
     if (!(config->GetDisableRPC())) {
         std::string rpc_addr_str = "0.0.0.0:" + std::to_string(config->GetRPCPort());
         auto rpcAddress          = NetAddress::GetByIP(rpc_addr_str);
@@ -178,8 +181,8 @@ void LoadConfigFile() {
     // network config
     auto network_config = configContent->get_table("network");
     if (network_config) {
-        auto ip   = network_config->get_as<std::string>("ip");
-        auto port = network_config->get_as<uint16_t>("port");
+        auto ip          = network_config->get_as<std::string>("ip");
+        auto port        = network_config->get_as<uint16_t>("port");
         auto networkType = network_config->get_as<std::string>("type");
         if (ip && config->GetBindAddress() == config->defaultIP) {
             config->SetBindAddress(*ip);
@@ -268,10 +271,10 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 }
 
 bool Start() {
-    if (!peer_manager->Init(config)) {
+    if (!peerManager->Init(config)) {
         return false;
     }
-    peer_manager->Start();
+    peerManager->Start();
     if (!(config->GetDisableRPC())) {
         rpc_server->Start();
     }
@@ -280,10 +283,14 @@ bool Start() {
 
 void ShutDown() {
     spdlog::info("shutdown start");
-    peer_manager->Stop();
+
     if (!(config->GetDisableRPC())) {
         rpc_server->Shutdown();
     }
+
+    peerManager->Stop();
+    DAG->Stop();
+    CAT->Stop();
     CAT.reset();
     spdlog::info("shutdown finish");
     spdlog::shutdown();
@@ -293,4 +300,5 @@ void WaitShutdown() {
     while (!b_shutdown) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    peerManager.reset();
 }

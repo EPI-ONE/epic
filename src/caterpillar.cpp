@@ -252,10 +252,14 @@ void Caterpillar::Cache(const ConstBlockPtr& blk) {
     blockCache_.emplace(blk->GetHash(), blk);
 }
 
-void Caterpillar::Stop() {
-    while (obc_.Size() > 0 || obcThread_.GetTaskSize() > 0) {
+void Caterpillar::Wait() {
+    while (obc_.Size() > 0 || !obcThread_.IsIdle()) {
         std::this_thread::yield();
     }
+}
+
+void Caterpillar::Stop() {
+    Wait();
     obcThread_.Stop();
 }
 

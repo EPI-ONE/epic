@@ -1,4 +1,4 @@
-#include "init.h"
+#include "dag_manager.h"
 #include "peer_manager.h"
 #include <gtest/gtest.h>
 

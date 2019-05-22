@@ -10,6 +10,9 @@ enum MessageType : uint8_t {
     ADDR,
     BLOCK,
     BUNDLE,
+    GET_BLOCK,
+    INV,
+    GET_DATA,
 };
 
 #endif //__SRC_MESSAGE_TYPE_H__

@@ -10,7 +10,7 @@ DAGManager::DAGManager()
 }
 
 DAGManager::~DAGManager() {
-    verifyThread_.Stop();
+    Stop();
 }
 
 void DAGManager::RequestInv(const uint256&, const size_t&, PeerPtr) {}
@@ -224,10 +224,16 @@ const Chain& DAGManager::GetBestChain() const {
 }
 
 void DAGManager::Stop() {
-    while (verifyThread_.GetTaskSize() > 0) {
+    Wait();
+    syncPool_.Stop();
+    verifyThread_.Stop();
+    storagePool_.Stop();
+}
+
+void DAGManager::Wait() {
+    while (!verifyThread_.IsIdle() || !storagePool_.IsIdle() || !syncPool_.IsIdle()) {
         std::this_thread::yield();
     }
-    verifyThread_.Stop();
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {

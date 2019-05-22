@@ -25,12 +25,13 @@ public:
      * sending queue according to the BlockLocator constructed by peer.
      */
     void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
+    void CallbackRequestInv(std::shared_ptr<Inv> inv);
 
     /** Called by Peer and sets a list of inventory as the callback to the task. */
     void AssembleInv(GetBlockTask& task);
 
     /** Called by batchSync to create a GetDataTask for a given hash. */
-    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, PeerPtr peer);
+    GetDataTask RequestData(const uint256& hash, GetDataTask::GetDataType& type, PeerPtr peer);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void GetBundle(GetDataTask& task);
@@ -56,9 +57,12 @@ public:
      * until DAG completes all the tasks
      */
     void Stop();
+    void Wait();
 
 private:
     ThreadPool verifyThread_;
+    ThreadPool storagePool_ ;
+    ThreadPool syncPool_;
 
     /** Indicator of whether we are synching with some peer. */
     std::atomic<bool> isBatchSynching;

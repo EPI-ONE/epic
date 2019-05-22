@@ -68,6 +68,7 @@ public:
      * Blocks the main thread from going forward
      * until CAT completes all the tasks
      */
+    void Wait();
     void Stop();
 
     ~Caterpillar();

@@ -10,6 +10,9 @@
 #include "bundle.h"
 #include "connection_manager.h"
 #include "getaddr_message.h"
+#include "getblock_message.h"
+#include "getdata_message.h"
+#include "inventory_message.h"
 #include "message_type.h"
 #include "net_address.h"
 #include "ping.h"
@@ -21,8 +24,7 @@
 
 class Peer {
 public:
-    /*
-     *
+    /**
      * @param netAddress
      * @param handle ,the libevent socket handle
      * @param inbound
@@ -41,9 +43,9 @@ public:
 
     void ProcessMessage(NetMessage& message);
 
-    void SendMessage(NetMessage& message);
+    virtual void SendMessage(NetMessage& message);
 
-    void SendMessage(NetMessage&& message);
+    virtual void SendMessage(NetMessage&& message);
 
     /**
      * send scheduled messages(ping, address) to the peer
@@ -71,6 +73,38 @@ public:
     size_t GetNPingFailed() const;
 
     void SetNPingFailed(size_t nPingFailed_);
+
+    void AddPendingGetInvTask(const GetInvTask&);
+
+    std::optional<GetInvTask> RemovePendingGetInvTask(uint32_t task_id);
+
+    size_t GetInvTaskSize();
+
+    void AddPendingGetDataTask(const GetDataTask&);
+
+    std::optional<GetDataTask> RemovePendingGetDataTask(uint32_t task_id);
+
+    size_t GetDataTaskSize();
+
+    uint256 GetLastSentBundleHash() const;
+
+    void SetLastSentBundleHash(const uint256&);
+
+    uint256 GetLastSentInvHash() const;
+
+    void SetLastSentInvHash(const uint256&);
+
+    uint256 GetLastGetInvBegin() const;
+
+    void SetLastGetInvBegin(const uint256&);
+
+    uint256 GetLastGetInvEnd() const;
+
+    void SetLastGetInvEnd(const uint256&);
+
+    size_t GetLastGetInvLength() const;
+
+    void SetLastGetInvLength(const size_t&);
 
     /*
      * basic information of peer
@@ -131,15 +165,47 @@ private:
      */
     void ProcessAddressMessage(AddressMessage& addressMessage);
 
-    /*
+    /**
      * send addresses to the peer
      */
     void ProcessGetAddrMessage();
 
-    /*
+    /**
+     * process block, add to dag and relay
+     * @param block
+     */
+    void ProcessBlock(ConstBlockPtr& block);
+
+    /**
+     * process GetBlock
+     */
+    void ProcessGetBlock(GetBlock& getBlock);
+
+    /**
+     * process Inv
+     */
+    void ProcessInv(std::shared_ptr<Inv> inv);
+
+    /**
+     * processGetData
+     */
+    void ProcessGetData(GetData& getData);
+
+    /**
+     * process bundle, add to dag
+     * @param bundle
+     */
+    void ProcessBundle(const std::shared_ptr<Bundle>& bundle);
+
+    /**
+     * get the first nonce of GetData tasks
+     */
+    uint32_t GetFirstGetDataNonce();
+
+
+    /**
      * Parameters of network setting
      */
-
     // interval of sending ping
     const static uint64_t kPingSendInterval = 2 * 60;
 
@@ -188,5 +254,7 @@ private:
     ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
 };
+
+using PeerPtr = std::shared_ptr<Peer>;
 
 #endif // EPIC_PEER_H

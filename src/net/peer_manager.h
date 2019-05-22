@@ -109,7 +109,20 @@ public:
      */
     void SendLocalAddresses();
 
-private:
+    /**
+     * get the pointer of peer via the connection handle
+     * @param connection_handle
+     * @return
+     */
+    virtual PeerPtr GetPeer(const void* connection_handle);
+
+    /**
+     * relay block to neighbors
+     * @param block
+     */
+    void RelayBlock(ConstBlockPtr block, PeerPtr msg_from);
+
+protected:
     /*
      * create a peer after a new connection is setup
      * @param connection_handle
@@ -134,13 +147,6 @@ private:
      * @return
      */
     bool HasConnectedTo(const IPAddress& address);
-
-    /*
-     * get the pointer of peer via the connection handle
-     * @param connection_handle
-     * @return
-     */
-    std::shared_ptr<Peer> GetPeer(const void* connection_handle);
 
     /**
      * add a peer into peer map

@@ -140,6 +140,10 @@ public:
         std::vector<unsigned char> vch(data, data + 20);
         return uint160(vch);
     }
+
+    std::string to_string() {
+        return GetHex();
+    }
 };
 
 /* uint256 from const char *.
