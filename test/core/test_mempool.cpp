@@ -12,7 +12,8 @@ public:
         std::size_t N = 4;
 
         for (std::size_t i = 0; i < N; ++i) {
-            transactions.push_back(std::make_shared<Transaction>(fac.CreateTx(fac.GetRand()% 11 + 1, fac.GetRand() % 11 + 1)));
+            transactions.push_back(
+                std::make_shared<Transaction>(fac.CreateTx(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1)));
         }
     }
 };
