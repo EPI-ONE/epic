@@ -31,23 +31,41 @@ std::optional<IPAddress> IPAddress::GetByIP(const std::string& ip_string) {
     return {};
 }
 
-std::optional<IPAddress> IPAddress::GetByHostname(const std::string& hostname) {
+std::optional<IPAddress> IPAddress::GetByHostname(const std::string& hostname, uint32_t networkFamily) {
     struct addrinfo hints, *result, *p;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family   = AF_UNSPEC;
+    hints.ai_family   = networkFamily;
     hints.ai_socktype = SOCK_STREAM;
     if (getaddrinfo(hostname.c_str(), nullptr, &hints, &result) != 0) {
         return {};
     }
 
+    IPAddress address{};
     for (p = result; p != nullptr; p = p->ai_next) {
         if (p->ai_family == AF_INET) {
             auto* ip = (struct sockaddr_in*) p->ai_addr;
-            return IPAddress(ip->sin_addr);
+            address  = IPAddress(ip->sin_addr);
+            break;
         } else if (p->ai_family == AF_INET6) {
             auto* ip = (struct sockaddr_in6*) p->ai_addr;
-            return IPAddress(ip->sin6_addr);
+            address  = IPAddress(ip->sin6_addr);
+            break;
         }
+    }
+    freeaddrinfo(result);
+    return address;
+}
+
+std::optional<IPAddress> IPAddress::GetByHostname(const std::string& hostname) {
+    // try to return ipv4 first
+    auto ipv4 = GetByHostname(hostname, AF_INET);
+    if (ipv4) {
+        return ipv4;
+    }
+
+    auto ipv6 = GetByHostname(hostname, AF_INET6);
+    if (ipv6) {
+        return ipv6;
     }
 
     return {};
