@@ -29,7 +29,7 @@ uint256 TestFactory::CreateRandomHash() {
 Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
     Transaction tx;
-    uint32_t maxPos = numGenerator.GetRand() % 128 + 1;
+    uint32_t maxPos = GetRand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
         tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, Listing(std::vector<unsigned char>(i))));
     }
@@ -39,7 +39,6 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     }
     return tx;
 }
-
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 

@@ -142,11 +142,6 @@ public:
 
     const uint256& GetHash() const;
 
-    /*
-     * should only be used for debugging
-     */
-    void RandomizeHash();
-
     bool IsRegistration() const;
 
     bool IsFirstRegistration() const;
