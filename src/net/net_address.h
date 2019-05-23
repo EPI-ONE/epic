@@ -27,6 +27,8 @@ class IPAddress {
 public:
     static std::optional<IPAddress> GetByIP(const std::string& ip_string);
 
+    static std::optional<IPAddress> GetByHostname(const std::string& hostname, uint32_t networkFamily);
+
     static std::optional<IPAddress> GetByHostname(const std::string& hostname);
 
     IPAddress() = default;
