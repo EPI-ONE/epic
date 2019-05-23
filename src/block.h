@@ -7,7 +7,6 @@
 
 #include "arith_uint256.h"
 #include "pubkey.h"
-#include "threadpool.h"
 #include "transaction.h"
 #include "utilstrencodings.h"
 
@@ -133,12 +132,6 @@ public:
      * difficulty target. For test purposes only.
      */
     void Solve();
-
-    /*
-     * A multi-thread solver for nonce that makes the blocks hash lower than the
-     * difficulty target. For test purposes only.
-     */
-    void Solve(ThreadPool& pool);
 
     /*
      * Sets parents for elements contained in the block all at once
