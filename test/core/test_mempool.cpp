@@ -1,20 +1,18 @@
 #include <gtest/gtest.h>
 
 #include "mempool.h"
+#include "test_factory.h"
 
 class MemPoolTest : public testing::Test {
 public:
     std::vector<ConstTxPtr> transactions;
+    TestFactory fac;
 
     void SetUp() {
-        std::size_t n = 4;
-        Transaction* tx;
+        std::size_t N = 4;
 
-        for (std::size_t i = 0; i < n; ++i) {
-            tx = new Transaction();
-            tx->RandomizeHash();
-
-            transactions.push_back(std::shared_ptr<const Transaction>(tx));
+        for (std::size_t i = 0; i < N; ++i) {
+            transactions.push_back(std::make_shared<Transaction>(fac.CreateTx(fac.GetRand()% 11 + 1, fac.GetRand() % 11 + 1)));
         }
     }
 };
@@ -25,9 +23,9 @@ public:
 TEST_F(MemPoolTest, simple_test) {
     MemPool pool;
 
-    pool.Insert(transactions[0]);
-    pool.Insert(transactions[1]);
-    pool.Insert(transactions[2]);
+    ASSERT_TRUE(pool.Insert(transactions[0]));
+    ASSERT_TRUE(pool.Insert(transactions[1]));
+    ASSERT_TRUE(pool.Insert(transactions[2]));
 
     /* check if now there are three
      * transactions in the pool */
@@ -63,8 +61,7 @@ TEST_F(MemPoolTest, get_transaction_test) {
     MemPool pool;
 
     /* hash used to simulate block */
-    uint256 hash;
-    hash.randomize();
+    uint256 hash = fac.CreateRandomHash();
 
     /* this transaction is used to
      * simulate three cases:
