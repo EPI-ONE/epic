@@ -142,6 +142,11 @@ public:
 
     const uint256& GetHash() const;
 
+    /*
+     * should only be used for debugging
+     */
+    void RandomizeHash();
+
     bool IsRegistration() const;
 
     bool IsFirstRegistration() const;
@@ -171,6 +176,23 @@ private:
     Coin fee_;
 
     const Block* parentBlock_;
+};
+
+typedef std::shared_ptr<const Transaction> ConstTxPtr;
+
+template <>
+struct std::hash<std::shared_ptr<const Transaction>> {
+    size_t operator()(const std::shared_ptr<const Transaction>& value) const {
+        return value->GetHash().GetCheapHash();
+    }
+};
+
+template <>
+struct std::equal_to<std::shared_ptr<const Transaction>> {
+    bool operator()(const std::shared_ptr<const Transaction>& lhs,
+        const std::shared_ptr<const Transaction>& rhs) const {
+        return lhs->GetHash() == rhs->GetHash();
+    }
 };
 
 namespace std {
