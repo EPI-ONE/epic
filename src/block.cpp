@@ -279,51 +279,6 @@ void Block::Solve() {
     }
 }
 
-void Block::Solve(ThreadPool& solverPool) {
-    arith_uint256 target = GetTargetAsInteger();
-    std::size_t nthreads = solverPool.size();
-    uint64_t final_time  = time_;
-
-    uint32_t default_nonce            = 0;
-    std::atomic<uint32_t> final_nonce = default_nonce;
-
-    for (std::size_t i = 1; i <= nthreads; ++i) {
-        solverPool.Execute([this, &final_nonce, &final_time, &default_nonce, i, target, nthreads]() {
-            Block blk(*this);
-            blk.nonce_ = i;
-            blk.FinalizeHash();
-
-            while (final_nonce.load() == 0) {
-                if (UintToArith256(blk.hash_) <= target) {
-                    if (final_nonce.compare_exchange_strong(default_nonce, blk.nonce_)) {
-                        final_time = blk.time_;
-                    }
-
-                    break;
-                }
-
-                if (blk.nonce_ >= UINT_LEAST32_MAX - nthreads) {
-                    blk.time_  = time(nullptr);
-                    blk.nonce_ = i;
-                } else {
-                    blk.nonce_ += nthreads;
-                }
-
-                blk.CalculateHash();
-            }
-        });
-    }
-
-    // Block the main thread until a nonce is solved
-    while (final_nonce.load() == 0) {
-        std::this_thread::yield();
-    }
-
-    SetNonce(final_nonce.load());
-    SetTime(final_time);
-    FinalizeHash();
-}
-
 void Block::SetParents() {
     if (!HasTransaction()) {
         return;
@@ -389,7 +344,8 @@ Block Block::CreateGenesis() {
     // int numThreads = 44;
     // ThreadPool solverPool(numThreads);
     // solverPool.Start();
-    // genesisBlock.Solve(numThreads, solverPool);
+    // Miner m;
+    // m.Solve(genesisBlock, solverPool);
     // solverPool.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
 
