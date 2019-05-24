@@ -10,7 +10,7 @@ class Miner {
 public:
     Miner() = default;
 
-    void Solve(Block b, ThreadPool& solverPool) {
+    void Solve(Block& b, ThreadPool& solverPool) {
         arith_uint256 target = b.GetTargetAsInteger();
         std::size_t nthreads = solverPool.size();
         uint64_t final_time  = b.GetTime();
