@@ -243,6 +243,10 @@ arith_uint256 Block::GetTargetAsInteger() const {
 }
 
 bool Block::CheckPOW() const {
+    if (hash_.IsNull()) {
+        return false;
+    }
+
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
@@ -251,9 +255,7 @@ bool Block::CheckPOW() const {
         return false;
     }
 
-    arith_uint256 blkHash = UintToArith256(hash_);
-
-    if (blkHash > target) {
+    if (UintToArith256(hash_) > target) {
         spdlog::info(
             "Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
         return false;
