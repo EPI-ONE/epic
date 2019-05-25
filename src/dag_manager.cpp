@@ -1,8 +1,14 @@
 #include "dag_manager.h"
 #include "caterpillar.h"
 
-DAGManager::DAGManager() : isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
+DAGManager::DAGManager()
+    : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
     milestoneChains.push(std::make_unique<Chain>(true));
+    thread_.Start();
+}
+
+DAGManager::~DAGManager() {
+    thread_.Stop();
 }
 
 void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer>) {}
@@ -13,45 +19,47 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         UpdateDownloadingQueue(block->GetHash());
     };
 
-    // Extract utxos from outputs and pass their pointers to chains
-    std::vector<UTXOPtr> utxos;
-    if (block->HasTransaction()) {
-        auto& outs = block->GetTransaction()->GetOutputs();
-        utxos.reserve(outs.size());
-        for (size_t i = 0; i < outs.size(); ++i) {
-            utxos.push_back(std::make_shared<UTXO>(outs[i], i));
-        }
-    }
-
-    for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
-        if ((*chainIt)->GetPendingBlockCount() > 0 && *block == GENESIS) {
-            continue;
+    thread_.Execute([block, this]() {
+        // Extract utxos from outputs and pass their pointers to chains
+        std::vector<UTXOPtr> utxos;
+        if (block->HasTransaction()) {
+            auto& outs = block->GetTransaction()->GetOutputs();
+            utxos.reserve(outs.size());
+            for (size_t i = 0; i < outs.size(); ++i) {
+                utxos.push_back(std::make_shared<UTXO>(outs[i], i));
+            }
         }
 
-        MilestoneStatus mss = (*chainIt)->AddPendingBlock(block);
-        (*chainIt)->AddPendingUTXOs(utxos);
+        for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
+            if ((*chainIt)->GetPendingBlockCount() > 0 && *block == GENESIS) {
+                continue;
+            }
 
-        switch (mss) {
-        case IS_NOT_MILESTONE:
-            continue;
+            MilestoneStatus mss = (*chainIt)->AddPendingBlock(block);
+            (*chainIt)->AddPendingUTXOs(utxos);
 
-        case IS_TRUE_MILESTONE: {
-            isVerifying = true;
-            process(*chainIt);
-            milestoneChains.update_best(chainIt);
-            isVerifying = false;
-            break;
-        }
+            switch (mss) {
+            case IS_NOT_MILESTONE:
+                continue;
 
-        case IS_FAKE_MILESTONE: {
-            // Add a new fork
-            auto new_fork = std::make_unique<Chain>(**chainIt, block);
-            process(new_fork);
-            milestoneChains.emplace(std::move(new_fork));
-            break;
+            case IS_TRUE_MILESTONE: {
+                isVerifying = true;
+                process(*chainIt);
+                milestoneChains.update_best(chainIt);
+                isVerifying = false;
+                break;
+            }
+
+            case IS_FAKE_MILESTONE: {
+                // Add a new fork
+                auto new_fork = std::make_unique<Chain>(**chainIt, block);
+                process(new_fork);
+                milestoneChains.emplace(std::move(new_fork));
+                break;
+            }
+            }
         }
-        }
-    }
+    });
 }
 
 RecordPtr DAGManager::GetState(const uint256& msHash) {
@@ -78,3 +86,10 @@ const Chain& DAGManager::GetBestChain() const {
 }
 
 DAGManager& DAG = DAGManager::GetDAGManager();
+
+void DAGManager::Stop() {
+    while (thread_.GetTaskSize() > 0) {
+        std::this_thread::yield();
+    }
+    thread_.Stop();
+}

@@ -50,8 +50,6 @@ public:
     ~Caterpillar();
 
 private:
-    mutable std::shared_mutex mutex_;
-
     ThreadPool verifyThread_;
     ThreadPool obcThread_;
 

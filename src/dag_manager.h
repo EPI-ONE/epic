@@ -7,15 +7,11 @@
 
 #include "chains.h"
 #include "task.h"
+#include "threadpool.h"
 
 class Peer;
 class DAGManager {
 public:
-    static DAGManager& GetDAGManager() {
-        static DAGManager DAG;
-        return DAG;
-    }
-
     /**
      * TODO: For test only. Remove this in the future
      *       when AddBlockToPending becomes real
@@ -34,13 +30,8 @@ public:
      */
     std::vector<GetDataTask> preDownloading;
 
-    /** Indicator of whether we are synching with some peer. */
-    std::atomic<bool> isBatchSynching;
-
-    /** The peer we are synching with. Null if isBatchSynching is false. */
-    std::shared_ptr<Peer> syncingPeer;
-
     DAGManager();
+    ~DAGManager();
 
     /**
      * Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
@@ -80,8 +71,27 @@ public:
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
+    static DAGManager& GetDAGManager() {
+        static DAGManager DAG;
+        return DAG;
+    }
+
+    /*
+     * Blocks the main thread from going forward
+     * until CAT completes all the tasks
+     *
+     * FOR TEST ONLY!
+     */
+    void Stop();
+
 private:
-    std::unordered_map<uint256, RecordPtr> globalStates_;
+    ThreadPool thread_;
+
+    /** Indicator of whether we are synching with some peer. */
+    std::atomic<bool> isBatchSynching;
+
+    /** The peer we are synching with. Null if isBatchSynching is false. */
+    std::shared_ptr<Peer> syncingPeer;
 
     std::atomic<bool> isVerifying;
 
@@ -90,6 +100,11 @@ private:
      * the main chain and others being forked chains.
      */
     Chains milestoneChains;
+
+    /**
+     * Stores RecordPtr of all verified milestones on all branches as a cache
+     */
+    std::unordered_map<uint256, RecordPtr> globalStates_;
 
     /**
      * Start a new thread and create a list of GetData tasks that is either added
