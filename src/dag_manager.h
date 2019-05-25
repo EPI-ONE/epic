@@ -11,24 +11,6 @@
 class Peer;
 class DAGManager {
 public:
-    /**
-     * TODO: For test only. Remove this in the future
-     *       when AddBlockToPending becomes real
-     */
-    std::vector<ConstBlockPtr> pending;
-
-    /**
-     * A list of hashes we've sent out in GetData requests.
-     * It can be operated by multi threads.
-     */
-    std::vector<uint256> downloading;
-
-    /**
-     * A list of tasks we've prepared to deliver to a Peer.
-     * Should be thread-safe.
-     */
-    std::vector<GetDataTask> preDownloading;
-
     DAGManager();
     ~DAGManager();
 
@@ -89,7 +71,20 @@ private:
     /** The peer we are synching with. Null if isBatchSynching is false. */
     std::shared_ptr<Peer> syncingPeer;
 
+    /** Indicator of whether the DAG manager is doing off-line verification */
     std::atomic<bool> isVerifying;
+
+    /**
+     * A list of hashes we've sent out in GetData requests.
+     * Should be thread-safe.
+     */
+    std::vector<uint256> downloading;
+
+    /**
+     * A list of tasks we've prepared to deliver to a Peer.
+     * Should be thread-safe.
+     */
+    std::vector<GetDataTask> preDownloading;
 
     /**
      * A list of milestone chains, with first element being
