@@ -128,7 +128,7 @@ void NodeRecord::Deserialize(VStream& s) {
     isMilestone                 = msFlag == IS_TRUE_MILESTONE;
 
     if (msFlag > 0) {
-        snapshot                = std::make_shared<ChainState>(s);
+        snapshot = std::make_shared<ChainState>(s);
     }
 }
 

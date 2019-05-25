@@ -2,9 +2,7 @@
 #include "caterpillar.h"
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
-    pendingBlocks_ = {};
-    recordHistory_ = {};
-    states_        = {GENESIS_RECORD.snapshot};
+    states_.push_back(make_shared_ChainState());
 }
 
 ChainStatePtr Chain::GetChainHead() const {
@@ -109,13 +107,16 @@ MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
 
     if (entry != recordHistory_.end()) {
         auto& ms = entry->second->snapshot;
+
         if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
             return IS_TRUE_MILESTONE;
         }
+
         if (ms && CheckMsPOW(pblock, ms)) {
             return IS_FAKE_MILESTONE;
         }
     }
+
     return IS_NOT_MILESTONE;
 }
 

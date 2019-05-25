@@ -4,8 +4,7 @@
 #include <atomic>
 #include <list>
 
-#include "chain.h"
-#include "max_queue.h"
+#include "chains.h"
 #include "task.h"
 
 class Peer;
