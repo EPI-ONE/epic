@@ -189,6 +189,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     cat.Stop();
+    DAG.Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
