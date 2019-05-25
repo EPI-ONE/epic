@@ -8,11 +8,19 @@ void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer>
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     static auto process = [&block, this](const ChainPtr& chain) {
-        auto lvs = chain->GetSortedSubgraph(block);
-        chain->Verify(lvs);
-        chain->UpdateChainState(lvs);
+        chain->Verify(block);
         UpdateDownloadingQueue(block->GetHash());
     };
+
+    // Extract utxos from outputs and pass their pointers to chains
+    std::vector<UTXOPtr> utxos;
+    if (block->HasTransaction()) {
+        auto& outs = block->GetTransaction()->GetOutputs();
+        utxos.reserve(outs.size());
+        for (size_t i = 0; i < outs.size(); ++i) {
+            utxos.push_back(std::make_shared<UTXO>(outs[i], i));
+        }
+    }
 
     for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
         if ((*chainIt)->GetPendingBlockCount() > 0 && *block == GENESIS) {
@@ -20,6 +28,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         }
 
         MilestoneStatus mss = (*chainIt)->AddPendingBlock(block);
+        (*chainIt)->AddPendingUTXOs(utxos);
 
         switch (mss) {
         case IS_NOT_MILESTONE:

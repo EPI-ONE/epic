@@ -94,4 +94,6 @@ private:
     std::vector<uint256> spent_;
 };
 
+typedef std::shared_ptr<const UTXO> UTXOPtr;
+
 #endif /* ifndef __SRC_UTXO_H__ */

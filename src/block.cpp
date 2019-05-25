@@ -4,6 +4,13 @@ Block::Block() {
     SetNull();
 }
 
+Block::Block(const Block& b)
+    : hash_(b.hash_), optimalEncodingSize_(b.optimalEncodingSize_), version_(b.version_),
+      milestoneBlockHash_(b.milestoneBlockHash_), prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_),
+      diffTarget_(b.diffTarget_), time_(b.time_), nonce_(b.nonce_), transaction_(b.transaction_) {
+    SetParents();
+}
+
 Block::Block(uint32_t versionNum) : Block() {
     version_            = versionNum;
     milestoneBlockHash_ = Hash::GetZeroHash();
@@ -71,15 +78,14 @@ bool Block::Verify() const {
     // checks if the time of block is too far in the future
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
-        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]",
-            ctime((time_t*) &time_), time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
+        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", ctime((time_t*) &time_),
+            time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
         return false;
     }
 
     // verify content of the block
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
-        spdlog::info(
-            "Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
+        spdlog::info("Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
         return false;
     }
 
@@ -105,15 +111,13 @@ bool Block::Verify() const {
     if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
-            spdlog::info(
-                "Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
+            spdlog::info("Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transaction_->IsFirstRegistration()) {
-            spdlog::info(
-                "Block is the first registration but conatains invalid tx [{}]", std::to_string(hash_));
+            spdlog::info("Block is the first registration but conatains invalid tx [{}]", std::to_string(hash_));
             return false;
         }
     }
@@ -132,6 +136,10 @@ void Block::AddTransaction(Transaction tx) {
 
 bool Block::HasTransaction() const {
     return transaction_.has_value();
+}
+
+const std::optional<Transaction>& Block::GetTransaction() const {
+    return transaction_;
 }
 
 std::optional<Transaction>& Block::GetTransaction() {
@@ -254,8 +262,7 @@ bool Block::CheckPOW() const {
     arith_uint256 blkHash = UintToArith256(hash_);
 
     if (blkHash > target) {
-        spdlog::info(
-            "Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
+        spdlog::info("Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
         return false;
     }
 
@@ -396,9 +403,7 @@ Block Block::CreateGenesis() {
     return genesisBlock;
 }
 
-BlockNet::BlockNet(const Block& b) : Block(b) {
-    SetParents();
-}
+BlockNet::BlockNet(const Block& b) : Block(b) {}
 
 BlockNet::BlockNet(VStream& payload) {
     payload >> *this;

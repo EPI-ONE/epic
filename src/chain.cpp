@@ -28,6 +28,12 @@ MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
     return IsMilestone(pblock);
 }
 
+void Chain::AddPendingUTXOs(std::vector<UTXOPtr>& utxos) {
+    for (const auto& u : utxos) {
+        pendingUTXOs_.emplace(u->GetKey(), u);
+    }
+}
+
 void Chain::RemovePendingBlock(const uint256& hash) {
     pendingBlocks_.erase(hash);
 }
@@ -120,5 +126,6 @@ MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
     return IS_NOT_MILESTONE;
 }
 
-void Chain::Verify(std::vector<RecordPtr>&) {}
+void Chain::Verify(ConstBlockPtr) {}
+
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}

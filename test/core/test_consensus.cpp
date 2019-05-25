@@ -159,7 +159,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         }
         b.Solve();
 
-        blocks.emplace_back(std::make_shared<BlockNet>(b));
+        blocks.push_back(std::make_shared<BlockNet>(b));
     }
     ECC_Stop();
 

@@ -47,8 +47,11 @@ public:
     ~Caterpillar();
 
 private:
+    mutable std::shared_mutex mutex_;
+
     ThreadPool verifyThread_;
     ThreadPool obcThread_;
+
     RocksDBStore dbStore_;
     OrphanBlocksContainer obc_;
 
