@@ -82,7 +82,7 @@ protected:
 
 TestImplRocksDBStore* TestRocksDB::db       = nullptr;
 TestFactory* TestRocksDB::fac               = nullptr;
-size_t TestRocksDB::size                    = 1000;
+size_t TestRocksDB::size                    = 100;
 std::vector<RecordPtr> TestRocksDB::records = std::vector<RecordPtr>(size);
 std::vector<uint256> TestRocksDB::keys      = std::vector<uint256>(size);
 

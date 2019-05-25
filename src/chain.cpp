@@ -46,9 +46,9 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<RecordPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
     std::vector<ConstBlockPtr> stack = {pblock};
-    std::vector<RecordPtr> result;
+    std::vector<ConstBlockPtr> result;
     ConstBlockPtr cursor;
 
     /* reserve a good chunk of memory for efficiency;
@@ -80,7 +80,7 @@ std::vector<RecordPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
 
         uint256 cursorHash = cursor->GetHash();
         pendingBlocks_.erase(cursorHash);
-        result.push_back(std::make_shared<NodeRecord>(cursor));
+        result.push_back(cursor);
         stack.pop_back();
     }
 

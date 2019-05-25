@@ -45,7 +45,7 @@ public:
     std::size_t GetPendingBlockCount() const;
 
     /** Gets a list of block to verify by the post-order DFS */
-    std::vector<RecordPtr> GetSortedSubgraph(ConstBlockPtr pblock);
+    std::vector<ConstBlockPtr> GetSortedSubgraph(ConstBlockPtr pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
         return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
