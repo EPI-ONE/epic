@@ -5,8 +5,7 @@
 #include <list>
 #include <queue>
 
-#include "chain.h"
-#include "max_queue.h"
+#include "chains.h"
 #include "task.h"
 
 class Peer;

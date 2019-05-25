@@ -38,10 +38,7 @@ public:
 
     ChainStatePtr GetChainHead() const;
 
-    /**
-     * Returns true only when the block is successfully added to the chain.
-     * Returns false when this block is a new fork.
-     */
+    /** Adds the block to pending and returns its milestone status */
     MilestoneStatus AddPendingBlock(ConstBlockPtr pblock);
 
     void RemovePendingBlock(const uint256& hash);
@@ -50,7 +47,7 @@ public:
 
     std::size_t GetPendingBlockCount() const;
 
-    // get a list of block to verify by a post-order DFS
+    /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {

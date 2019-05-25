@@ -1,9 +1,7 @@
 #include "dag_manager.h"
 #include "caterpillar.h"
 
-DAGManager::DAGManager()
-    : isBatchSynching(false), syncingPeer(nullptr),
-      milestoneChains([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {
+DAGManager::DAGManager() : isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
     milestoneChains.push(std::make_unique<Chain>(true));
 }
 
@@ -22,7 +20,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             continue;
         }
 
-        auto mss = (*chainIt)->AddPendingBlock(block);
+        MilestoneStatus mss = (*chainIt)->AddPendingBlock(block);
 
         switch (mss) {
         case IS_NOT_MILESTONE:
@@ -31,7 +29,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         case IS_TRUE_MILESTONE: {
             isVerifying = true;
             process(*chainIt);
-            milestoneChains.update_max(chainIt);
+            milestoneChains.update_best(chainIt);
             isVerifying = false;
             break;
         }
@@ -67,7 +65,7 @@ bool DAGManager::UpdateDownloadingQueue(const uint256&) {
 }
 
 const Chain& DAGManager::GetBestChain() const {
-    return *milestoneChains.max();
+    return *milestoneChains.best();
 }
 
 DAGManager& DAG = DAGManager::GetDAGManager();
