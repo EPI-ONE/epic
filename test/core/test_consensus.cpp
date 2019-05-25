@@ -133,7 +133,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         }
         b.Solve();
 
-        blocks.emplace_back(std::make_shared<BlockNet>(b));
+        blocks.push_back(std::make_shared<BlockNet>(b));
     }
 
     // Shuffle order of blocks to make some of them not solid

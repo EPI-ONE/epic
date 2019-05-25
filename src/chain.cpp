@@ -36,6 +36,12 @@ MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
     return IsMilestone(pblock);
 }
 
+void Chain::AddPendingUTXOs(std::vector<UTXOPtr>& utxos) {
+    for (const auto& u : utxos) {
+        pendingUTXOs_.emplace(u->GetKey(), u);
+    }
+}
+
 void Chain::RemovePendingBlock(const uint256& hash) {
     pendingBlocks_.erase(hash);
 }
@@ -209,7 +215,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     // check Transaction distance
-    RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+    RecordPtr prevMs = DAG.GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
     if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
         return {};

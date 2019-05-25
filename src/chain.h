@@ -28,22 +28,21 @@ public:
      * Moreover, it does not contain the corresponding chain state of this $pfork.
      * We have to further verify it to update chain state.
      */
-    Chain(const Chain& chain, ConstBlockPtr pfork);
+    Chain(const Chain&, ConstBlockPtr fork);
 
     /** Now for test only */
     Chain(const std::deque<ChainStatePtr>& states, bool ismain = false) : ismainchain_(ismain), states_(states) {}
 
-    /** Adds block to this chain */
-    void AddBlock(ConstBlockPtr pblock);
-
     ChainStatePtr GetChainHead() const;
 
     /** Adds the block to pending and returns its milestone status */
-    MilestoneStatus AddPendingBlock(ConstBlockPtr pblock);
+    MilestoneStatus AddPendingBlock(ConstBlockPtr);
 
-    void RemovePendingBlock(const uint256& hash);
+    void AddPendingUTXOs(std::vector<UTXOPtr>&);
 
-    bool IsBlockPending(const uint256& hash) const;
+    void RemovePendingBlock(const uint256&);
+
+    bool IsBlockPending(const uint256&) const;
 
     std::size_t GetPendingBlockCount() const;
 
@@ -87,8 +86,9 @@ private:
      */
     std::deque<ChainStatePtr> states_;
 
-    // stores blocks not yet verified in this chain
+    // stores data not yet verified in this chain
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
+    std::unordered_map<uint256, UTXOPtr> pendingUTXOs_;
 
     // stores blocks verified in this chain
     std::unordered_map<uint256, RecordPtr> recordHistory_;

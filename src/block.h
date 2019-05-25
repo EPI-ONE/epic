@@ -21,7 +21,7 @@ class Block {
 public:
     Block();
 
-    Block(const Block&) = default;
+    Block(const Block&);
 
     Block(uint32_t versionNum);
 

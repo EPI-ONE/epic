@@ -119,4 +119,6 @@ private:
     std::unordered_map<uint256, UTXOPtr> removed_;
 };
 
+typedef std::shared_ptr<const UTXO> UTXOPtr;
+
 #endif /* ifndef __SRC_UTXO_H__ */
