@@ -33,7 +33,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
             MilestoneStatus mss = (*chainIt)->IsMilestone(block);
             switch (mss) {
-            case UNKNOWN:
+            case WE_DONT_KNOW:
                 continue;
 
             case IS_NOT_MILESTONE:
@@ -48,7 +48,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 process(*chainIt);
                 milestoneChains.update_best(chainIt);
                 isVerifying = false;
-                continue;
+                return;
             }
 
             case IS_FAKE_MILESTONE: {
@@ -58,7 +58,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 auto new_fork = std::make_unique<Chain>(**chainIt, block);
                 process(new_fork);
                 milestoneChains.emplace(std::move(new_fork));
-                continue;
+                return;
             }
             }
         }
