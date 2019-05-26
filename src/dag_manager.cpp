@@ -1,5 +1,6 @@
 #include "dag_manager.h"
 #include "caterpillar.h"
+#include "chain.h"
 
 DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
@@ -31,31 +32,34 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         }
 
         for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
-            if ((*chainIt)->GetPendingBlockCount() > 0 && *block == GENESIS) {
-                continue;
-            }
-
-            MilestoneStatus mss = (*chainIt)->AddPendingBlock(block);
-            (*chainIt)->AddPendingUTXOs(utxos);
-
+            MilestoneStatus mss = (*chainIt)->IsMilestone(block);
             switch (mss) {
+            case UNKNOWN:
+                continue;
+
             case IS_NOT_MILESTONE:
+                (*chainIt)->AddPendingBlock(block);
+                (*chainIt)->AddPendingUTXOs(utxos);
                 continue;
 
             case IS_TRUE_MILESTONE: {
+                (*chainIt)->AddPendingBlock(block);
+                (*chainIt)->AddPendingUTXOs(utxos);
                 isVerifying = true;
                 process(*chainIt);
                 milestoneChains.update_best(chainIt);
                 isVerifying = false;
-                break;
+                continue;
             }
 
             case IS_FAKE_MILESTONE: {
+                (*chainIt)->AddPendingBlock(block);
+                (*chainIt)->AddPendingUTXOs(utxos);
                 // Add a new fork
                 auto new_fork = std::make_unique<Chain>(**chainIt, block);
                 process(new_fork);
                 milestoneChains.emplace(std::move(new_fork));
-                break;
+                continue;
             }
             }
         }

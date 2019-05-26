@@ -39,11 +39,9 @@ public:
      */
     bool AddNewBlock(const ConstBlockPtr& block, std::shared_ptr<Peer> peer);
 
-    /*
+    /**
      * Blocks the main thread from going forward
      * until CAT completes all the tasks
-     *
-     * FOR TEST ONLY!
      */
     void Stop();
 

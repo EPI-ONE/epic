@@ -140,23 +140,16 @@ TEST_F(TestConsensus, AddNewBlocks) {
     auto rng = std::default_random_engine{};
     std::shuffle(std::begin(blocks), std::end(blocks), rng);
 
-    // Add GENESIS to the front
-    // Note that now we have 2 GENESIS in blocks
-    blocks.emplace(blocks.begin(), genesisPtr);
-
     ///////////////////////////
     // Test starts here
     //
     std::string prefix = "test_consensus/";
     std::ostringstream os;
     os << time(nullptr);
-    std::string filename = prefix + os.str();
+    CAT = std::make_unique<Caterpillar>(prefix + os.str());
 
-    CAT = std::make_unique<Caterpillar>(filename);
-
-    // Initialize DB and pending with genesis block
+    // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    DAG.pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
@@ -173,6 +166,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     EXPECT_EQ(DAG.GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
+
+    CAT.reset();
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());

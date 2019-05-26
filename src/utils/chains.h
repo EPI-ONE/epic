@@ -26,7 +26,8 @@ private:
 
 public:
     Chains() : c(), m(0), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
-    Chains(Chains&& q) : c(std::move(q.c)), m(std::move(q.m)), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
+    Chains(Chains&& q)
+        : c(std::move(q.c)), m(std::move(q.m)), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
 
     bool empty() const {
         return c.empty();
@@ -56,7 +57,7 @@ public:
     }
 
     iterator erase(iterator pos) {
-        if (std::distance(c.begin(), pos) == (long)m) {
+        if (std::distance(c.begin(), pos) == (long) m) {
             // Erasing the current best is not allowed
             return pos;
         }
@@ -64,7 +65,7 @@ public:
     }
 
     const_iterator erase(const_iterator pos) {
-        if (std::distance(c.cbegin(), pos) == (long)m) {
+        if (std::distance(c.cbegin(), pos) == (long) m) {
             // Erasing the current best is NOT allowed
             return pos;
         }

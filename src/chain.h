@@ -36,9 +36,16 @@ public:
     ChainStatePtr GetChainHead() const;
 
     /** Adds the block to pending and returns its milestone status */
-    MilestoneStatus AddPendingBlock(ConstBlockPtr);
+    void AddPendingBlock(ConstBlockPtr);
 
-    void AddPendingUTXOs(std::vector<UTXOPtr>&);
+    void AddPendingUTXOs(const std::vector<UTXOPtr>&);
+
+    /**
+     * Returns IS_TRUE_MILESTONE if the block reaches ms diff target in the head CS
+     * Returns IS_FAKE_MILESTONE if the block reaches ms diff target in a CS other than the head
+     * Returns IS_NOT_MILESTONE otherwise, meaning that this block is not a milestone
+     */
+    MilestoneStatus IsMilestone(const ConstBlockPtr &pblock);
 
     void RemovePendingBlock(const uint256&);
 
@@ -74,7 +81,7 @@ public:
      */
     void UpdateChainState(const std::vector<RecordPtr>&);
 
-    static bool IsValidDistance(const RecordPtr, const arith_uint256);
+    static bool IsValidDistance(const RecordPtr&, const arith_uint256&);
 
 private:
     // 1 if this chain is main chain, 0 otherwise;
@@ -100,13 +107,6 @@ private:
     ChainLedger ledger_;
 
     bool CheckMsPOW(const ConstBlockPtr&, const ChainStatePtr&);
-
-    /**
-     * Returns IS_TRUE_MILESTONE if the block reaches ms diff target in the head CS
-     * Returns IS_FAKE_MILESTONE if the block reaches ms diff target in a CS other than the head
-     * Returns IS_NOT_MILESTONE otherwise, meaning that this block is not a milestone
-     */
-    MilestoneStatus IsMilestone(const ConstBlockPtr& pblock);
 
     /**
      * Checks whether the block contains a valide tx

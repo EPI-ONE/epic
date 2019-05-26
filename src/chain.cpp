@@ -31,12 +31,14 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     // note that we don't do any verification here
 }
 
-MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
+void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
-    return IsMilestone(pblock);
 }
 
-void Chain::AddPendingUTXOs(std::vector<UTXOPtr>& utxos) {
+void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
+    if (utxos.empty()) {
+        return;
+    }
     for (const auto& u : utxos) {
         pendingUTXOs_.emplace(u->GetKey(), u);
     }
@@ -287,17 +289,24 @@ bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
 
 MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
     auto entry = recordHistory_.find(pblock->GetMilestoneHash());
+    ChainStatePtr ms;
 
-    if (entry != recordHistory_.end()) {
-        auto& ms = entry->second->snapshot;
-
-        if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
-            return IS_TRUE_MILESTONE;
+    if (entry == recordHistory_.end()) {
+        auto rec = CAT->GetRecord(pblock->GetMilestoneHash());
+        if (ms) {
+            return UNKNOWN;
         }
+        ms = rec->snapshot;
+    } else {
+        ms = entry->second->snapshot;
+    }
 
-        if (ms && CheckMsPOW(pblock, ms)) {
-            return IS_FAKE_MILESTONE;
-        }
+    if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
+        return IS_TRUE_MILESTONE;
+    }
+
+    if (ms && CheckMsPOW(pblock, ms)) {
+        return IS_FAKE_MILESTONE;
     }
 
     return IS_NOT_MILESTONE;
