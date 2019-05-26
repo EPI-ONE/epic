@@ -293,8 +293,8 @@ MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
 
     if (entry == recordHistory_.end()) {
         auto rec = CAT->GetRecord(pblock->GetMilestoneHash());
-        if (ms) {
-            return UNKNOWN;
+        if (!rec) {
+            return WE_DONT_KNOW;
         }
         ms = rec->snapshot;
     } else {
