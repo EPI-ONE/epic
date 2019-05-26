@@ -4,7 +4,7 @@
 
 DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
-    milestoneChains.push(std::make_unique<Chain>(true));
+    milestoneChains.push(std::make_unique<Chain>());
     thread_.Start();
 }
 
@@ -16,8 +16,10 @@ void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer>
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     static auto process = [&block, this](const ChainPtr& chain) {
+        isVerifying = true;
         chain->Verify(block);
         UpdateDownloadingQueue(block->GetHash());
+        isVerifying = false;
     };
 
     thread_.Execute([block, this]() {
@@ -31,36 +33,62 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             }
         }
 
-        for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
-            MilestoneStatus mss = (*chainIt)->IsMilestone(block);
-            switch (mss) {
-            case WE_DONT_KNOW:
-                continue;
+        // Add to pending on every chain
+        for (const auto& chain : milestoneChains) {
+            chain->AddPendingBlock(block);
+            chain->AddPendingUTXOs(utxos);
+        }
 
-            case IS_NOT_MILESTONE:
-                (*chainIt)->AddPendingBlock(block);
-                (*chainIt)->AddPendingUTXOs(utxos);
-                continue;
+        // Check if it's a new ms from the main chain
+        auto& mainchain   = milestoneChains.best();
+        RecordPtr msBlock = mainchain->GetMilestoneCache(block->GetMilestoneHash());
+        if (!msBlock) {
+            msBlock = CAT->GetRecord(block->GetMilestoneHash());
+        }
 
-            case IS_TRUE_MILESTONE: {
-                (*chainIt)->AddPendingBlock(block);
-                (*chainIt)->AddPendingUTXOs(utxos);
-                isVerifying = true;
-                process(*chainIt);
-                milestoneChains.update_best(chainIt);
-                isVerifying = false;
-                return;
+        if (msBlock) {
+            auto ms = msBlock->snapshot;
+
+            if (*(ms) == *(mainchain->GetChainHead()) && CheckMsPOW(block, ms)) {
+                // new milestone
+                process(mainchain);
+            } else if (CheckMsPOW(block, ms)) {
+                // new fork
+                auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
+                process(new_fork);
+                milestoneChains.emplace(std::move(new_fork));
             }
 
-            case IS_FAKE_MILESTONE: {
-                (*chainIt)->AddPendingBlock(block);
-                (*chainIt)->AddPendingUTXOs(utxos);
-                // Add a new fork
-                auto new_fork = std::make_unique<Chain>(**chainIt, block);
+            return;
+        }
+
+        // Check if it's a milestone on any other chain
+        for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
+            ChainPtr& chain   = *chainIt;
+
+            if (chain->IsMainChain()) {
+                continue;
+            }
+
+            RecordPtr msBlock = chain->GetMilestoneCache(block->GetMilestoneHash());
+
+            if (!msBlock) {
+                continue;
+            }
+
+            ChainStatePtr ms = msBlock->snapshot;
+
+            if (*(ms) == *(chain->GetChainHead()) && CheckMsPOW(block, ms)) {
+                // new milestone
+                process(*chainIt);
+                milestoneChains.update_best(chainIt);
+                return;
+            } else if (CheckMsPOW(block, ms)) {
+                // new fork
+                auto new_fork = std::make_unique<Chain>(*chain, block);
                 process(new_fork);
                 milestoneChains.emplace(std::move(new_fork));
                 return;
-            }
             }
         }
     });

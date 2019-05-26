@@ -6,6 +6,7 @@
 #include <queue>
 
 #include "chains.h"
+#include "consensus.h"
 #include "task.h"
 #include "threadpool.h"
 
@@ -45,6 +46,10 @@ public:
     RecordPtr GetState(const uint256&);
 
     const Chain& GetBestChain() const;
+
+    bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+        return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+    }
 
     /**
      * Methods are called when the synchronization status is changed:

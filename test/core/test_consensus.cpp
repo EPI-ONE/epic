@@ -132,6 +132,9 @@ TEST_F(TestConsensus, AddNewBlocks) {
             b.AddTransaction(tx);
         }
         b.Solve();
+        while (DAG.CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
+            b.Solve();
+        }
 
         blocks.emplace_back(std::make_shared<BlockNet>(b));
     }

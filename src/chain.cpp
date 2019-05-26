@@ -3,9 +3,12 @@
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
-Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
+Chain::Chain() : Chain(true) {
     states_.push_back(make_shared_ChainState());
+    recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
 }
+
+Chain::Chain(bool mainchain) : ismainchain_(mainchain) {}
 
 ChainStatePtr Chain::GetChainHead() const {
     return states_.back();
@@ -304,12 +307,15 @@ MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
     if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
         return IS_TRUE_MILESTONE;
     }
+    return nullptr;
+}
 
-    if (ms && CheckMsPOW(pblock, ms)) {
-        return IS_FAKE_MILESTONE;
+RecordPtr Chain::GetMilestoneCache(const uint256& msHash) {
+    auto entry = recordHistory_.find(msHash);
+    if (entry != recordHistory_.end() && entry->second->isMilestone) {
+        return entry->second;
     }
-
-    return IS_NOT_MILESTONE;
+    return nullptr;
 }
 
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}

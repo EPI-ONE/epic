@@ -224,6 +224,7 @@ NodeRecord NodeRecord::CreateGenesisRecord() {
     NodeRecord genesis{BlockNet{GENESIS}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
+    genesis.isMilestone = true;
     return genesis;
 }
 

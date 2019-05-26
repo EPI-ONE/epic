@@ -18,7 +18,8 @@ typedef std::unique_ptr<Chain> ChainPtr;
 
 class Chain {
 public:
-    Chain() : Chain(false) {}
+    /** Init a chain with genesis */
+    Chain();
     Chain(bool mainchain);
     Chain(const Chain&);
 
@@ -40,12 +41,7 @@ public:
 
     void AddPendingUTXOs(const std::vector<UTXOPtr>&);
 
-    /**
-     * Returns IS_TRUE_MILESTONE if the block reaches ms diff target in the head CS
-     * Returns IS_FAKE_MILESTONE if the block reaches ms diff target in a CS other than the head
-     * Returns IS_NOT_MILESTONE otherwise, meaning that this block is not a milestone
-     */
-    MilestoneStatus IsMilestone(const ConstBlockPtr &pblock);
+    RecordPtr GetMilestoneCache(const uint256&);
 
     void RemovePendingBlock(const uint256&);
 
@@ -93,17 +89,23 @@ private:
      */
     std::deque<ChainStatePtr> states_;
 
-    // stores data not yet verified in this chain
+    /**
+     * Stores data not yet verified in this chain
+     */
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
     std::unordered_map<uint256, UTXOPtr> pendingUTXOs_;
 
-    // stores blocks verified in this chain
+    /**
+     * Stored verified blocks on this chain as cache
+     */
     std::unordered_map<uint256, RecordPtr> recordHistory_;
 
     // store blocks being verified in a level set
     std::unordered_map<uint256, RecordPtr> verifying_;
 
-    // store different types of UTXO
+    /**
+     * Manages UTXO
+     */
     ChainLedger ledger_;
 
     bool CheckMsPOW(const ConstBlockPtr&, const ChainStatePtr&);
