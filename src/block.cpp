@@ -272,7 +272,7 @@ bool Block::CheckPOW() const {
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
 
-    FinalizeHash();
+    CalculateHash();
     for (;;) {
         if (UintToArith256(hash_) <= target) {
             return;
