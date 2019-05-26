@@ -6,17 +6,15 @@
 #include "chain.h"
 #include "test_factory.h"
 
-static std::string prefix = "test_validation/";
-
 class TestValidation : public testing::Test {
 public:
+    static std::string prefix;
     TestFactory fac;
 
     static void SetUpTestCase() {
         std::ostringstream os;
         os << time(nullptr);
-        std::string filename = prefix + os.str();
-        CAT                  = std::make_unique<Caterpillar>(filename);
+        CAT = std::make_unique<Caterpillar>(prefix + os.str());
     }
 
     static void TearDownTestCase() {
@@ -25,6 +23,8 @@ public:
         CAT.reset();
     }
 };
+
+std::string TestValidation::prefix = "test_validation/";
 
 TEST_F(TestValidation, ValidDistanceNormalChain) {
     auto genesisPtr = std::make_shared<BlockNet>(GENESIS);

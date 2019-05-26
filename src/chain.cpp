@@ -23,12 +23,14 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     }
 }
 
-MilestoneStatus Chain::AddPendingBlock(ConstBlockPtr pblock) {
+void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
-    return IsMilestone(pblock);
 }
 
-void Chain::AddPendingUTXOs(std::vector<UTXOPtr>& utxos) {
+void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
+    if (utxos.empty()) {
+        return;
+    }
     for (const auto& u : utxos) {
         pendingUTXOs_.emplace(u->GetKey(), u);
     }
@@ -46,7 +48,7 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(ConstBlockPtr pblock) {
     std::vector<ConstBlockPtr> stack = {pblock};
     std::vector<ConstBlockPtr> result;
     ConstBlockPtr cursor;
@@ -88,7 +90,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) 
     return result;
 }
 
-bool Chain::IsValidDistance(const RecordPtr b, const arith_uint256 ms_hashrate) {
+bool Chain::IsValidDistance(const RecordPtr& b, const arith_uint256& ms_hashrate) {
     auto current_distance = UintToArith256(b->cblock->GetTxHash()) ^ UintToArith256(b->cblock->GetPrevHash());
     arith_uint256 S       = 0;
     arith_uint256 t       = 0;
@@ -110,17 +112,24 @@ bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
 
 MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
     auto entry = recordHistory_.find(pblock->GetMilestoneHash());
+    ChainStatePtr ms;
 
-    if (entry != recordHistory_.end()) {
-        auto& ms = entry->second->snapshot;
-
-        if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
-            return IS_TRUE_MILESTONE;
+    if (entry == recordHistory_.end()) {
+        auto rec = CAT->GetRecord(pblock->GetMilestoneHash());
+        if (ms) {
+            return UNKNOWN;
         }
+        ms = rec->snapshot;
+    } else {
+        ms = entry->second->snapshot;
+    }
 
-        if (ms && CheckMsPOW(pblock, ms)) {
-            return IS_FAKE_MILESTONE;
-        }
+    if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
+        return IS_TRUE_MILESTONE;
+    }
+
+    if (ms && CheckMsPOW(pblock, ms)) {
+        return IS_FAKE_MILESTONE;
     }
 
     return IS_NOT_MILESTONE;

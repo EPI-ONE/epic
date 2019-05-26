@@ -7,6 +7,7 @@ enum MilestoneStatus : uint8_t {
     IS_NOT_MILESTONE = 0,
     IS_TRUE_MILESTONE,
     IS_FAKE_MILESTONE,
+    UNKNOWN,
 };
 
 class NodeRecord;

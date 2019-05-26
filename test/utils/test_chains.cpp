@@ -14,7 +14,7 @@ TEST_F(TestChains, BasicFunctions) {
 
     auto chainworkOf = [](ChainPtr& cp) -> arith_uint256& { return cp->GetChainHead()->chainwork; };
 
-    // Construct chains, each contains one chainstate
+    // Construct chains, each containing one chainstate
     // with a random chainwork less than mcw
     std::vector<ChainPtr> random_chains;
     for (int i = 0; i < testSize; ++i) {
@@ -23,7 +23,7 @@ TEST_F(TestChains, BasicFunctions) {
         random_chains.push_back(std::move(chain));
     }
 
-    // Replace a random element in c with mcw
+    // Replace a random element in random_chains with mcw
     auto best_chain                  = std::make_unique<Chain>();
     chainworkOf(best_chain)          = mcw;
     random_chains[rand() % testSize] = std::unique_ptr<Chain>(std::move(best_chain));
@@ -54,4 +54,8 @@ TEST_F(TestChains, BasicFunctions) {
     // Erasing a worse chain is allowed
     q.erase(q.begin() + 1);
     EXPECT_EQ(q.size(), testSize - 1);
+
+    // Pop the best chain
+    q.pop();
+    EXPECT_EQ(q.size(), testSize - 2);
 }

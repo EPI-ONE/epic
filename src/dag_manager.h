@@ -54,11 +54,9 @@ public:
         return DAG;
     }
 
-    /*
+    /**
      * Blocks the main thread from going forward
-     * until CAT completes all the tasks
-     *
-     * FOR TEST ONLY!
+     * until DAG completes all the tasks
      */
     void Stop();
 
