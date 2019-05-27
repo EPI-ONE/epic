@@ -68,12 +68,15 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+NodeRecord::NodeRecord()
+    : cumulativeReward(0), minerChainHeight(0), isMilestone(false), validity(UNKNOWN), optimalStorageSize(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+    : cblock(blk), cumulativeReward(0), minerChainHeight(0), isMilestone(false), validity(UNKNOWN),
+      optimalStorageSize(0) {}
 
-NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {
+NodeRecord::NodeRecord(const BlockNet& blk)
+    : cumulativeReward(0), minerChainHeight(0), isMilestone(false), validity(UNKNOWN), optimalStorageSize(0) {
     cblock = std::make_shared<BlockNet>(blk);
 }
 
@@ -190,6 +193,7 @@ NodeRecord NodeRecord::CreateGenesisRecord() {
     NodeRecord genesis(GENESIS);
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
+    genesis.isMilestone = true;
     return genesis;
 }
 

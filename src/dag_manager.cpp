@@ -3,7 +3,7 @@
 
 DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
-    milestoneChains.push(std::make_unique<Chain>(true));
+    milestoneChains.push(std::make_unique<Chain>());
     thread_.Start();
 }
 

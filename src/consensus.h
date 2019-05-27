@@ -120,7 +120,7 @@ public:
     Coin cumulativeReward;
     uint64_t minerChainHeight;
 
-    bool isMilestone = false;
+    bool isMilestone;
     ChainStatePtr snapshot;
 
     Validity validity;

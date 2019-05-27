@@ -5,6 +5,7 @@
 #include "block.h"
 #include "caterpillar.h"
 #include "chain.h"
+#include "consensus.h"
 #include "dag_manager.h"
 #include "key.h"
 #include "test_factory.h"
@@ -99,8 +100,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 
 TEST_F(TestConsensus, Chain) {
     Chain chain1{};
-    Chain chain2{false};
-    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+    ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
     std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};

@@ -1,9 +1,12 @@
 #include "chain.h"
 #include "caterpillar.h"
 
-Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
+Chain::Chain() : Chain(true) {
     states_.push_back(make_shared_ChainState());
+    recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
 }
+
+Chain::Chain(bool mainchain) : ismainchain_(mainchain) {}
 
 ChainStatePtr Chain::GetChainHead() const {
     return states_.back();

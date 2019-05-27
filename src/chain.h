@@ -16,7 +16,8 @@ typedef std::unique_ptr<Chain> ChainPtr;
 
 class Chain {
 public:
-    Chain() : Chain(false) {}
+    /** Init a chain with genesis */
+    Chain();
     Chain(bool mainchain);
     Chain(const Chain&);
 
