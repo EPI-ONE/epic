@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <list>
+#include <queue>
 
 #include "chain.h"
 #include "task.h"

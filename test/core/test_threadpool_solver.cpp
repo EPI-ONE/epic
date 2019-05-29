@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "block.h"
+#include "pow.h"
 
-class ThreadPoolSolverTest : public testing::Test {};
+class TestThreadPoolSolver: public testing::Test {};
 
-TEST_F(ThreadPoolSolverTest, simple_test) {
+TEST_F(TestThreadPoolSolver, simple_test) {
     /*
      * Create a basic block to solve
      */
@@ -21,14 +21,14 @@ TEST_F(ThreadPoolSolverTest, simple_test) {
     block.AddTransaction(tx);
     block.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
 
-
     /*
      * test the solver
      */
     ThreadPool solverPool(4);
 
     solverPool.Start();
-    block.Solve(solverPool);
+    Miner m;
+    m.Solve(block, solverPool);
     solverPool.Stop();
 
     EXPECT_TRUE(block.Verify());
