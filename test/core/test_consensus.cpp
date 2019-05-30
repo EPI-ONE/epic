@@ -2,12 +2,9 @@
 #include <gtest/gtest.h>
 #include <random>
 
-#include "block.h"
 #include "caterpillar.h"
-#include "dag_manager.h"
 #include "key.h"
 #include "test_factory.h"
-#include "utxo.h"
 
 class TestConsensus : public testing::Test {
 public:
@@ -132,6 +129,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
             b.AddTransaction(tx);
         }
         b.Solve();
+
         while (DAG.CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
             b.Solve();
         }

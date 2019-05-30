@@ -47,16 +47,16 @@ public:
 
     const Chain& GetBestChain() const;
 
-    bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
-        return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
-    }
-
     /**
      * Methods are called when the synchronization status is changed:
      * on to off and off to on. Modifies the atomic_flag isBatchSynching.
      */
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
+
+    static bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+        return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+    }
 
     static DAGManager& GetDAGManager() {
         static DAGManager DAG;

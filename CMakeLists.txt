@@ -21,8 +21,6 @@ set(CMAKE_VERBOSE_MAKEFILE OFF)
 #set(CMAKE_CXX_FLAGS "-DENABLE_SSE42 ${CMAKE_CXX_FLAGS}")
 #set(CMAKE_CXX_FLAGS "-DENABLE_PCLMULQDQ ${CMAKE_CXX_FLAGS}")
 
-LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
 # default bulid type
 set(DEFAULT_BUILD_TYPE "Debug")
 
@@ -33,6 +31,7 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 endif ()
 
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # gtest
 find_package(GTest 1.8.1 EXACT REQUIRED)
@@ -91,7 +90,6 @@ set(SRC_CODE
         )
 
 set(SRC_MAIN src/main.cpp)
-
 
 # test codes
 set(TEST_METHODS_SRCS test/test-methods)

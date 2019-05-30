@@ -43,6 +43,8 @@ public:
 
     RecordPtr GetMilestoneCache(const uint256&);
 
+    RecordPtr GetRecordCache(const uint256&);
+
     void RemovePendingBlock(const uint256&);
 
     bool IsBlockPending(const uint256&) const;

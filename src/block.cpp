@@ -229,7 +229,7 @@ bool Block::IsRegistration() const {
 }
 
 bool Block::IsFirstRegistration() const {
-    return HasTransaction() ? transaction_->IsFirstRegistration() : false;
+    return HasTransaction() ? transaction_->IsFirstRegistration() && prevBlockHash_ == GENESIS.GetHash() : false;
 }
 
 arith_uint256 Block::GetChainWork() const {
@@ -260,8 +260,7 @@ bool Block::CheckPOW() const {
     }
 
     if (UintToArith256(hash_) > target) {
-        spdlog::info(
-            "Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
+        spdlog::info("Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
         return false;
     }
 

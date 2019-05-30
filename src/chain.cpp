@@ -318,4 +318,12 @@ RecordPtr Chain::GetMilestoneCache(const uint256& msHash) {
     return nullptr;
 }
 
+RecordPtr Chain::GetRecordCache(const uint256& h) {
+    auto entry = recordHistory_.find(h);
+    if (entry != recordHistory_.end()) {
+        return entry->second;
+    }
+    return nullptr;
+}
+
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
