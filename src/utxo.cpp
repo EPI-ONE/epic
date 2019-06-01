@@ -30,10 +30,6 @@ void TXOC::AddToCreated(const TxOutput& output, uint32_t index) {
     created_.emplace_back(UTXO(output, index));
 }
 
-void TXOC::AddToSpent(const UTXO& utxo) {
-    spent_.emplace_back(utxo.GetKey());
-}
-
 void TXOC::AddToSpent(const TxInput& input) {
     auto outpoint = input.outpoint;
     spent_.emplace_back(XOR(outpoint.bHash, outpoint.index));

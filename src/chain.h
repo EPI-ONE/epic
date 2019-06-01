@@ -55,8 +55,6 @@ public:
         return states_; 
     }
 
-    static bool IsValidDistance(const RecordPtr, const arith_uint256);
-
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
@@ -68,6 +66,8 @@ private:
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
     // store blocks verified in this chain
     std::unordered_map<uint256, RecordPtr> recordHistory_;
+    // store blocks being verified in a level set
+    std::unordered_map<uint256, RecordPtr> verifying_;
     // the unspent ledger 
     std::unordered_map<uint256, UTXO> ledger_;
     // the spent ledger 
@@ -83,6 +83,14 @@ private:
     // offline verification for transactions
     std::optional<TXOC> ValidateRedemption(NodeRecord& record);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
+
+    const Coin& GetPrevReward(const NodeRecord& rec) {
+        // TODO: add mroe check
+        return recordHistory_[rec.cblock->GetHash()]->cumulativeReward
+    }
+
+    static bool IsValidDistance(const NodeRecord&, const arith_uint256&);
+
 };
 
 typedef std::unique_ptr<Chain> ChainPtr;

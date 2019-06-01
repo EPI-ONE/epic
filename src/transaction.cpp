@@ -117,7 +117,7 @@ const std::vector<TxOutput>& Transaction::GetOutputs() const {
     return outputs_;
 }
 
-const Tasm::Listing Transaction::GetListing() const {
+/*const Tasm::Listing Transaction::GetListing() const {
     Tasm::Listing l;
     if (inputs_.size() > 1 && outputs_.size() > 1) {
         throw std::runtime_error("Transaction is inconsistent. Input size and output size currently supported is <= 1");
@@ -130,7 +130,7 @@ const Tasm::Listing Transaction::GetListing() const {
     }
 
     return l;
-}
+}*/
 
 std::vector<TxInput>& Transaction::GetInputs() {
     return inputs_;
@@ -163,6 +163,14 @@ const Block* Transaction::GetParentBlock() const {
 
 uint64_t Transaction::HashCode() const {
     return hash_.GetCheapHash();
+}
+
+bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
+    Tasm tasm(functors);
+    Tasm::Listing listing;
+    listing.program.push_back(VERIFY);
+    listing.data << outputListing.data << input.listingContent.data;
+    return tasm.ExecListing(listing);
 }
 
 /*

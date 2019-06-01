@@ -127,6 +127,7 @@ public:
     ConstBlockPtr cblock;
 
     Coin cumulativeReward;
+    Coin fee;
     uint64_t minerChainHeight;
 
     bool isMilestone = false;

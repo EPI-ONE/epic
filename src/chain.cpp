@@ -1,5 +1,7 @@
 #include "chain.h"
 #include "caterpillar.h"
+#include "tasm/functors.h"
+#include "tasm/tasm.h"
 
 Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
     pendingBlocks_ = {};
@@ -89,12 +91,12 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) 
     return result;
 }
 
-bool Chain::IsValidDistance(const RecordPtr b, const arith_uint256 ms_hashrate) {
-    auto current_distance = UintToArith256(b->cblock->GetTxHash()) ^ UintToArith256(b->cblock->GetPrevHash());
+bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
+    auto current_distance = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
     arith_uint256 S       = 0;
     arith_uint256 t       = 0;
 
-    auto curr = CAT->GetRecord(b->cblock->GetPrevHash());
+    auto curr = CAT->GetRecord(b.cblock->GetPrevHash());
     for (size_t i = 0; i < params.sortitionThreshold && *curr != GENESIS_RECORD;
          ++i, curr = CAT->GetRecord(curr->cblock->GetPrevHash())) {
         S += curr->cblock->GetChainWork();
@@ -146,24 +148,79 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
             result = ValidateTx(record);
         }
     }
-    record.UpdateReward(recordHistory_[pblock->GetHash()]->cumulativeReward);
+    record.UpdateReward(GetPrevReward(record));
     return result;
 }
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
-    Coin valueIn{};
-    Coin valueOut{};
-    auto tx = record.cblock->GetTransaction();
-    
-    // check Transaction distance 
+    // this transaction is a redemption of reward
+    const auto redem = record.cblock->GetTransaction();
+    if (redem->GetOutputs().size() == 1) {
+        // missing output for redemption of reward
+        return {};
+    }
+    const TxInput& in   = redem->GetInputs().at(0);
+    const TxOutput& out = redem->GetOutputs().at(0);
 
-    // update TXOC
-    uint64 sigOps = 0;
-    TXOC txoc{};
-    return {};
+    // value of the output should be less or equal to the previous counter
+    if (GetPrevReward(record) <= out.value) {
+        // log: wrong redemption value 
+        return {};
+    }
+
+    // TODO: verify signature using the public from last registration
+
+    return std::make_optional<TXOC>({{UTXO(out, 0)}, {}});
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
-    return {};
+    auto tx = record.cblock->GetTransaction();
+
+    // check Transaction distance
+    ChainStatePtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+    assert(prevMs);
+    if (!IsValidDistance(record, prevMs->hashRate)) {
+        return {};
+    }
+
+    // update TXOC
+    uint64_t sigOps = 0;
+    Coin valueIn{};
+    Coin valueOut{};
+    TXOC txoc{};
+    std::vector<Tasm::Listing> prevOutListing;
+    prevOutListing.reserve(tx->GetInputs().size());
+
+    for (const auto& in: tx->GetInputs()) {
+        const TxOutPoint& outpoint = in.outpoint;
+        std::unique_ptr<UTXO> prevOut = CAT->GetTransactionOutput(XOR(outpoint.bHash, outpoint.index));
+
+        if (!prevOut) {
+            // log: non-existent or spent output
+            return {};
+        }
+        // TODO: can we check size of sig ops?
+        valueIn = valueIn + prevOut->GetOutput().value;
+
+        prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
+        txoc.AddToSpent(in);
+    }
+
+    Coin fee = valueIn - valueOut;
+    // check total amount of value in and value out
+    if (!(fee >= 0 && fee <= params.maxMoney && valueIn <= params.maxMoney)) {
+        // log: transaction input vlaue out of range
+        return {};
+    }
+
+    // verify transaction input one by one
+    auto itprevOut = prevOutListing.cbegin();
+    for (const auto& input : tx->GetInputs()) {
+        if (!VerifyInOut(input, *itprevOut)) {
+            return {};
+        }
+    }
+    return std::make_optional<TXOC>(std::move(txoc));
 }
+
 

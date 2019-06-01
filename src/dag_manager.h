@@ -61,12 +61,17 @@ public:
 
     size_t GetBestMilestoneHeight();
 
+    // Checkout states either in different chain or in db
+    ChainStatePtr GetState(const uint256&);
+
     // Methods are called when the synchronization status is changed:
     // on to off and off to on. Modifies the atomic_flag isBatchSynching.
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
 private:
+
+    std::unordered_map<uint256, ChainStatePtr> globalStates_;
     // Start a new thread and create a list of GetData tasks that is either added
     // to preDownloading (if it's not empty) or a peer's task queue. If preDownloading
     // is not empty, drain certain amount of tasks from preDownloading to peer's task queue.

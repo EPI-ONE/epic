@@ -11,6 +11,7 @@
 #include "spdlog.h"
 #include "stream.h"
 #include "tasm.h"
+#include "tasm/functors.h"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
@@ -136,7 +137,7 @@ public:
 
     const std::vector<TxOutput>& GetOutputs() const;
 
-    const Tasm::Listing GetListing() const;
+    //const Tasm::Listing GetListing() const;
 
     std::vector<TxOutput>& GetOutputs();
 
@@ -168,8 +169,6 @@ private:
     std::vector<TxOutput> outputs_;
 
     uint256 hash_;
-    Coin fee_;
-
     const Block* parentBlock_;
 };
 
@@ -189,6 +188,8 @@ struct std::equal_to<std::shared_ptr<const Transaction>> {
         return lhs->GetHash() == rhs->GetHash();
     }
 };
+
+bool VerifyInOut(const TxInput&, const Tasm::Listing&);
 
 namespace std {
 string to_string(const TxOutPoint& outpoint);

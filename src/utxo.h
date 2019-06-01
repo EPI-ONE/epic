@@ -40,6 +40,10 @@ public:
         return !(*this == another);
     }
 
+    const TxOutput& GetOutput() const {
+        return output_;
+    }
+
     uint256 GetContainingBlkHash() const;
 
     /**
@@ -76,7 +80,6 @@ public:
 
     void AddToCreated(UTXO&&);
     void AddToCreated(const TxOutput&, uint32_t);
-    void AddToSpent(const UTXO&);
     void AddToSpent(const TxInput&);
 
     const std::vector<UTXO>& GetTxOutsCreated() const {
