@@ -90,6 +90,31 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
     isMilestone = true;
 }
 
+void NodeRecord::UpdateReward(const Coin& prevReward, bool validPeerChain) {
+    assert(validity == Validity::UNKNOWN);
+
+    if (!validPeerChain) {
+        cumulativeReward = prevReward;
+        return;
+    }
+    if (!cblock->HasTransaction() || validity == Validity::INVALID) {
+        // cumulate reward without fee
+        cumulativeReward = prevReward + params.reward;
+        return;
+    }
+    if (validity == Validity::VALID) {
+        if (cblock->IsFirstRegistration()) {
+            // reset reward 
+            cumulativeReward = {};
+        } else if (cblock->IsRegistration()) {
+            // remaining reward = last cumulative reward - redemption amount
+            cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
+        } else { // for normal valid transaction
+            cumulativeReward = prevReward + fee; 
+        }
+    }
+}
+
 void NodeRecord::Serialize(VStream& s) const {
     s << *cblock;
     s << VARINT(cumulativeReward.GetValue());

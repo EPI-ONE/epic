@@ -84,13 +84,14 @@ private:
     std::optional<TXOC> ValidateRedemption(NodeRecord& record);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
-    const Coin& GetPrevReward(const NodeRecord& rec) {
-        // TODO: add mroe check
-        return recordHistory_[rec.cblock->GetHash()]->cumulativeReward
-    }
-
     static bool IsValidDistance(const NodeRecord&, const arith_uint256&);
 
+    const Coin& GetPrevReward(const NodeRecord& rec) {
+        // TODO: add more check
+        return recordHistory_[rec.cblock->GetHash()]->cumulativeReward;
+    }
+
+    RecordPtr GetRecord(const uint256&) const;
 };
 
 typedef std::unique_ptr<Chain> ChainPtr;

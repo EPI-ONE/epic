@@ -112,6 +112,7 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, const NodeRecord& r
  */
 class NodeRecord {
 public:
+    // transaction validity
     enum Validity : uint8_t {
         UNKNOWN = 0,
         VALID,
@@ -130,11 +131,13 @@ public:
     Coin fee;
     uint64_t minerChainHeight;
 
+    bool isRedeemed;
+    uint256 prevRedemHash;
+
     bool isMilestone = false;
     ChainStatePtr snapshot;
 
     Validity validity;
-
     size_t optimalStorageSize;
 
     NodeRecord();
@@ -145,8 +148,7 @@ public:
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
-    // TODO
-    void UpdateReward(Coin coin&);
+    void UpdateReward(const Coin&, bool);
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);

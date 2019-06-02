@@ -115,6 +115,7 @@ void Chain::Verify(const ConstBlockPtr pblock) {
     std::vector<uint256> hashes;
     recs.reserve(blocksToValidate.size());
     hashes.reserve(blocksToValidate.size());
+    verifying_.clear();
 
     for (const auto& b : blocksToValidate) {
         recs.emplace_back(std::make_shared<NodeRecord>(b));
@@ -124,7 +125,9 @@ void Chain::Verify(const ConstBlockPtr pblock) {
 
     // validate each block in order
     for (auto& rec : recs) {
-        if (!rec->cblock->IsFirstRegistration())  {
+        if (rec->cblock->IsFirstRegistration()) {
+            rec.prevRedemHash = rec.cblock->GetHash();
+        } else {
             if (auto update = Validate(*rec)) {
                 // TODO: remove UTXO from chain
                 state->UpdateTXOC(std::move(*update));
@@ -132,15 +135,31 @@ void Chain::Verify(const ConstBlockPtr pblock) {
                 rec->validity = NodeRecord::INVALID;
                 // TODO: we may add log here
             }
+        
         }
-        recordHistory_.insert({rec->cblock->GetHash(), rec});
+        verifying_.insert({rec->cblock->GetHash(), rec});
     }
     states_.emplace_back(state);
+    //recordHistory_.merge(std::move(verifying_));
 }
 
 std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     auto pblock = record.cblock;
     std::optional<TXOC> result;
+
+    // first check whether it is a fork of its peer chain
+    bool validPeerChain = false;
+    auto prevRec = GetRecord(record.cblock->GetPrevHash());
+    if (prevRec->prevRedemHash != Hash::GetZeroHash()) {
+        // then its previous block is valid in the sense of reward
+        record.prevRedemHash = prevRec->cblock->GetHash();
+        prevRec->prevRedemHash = Hash::GetZeroHash();
+        validPeerChain = true;
+    } else {
+        record.prevRedemHash = Hash::GetZeroHash();
+    }
+
+    // then check its transaction and update UTXO
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
             result = ValidateRedemption(record);
@@ -148,7 +167,8 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
             result = ValidateTx(record);
         }
     }
-    record.UpdateReward(GetPrevReward(record));
+
+    record.UpdateReward(GetPrevReward(record), validPeerChain);
     return result;
 }
 
@@ -169,7 +189,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     }
 
     // TODO: verify signature using the public from last registration
-
+    
     return std::make_optional<TXOC>({{UTXO(out, 0)}, {}});
 }
 
@@ -212,6 +232,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
         // log: transaction input vlaue out of range
         return {};
     }
+    record.fee = fee;
 
     // verify transaction input one by one
     auto itprevOut = prevOutListing.cbegin();
@@ -223,4 +244,16 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     return std::make_optional<TXOC>(std::move(txoc));
 }
 
-
+RecordPtr Chain::GetRecord(const uint256& blkHash) const {
+    try {
+        if (verifying_.find(blkHash) != verifying_.end()) {
+            return verifying_.at(blkHash);
+        } else if (recordHistory_.find(blkHash) != recordHistory_.end()) {
+            return recordHistory_.at(blkHash);
+        } else {
+            return CAT->GetRecord(blkHash);
+        }
+    } catch (std::out_of_range e) {
+        return nullptr; 
+    }
+}
