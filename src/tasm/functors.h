@@ -8,7 +8,7 @@
 #include "pubkey.h"
 #include "tasm/tasm.h"
 
-std::array<instruction, 256> functors = {
+static const std::array<instruction, 256> functors = {
     // FALSE
     ([](VStream&, std::size_t) { return 0; }),
     // TRUE

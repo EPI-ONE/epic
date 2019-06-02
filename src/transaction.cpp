@@ -76,7 +76,6 @@ Transaction::Transaction(const Transaction& tx) {
     hash_.SetNull();
     inputs_      = tx.inputs_;
     outputs_     = tx.outputs_;
-    fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
     FinalizeHash();
 

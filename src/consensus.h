@@ -2,6 +2,7 @@
 #define __SRC_CONSENSUS_H__
 
 #include "block.h"
+#include "utxo.h"
 
 class NodeRecord;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
@@ -55,7 +56,7 @@ public:
         return lvsHash_.back(); 
     }
 
-    const std::vector<uint256>& GetTXOC() const {
+    const TXOC& GetTXOC() const {
         return txoc_;
     }
 
@@ -104,7 +105,7 @@ private:
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
 ChainStatePtr make_shared_ChainState();
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, const NodeRecord& record, std::vector<uint256>&& hashes);
+ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
  * A structure that contains a shared_ptr<const BlockNet> that will

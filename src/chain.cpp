@@ -126,11 +126,11 @@ void Chain::Verify(const ConstBlockPtr pblock) {
     // validate each block in order
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
-            rec.prevRedemHash = rec.cblock->GetHash();
+            rec->prevRedemHash = rec->cblock->GetHash();
         } else {
             if (auto update = Validate(*rec)) {
                 // TODO: remove UTXO from chain
-                state->UpdateTXOC(std::move(*update));
+                //state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
                 // TODO: we may add log here

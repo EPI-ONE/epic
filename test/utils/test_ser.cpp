@@ -186,7 +186,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     EXPECT_EQ(s, soutput.str());
 
     // Check parent pointers
-    Transaction* ptrTx = &*block1.GetTransaction();
+    const Transaction* ptrTx = &(*block1.GetTransaction());
     EXPECT_EQ(&block1, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());

@@ -8,6 +8,13 @@
 
 static std::string prefix = "test_validation/";
 
+class TestImplChain : public Chain {
+public:
+    static bool IsValidDistance(const NodeRecord& rec, const arith_uint256& msHashRate) {
+        return Chain::IsValidDistance(rec, msHashRate);
+    }
+};
+
 class TestValidation : public testing::Test {
 public:
     TestFactory fac;
@@ -56,7 +63,7 @@ TEST_F(TestValidation, ValidDistanceNormalChain) {
     CAT->StoreRecord(goodBlockR);
 
     arith_uint256 ms_hashrate = 1;
-    EXPECT_TRUE(Chain::IsValidDistance(goodBlockR, ms_hashrate));
+    EXPECT_TRUE(TestImplChain::IsValidDistance(*goodBlockR, ms_hashrate));
 }
 
 TEST_F(TestValidation, ValidDistanceMaliciousChain) {
@@ -99,5 +106,5 @@ TEST_F(TestValidation, ValidDistanceMaliciousChain) {
     CAT->StoreRecord(badBlockR);
 
     arith_uint256 ms_hashrate = 9999;
-    EXPECT_FALSE(Chain::IsValidDistance(badBlockR, ms_hashrate));
+    EXPECT_FALSE(TestImplChain::IsValidDistance(*badBlockR, ms_hashrate));
 }
