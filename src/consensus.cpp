@@ -11,7 +11,7 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
 
 ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
-      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHash_(lvsHash) {
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
     chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }

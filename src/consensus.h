@@ -49,11 +49,11 @@ public:
     }
 
     const std::vector<uint256>& GetRecordHashes() const {
-        return lvsHash_;
+        return lvsHashes_;
     }
 
     const uint256& GetMilestoneHash() const {
-        return lvsHash_.back(); 
+        return lvsHashes_.back(); 
     }
 
     const TXOC& GetTXOC() const {
@@ -95,7 +95,7 @@ public:
 
 private:
     // a vector consists of hashes of blocks in level set of this chain state
-    std::vector<uint256> lvsHash_;
+    std::vector<uint256> lvsHashes_;
     // a vector of TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
@@ -126,20 +126,26 @@ public:
         IS_FAKE_MILESTONE,
     };
 
+    enum RedemptionStatus : uint8_t {
+        IS_NOT_REDEMPTION = 0, 
+        NOT_YET_REDEEMED,
+        IS_REDEEMED,
+    };
+
     ConstBlockPtr cblock;
 
     Coin cumulativeReward;
     Coin fee;
-    uint64_t minerChainHeight;
+    uint64_t minerChainHeight = 0;
 
-    bool isRedeemed;
-    uint256 prevRedemHash;
+    RedemptionStatus isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
+    uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
 
     bool isMilestone = false;
-    ChainStatePtr snapshot;
+    ChainStatePtr snapshot = nullptr;
 
-    Validity validity;
-    size_t optimalStorageSize;
+    Validity validity = Validity::UNKNOWN;
+    size_t optimalStorageSize = 0;
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);

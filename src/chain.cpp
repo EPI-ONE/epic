@@ -152,7 +152,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     auto prevRec = GetRecord(record.cblock->GetPrevHash());
     if (prevRec->prevRedemHash != Hash::GetZeroHash()) {
         // then its previous block is valid in the sense of reward
-        record.prevRedemHash = prevRec->cblock->GetHash();
+        record.prevRedemHash = prevRec->prevRedemHash;
         prevRec->prevRedemHash = Hash::GetZeroHash();
         validPeerChain = true;
     } else {
@@ -175,12 +175,12 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     // this transaction is a redemption of reward
     const auto redem = record.cblock->GetTransaction();
-    if (redem->GetOutputs().size() == 1) {
+    if (redem->GetOutputs().size() > 0) {
         // missing output for redemption of reward
         return {};
     }
     const TxInput& in   = redem->GetInputs().at(0);
-    const TxOutput& out = redem->GetOutputs().at(0);
+    const TxOutput& out = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
     // value of the output should be less or equal to the previous counter
     if (GetPrevReward(record) <= out.value) {
@@ -188,8 +188,20 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
         return {};
     }
 
-    // TODO: verify signature using the public from last registration
-    
+    auto prevReg = GetRecord(record.prevRedemHash);
+    assert(prevReg);
+    if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
+        // log: double redemption 
+        return {};
+    }
+
+    if (!VerifyInOut(in, prevReg->cblock->GetTransaction()->GetOutputs().at(0).listingContent)) {
+        // log: singature failed
+        return {};
+    }
+
+    prevReg->isRedeemed = NodeRecord::IS_REDEEMED;
+    record.isRedeemed   = NodeRecord::NOT_YET_REDEEMED;
     return std::make_optional<TXOC>({{UTXO(out, 0)}, {}});
 }
 
@@ -240,6 +252,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
         if (!VerifyInOut(input, *itprevOut)) {
             return {};
         }
+        itprevOut++;
     }
     return std::make_optional<TXOC>(std::move(txoc));
 }
