@@ -20,15 +20,9 @@ public:
 
         Listing() = default;
 
-        Listing(std::vector<uint8_t>& p, VStream& d) : program(p), data(d) {}
-        //Listing(std::vector<uint8_t>&& p, VStream& d) : program(p), data(d) {}
-        Listing(std::vector<uint8_t>&& p, VStream& d) : program(p) {
-            data = d;
-        }
-
-        Listing(const VStream& d) {
-            data = d;
-        }
+        Listing(std::vector<uint8_t>& p, VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(std::vector<uint8_t>&& p, VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(const VStream& d) : data(d.cbegin(), d.cend()) {}
 
         ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>

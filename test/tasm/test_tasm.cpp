@@ -45,16 +45,12 @@ TEST_F(TestTasm, verify) {
     CKey seckey = CKey();
     seckey.MakeNewKey(true);
     CPubKey pubkey      = seckey.GetPubKey();
-    uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
     std::string randstr = "frog learns chess";
     uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> sig;
     seckey.Sign(msg, sig);
 
-    pubkeyHash.Serialize(v);
-    pubkey.Serialize(v);
-    Serialize(v, sig);
-    msg.Serialize(v);
+    v << pubkey << sig << msg << EncodeAddress(pubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
     Tasm::Listing l(p, v);
@@ -66,14 +62,14 @@ TEST_F(TestTasm, transaction_in_out_verify) {
     VStream indata{}, outdata{};
 
     // construct transaction input
-    auto keypair = fac.CreateKeyPair();
-    CKeyID addr = keypair.second.GetID();
+    auto keypair     = fac.CreateKeyPair();
+    CKeyID addr      = keypair.second.GetID();
     auto encodedAddr = EncodeAddress(addr);
     indata << encodedAddr;
     TxInput txin{Tasm::Listing{std::vector<uint8_t>{VERIFY}, indata}};
 
     // construct transaction output
-    auto msg = fac.GetRandomString(10);
+    auto msg     = fac.GetRandomString(10);
     auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
     std::vector<unsigned char> sig;
     keypair.first.Sign(hashMsg, sig);
@@ -95,16 +91,15 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     maliciousSeckey.MakeNewKey(true);
     CPubKey pubkey              = seckey.GetPubKey();
     CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
-    uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
     std::string randstr         = "frog learns chess";
     uint256 msg                 = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> sig;
     seckey.Sign(msg, sig);
 
-    v << maliciousPubkeyHash;
     v << pubkey;
     v << sig;
     v << msg;
+    v << EncodeAddress(maliciousPubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
     Tasm::Listing l(p, v);
@@ -121,16 +116,15 @@ TEST_F(TestTasm, verify_bad_signature) {
     seckey.MakeNewKey(true);
     maliciousSeckey.MakeNewKey(true);
     CPubKey pubkey      = seckey.GetPubKey();
-    uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
     std::string randstr = "frog learns chess";
     uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
     std::vector<unsigned char> maliciousSig;
     maliciousSeckey.Sign(msg, maliciousSig);
 
-    v << pubkeyHash;
     v << pubkey;
     v << maliciousSig;
     v << msg;
+    v << EncodeAddress(pubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
     Tasm::Listing l(p, v);
@@ -147,15 +141,14 @@ TEST_F(TestTasm, continuous_verify) {
         CKey seckey = CKey();
         seckey.MakeNewKey(true);
         CPubKey pubkey     = seckey.GetPubKey();
-        uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
         uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
         std::vector<unsigned char> sig;
         seckey.Sign(msg, sig);
 
-        v << pubkeyHash;
         v << pubkey;
         v << sig;
         v << msg;
+        v << EncodeAddress(pubkey.GetID());
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
@@ -173,15 +166,14 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             CKey seckey = CKey();
             seckey.MakeNewKey(true);
             CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
             uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
 
-            pubkeyHash.Serialize(v);
             pubkey.Serialize(v);
             Serialize(v, sig);
             msg.Serialize(v);
+            v << EncodeAddress(pubkey.GetID());
         } else {
             CKey seckey          = CKey();
             CKey maliciousSeckey = CKey();
@@ -189,15 +181,14 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             maliciousSeckey.MakeNewKey(true);
             CPubKey pubkey              = seckey.GetPubKey();
             CPubKey maliciousPubkey     = maliciousSeckey.GetPubKey();
-            uint160 maliciousPubkeyHash = Hash160<1>(maliciousPubkey.begin(), maliciousPubkey.end());
             uint256 msg                 = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
 
-            v << maliciousPubkeyHash;
             v << pubkey;
             v << sig;
             v << msg;
+            v << EncodeAddress(maliciousPubkey.GetID());
         }
     }
 
@@ -216,31 +207,29 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
             CKey seckey = CKey();
             seckey.MakeNewKey(true);
             CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
             uint256 msg        = Hash<1>(randstr[i].cbegin(), randstr[i].cend());
             std::vector<unsigned char> sig;
             seckey.Sign(msg, sig);
 
-            pubkeyHash.Serialize(v);
             pubkey.Serialize(v);
             Serialize(v, sig);
             msg.Serialize(v);
+            v << EncodeAddress(pubkey.GetID());
         } else {
             CKey seckey          = CKey();
             CKey maliciousSeckey = CKey();
             seckey.MakeNewKey(true);
             maliciousSeckey.MakeNewKey(true);
             CPubKey pubkey      = seckey.GetPubKey();
-            uint160 pubkeyHash  = Hash160<1>(pubkey.begin(), pubkey.end());
             std::string randstr = "frog learns chess";
             uint256 msg         = Hash<1>(randstr.cbegin(), randstr.cend());
             std::vector<unsigned char> maliciousSig;
             maliciousSeckey.Sign(msg, maliciousSig);
 
-            v << pubkeyHash;
             v << pubkey;
             v << maliciousSig;
             v << msg;
+            v << EncodeAddress(pubkey.GetID());
         }
     }
 
