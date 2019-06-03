@@ -9,12 +9,16 @@
 #include "tasm/functors.h"
 #include "tasm/opcodes.h"
 #include "tasm/tasm.h"
+#include "test_factory.h"
 #include "tinyformat.h"
+#include "transaction.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
 
-
 class TestTasm : public testing::Test {
+public:
+    TestFactory fac;
+
 protected:
     ECCVerifyHandle handle;
     void SetUp() {
@@ -55,6 +59,30 @@ TEST_F(TestTasm, verify) {
     std::vector<uint8_t> p = {VERIFY};
     Tasm::Listing l(p, v);
     ASSERT_TRUE(t.ExecListing(l));
+}
+
+TEST_F(TestTasm, transaction_in_out_verify) {
+    Tasm tasm(functors);
+    VStream indata{}, outdata{};
+
+    // construct transaction input
+    auto keypair = fac.CreateKeyPair();
+    CKeyID addr = keypair.second.GetID();
+    auto encodedAddr = EncodeAddress(addr);
+    indata << encodedAddr;
+    TxInput txin{Tasm::Listing{std::vector<uint8_t>{VERIFY}, indata}};
+
+    // construct transaction output
+    auto msg = fac.GetRandomString(10);
+    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
+    std::vector<unsigned char> sig;
+    keypair.first.Sign(hashMsg, sig);
+    outdata << keypair.second << sig << hashMsg;
+    Tasm::Listing outputListing{outdata};
+
+    VStream expected;
+    expected << keypair.second << sig << hashMsg << encodedAddr;
+    ASSERT_TRUE(VerifyInOut(txin, outputListing));
 }
 
 TEST_F(TestTasm, verify_bad_pubkeyhash) {

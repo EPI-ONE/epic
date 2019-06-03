@@ -15,16 +15,16 @@ static const std::array<instruction, 256> functors = {
     ([](VStream&, std::size_t) { return 0; }),
     // VERIFY
     ([](VStream& data, std::size_t ip) {
-        uint160 pubkeyHash;
+        //uint160 pubkeyHash;
         CPubKey pubkey;
         std::vector<unsigned char> sig;
         uint256 msg;
-        pubkeyHash.Deserialize(data);
-        pubkey.Deserialize(data);
-        Deserialize(data, sig);
-        msg.Deserialize(data);
+        std::string encodedAddr;
 
-        if (Hash160<1>(pubkey.begin(), pubkey.end()) != pubkeyHash) {
+        data >> pubkey >> sig >> msg >> encodedAddr;
+
+        std::optional<CKeyID> addr = DecodeAddress(encodedAddr);
+        if (!addr.has_value() || pubkey.GetID() != *addr) {
             return ip + 1;
         }
 

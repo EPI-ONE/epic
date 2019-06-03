@@ -37,16 +37,25 @@ TEST_F(TestSer, SerializeOptional) {
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     ECC_Start();
-    CKey seckey = CKey();
-    seckey.MakeNewKey(true);
-    CPubKey pubkey = seckey.GetPubKey();
+    auto pubkey = fac.CreateKeyPair().second;
 
+    // serialize on pubkey
     VStream vstream;
     vstream << pubkey;
     CPubKey outPubkey;
     vstream >> outPubkey;
 
     ASSERT_EQ(pubkey, outPubkey);
+    
+    // serialize on address
+    std::string strAddr = EncodeAddress(pubkey.GetID());
+    vstream << strAddr;
+    std::string deserAddr;
+    vstream >> deserAddr;
+    ASSERT_EQ(strAddr, deserAddr);
+    auto decodeDeserAddr = DecodeAddress(deserAddr);
+    ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);
+
     ECC_Stop();
 }
 

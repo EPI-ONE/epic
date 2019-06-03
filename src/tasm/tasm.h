@@ -20,10 +20,11 @@ public:
 
         Listing() = default;
 
-        Listing(std::vector<uint8_t>& p, VStream& d) {
-            program = p;
-            data    = d;
-        };
+        Listing(std::vector<uint8_t>& p, VStream& d) : program(p), data(d) {}
+        //Listing(std::vector<uint8_t>&& p, VStream& d) : program(p), data(d) {}
+        Listing(std::vector<uint8_t>&& p, VStream& d) : program(p) {
+            data = d;
+        }
 
         Listing(const VStream& d) {
             data = d;
@@ -38,6 +39,15 @@ public:
 
         friend bool operator==(const Listing& a, const Listing& b) {
             return a.program == b.program && a.data == b.data;
+        }
+
+        friend Listing operator+(const Listing& a, const Listing& b) {
+            Listing listing(a);
+            for (const auto& prog : b.program) {
+                listing.program.emplace_back(prog);
+            }
+            listing.data += b.data;
+            return listing;
         }
     };
 

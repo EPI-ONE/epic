@@ -26,6 +26,13 @@ uint256 TestFactory::CreateRandomHash() {
     return uint256(vch);
 }
 
+std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
+    CKey seckey = CKey();
+    seckey.MakeNewKey(compressed);
+    CPubKey pubkey = seckey.GetPubKey();
+    return std::make_pair(std::move(seckey), std::move(pubkey));
+}
+
 Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
     Transaction tx;

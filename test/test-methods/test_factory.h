@@ -1,8 +1,10 @@
 #ifndef __TEST_TEST_FACTORY_H__
 #define __TEST_TEST_FACTORY_H__
 
-#include "consensus.h"
 #include "block.h"
+#include "consensus.h"
+#include "key.h"
+#include "pubkey.h"
 #include "tasm.h"
 
 #include <random>
@@ -42,6 +44,7 @@ class TestFactory {
 public:
     std::string GetRandomString(size_t len);
     uint256 CreateRandomHash();
+    std::pair<CKey, CPubKey> CreateKeyPair(bool compressed = true);
     Transaction CreateTx(int numTxInput, int numTxOutput);
     Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     BlockNet CreateBlockNet(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);

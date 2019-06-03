@@ -72,8 +72,8 @@ TEST_F(TestECKey, key_workflow_test) {
     std::string strSeckey = EncodeSecret(seckey);
     CKey decodeSeckey     = DecodeSecret(strSeckey);
     ASSERT_EQ(seckey, decodeSeckey);
-    std::string strAddr              = EncodeAddress(pubkey.GetID());
-    std::optional<CKeyID> decodeAddr = DecodeAddress(strAddr);
+    std::string strAddr = EncodeAddress(pubkey.GetID());
+    auto decodeAddr     = DecodeAddress(strAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeAddr);
 
     // cross verification
