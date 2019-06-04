@@ -166,7 +166,7 @@ uint64_t Transaction::HashCode() const {
 
 bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
     Tasm tasm(functors);
-    Tasm::Listing listing(outputListing + input.listingContent);
+    Tasm::Listing listing(input.listingContent + outputListing);
     return tasm.ExecListing(listing);
 }
 

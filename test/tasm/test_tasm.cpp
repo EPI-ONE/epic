@@ -61,23 +61,22 @@ TEST_F(TestTasm, transaction_in_out_verify) {
     Tasm tasm(functors);
     VStream indata{}, outdata{};
 
-    // construct transaction input
-    auto keypair     = fac.CreateKeyPair();
-    CKeyID addr      = keypair.second.GetID();
-    auto encodedAddr = EncodeAddress(addr);
-    indata << encodedAddr;
-    TxInput txin{Tasm::Listing{std::vector<uint8_t>{VERIFY}, indata}};
-
-    // construct transaction output
+    auto keypair = fac.CreateKeyPair();
+    CKeyID addr  = keypair.second.GetID();
     auto msg     = fac.GetRandomString(10);
     auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
     std::vector<unsigned char> sig;
     keypair.first.Sign(hashMsg, sig);
-    outdata << keypair.second << sig << hashMsg;
-    Tasm::Listing outputListing{outdata};
 
-    VStream expected;
-    expected << keypair.second << sig << hashMsg << encodedAddr;
+    // construct transaction output listing
+    auto encodedAddr = EncodeAddress(addr);
+    outdata << encodedAddr;
+    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
+
+    // construct transaction input
+    indata << keypair.second << sig << hashMsg;
+    TxInput txin{Tasm::Listing{indata}};
+
     ASSERT_TRUE(VerifyInOut(txin, outputListing));
 }
 
