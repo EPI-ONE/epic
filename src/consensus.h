@@ -120,16 +120,16 @@ public:
         INVALID,
     };
 
-    enum MilestoneStatus : uint8_t {
-        IS_NOT_MILESTONE = 0,
-        IS_TRUE_MILESTONE,
-        IS_FAKE_MILESTONE,
-    };
-
     enum RedemptionStatus : uint8_t {
         IS_NOT_REDEMPTION = 0, 
         NOT_YET_REDEEMED,
         IS_REDEEMED,
+    };
+
+    enum MilestoneStatus : uint8_t {
+        IS_NOT_MILESTONE = 0,
+        IS_TRUE_MILESTONE,
+        IS_FAKE_MILESTONE,
     };
 
     ConstBlockPtr cblock;
@@ -145,7 +145,7 @@ public:
     ChainStatePtr snapshot = nullptr;
 
     Validity validity = Validity::UNKNOWN;
-    size_t optimalStorageSize = 0;
+    size_t optiomalStorageSize_ = 0;
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);

@@ -67,12 +67,12 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {
+NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {
     cblock = std::make_shared<BlockNet>(blk);
 }
 
@@ -124,6 +124,11 @@ void NodeRecord::Serialize(VStream& s) const {
         s << (uint8_t) validity;
     }
 
+    s << (uint8_t) isRedeemed;
+    if (isRedeemed) {
+        s << prevRedemHash;
+    }
+
     if (isMilestone) {
         s << (uint8_t) IS_TRUE_MILESTONE;
     } else if (snapshot != nullptr) {
@@ -145,10 +150,15 @@ void NodeRecord::Deserialize(VStream& s) {
     s >> VARINT(minerChainHeight);
 
     if (cblock->HasTransaction()) {
-        validity = (Validity) ser_readdata8(s);
+        validity = static_cast<Validity>(ser_readdata8(s));
     }
 
-    enum MilestoneStatus msFlag = (MilestoneStatus) ser_readdata8(s);
+    isRedeemed = static_cast<RedemptionStatus>(ser_readdata8(s));
+    if (isRedeemed) {
+        s >> prevRedemHash;
+    }
+
+    enum MilestoneStatus msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
     isMilestone                 = msFlag == IS_TRUE_MILESTONE;
 
     if (msFlag > 0) {
@@ -157,29 +167,33 @@ void NodeRecord::Deserialize(VStream& s) {
 }
 
 size_t NodeRecord::GetOptimalStorageSize() {
-    if (optimalStorageSize > 0) {
-        return optimalStorageSize;
+    if (optiomalStorageSize_ > 0) {
+        return optiomalStorageSize_;
     }
-    optimalStorageSize = cblock->GetOptimalEncodingSize();
-    optimalStorageSize += GetSizeOfVarInt(cumulativeReward.GetValue());
-    optimalStorageSize += GetSizeOfVarInt(minerChainHeight);
+    optiomalStorageSize_ = cblock->GetOptimalEncodingSize();
+    optiomalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
+    optiomalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
 
     if (cblock->HasTransaction()) {
-        optimalStorageSize += 1;
+        optiomalStorageSize_ += 1;
     }
 
-    optimalStorageSize += 1;
+    optiomalStorageSize_ += 1; // RedemptionStatus
+    if (isRedeemed) {
+        optiomalStorageSize_ += 32; // prevRedemHash size
+    }
+    optiomalStorageSize_ += 1; // MilestoneStatus
 
     if (snapshot != nullptr) {
-        optimalStorageSize += GetSizeOfVarInt(snapshot->height);
-        optimalStorageSize += 4;
-        optimalStorageSize += 8;
-        optimalStorageSize += 4;
-        optimalStorageSize += 4;
-        optimalStorageSize += GetSizeOfVarInt(snapshot->hashRate);
+        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->height);
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += 8;
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);
     }
 
-    return optimalStorageSize;
+    return optiomalStorageSize_;
 }
 
 std::string std::to_string(const ChainState& cs) {

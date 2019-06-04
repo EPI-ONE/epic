@@ -6,20 +6,15 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
-#include <algorithm>
-#include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <ios>
-#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "compat/bitcoin_endian.h"
