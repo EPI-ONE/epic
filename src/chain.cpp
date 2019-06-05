@@ -1,5 +1,5 @@
-#include "chain.h"
 #include "caterpillar.h"
+#include "chain.h"
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
@@ -26,7 +26,7 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
         for (const auto& h : (*it)->GetRecordHashes()) {
             pendingBlocks_.insert({h, recordHistory_[h]->cblock});
             recordHistory_.erase(h);
-            // TODO: roll back UTXOs
+            ledger_.Rollback((*it)->GetTXOC());
         }
         states_.erase(std::next(it).base());
     }
@@ -49,7 +49,7 @@ std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
 }
 
-std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr pblock) {
+std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock) {
     std::vector<ConstBlockPtr> stack = {pblock};
     std::vector<ConstBlockPtr> result;
     ConstBlockPtr cursor;
@@ -107,7 +107,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     return current_distance <= allowed_distance;
 }
 
-void Chain::Verify(const ConstBlockPtr pblock) {
+void Chain::Verify(const ConstBlockPtr& pblock) {
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
@@ -129,18 +129,17 @@ void Chain::Verify(const ConstBlockPtr pblock) {
             rec->prevRedemHash = rec->cblock->GetHash();
         } else {
             if (auto update = Validate(*rec)) {
-                // TODO: remove UTXO from chain
-                //state->UpdateTXOC(std::move(*update));
+                ledger_.Update(*update);
+                state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
-                // TODO: we may add log here
+                // log: invalid transaction in this block
             }
-        
         }
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
     states_.emplace_back(state);
-    //recordHistory_.merge(std::move(verifying_));
+    recordHistory_.merge(std::move(verifying_));
 }
 
 std::optional<TXOC> Chain::Validate(NodeRecord& record) {
@@ -149,12 +148,12 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
 
     // first check whether it is a fork of its peer chain
     bool validPeerChain = false;
-    auto prevRec = GetRecord(record.cblock->GetPrevHash());
+    auto prevRec        = GetRecord(record.cblock->GetPrevHash());
     if (prevRec->prevRedemHash != Hash::GetZeroHash()) {
         // then its previous block is valid in the sense of reward
-        record.prevRedemHash = prevRec->prevRedemHash;
+        record.prevRedemHash   = prevRec->prevRedemHash;
         prevRec->prevRedemHash = Hash::GetZeroHash();
-        validPeerChain = true;
+        validPeerChain         = true;
     } else {
         record.prevRedemHash = Hash::GetZeroHash();
     }
@@ -175,7 +174,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     // this transaction is a redemption of reward
     const auto redem = record.cblock->GetTransaction();
-    if (redem->GetOutputs().size() > 0) {
+    if (!redem->GetOutputs().empty()) {
         // missing output for redemption of reward
         return {};
     }
@@ -184,14 +183,14 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
 
     // value of the output should be less or equal to the previous counter
     if (GetPrevReward(record) <= out.value) {
-        // log: wrong redemption value 
+        // log: wrong redemption value
         return {};
     }
 
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        // log: double redemption 
+        // log: double redemption
         return {};
     }
 
@@ -202,7 +201,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
 
     prevReg->isRedeemed = NodeRecord::IS_REDEEMED;
     record.isRedeemed   = NodeRecord::NOT_YET_REDEEMED;
-    return std::make_optional<TXOC>({{UTXO(out, 0)}, {}});
+    return std::make_optional<TXOC>({{XOR(record.cblock->GetHash(), 0)}, {}});
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
@@ -216,30 +215,36 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     }
 
     // update TXOC
-    uint64_t sigOps = 0;
     Coin valueIn{};
     Coin valueOut{};
     TXOC txoc{};
     std::vector<Tasm::Listing> prevOutListing;
     prevOutListing.reserve(tx->GetInputs().size());
 
-    for (const auto& in: tx->GetInputs()) {
-        const TxOutPoint& outpoint = in.outpoint;
-        std::unique_ptr<UTXO> prevOut = CAT->GetTransactionOutput(XOR(outpoint.bHash, outpoint.index));
+    // check previous vouts that are used in this transaction and compute total value in along the way
+    for (const auto& vin : tx->GetInputs()) {
+        const TxOutPoint& outpoint    = vin.outpoint;
+        // this ensures that $prevOut has not been spent yet
+        auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
             // log: non-existent or spent output
             return {};
         }
-        // TODO: can we check size of sig ops?
         valueIn = valueIn + prevOut->GetOutput().value;
 
         prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
-        txoc.AddToSpent(in);
+        txoc.AddToSpent(vin);
     }
 
+    // get key of new UTXO and compute total value out
+    for (size_t i = 0; i < tx->GetOutputs().size(); i++) {
+        valueOut += tx->GetOutputs()[i].value;
+        txoc.AddToCreated(record.cblock->GetHash(), i);
+    }
+
+    // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
-    // check total amount of value in and value out
     if (!(fee >= 0 && fee <= params.maxMoney && valueIn <= params.maxMoney)) {
         // log: transaction input vlaue out of range
         return {};
@@ -266,7 +271,7 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
         } else {
             return CAT->GetRecord(blkHash);
         }
-    } catch (std::out_of_range e) {
-        return nullptr; 
+    } catch (std::out_of_range& e) {
+        return nullptr;
     }
 }

@@ -54,6 +54,10 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     lastUpdateTime = blockUpdateTime;
 }
 
+void ChainState::UpdateTXOC(TXOC&& txoc) {
+    txoc_.Merge(std::move(txoc));
+}
+
 ChainStatePtr make_shared_ChainState() {
     return std::make_shared<ChainState>();
 }
@@ -154,11 +158,11 @@ void NodeRecord::Deserialize(VStream& s) {
     }
 
     isRedeemed = static_cast<RedemptionStatus>(ser_readdata8(s));
-    if (isRedeemed) {
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
         s >> prevRedemHash;
     }
 
-    enum MilestoneStatus msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
+    auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
     isMilestone                 = msFlag == IS_TRUE_MILESTONE;
 
     if (msFlag > 0) {
@@ -179,7 +183,7 @@ size_t NodeRecord::GetOptimalStorageSize() {
     }
 
     optiomalStorageSize_ += 1; // RedemptionStatus
-    if (isRedeemed) {
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
         optiomalStorageSize_ += 32; // prevRedemHash size
     }
     optiomalStorageSize_ += 1; // MilestoneStatus

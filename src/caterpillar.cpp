@@ -135,11 +135,6 @@ BlockCache Caterpillar::GetBlockCache(const uint256& blkHash) const {
     return dbStore_.GetBlockCache(blkHash);
 }
 
-std::unique_ptr<UTXO> Caterpillar::GetTransactionOutput(const uint256&) {
-    // TODO
-    return nullptr;
-}
-
 void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
     obcThread_.Execute([&blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);

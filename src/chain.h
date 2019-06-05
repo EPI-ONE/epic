@@ -41,7 +41,7 @@ public:
     std::size_t GetPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
-    std::vector<ConstBlockPtr> GetSortedSubgraph(ConstBlockPtr pblock);
+    std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
         return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
@@ -68,16 +68,14 @@ private:
     std::unordered_map<uint256, RecordPtr> recordHistory_;
     // store blocks being verified in a level set
     std::unordered_map<uint256, RecordPtr> verifying_;
-    // the unspent ledger 
-    std::unordered_map<uint256, UTXO> ledger_;
-    // the spent ledger 
-    std::unordered_set<uint256> removedledger_;
+    // store different types of UTXO
+    ChainLedger ledger_;
 
-    bool IsMilestone(const ConstBlockPtr pblock);
+    bool IsMilestone(const ConstBlockPtr& pblock);
 
     // when we add a milestone block to this chain, we start verification
     // TODO: should return tx ouput changes
-    void Verify(const ConstBlockPtr);
+    void Verify(const ConstBlockPtr&);
     // do validity check on the block
     std::optional<TXOC> Validate(NodeRecord& record);
     // offline verification for transactions

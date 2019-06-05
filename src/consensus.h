@@ -60,7 +60,7 @@ public:
         return txoc_;
     }
 
-    void UpdateTXOC(TXOC&&, std::unordered_map<uint256, UTXO>&, std::unordered_set<uint256>&); 
+    void UpdateTXOC(TXOC&&);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -96,7 +96,7 @@ public:
 private:
     // a vector consists of hashes of blocks in level set of this chain state
     std::vector<uint256> lvsHashes_;
-    // a vector of TXOC: changes on transaction outputs from previous chain state
+    // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
