@@ -52,7 +52,7 @@ public:
     NodeRecord CreateNodeRecord(ConstBlockPtr b);
     RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     RecordPtr CreateConsecutiveRecordPtr();
-    ChainStatePtr CreateChainStatePtr(ChainStatePtr previous);
+    ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
     uint32_t GetRand() {

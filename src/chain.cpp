@@ -17,7 +17,7 @@ Chain::Chain(const Chain& chain) : ismainchain_(false), states_(chain.states_), 
 
 Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
-      recordHistory_(chain.recordHistory_) {
+      recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
     assert(recordHistory_.at(target));

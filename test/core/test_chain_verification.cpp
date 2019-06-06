@@ -15,7 +15,7 @@ public:
     }
 };
 
-class TestValidation : public testing::Test {
+class TestChainVerification : public testing::Test {
 public:
     TestFactory fac;
 
@@ -31,9 +31,40 @@ public:
         system(cmd.c_str());
         CAT.reset();
     }
+
+private:
+    Chain chain;
 };
 
-TEST_F(TestValidation, ValidDistanceNormalChain) {
+TEST_F(TestChainVerification, ChainForking) {
+    Chain chain1{};
+    Chain chain2{false};
+    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+
+    // construct the main chain and fork
+    std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};
+    std::vector<RecordPtr> recs{};
+    ConstBlockPtr forkblk;
+    ChainStatePtr split;
+    for (int i = 1; i < 10; i++) { // reach height 9
+        recs.emplace_back(fac.CreateConsecutiveRecordPtr());
+        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1], recs[i-1]));
+        if (i == 5) {
+            // create a forked chain state at height 5
+            auto blk = fac.CreateBlock();
+            split    = dqcs[i];
+            blk.SetMilestoneHash(split->GetMilestoneHash());
+            blk.Solve();
+            forkblk = std::make_shared<const BlockNet>(blk);
+        }
+    }
+    Chain chain{dqcs, recs, true}, fork{chain, forkblk};
+
+    ASSERT_EQ(fork.GetChainHead()->height, 5);
+    ASSERT_EQ(*split, *fork.GetChainHead());
+}
+
+TEST_F(TestChainVerification, ValidDistanceNormalChain) {
     auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
 
     BlockNet registration = fac.CreateBlockNet(1, 1);
@@ -66,7 +97,7 @@ TEST_F(TestValidation, ValidDistanceNormalChain) {
     EXPECT_TRUE(TestImplChain::IsValidDistance(*goodBlockR, ms_hashrate));
 }
 
-TEST_F(TestValidation, ValidDistanceMaliciousChain) {
+TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
     auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
 
     BlockNet registration = fac.CreateBlockNet(1, 1);

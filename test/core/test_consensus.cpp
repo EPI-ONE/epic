@@ -4,7 +4,6 @@
 
 #include "block.h"
 #include "caterpillar.h"
-#include "chain.h"
 #include "dag_manager.h"
 #include "key.h"
 #include "test_factory.h"
@@ -80,9 +79,10 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     arrayMs[0] = make_shared_ChainState();
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    size_t LOOPS = 100;
+    constexpr size_t LOOPS = 100;
     for (size_t i = 1; i < LOOPS; i++) {
-        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1]);
+        auto rec = fac.CreateConsecutiveRecordPtr();
+        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % params.timeInterval) == 0) {
@@ -95,32 +95,6 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
-}
-
-TEST_F(TestConsensus, Chain) {
-    Chain chain1{};
-    Chain chain2{false};
-    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
-
-    // construct the main chain and fork
-    std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};
-    ConstBlockPtr forkblk;
-    ChainStatePtr split;
-    for (int i = 1; i < 10; i++) { // reach height 9
-        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1]));
-        if (i == 5) {
-            // create a forked chain state at height 5
-            auto blk = fac.CreateBlock();
-            split    = dqcs[i];
-            blk.SetMilestoneHash(split->GetMilestoneHash());
-            blk.Solve();
-            forkblk = std::make_shared<const BlockNet>(blk);
-        }
-    }
-    Chain chain{dqcs, true}, fork{chain, forkblk};
-
-    ASSERT_EQ(fork.GetChainHead()->height, 5);
-    ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
 TEST_F(TestConsensus, AddNewBlocks) {

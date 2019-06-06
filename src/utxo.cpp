@@ -38,9 +38,6 @@ void TXOC::AddToSpent(const TxInput& input) {
 
 void TXOC::Merge(TXOC&& another) {
     created_.merge(std::move(another.created_));
-    // for (const auto& utxokey : another.created_){
-    // created_.emplace(utxokey);
-    //}
     for (const auto& utxokey : another.spent_) {
         if (created_.erase(utxokey) == 0) {
             spent_.emplace(utxokey);
