@@ -14,6 +14,13 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug -fsanitize=address -fno-omi
 set(CMAKE_CXX_FLAGS "-pthread -march=native $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
+# if the architecture in question supports the extensions
+# below it makes sense to uncomment the respective lines
+# as a speedup will be realized
+
+#set(CMAKE_CXX_FLAGS "-DENABLE_SSE42 ${CMAKE_CXX_FLAGS}")
+#set(CMAKE_CXX_FLAGS "-DENABLE_PCLMULQDQ ${CMAKE_CXX_FLAGS}")
+
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # default bulid type
