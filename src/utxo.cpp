@@ -35,7 +35,6 @@ void TXOC::AddToSpent(const TxInput& input) {
     spent_.emplace(XOR(outpoint.bHash, outpoint.index));
 }
 
-
 void TXOC::Merge(TXOC&& another) {
     created_.merge(std::move(another.created_));
     for (const auto& utxokey : another.spent_) {
@@ -52,10 +51,18 @@ void ChainLedger::AddToPending(UTXOPtr putxo) {
     pending_.insert({putxo->GetKey(), putxo});
 }
 
+UTXOPtr ChainLedger::GetFromPending(const uint256& xorkey) {
+    auto query = pending_.find(xorkey);
+    if (query != pending_.end()) {
+        return query->second;
+    }
+    return nullptr;
+}
+
 UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     auto query = removed_.find(xorkey);
     if (query != removed_.end()) {
-        return nullptr;
+        return query->second;
     }
     query = comfirmed_.find(xorkey);
     if (query != comfirmed_.end()) {

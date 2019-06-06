@@ -137,8 +137,6 @@ public:
 
     const std::vector<TxOutput>& GetOutputs() const;
 
-    //const Tasm::Listing GetListing() const;
-
     std::vector<TxOutput>& GetOutputs();
 
     const uint256& GetHash() const;

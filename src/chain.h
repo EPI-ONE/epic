@@ -28,8 +28,7 @@ public:
     // now for test only
     Chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain=false) : ismainchain_(ismain), states_(states) {
         for (const auto& pRec : recs) {
-            //recordHistory_.emplace(std::make_pair(pRec->cblock->GetHash(), *pRec));
-            recordHistory_.insert(std::make_pair(pRec->cblock->GetHash(), pRec));
+            recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
         }
     }
 

@@ -70,7 +70,6 @@ public:
     void CompleteBatchSync();
 
 private:
-
     std::unordered_map<uint256, ChainStatePtr> globalStates_;
     // Start a new thread and create a list of GetData tasks that is either added
     // to preDownloading (if it's not empty) or a peer's task queue. If preDownloading

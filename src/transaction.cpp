@@ -116,21 +116,6 @@ const std::vector<TxOutput>& Transaction::GetOutputs() const {
     return outputs_;
 }
 
-/*const Tasm::Listing Transaction::GetListing() const {
-    Tasm::Listing l;
-    if (inputs_.size() > 1 && outputs_.size() > 1) {
-        throw std::runtime_error("Transaction is inconsistent. Input size and output size currently supported is <= 1");
-    }
-
-    if (inputs_.size() == 1 && outputs_.size() == 1) {
-        l.program.push_back(VERIFY);
-        l.data << outputs_[0].listingContent.data;
-        l.data << inputs_[0].listingContent.data;
-    }
-
-    return l;
-}*/
-
 std::vector<TxInput>& Transaction::GetInputs() {
     return inputs_;
 }
