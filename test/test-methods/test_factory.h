@@ -42,13 +42,27 @@ private:
 
 class TestFactory {
 public:
+    TestFactory() :timeGenerator(), numGenerator() {
+        ECC_Start();
+        ECCVerifyHandle handle;
+    }
+
+    ~TestFactory() {
+        ECC_Stop();
+    }
+
     std::string GetRandomString(size_t len);
     uint256 CreateRandomHash();
+
     std::pair<CKey, CPubKey> CreateKeyPair(bool compressed = true);
+    Transaction CreateReg();
     Transaction CreateTx(int numTxInput, int numTxOutput);
+
     Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     BlockNet CreateBlockNet(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
+    //ConstBlockPtr CreateFirstRegBlockPtr(const CKeyID& addr);
+
     NodeRecord CreateNodeRecord(ConstBlockPtr b);
     RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     RecordPtr CreateConsecutiveRecordPtr();

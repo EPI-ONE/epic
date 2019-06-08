@@ -76,8 +76,8 @@ NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optiomalStora
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
     : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {
-    cblock = std::make_shared<BlockNet>(blk);
+NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {
+    cblock = std::make_shared<BlockNet>(std::move(blk));
 }
 
 NodeRecord::NodeRecord(VStream& s) {
@@ -229,7 +229,7 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
-    NodeRecord genesis(GENESIS);
+    NodeRecord genesis{BlockNet{GENESIS}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
     return genesis;

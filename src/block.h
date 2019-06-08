@@ -181,8 +181,8 @@ public:
     using Block::Block;
 
     BlockNet(const BlockNet&) = default;
-
     BlockNet(const Block& b);
+    BlockNet(Block&& b);
 
     BlockNet(VStream&);
 

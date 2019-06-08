@@ -1,5 +1,7 @@
 #include "transaction.h"
 
+using Listing = Tasm::Listing;
+
 /*
  * TxInput class START
  */
@@ -87,6 +89,13 @@ Transaction::Transaction(const Transaction& tx) {
     for (TxOutput& output : outputs_) {
         output.SetParent(this);
     }
+}
+
+Transaction::Transaction(const CKeyID& addr) {
+    Transaction tx{};
+    tx.AddInput(TxInput{Listing{}});
+    VStream vstream{addr};
+    tx.AddOutput(TxOutput{ZERO_COIN, Listing{std::vector<uint8_t>{VERIFY}, vstream}});
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {

@@ -358,6 +358,10 @@ BlockNet::BlockNet(const Block& b) : Block(b) {
     SetParents();
 }
 
+BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {
+    SetParents();
+}
+
 BlockNet::BlockNet(VStream& payload) {
     payload >> *this;
 }

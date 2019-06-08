@@ -8,6 +8,7 @@
 
 #include "hash.h"
 #include "params.h"
+#include "pubkey.h"
 #include "spdlog.h"
 #include "stream.h"
 #include "tasm.h"
@@ -121,32 +122,34 @@ private:
 
 class Transaction {
 public:
+    /**
+     * constructor of an empty transcation
+     */
     Transaction();
-
+    /**
+     * copy constructor with computing hash and setting parent block
+     */
     Transaction(const Transaction& tx);
+    /**
+     * constructor of first registration where $addr is the address to redeem in the future
+     */
+    explicit Transaction(const CKeyID& addr);
 
     Transaction& AddInput(TxInput&& input);
-
     Transaction& AddOutput(TxOutput&& output);
 
     void FinalizeHash();
 
     const std::vector<TxInput>& GetInputs() const;
-
     std::vector<TxInput>& GetInputs();
-
     const std::vector<TxOutput>& GetOutputs() const;
-
     std::vector<TxOutput>& GetOutputs();
-
     const uint256& GetHash() const;
 
     bool IsRegistration() const;
-
     bool IsFirstRegistration() const;
 
     void SetParent(const Block* const blk);
-
     const Block* GetParentBlock() const;
 
     uint64_t HashCode() const;

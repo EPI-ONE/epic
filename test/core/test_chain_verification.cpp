@@ -8,13 +8,6 @@
 
 static std::string prefix = "test_validation/";
 
-class TestImplChain : public Chain {
-public:
-    static bool IsValidDistance(const NodeRecord& rec, const arith_uint256& msHashRate) {
-        return Chain::IsValidDistance(rec, msHashRate);
-    }
-};
-
 class TestChainVerification : public testing::Test {
 public:
     TestFactory fac;
@@ -32,9 +25,45 @@ public:
         CAT.reset();
     }
 
-private:
-    Chain chain;
+    Chain make_chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain = false) {
+        Chain chain{};
+        chain.ismainchain_ = ismain;
+        chain.states_ = states;
+        for (const auto& pRec : recs) {
+            chain.recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
+        }
+        return chain;
+    }
+
+    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record) {
+        return c->ValidateRedemption(record);
+    }
+
+    std::optional<TXOC> ValidateTx(Chain* c, NodeRecord& record) {
+        return c->ValidateTx(record);
+    }
+
+    void Verify(Chain* c, const ConstBlockPtr& pblock) {
+        c->Verify(pblock);
+    }
+
+    bool IsValidDistance(const NodeRecord& rec, const arith_uint256& msHashRate) {
+        return Chain::IsValidDistance(rec, msHashRate);
+    }
+
+    Chain* pchain;
 };
+
+TEST_F(TestChainVerification, try_syntax) {
+    Chain c{};
+}
+
+TEST_F(TestChainVerification, VerifyRedemption) {
+    auto keypair = fac.CreateKeyPair();
+    Block b1{1};
+    b1.AddTransaction(Transaction{keypair.second.GetID()});
+    NodeRecord firstRecord{BlockNet(std::move(b1))};
+}
 
 TEST_F(TestChainVerification, ChainForking) {
     Chain chain1{};
@@ -48,7 +77,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ChainStatePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
         recs.emplace_back(fac.CreateConsecutiveRecordPtr());
-        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1], recs[i-1]));
+        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1], recs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5
             auto blk = fac.CreateBlock();
@@ -58,7 +87,8 @@ TEST_F(TestChainVerification, ChainForking) {
             forkblk = std::make_shared<const BlockNet>(blk);
         }
     }
-    Chain chain{dqcs, recs, true}, fork{chain, forkblk};
+    Chain chain = make_chain(dqcs, recs, true);
+    Chain fork{chain, forkblk};
 
     ASSERT_EQ(fork.GetChainHead()->height, 5);
     ASSERT_EQ(*split, *fork.GetChainHead());
@@ -94,7 +124,7 @@ TEST_F(TestChainVerification, ValidDistanceNormalChain) {
     CAT->StoreRecord(goodBlockR);
 
     arith_uint256 ms_hashrate = 1;
-    EXPECT_TRUE(TestImplChain::IsValidDistance(*goodBlockR, ms_hashrate));
+    EXPECT_TRUE(IsValidDistance(*goodBlockR, ms_hashrate));
 }
 
 TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
@@ -137,5 +167,5 @@ TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
     CAT->StoreRecord(badBlockR);
 
     arith_uint256 ms_hashrate = 9999;
-    EXPECT_FALSE(TestImplChain::IsValidDistance(*badBlockR, ms_hashrate));
+    EXPECT_FALSE(IsValidDistance(*badBlockR, ms_hashrate));
 }

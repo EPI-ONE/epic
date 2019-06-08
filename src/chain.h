@@ -26,11 +26,11 @@ public:
     Chain(const Chain& chain, ConstBlockPtr pfork);
 
     // now for test only
-    Chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain=false) : ismainchain_(ismain), states_(states) {
+    /*Chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain=false) : ismainchain_(ismain), states_(states) {
         for (const auto& pRec : recs) {
             recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
         }
-    }
+    }*/
 
     // add block to this chain
     void AddBlock(ConstBlockPtr pblock);
@@ -89,12 +89,11 @@ private:
 
     const Coin& GetPrevReward(const NodeRecord& rec) {
         // TODO: may add more check
-        return recordHistory_[rec.cblock->GetHash()]->cumulativeReward;
+        return recordHistory_[rec.cblock->GetPrevHash()]->cumulativeReward;
     }
 
     RecordPtr GetRecord(const uint256&) const;
 
-protected:
     static bool IsValidDistance(const NodeRecord&, const arith_uint256&);
     // TODO: try using this friend declaration instead of TestImpl which requires putting methods to test in protected
     friend class TestChainVerification;

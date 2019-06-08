@@ -149,7 +149,7 @@ public:
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
-    NodeRecord(const BlockNet&);
+    NodeRecord(Block&&);
     NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);

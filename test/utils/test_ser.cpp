@@ -231,7 +231,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     blk.AddTransaction(tx);
 
     // Construct NodeRecord
-    NodeRecord block(blk);
+    NodeRecord block(BlockNet(std::move(blk)));
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 

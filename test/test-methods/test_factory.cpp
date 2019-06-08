@@ -33,8 +33,9 @@ std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
     return std::make_pair(std::move(seckey), std::move(pubkey));
 }
 
-Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
+//Transaction TestFactory::CreateReg() {}
 
+Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
@@ -78,8 +79,14 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 }
 
 BlockNet TestFactory::CreateBlockNet(int numTxInput, int numTxOutput, bool finalize) {
-    return CreateBlock(numTxInput, numTxOutput, finalize);
+    return BlockNet{CreateBlock(numTxInput, numTxOutput, finalize)};
 }
+
+/*ConstBlockPtr TestFactory::CreateFirstRegBlockPtr(const CKeyID& addr) {
+    Block b = CreateBlock();
+    b.AddTransaction(Transaction{addr});
+    return std::make_shared<const BlockNet>(std::move(b));
+}*/
 
 ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput , bool finalize) {
     return std::make_shared<const BlockNet>(CreateBlockNet(numTxInput, numTxOutput, finalize));
