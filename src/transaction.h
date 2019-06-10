@@ -136,7 +136,10 @@ public:
     explicit Transaction(const CKeyID& addr);
 
     Transaction& AddInput(TxInput&& input);
+    Transaction& AddSignedInput();
     Transaction& AddOutput(TxOutput&& output);
+    Transaction& AddOutput(uint64_t, const CKeyID&);
+    Transaction& AddOutput(const Coin&, const CKeyID&);
 
     void FinalizeHash();
 

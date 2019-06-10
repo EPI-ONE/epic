@@ -1,15 +1,16 @@
 #include <gtest/gtest.h>
 #include <optional>
 
-#include "test_factory.h"
+#include "test_env.h"
 #include "consensus.h"
 #include "key.h"
 
 typedef Tasm::Listing Listing;
 
 class TestSer : public testing::Test {
+public:
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 protected:
-    TestFactory fac;
     Listing randomBytes;
     uint256 rand1;
     uint256 rand2;
@@ -36,7 +37,7 @@ TEST_F(TestSer, SerializeOptional) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
-    ECC_Start();
+     //ECC_Start();
     auto pubkey = fac.CreateKeyPair().second;
 
     // serialize on pubkey
@@ -56,7 +57,7 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     auto decodeDeserAddr = DecodeAddress(deserAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);
 
-    ECC_Stop();
+     //ECC_Stop();
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {

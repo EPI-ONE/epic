@@ -22,18 +22,7 @@ protected:
     const std::string testStrSeckey2  = "5J53YAc8zUM7aCcDN1vppc7Ecdesqp1UFVR1wgwmLCSSEStWmhs";
     const std::string testStrSeckey1C = "KyeHvtUNjK5DqCT7r3Yefae9SMFYofxz8DoZgqKKpxFviWqydoUT";
     const std::string testStrSeckey2C = "KxLrCZQ6Gfhn1YERZm6a57xX6GnBQSV5GxR1APJifjVGNLSRbaAm";
-
-    ECCVerifyHandle handle;
-
-    void SetUp() {
-        ECC_Start();
-    }
-
-    void TearDown() {
-        ECC_Stop();
-    }
 };
-
 
 TEST_F(TestECKey, key_initial_sanity_test) {
     ASSERT_TRUE(ECC_InitSanityCheck());

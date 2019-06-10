@@ -9,7 +9,7 @@
 #include "tasm/functors.h"
 #include "tasm/opcodes.h"
 #include "tasm/tasm.h"
-#include "test_factory.h"
+#include "test_env.h"
 #include "tinyformat.h"
 #include "transaction.h"
 #include "uint256.h"
@@ -17,17 +17,7 @@
 
 class TestTasm : public testing::Test {
 public:
-    TestFactory fac;
-
-protected:
-    ECCVerifyHandle handle;
-    void SetUp() {
-        ECC_Start();
-    }
-
-    void TearDown() {
-        ECC_Stop();
-    }
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 };
 
 TEST_F(TestTasm, simple_listing) {
@@ -58,6 +48,7 @@ TEST_F(TestTasm, verify) {
 }
 
 TEST_F(TestTasm, transaction_in_out_verify) {
+    TestFactory fac{};
     Tasm tasm(functors);
     VStream indata{}, outdata{};
 

@@ -20,8 +20,8 @@ public:
 
         Listing() = default;
 
-        Listing(std::vector<uint8_t>& p, VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
-        Listing(std::vector<uint8_t>&& p, VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(std::vector<uint8_t>&& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
         Listing(const VStream& d) : data(d.cbegin(), d.cend()) {}
 
         ADD_SERIALIZE_METHODS;
@@ -36,11 +36,16 @@ public:
         }
 
         friend Listing operator+(const Listing& a, const Listing& b) {
-            Listing listing(a);
-            for (const auto& prog : b.program) {
-                listing.program.emplace_back(prog);
-            }
+            Listing listing{a.program, a.data};
             listing.data += b.data;
+            if (!b.program.empty()) {
+                for (const auto& prog : b.program) {
+                    listing.program.emplace_back(prog);
+                }
+            }
+            /*for (auto it = b.program.cbegin(); it != b.program.cend(); it++) {
+                listing.program.emplace_back(*it);
+            }*/
             return listing;
         }
     };

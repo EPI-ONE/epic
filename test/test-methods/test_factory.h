@@ -42,14 +42,7 @@ private:
 
 class TestFactory {
 public:
-    TestFactory() :timeGenerator(), numGenerator() {
-        ECC_Start();
-        ECCVerifyHandle handle;
-    }
-
-    ~TestFactory() {
-        ECC_Stop();
-    }
+    TestFactory() : timeGenerator(), numGenerator() {}
 
     std::string GetRandomString(size_t len);
     uint256 CreateRandomHash();

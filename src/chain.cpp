@@ -173,8 +173,8 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     // this transaction is a redemption of reward
-    const auto& redem = record.cblock->GetTransaction();
-    if (!redem->GetOutputs().empty()) {
+    const auto redem = record.cblock->GetTransaction();
+    if (redem->GetOutputs().empty()) {
         spdlog::info("Missing output for redemption of reward!");
         return {};
     }
@@ -182,7 +182,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     const TxOutput& vout = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
     // value of the output should be less or equal to the previous counter
-    if (GetPrevReward(record) <= vout.value) {
+    if (!(GetPrevReward(record) <= vout.value)) {
         spdlog::info("Wrong redemption value that exceeds total cumulative reward!");
         return {};
     }
@@ -190,11 +190,11 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Doulbe redemption on previous registration block {}", std::to_string(record.prevRedemHash));
+        spdlog::info("Double redemption on previous registration block {}", std::to_string(record.prevRedemHash));
         return {};
     }
 
-    if (!VerifyInOut(vin, prevReg->cblock->GetTransaction()->GetOutputs().at(0).listingContent)) {
+    if (!VerifyInOut(vin, prevReg->cblock->GetTransaction()->GetOutputs()[0].listingContent)) {
         spdlog::info("Singature failed!");
         return {};
     }

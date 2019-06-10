@@ -94,8 +94,8 @@ Transaction::Transaction(const Transaction& tx) {
 Transaction::Transaction(const CKeyID& addr) {
     Transaction tx{};
     tx.AddInput(TxInput{Listing{}});
-    VStream vstream{addr};
-    tx.AddOutput(TxOutput{ZERO_COIN, Listing{std::vector<uint8_t>{VERIFY}, vstream}});
+    Coin zero{};
+    tx.AddOutput(zero, addr);
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {
@@ -110,6 +110,16 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     txout.SetParent(this);
     outputs_.push_back(txout);
     return *this;
+}
+
+Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
+    Coin coin{value};
+    return AddOutput(coin, addr);
+}
+
+Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
+    VStream vstream{addr};
+    return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, vstream}});
 }
 
 void Transaction::FinalizeHash() {
