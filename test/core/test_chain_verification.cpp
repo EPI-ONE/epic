@@ -67,33 +67,33 @@ TEST_F(TestChainVerification, try_syntax) {
 }
 
 TEST_F(TestChainVerification, VerifyRedemption) {
+    // prepare keys and signature
     auto keypair = fac.CreateKeyPair();
-    const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
-    b1.AddTransaction(Transaction{keypair.second.GetID()});
-    b1.Solve();
-    RecordPtr firstRecord = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
-    firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
-
-    auto newkeypair = fac.CreateKeyPair();
-    Block b2{1, ghash, b1.GetHash(), ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
-
-    Transaction redeem{};
+    auto addr    = keypair.second.GetID();
     auto msg     = fac.GetRandomString(10);
     auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
     std::vector<unsigned char> sig;
     keypair.first.Sign(hashMsg, sig);
+
+    // construct first registration
+    const auto& ghash = GENESIS.GetHash();
+    Block b1{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    b1.AddTransaction(Transaction{addr});
+    b1.Solve();
+    RecordPtr firstRecord = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
+    firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
+
+    // construct redemption block
+    Block b2{1, ghash, b1.GetHash(), ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    Transaction redeem{};
     VStream indata{keypair.second, sig, hashMsg};
     redeem.AddInput(TxInput{b1.GetHash(), 0, Tasm::Listing{indata}});
-    redeem.AddOutput(0, newkeypair.second.GetID());
+    redeem.AddOutput(0, addr);
     b2.AddTransaction(redeem);
-
     NodeRecord redemption{BlockNet{std::move(b2)}};
     redemption.prevRedemHash = b1.GetHash();
-    ASSERT_FALSE(redeem.GetOutputs().empty());
-    ASSERT_FALSE(redemption.cblock->GetTransaction()->GetOutputs().empty());
 
-
+    // start testing
     Chain c{};
     AddToHistory(&c, firstRecord);
     ASSERT_TRUE(bool((ValidateRedemption(&c, redemption))));

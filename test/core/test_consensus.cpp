@@ -110,7 +110,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
     blocks.emplace_back(genesisPtr);
 
     // Construct a fully connected and syntatical valid random graph
-    ECC_Start();
     for (std::size_t i = 1; i < n; ++i) {
         BlockNet b = fac.CreateBlockNet(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
@@ -135,7 +134,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
         blocks.emplace_back(std::make_shared<BlockNet>(b));
     }
-    ECC_Stop();
 
     // Shuffle order of blocks to make some of them not solid
     auto rng = std::default_random_engine{};

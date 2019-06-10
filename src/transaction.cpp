@@ -11,7 +11,7 @@ TxInput::TxInput(const TxOutPoint& outpointToPrev, const Tasm::Listing& listingD
     listingContent = listingData;
 }
 
-TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Tasm::Listing& listingData) {
+TxInput::TxInput(const uint256& fromBlockHash, uint32_t indexNum, const Tasm::Listing& listingData) {
     outpoint       = TxOutPoint(fromBlockHash, indexNum);
     listingContent = listingData;
 }
@@ -92,10 +92,9 @@ Transaction::Transaction(const Transaction& tx) {
 }
 
 Transaction::Transaction(const CKeyID& addr) {
-    Transaction tx{};
-    tx.AddInput(TxInput{Listing{}});
+    AddInput(TxInput{Listing{}});
     Coin zero{};
-    tx.AddOutput(zero, addr);
+    AddOutput(zero, addr);
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {
@@ -118,7 +117,7 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 }
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
-    VStream vstream{addr};
+    VStream vstream{EncodeAddress(addr)};
     return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, vstream}});
 }
 

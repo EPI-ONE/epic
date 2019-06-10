@@ -63,7 +63,7 @@ public:
 
     explicit TxInput(const TxOutPoint& outpoint, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const uint256& fromBlock, const uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
+    TxInput(const uint256& fromBlock, uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
 
     TxInput(const Tasm::Listing& script);
 
