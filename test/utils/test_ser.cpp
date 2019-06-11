@@ -37,7 +37,6 @@ TEST_F(TestSer, SerializeOptional) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
-     //ECC_Start();
     auto pubkey = fac.CreateKeyPair().second;
 
     // serialize on pubkey
@@ -56,8 +55,6 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     ASSERT_EQ(strAddr, deserAddr);
     auto decodeDeserAddr = DecodeAddress(deserAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);
-
-     //ECC_Stop();
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {

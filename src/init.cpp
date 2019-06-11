@@ -1,7 +1,16 @@
 #include "init.h"
+#include "block.h"
+#include "consensus.h"
+#include "dag_manager.h"
+#include "params.h"
 
 std::unique_ptr<Config> config;
+
+Params params;
+Block GENESIS;
+NodeRecord GENESIS_RECORD;
 std::unique_ptr<Caterpillar> CAT;
+std::unique_ptr<DAGManager> DAG;
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -25,7 +34,14 @@ void Init(int argc, char* argv[]) {
 
     config->ShowConfig();
 
+    // set global variables
+    params = TestNetParams::GetParams();
+
+    GENESIS        = Block::CreateGenesis();
+    GENESIS_RECORD = NodeRecord::CreateGenesisRecord();
+
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
+    DAG = std::make_unique<DAGManager>(); // DAGManager::GetDAGManager();
 }
 
 void SetupCommandline(cxxopts::Options& options) {

@@ -48,6 +48,7 @@ public:
     uint256 CreateRandomHash();
 
     std::pair<CKey, CPubKey> CreateKeyPair(bool compressed = true);
+    std::pair<uint256, std::vector<unsigned char>> CreateSig(const CKey&);
     Transaction CreateReg();
     Transaction CreateTx(int numTxInput, int numTxOutput);
 

@@ -1,4 +1,5 @@
 #include "block.h"
+#include "params.h"
 
 Block::Block() {
     SetNull();
@@ -367,4 +368,3 @@ BlockNet::BlockNet(VStream& payload) {
     payload >> *this;
 }
 
-const Block GENESIS = Block::CreateGenesis();

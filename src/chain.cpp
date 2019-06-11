@@ -105,7 +105,8 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     arith_uint256 t       = 0;
 
     auto curr = GetRecord(b.cblock->GetPrevHash());
-    for (size_t i = 0; i < params.sortitionThreshold && *curr != GENESIS_RECORD;
+    assert(curr);
+    for (size_t i = 0; i < params.sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
          ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
         S += curr->cblock->GetChainWork();
         t = curr->cblock->GetTime();
@@ -221,6 +222,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     RecordPtr prevMs = DAG.GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
     if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
+        spdlog::info("Transaction distance exceeds its allowed distance!");
         return {};
     }
 

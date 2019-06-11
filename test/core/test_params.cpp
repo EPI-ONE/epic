@@ -6,7 +6,7 @@
 
 class TestParams : public testing::Test {
 public:
-    const Params& params = TestNetParams::GetParams();
+    //const Params& params = TestNetParams::GetParams();
 };
 
 TEST_F(TestParams, Basic_Value_Check) {

@@ -70,13 +70,21 @@ protected:
 
 class TestNetParams : public Params {
 public:
-    static const Params& GetParams();
+    static Params GetParams();
 
-protected:
+//protected:
     TestNetParams();
 };
 
+class UnitTestParams : public Params {
+public:
+    static const Params GetParams();
+
+//protected:
+    UnitTestParams();
+};
+
 // instance of the parameters for usage throughout the project
-static const Params& params = TestNetParams::GetParams();
+extern Params params;
 
 #endif // __SRC_PARAMS_H__

@@ -105,7 +105,13 @@ private:
 
 class ChainLedger {
 public:
-    ChainLedger() = default;
+    ChainLedger()                   = default;
+    ChainLedger(const ChainLedger&) = default;
+
+    ChainLedger(std::unordered_map<uint256, UTXOPtr>&& pending,
+        std::unordered_map<uint256, UTXOPtr>&& comfirmed,
+        std::unordered_map<uint256, UTXOPtr>&& removed)
+        : pending_(std::move(pending)), comfirmed_(std::move(comfirmed)), removed_(std::move(removed)) {}
 
     void AddToPending(UTXOPtr);
     UTXOPtr GetFromPending(const uint256&);

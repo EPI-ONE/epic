@@ -6,7 +6,6 @@
 #include "cpptoml.h"
 #include "cxxopts.hpp"
 #include "file_utils.h"
-#include "params.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
 enum : uint8_t {

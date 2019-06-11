@@ -33,6 +33,14 @@ std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
     return std::make_pair(std::move(seckey), std::move(pubkey));
 }
 
+std::pair<uint256, std::vector<unsigned char>> TestFactory::CreateSig(const CKey& privateKey) {
+    auto msg     = GetRandomString(10);
+    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
+    std::vector<unsigned char> sig;
+    privateKey.Sign(hashMsg, sig);
+    return std::make_pair(hashMsg, sig);
+}
+
 Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;

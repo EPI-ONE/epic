@@ -5,6 +5,7 @@ DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
     milestoneChains.push(std::make_unique<Chain>());
     thread_.Start();
+    globalStates_.emplace(GENESIS.GetHash(), make_shared_ChainState());
 }
 
 DAGManager::~DAGManager() {

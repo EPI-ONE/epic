@@ -10,7 +10,7 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
-extern const Block GENESIS;
+//extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
@@ -200,5 +200,6 @@ public:
 };
 
 typedef std::shared_ptr<const BlockNet> ConstBlockPtr;
+extern Block GENESIS;
 
 #endif //__SRC_BLOCK_H__

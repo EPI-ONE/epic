@@ -29,6 +29,10 @@ public:
         c->recordHistory_.emplace(prec->cblock->GetHash(), prec);
     }
 
+    void AddToLedger(Chain* c, ChainLedger&& ledger) {
+        c->ledger_  = ledger;
+    }
+
     Chain make_chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain = false) {
         Chain chain{};
         chain.ismainchain_ = ismain;
@@ -51,43 +55,86 @@ public:
         return c->IsValidDistance(rec, msHashRate);
     }
 
-    Chain* pchain;
+    RecordPtr GetRecord(Chain* c, const uint256& h) {
+        return c->GetRecord(h);
+    }
 };
 
 TEST_F(TestChainVerification, try_syntax) {
     Chain c{};
+    ASSERT_EQ(c.GetChainHead()->height, 0);
+    ASSERT_EQ(c.GetChainHead()->GetRecordHashes().size(), 1);
+    ASSERT_EQ(c.GetChainHead()->GetRecordHashes()[0], GENESIS.GetHash());
+    ASSERT_TRUE(GetRecord(&c, GENESIS.GetHash()) != nullptr);
+    ASSERT_TRUE(*GetRecord(&c, GENESIS.GetHash()) == GENESIS_RECORD);
 }
 
 TEST_F(TestChainVerification, VerifyRedemption) {
     // prepare keys and signature
-    auto keypair = fac.CreateKeyPair();
-    auto addr    = keypair.second.GetID();
-    auto msg     = fac.GetRandomString(10);
-    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
-    std::vector<unsigned char> sig;
-    keypair.first.Sign(hashMsg, sig);
+    auto keypair        = fac.CreateKeyPair();
+    auto addr           = keypair.second.GetID();
+    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
     Block b1{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
-    RecordPtr firstRecord = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
+    auto b1hash             = b1.GetHash();
+    RecordPtr firstRecord   = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
     firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
 
     // construct redemption block
-    Block b2{1, ghash, b1.GetHash(), ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
-    TxOutPoint outpoint{b1.GetHash(), 0};
     Transaction redeem{};
     redeem.AddSignedInput(outpoint, keypair.second, hashMsg, sig).AddOutput(0, addr);
+    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
     b2.AddTransaction(redeem);
     NodeRecord redemption{BlockNet{std::move(b2)}};
-    redemption.prevRedemHash = b1.GetHash();
+    redemption.prevRedemHash = b1hash;
 
     // start testing
     Chain c{};
     AddToHistory(&c, firstRecord);
-    ASSERT_TRUE(bool((ValidateRedemption(&c, redemption))));
+    auto txoc = ValidateRedemption(&c, redemption);
+    ASSERT_TRUE(bool(txoc));
+    ASSERT_EQ(firstRecord->isRedeemed, NodeRecord::IS_REDEEMED);
+    ASSERT_EQ(redemption.isRedeemed, NodeRecord::NOT_YET_REDEEMED);
+}
+
+TEST_F(TestChainVerification, VerifyTx) {
+    // prepare keys and signature
+    auto keypair        = fac.CreateKeyPair();
+    auto addr           = keypair.second.GetID();
+    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
+
+    // construct transaction output to add into the ledger
+    const auto& ghash = GENESIS.GetHash();
+    auto encodedAddr = EncodeAddress(addr);
+    VStream outdata(encodedAddr);
+    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
+    TxOutput output{4, outputListing};
+    BlockNet b1{Block{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0}};
+    Transaction tx1{};
+    b1.AddTransaction(tx1.AddOutput(std::move(output)));
+    b1.Solve();
+    auto rec1 = std::make_shared<NodeRecord>(std::move(b1));
+    const auto& b1hash = rec1->cblock->GetHash();
+
+    Chain c{};
+    auto putxo = std::make_shared<UTXO>(rec1->cblock->GetTransaction()->GetOutputs()[0], 0);
+    ChainLedger ledger{std::unordered_map<uint256, UTXOPtr>{}, {{putxo->GetKey(), putxo}}, std::unordered_map<uint256, UTXOPtr>{}};
+    AddToLedger(&c, std::move(ledger));
+    AddToHistory(&c, rec1);
+
+    // construct block
+    Transaction tx{};
+    VStream indata{keypair.second, sig, hashMsg};
+    tx.AddInput(TxInput{b1hash, 0, Tasm::Listing{indata}}).AddOutput(0, addr);
+    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    b2.AddTransaction(tx);
+    NodeRecord record{BlockNet{std::move(b2)}};
+
+    ASSERT_TRUE(bool(ValidateTx(&c, record)));
 }
 
 TEST_F(TestChainVerification, ChainForking) {

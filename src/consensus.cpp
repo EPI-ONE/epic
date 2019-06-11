@@ -7,6 +7,8 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
     milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
     blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
     hashRate        = GetMsDifficulty() / params.timeInterval;
+
+    lvsHashes_ = {GENESIS.GetHash()};
 }
 
 ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
@@ -221,11 +223,10 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
-    NodeRecord genesis{BlockNet{GENESIS}};
+    NodeRecord genesis{BlockNet{Block::CreateGenesis()}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
     genesis.isMilestone = true;
     return genesis;
 }
 
-const NodeRecord GENESIS_RECORD = NodeRecord::CreateGenesisRecord();

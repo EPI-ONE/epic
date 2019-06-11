@@ -11,6 +11,9 @@ enum MilestoneStatus : uint8_t {
 };
 
 class NodeRecord;
+typedef std::shared_ptr<NodeRecord> RecordPtr;
+
+class NodeRecord;
 class ChainState {
 public:
     uint64_t height;
@@ -103,6 +106,8 @@ private:
     TXOC txoc_;
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
+
+    friend std::shared_ptr<ChainState>make_shared_ChainState();
 };
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
@@ -175,8 +180,6 @@ string to_string(const ChainState&);
 string to_string(const NodeRecord& rec, bool showtx = false);
 } // namespace std
 
-typedef std::shared_ptr<NodeRecord> RecordPtr;
-
-extern const NodeRecord GENESIS_RECORD;
+extern NodeRecord GENESIS_RECORD;
 
 #endif // __SRC_CONSENSUS_H__
