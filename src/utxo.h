@@ -2,10 +2,12 @@
 #define __SRC_UTXO_H__
 
 #include "block.h"
+
 #include <unordered_set>
 
 class UTXO;
 class TXOC;
+
 namespace std {
 string to_string(const UTXO&);
 string to_string(const TXOC&);
@@ -78,7 +80,7 @@ typedef std::shared_ptr<UTXO> UTXOPtr;
 class TXOC {
 public:
     TXOC() = default;
-    TXOC(std::unordered_set<uint256> created, std::unordered_set<uint256> spent)
+    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent)
         : created_(std::move(created)), spent_(std::move(spent)) {}
 
     void AddToCreated(const UTXOPtr&);

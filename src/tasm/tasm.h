@@ -43,9 +43,6 @@ public:
                     listing.program.emplace_back(prog);
                 }
             }
-            /*for (auto it = b.program.cbegin(); it != b.program.cend(); it++) {
-                listing.program.emplace_back(*it);
-            }*/
             return listing;
         }
     };

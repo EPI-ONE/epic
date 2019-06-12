@@ -229,7 +229,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
             spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), std::to_string(blkHash));
             return {};
         }
-        valueIn = valueIn + prevOut->GetOutput().value;
+        valueIn += prevOut->GetOutput().value;
 
         prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
         txoc.AddToSpent(vin);

@@ -96,7 +96,6 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
 
 void NodeRecord::UpdateReward(const Coin& prevReward) {
     assert(validity != Validity::UNKNOWN);
-
     // cumulate reward without fee
     cumulativeReward = prevReward + params.reward;
 

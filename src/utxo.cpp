@@ -1,4 +1,5 @@
 #include "utxo.h"
+#include "caterpillar.h"
 
 uint256 XOR(const uint256& hash, uint32_t index) {
     return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
@@ -68,7 +69,7 @@ UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     if (query != comfirmed_.end()) {
         return query->second;
     }
-    return nullptr;
+    return CAT->GetTransactionOutput(xorkey);
 }
 
 void ChainLedger::Update(const TXOC& txoc) {

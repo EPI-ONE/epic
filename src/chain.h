@@ -25,13 +25,6 @@ public:
     // We have to further verify it to update chain state.
     Chain(const Chain& chain, ConstBlockPtr pfork);
 
-    // now for test only
-    /*Chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain=false) : ismainchain_(ismain), states_(states) {
-        for (const auto& pRec : recs) {
-            recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
-        }
-    }*/
-
     // add block to this chain
     void AddBlock(ConstBlockPtr pblock);
 
@@ -95,7 +88,7 @@ private:
     RecordPtr GetRecord(const uint256&) const;
 
     static bool IsValidDistance(const NodeRecord&, const arith_uint256&);
-    // TODO: try using this friend declaration instead of TestImpl which requires putting methods to test in protected
+    // friend decleration for running a test
     friend class TestChainVerification;
 };
 

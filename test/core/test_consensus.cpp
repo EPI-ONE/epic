@@ -29,19 +29,20 @@ TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
     BlockNet b1 = fac.CreateBlockNet();
-    NodeRecord bs1{fac.CreateBlock()};
+    BlockNet b2{b1};
+    NodeRecord bs1{std::move(b1)};
 
     // test without a tx
     EXPECT_EQ(VStream(bs1).size(), bs1.GetOptimalStorageSize());
 
-    // with a big-enough tx to test the variable-size ints (e.g., VarInt, CompactSize)
+    // with a big-enough tx to test the variable-size ints (e.g. VarInt, CompactSize)
     Transaction tx;
     for (int i = 0; i < 512; ++i) {
         tx.AddInput(TxInput(Hash::GetZeroHash(), i, Tasm::Listing(VStream(i))));
         tx.AddOutput(TxOutput(i, Tasm::Listing(VStream(i))));
     }
-    b1.AddTransaction(tx);
-    NodeRecord bs2(fac.CreateBlock(500,500));
+    b2.AddTransaction(tx);
+    NodeRecord bs2{std::move(b2)};
     EXPECT_EQ(VStream(bs2).size(), bs2.GetOptimalStorageSize());
 }
 

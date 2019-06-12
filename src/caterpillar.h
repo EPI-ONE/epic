@@ -24,7 +24,7 @@ public:
     BlockCache GetBlockCache(const uint256&) const;
     bool IsSolid(const uint256&) const;
 
-    // search for UTXO in db
+    // TODO: search for UTXO in db
     std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
 
     bool StoreRecord(const RecordPtr&) const;

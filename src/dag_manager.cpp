@@ -22,7 +22,6 @@ RecordPtr DAGManager::GetState(const uint256& msHash) {
         auto prec = CAT->GetRecord(msHash);
         if (prec && prec->snapshot) {
             return prec;
-
         } else {
             // cannot happen
             return nullptr;
