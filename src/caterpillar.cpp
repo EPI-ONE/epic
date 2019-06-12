@@ -51,7 +51,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            StoredRecord ms = GetRecord(msHash);
+            RecordPtr ms = DAG->GetState(msHash);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
@@ -68,15 +68,9 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
 
         // Check difficulty target ///////////////////////
 
-        StoredRecord ms = GetRecord(msHash);
+        RecordPtr ms = DAG->GetState(msHash);
         if (!ms) {
-            spdlog::info("Block is missing milestone link {} [{}]", std::to_string(msHash),
-                std::to_string(blk->GetHash()));
-            return false;
-        }
-
-        if (!(ms->snapshot)) {
-            spdlog::info("Block has invalid milestone link [{}]", std::to_string(blk->GetHash()));
+            spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return false;
         }
 
@@ -106,7 +100,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
     // clang-format on
 }
 
-bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const {
+bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const {
     if (ms == nullptr) {
         // Should not happen
         return false;

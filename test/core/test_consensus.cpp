@@ -150,22 +150,23 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::ostringstream os;
     os << time(nullptr);
     std::string filename = prefix + os.str();
-    Caterpillar cat(filename);
+
+    CAT = std::make_unique<Caterpillar>(filename);
 
     // Initialize DB and pending with genesis block
-    cat.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
     DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
-        cat.AddNewBlock(block, nullptr);
+        CAT->AddNewBlock(block, nullptr);
     }
 
-    cat.Stop();
+    CAT->Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
-        EXPECT_TRUE(cat.IsSolid(bhash));
-        auto blkCache = cat.GetBlockCache(bhash);
+        EXPECT_TRUE(CAT->IsSolid(bhash));
+        auto blkCache = CAT->GetBlockCache(bhash);
         EXPECT_TRUE(blkCache);
     }
 
@@ -173,4 +174,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());
+
+    CAT.reset();
 }

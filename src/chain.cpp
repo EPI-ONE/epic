@@ -209,9 +209,9 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     auto tx = record.cblock->GetTransaction();
 
     // check Transaction distance
-    ChainStatePtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+    RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
-    if (!IsValidDistance(record, prevMs->hashRate)) {
+    if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
         return {};
     }
 

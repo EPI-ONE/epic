@@ -6,7 +6,7 @@ DAGManager::DAGManager() {
     isBatchSynching = false;
 }
 
-void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer> peer) {}
+void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer>) {}
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // TODO: For test only!
@@ -14,14 +14,18 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     pending.push_back(block);
 }
 
-ChainStatePtr DAGManager::GetState(const uint256& msHash) {
+RecordPtr DAGManager::GetState(const uint256& msHash) {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
-        return search->second; 
-    } else if (auto prec = CAT->GetRecord(msHash)){
-        return prec->snapshot; 
+        return search->second;
     } else {
-        // cannot happen
-        return nullptr; 
+        auto prec = CAT->GetRecord(msHash);
+        if (prec && prec->snapshot) {
+            return prec;
+
+        } else {
+            // cannot happen
+            return nullptr;
+        }
     }
 }
