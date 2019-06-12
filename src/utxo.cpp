@@ -62,7 +62,7 @@ UTXOPtr ChainLedger::GetFromPending(const uint256& xorkey) {
 UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     auto query = removed_.find(xorkey);
     if (query != removed_.end()) {
-        return query->second;
+        return nullptr;
     }
     query = comfirmed_.find(xorkey);
     if (query != comfirmed_.end()) {

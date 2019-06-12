@@ -143,17 +143,15 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
 }
 
 std::optional<TXOC> Chain::Validate(NodeRecord& record) {
-    auto pblock = record.cblock;
+    auto& pblock = record.cblock;
     std::optional<TXOC> result;
 
     // first check whether it is a fork of its peer chain
-    bool validPeerChain = false;
     auto prevRec        = GetRecord(record.cblock->GetPrevHash());
     if (prevRec->prevRedemHash != Hash::GetZeroHash()) {
         // then its previous block is valid in the sense of reward
         record.prevRedemHash   = prevRec->prevRedemHash;
         prevRec->prevRedemHash = Hash::GetZeroHash();
-        validPeerChain         = true;
     } else {
         record.prevRedemHash = Hash::GetZeroHash();
     }
@@ -167,46 +165,45 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
         }
     }
 
-    record.UpdateReward(GetPrevReward(record), validPeerChain);
+    record.UpdateReward(GetPrevReward(record));
     return result;
 }
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     // this transaction is a redemption of reward
-    const auto redem = record.cblock->GetTransaction();
-    if (redem->GetOutputs().empty()) {
-        spdlog::info("Missing output for redemption of reward!");
-        return {};
-    }
-    const TxInput& vin   = redem->GetInputs().at(0);
-    const TxOutput& vout = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
+    const auto& redem   = record.cblock->GetTransaction();
+    const auto& vin     = redem->GetInputs().at(0);
+    const auto& vout    = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
+    const auto& blkHash = record.cblock->GetHash();
 
     // value of the output should be less or equal to the previous counter
-    if (!(GetPrevReward(record) <= vout.value)) {
-        spdlog::info("Wrong redemption value that exceeds total cumulative reward!");
+    if (!(vout.value <= GetPrevReward(record))) {
+        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", std::to_string(blkHash));
         return {};
     }
 
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {}", std::to_string(record.prevRedemHash));
+        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), std::to_string(blkHash));
         return {};
     }
 
     if (!VerifyInOut(vin, prevReg->cblock->GetTransaction()->GetOutputs()[0].listingContent)) {
-        spdlog::info("Singature failed!");
+        spdlog::info("Singature failed! [{}]", std::to_string(blkHash));
         return {};
     }
 
     // update redemption status
-    prevReg->isRedeemed = NodeRecord::IS_REDEEMED;
-    record.isRedeemed   = NodeRecord::NOT_YET_REDEEMED;
+    prevReg->isRedeemed  = NodeRecord::IS_REDEEMED;
+    record.isRedeemed    = NodeRecord::NOT_YET_REDEEMED;
+    record.prevRedemHash = record.cblock->GetHash();
     return std::make_optional<TXOC>({{XOR(record.cblock->GetHash(), 0)}, {}});
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
-    auto tx = record.cblock->GetTransaction();
+    const auto& tx      = record.cblock->GetTransaction();
+    const auto& blkHash = record.cblock->GetHash();
 
     // check Transaction distance
     RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
@@ -229,7 +226,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
         auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {}", std::to_string(outpoint));
+            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), std::to_string(blkHash));
             return {};
         }
         valueIn = valueIn + prevOut->GetOutput().value;
@@ -246,8 +243,8 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
-    if (!(fee >= 0 && fee <= params.maxMoney && valueIn <= params.maxMoney)) {
-        spdlog::info("Transaction input vlaue goes out of range!");
+    if (!(0 <= fee && fee <= params.maxMoney)) {
+        spdlog::info("Transaction input value goes out of range!");
         return {};
     }
     record.fee = fee;
@@ -256,7 +253,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     auto itprevOut = prevOutListing.cbegin();
     for (const auto& input : tx->GetInputs()) {
         if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Singature failed!");
+            spdlog::info("Singature failed! [{}]", std::to_string(blkHash));
             return {};
         }
         itprevOut++;
@@ -265,15 +262,12 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 }
 
 RecordPtr Chain::GetRecord(const uint256& blkHash) const {
-    try {
-        if (verifying_.find(blkHash) != verifying_.end()) {
-            return verifying_.at(blkHash);
-        } else if (recordHistory_.find(blkHash) != recordHistory_.end()) {
-            return recordHistory_.at(blkHash);
-        } else {
+    auto result = verifying_.find(blkHash);
+    if (result == verifying_.end()) {
+        result = recordHistory_.find(blkHash);
+        if (result == recordHistory_.end()) {
             return CAT->GetRecord(blkHash);
         }
-    } catch (std::out_of_range& e) {
-        return nullptr;
     }
+    return result->second;
 }

@@ -94,28 +94,21 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
     isMilestone = true;
 }
 
-void NodeRecord::UpdateReward(const Coin& prevReward, bool validPeerChain) {
-    assert(validity == Validity::UNKNOWN);
+void NodeRecord::UpdateReward(const Coin& prevReward) {
+    assert(validity != Validity::UNKNOWN);
 
-    if (!validPeerChain) {
-        cumulativeReward = prevReward;
+    // cumulate reward without fee
+    cumulativeReward = prevReward + params.reward;
+
+    if (!(cblock->HasTransaction() && validity == Validity::VALID)) {
         return;
     }
-    if (!cblock->HasTransaction() || validity == Validity::INVALID) {
-        // cumulate reward without fee
-        cumulativeReward = prevReward + params.reward;
-        return;
-    }
-    if (validity == Validity::VALID) {
-        if (cblock->IsFirstRegistration()) {
-            // reset reward 
-            cumulativeReward = {};
-        } else if (cblock->IsRegistration()) {
-            // remaining reward = last cumulative reward - redemption amount
-            cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
-        } else { // for normal valid transaction
-            cumulativeReward = prevReward + fee; 
-        }
+
+    if (cblock->IsRegistration()) {
+        // remaining reward = last cumulative reward - redemption amount
+        cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
+    } else { // for normal valid transaction
+        cumulativeReward = prevReward + fee;
     }
 }
 
@@ -129,7 +122,7 @@ void NodeRecord::Serialize(VStream& s) const {
     }
 
     s << (uint8_t) isRedeemed;
-    if (isRedeemed) {
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
         s << prevRedemHash;
     }
 
@@ -163,7 +156,7 @@ void NodeRecord::Deserialize(VStream& s) {
     }
 
     auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
-    isMilestone                 = msFlag == IS_TRUE_MILESTONE;
+    isMilestone = (msFlag == IS_TRUE_MILESTONE);
 
     if (msFlag > 0) {
         snapshot = std::make_shared<ChainState>(s);

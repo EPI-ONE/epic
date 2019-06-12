@@ -85,10 +85,9 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
     // construct redemption block
     Block b2{1, ghash, b1.GetHash(), ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    TxOutPoint outpoint{b1.GetHash(), 0};
     Transaction redeem{};
-    VStream indata{keypair.second, sig, hashMsg};
-    redeem.AddInput(TxInput{b1.GetHash(), 0, Tasm::Listing{indata}});
-    redeem.AddOutput(0, addr);
+    redeem.AddSignedInput(outpoint, keypair.second, hashMsg, sig).AddOutput(0, addr);
     b2.AddTransaction(redeem);
     NodeRecord redemption{BlockNet{std::move(b2)}};
     redemption.prevRedemHash = b1.GetHash();

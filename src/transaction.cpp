@@ -104,6 +104,16 @@ Transaction& Transaction::AddInput(TxInput&& txin) {
     return *this;
 }
 
+Transaction& Transaction::AddSignedInput(const TxOutPoint& outpoint,
+    const CPubKey& pubkey,
+    const uint256& hashMsg,
+    const std::vector<unsigned char>& sig) {
+
+    VStream indata{pubkey, sig, hashMsg};
+    AddInput(TxInput{outpoint, Tasm::Listing{indata}});
+    return *this;
+}
+
 Transaction& Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(this);

@@ -136,7 +136,10 @@ public:
     explicit Transaction(const CKeyID& addr);
 
     Transaction& AddInput(TxInput&& input);
-    Transaction& AddSignedInput();
+    Transaction& AddSignedInput(const TxOutPoint& outpoint,
+        const CPubKey& pubkey,
+        const uint256& hashMsg,
+        const std::vector<unsigned char>& sig);
     Transaction& AddOutput(TxOutput&& output);
     Transaction& AddOutput(uint64_t, const CKeyID&);
     Transaction& AddOutput(const Coin&, const CKeyID&);

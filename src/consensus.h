@@ -155,7 +155,7 @@ public:
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
-    void UpdateReward(const Coin&, bool);
+    void UpdateReward(const Coin&);
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);
