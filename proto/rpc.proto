@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package rpc;
+
+message Block {
+  Hash block_hash = 1;
+  uint32 version = 2;
+  Hash milestoneBlockHash = 3;
+  Hash prevBlockHash = 4;
+  Hash tipBlockHash = 5;
+  Hash diffTarget = 6;
+  uint32 nonce = 7;
+  uint64 time = 8;
+  Transaction transactions = 9;
+}
+
+message Transaction {
+    message Input {
+        bytes listing = 1;
+    }
+    message Output {
+        bytes listing = 1;
+    }
+    Hash transaction_hash = 1;
+    uint32 fee = 2;
+    repeated Input inputs = 3;
+    repeated Output outputs = 4;
+}
+
+message Hash {
+    bytes hash = 1;
+}
+
+service BasicBlockExplorerRPC {
+    rpc GetBlock (GetBlockRequest) returns (GetBlockResponse);
+    rpc GetNewMilestoneSince (GetNewMilestoneSinceRequest) returns (GetNewMilestoneSinceResponse);
+    rpc GetLatestMilestone (GetLatestMilestoneRequest) returns (GetLatestMilestoneResponse);
+    rpc GetLevelSet (GetLevelSetRequest) returns (GetLevelSetResponse);
+    rpc GetLevelSetSize (GetLevelSetSizeRequest) returns (GetLevelSetSizeResponse);
+}
+
+message GetBlockRequest {
+    Hash hash = 1;    
+}
+
+message GetBlockResponse {
+    Block block = 1;    
+}
+
+message GetNewMilestoneSinceRequest {
+    Hash hash = 1;
+    int64 number = 2;
+} 
+
+message GetNewMilestoneSinceResponse {
+    repeated Block blocks = 1;    
+} 
+
+message GetLatestMilestoneRequest {}
+
+message GetLatestMilestoneResponse {
+    Block milestone = 1;    
+}
+
+message GetLevelSetRequest {
+    Hash hash = 1;    
+}
+
+message GetLevelSetResponse {
+    repeated Block blocks = 1;    
+}
+
+message GetLevelSetSizeRequest {
+    Hash hash = 1;    
+}
+
+message GetLevelSetSizeResponse {
+    uint64 size = 1;    
+}
