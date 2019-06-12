@@ -148,12 +148,12 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
 
     // first check whether it is a fork of its peer chain
     auto prevRec        = GetRecord(record.cblock->GetPrevHash());
-    if (prevRec->prevRedemHash != Hash::GetZeroHash()) {
+    if (!prevRec->prevRedemHash.IsNull()) {
         // then its previous block is valid in the sense of reward
         record.prevRedemHash   = prevRec->prevRedemHash;
-        prevRec->prevRedemHash = Hash::GetZeroHash();
+        prevRec->prevRedemHash.SetNull();
     } else {
-        record.prevRedemHash = Hash::GetZeroHash();
+        record.prevRedemHash.SetNull();
     }
 
     // then check its transaction and update UTXO

@@ -121,9 +121,9 @@ public:
     };
 
     enum RedemptionStatus : uint8_t {
-        IS_NOT_REDEMPTION = 0, 
-        NOT_YET_REDEEMED,
-        IS_REDEEMED,
+        IS_NOT_REDEMPTION = 0, // double zero hash
+        NOT_YET_REDEEMED,      // hash of previous redemption block
+        IS_REDEEMED,           // null hash
     };
 
     enum MilestoneStatus : uint8_t {
