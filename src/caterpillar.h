@@ -13,9 +13,6 @@
 #include "rocksdb.h"
 #include "threadpool.h"
 
-typedef std::unique_ptr<NodeRecord> StoredRecord;
-typedef std::unique_ptr<Block> BlockCache;
-
 class Caterpillar {
 public:
     Caterpillar() = delete;
@@ -41,9 +38,6 @@ public:
      */
     bool StoreRecords(const std::vector<RecordPtr>&);
 
-    /**
-     * Returns true is the hash exists in one of DAG, DB, or OBC
-     */
     bool Exists(const uint256&) const;
     bool DBExists(const uint256&) const;
     bool DAGExists(const uint256&) const;
@@ -107,8 +101,6 @@ private:
 
     StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;
     FilePos& NextFile(FilePos&) const;
-
-    friend class TestFileStorage;
 };
 
 extern std::unique_ptr<Caterpillar> CAT;

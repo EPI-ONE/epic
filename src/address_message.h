@@ -36,4 +36,13 @@ public:
     }
 };
 
+class GetAddrMessage {
+public:
+    GetAddrMessage() = default;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream&, Operation) {}
+};
+
 #endif // __SRC_ADDRESS_MESSAGE_H__

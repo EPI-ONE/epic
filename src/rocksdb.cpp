@@ -199,7 +199,7 @@ std::unique_ptr<UTXO> RocksDBStore::GetUTXO(const uint256& key) const {
     }
 }
 
-bool RocksDBStore::WriteUTXO(const uint256& key, const UTXOPtr & utxo) const {
+bool RocksDBStore::WriteUTXO(const uint256& key, const UTXOPtr& utxo) const {
     MAKE_KEY_SLICE(key);
 
     VStream value(utxo);

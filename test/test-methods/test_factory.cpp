@@ -138,3 +138,60 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous,
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
     return CreateNextChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
+
+TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height) {
+    NodeRecord lastMs    = startMs;
+    NodeRecord prevBlock = startMs;
+
+    TestChain testChain;
+    testChain.push_back(LevelSet{startMs});
+    testChain.push_back(LevelSet());
+
+    size_t count       = 1;
+    uint32_t timestamp = GENESIS.GetTime();
+    while (count < height) {
+        Block b = CreateBlock(GetRand() % 11 + 1, GetRand() % 11 + 1);
+        b.SetTime(timestamp++);
+        b.SetMilestoneHash(lastMs.cblock->GetHash());
+        b.SetPrevHash(prevBlock.cblock->GetHash());
+        b.SetTipHash(testChain[rand() % (testChain.size() - 1)][0].cblock->GetHash());
+        b.SetDifficultyTarget(lastMs.snapshot->blockTarget.GetCompact());
+
+        // Special transaction on the first registration block
+        if (b.GetPrevHash() == GENESIS.GetHash()) {
+            Transaction tx;
+            tx.AddInput(TxInput(Hash::GetZeroHash(), UNCONNECTED));
+
+            CKey seckey = CKey();
+            seckey.MakeNewKey(true);
+            CPubKey pubkey     = seckey.GetPubKey();
+            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
+            VStream v(pubkeyHash);
+            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v)));
+            b.AddTransaction(tx);
+        }
+        b.Solve();
+
+        NodeRecord node(std::make_shared<const Block>(b));
+
+        bool make_new_levelset = false;
+
+        if (CheckMsPOW(node.cblock, lastMs.snapshot)) {
+            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<uint256>());
+            node.LinkChainState(cs);
+            lastMs = node;
+            count++;
+            if (count < height) {
+                make_new_levelset = true;
+            }
+        }
+
+        testChain[testChain.size() - 1].push_back(node);
+        prevBlock = node;
+
+        if (make_new_levelset) {
+            testChain.push_back(LevelSet());
+        }
+    }
+    return testChain;
+}

@@ -41,6 +41,10 @@ public:
         header.checksum       = 0;
     }
 
+    template <typename M>
+    NetMessage(const void* handle, uint32_t message_type, const M& message)
+        : NetMessage(handle, message_type, VStream(message)) {}
+
     const void* GetConnectionHandle();
     bool VerifyChecksum();
 

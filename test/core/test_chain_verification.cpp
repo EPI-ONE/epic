@@ -80,6 +80,8 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     std::array<bool, HEIGHT> isRedemption;
     std::array<bool, HEIGHT> isMilestone;
     isRedemption.fill(false);
+    isRedemption[0] = true; // first reg
+
     isMilestone.fill(false);
 
     NumberGenerator numGen{fac.GetRand(), 1, 10};
@@ -104,11 +106,12 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(),  0};
+    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
     ASSERT_TRUE(b1.IsFirstRegistration());
-    auto b1hash             = b1.GetHash();
+    auto b1hash = b1.GetHash();
+    hashes[0] = b1.GetHash();
 
     // construct a chain with only redemption blocks and blocks without transaction
     Chain c{};
@@ -116,7 +119,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     auto prevHash    = b1hash;
     auto prevRedHash = b1hash;
     auto prevMs      = GENESIS_RECORD.snapshot;
-    for (size_t i = 0; i < HEIGHT; i++) {
+    for (size_t i = 1; i < HEIGHT; i++) {
         Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
             Transaction redeem{};
@@ -173,7 +176,8 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             } else if (i == 0) {
                 ASSERT_TRUE(recs[i]->cumulativeReward == 1);
             } else {
-                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
+                ASSERT_TRUE(recs[i]->cumulativeReward ==
+                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
             }
         }
         if (isMilestone[i]) {

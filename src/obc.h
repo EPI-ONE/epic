@@ -44,7 +44,7 @@ public:
 
     bool IsEmpty() const;
 
-    bool IsOrphan(const uint256& hash) const;
+    bool Contains(const uint256& hash) const;
 
     /*
      * adds block to OBC
@@ -81,7 +81,7 @@ private:
     std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;
     /* this container maps missing hashes to one or more
      * dependency structs that wait for this one hash */
-    std::multimap<uint256, obc_dep_ptr> lose_ends_;
+    std::unordered_map<uint256, std::unordered_set<obc_dep_ptr>> lose_ends_;
 };
 
 #endif

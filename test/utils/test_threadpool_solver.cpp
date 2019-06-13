@@ -36,15 +36,12 @@ TEST_F(TestThreadPoolSolver, simple_test) {
 }
 
 TEST_F(TestThreadPoolSolver, mine_genesis) {
-    // The line `m.Solve(genesisBlock, solverPool)`
-    // should only be uncommented when using this code
-    // to mine a new genesis block.
-
     /**
      * MainNet: {version: 1, difficulty target: 0x1d00ffffL}
      * TestNet: {version:10, difficulty target: 0x1e00ffffL}
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
+
     Block genesisBlock{100};
     Transaction tx;
 
@@ -80,13 +77,16 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
     // solverPool.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
-    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend());
+    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
+    // EXPECT_TRUE(genesisBlock.Verify());
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
     genesisBlock.SetNonce(251319); // UnitTest
-                                   // genesisBlock.SetNonce(29897782); // TestNet
-                                   // genesisBlock.SetNonce(1701609359); // MainNet
+    // genesisBlock.SetNonce(29897782); // TestNet
+    // genesisBlock.SetNonce(1701609359); // MainNet
+
     genesisBlock.FinalizeHash();
-    EXPECT_TRUE(genesisBlock.Verify());
+
+    EXPECT_TRUE(GENESIS.Verify());
 }

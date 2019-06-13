@@ -6,10 +6,7 @@ OrphanBlocksContainer::~OrphanBlocksContainer() {
 }
 
 std::size_t OrphanBlocksContainer::Size() const {
-    return lose_ends_.size();
-}
-
-std::size_t OrphanBlocksContainer::DependencySize() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     return block_dep_map_.size();
 }
 
@@ -17,19 +14,22 @@ bool OrphanBlocksContainer::IsEmpty() const {
     return this->Size() == 0;
 }
 
-bool OrphanBlocksContainer::IsOrphan(const uint256& hash) const {
+bool OrphanBlocksContainer::Contains(const uint256& hash) const {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     return block_dep_map_.find(hash) != block_dep_map_.end();
 }
 
-void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
-                                     uint8_t missing_mask) { /* return if the block is actually not an orphan */
+void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing_mask) {
+    if (missing_mask == 0) {
+        return;
+    }
 
     /* construct new dependency
      * for the new block */
     obc_dep_ptr dep(new obc_dep);
     dep->block = block;
 
+    /* insert new dependency into block_dep_map_ */
     std::unordered_set<uint256> unique_missing_hashes;
 
     auto common_insert = [&](uint256&& hash) {
@@ -39,7 +39,7 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
         if (it == block_dep_map_.end()) {
             /* if the dependency is not in this OBC
              * then the dep is a lose end */
-            lose_ends_.insert({hash, dep});
+            lose_ends_[hash].insert(dep);
         } else {
             /* if the dependency is in the OBC
              * the dep is linked to the dependency dep */
@@ -68,10 +68,11 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
 }
 
 std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
-    auto range = lose_ends_.equal_range(hash);
+    std::unique_lock<std::shared_mutex> writer(mutex_);
+    auto range = lose_ends_.find(hash);
 
     /* if no lose ends can be tied using this hash return */
-    if (std::distance(range.first, range.second) == 0) {
+    if (range == lose_ends_.end()) {
         return {};
     }
 
@@ -79,17 +80,18 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     std::vector<ConstBlockPtr> result;
 
     /* for all deps that have the given hash as a parent/dependency */
-    for (auto it = range.first; it != range.second; it++) {
+    for (auto& n : range->second) {
         /* push it onto the stack as it might
          * be used later on */
-        stack.push_back(it->second);
+        stack.push_back(n);
     }
 
     /* the addition of the given hash
      * ties lose ends therefore the
      * corresponding dependencies have
      * to be removed from lose_ends_ */
-    lose_ends_.erase(range.first, range.second);
+    lose_ends_.erase(range);
+    writer.unlock();
 
     obc_dep_ptr cursor;
     while (!stack.empty()) {
@@ -112,9 +114,9 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
 
         /* this also means that we have to remove the
          * dependency from the block_dep_map_ */
-        std::unique_lock<std::shared_mutex> lock(mutex_);
+        writer.lock();
         block_dep_map_.erase(cursor->block->GetHash());
-        lock.unlock();
+        writer.unlock();
 
         /* further we push all dependencies that dependend
          * on this block onto the stack */

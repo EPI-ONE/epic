@@ -141,8 +141,8 @@ public:
         return uint160(vch);
     }
 
-    std::string to_string() {
-        return GetHex();
+    std::string to_substr() const {
+        return GetHex().substr(0, 8);
     }
 };
 

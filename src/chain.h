@@ -3,14 +3,11 @@
 
 #include <deque>
 #include <optional>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
-#include "block.h"
+#include "concurrent_container.h"
 #include "consensus.h"
-#include "params.h"
-#include "uint256.h"
-#include "utxo.h"
 
 class Cumulator;
 namespace std {
@@ -78,6 +75,8 @@ public:
 
     bool IsBlockPending(const uint256&) const;
 
+    std::vector<ConstBlockPtr> GetPendingBlocks() const;
+
     std::size_t GetPendingBlockCount() const;
 
     /** Gets a list of block to verify by the post-order DFS */
@@ -100,7 +99,7 @@ public:
      * performed when we add a milestone block to this chain.
      * Updates TXOC of the of the chain on whole level set
      */
-    void Verify(const ConstBlockPtr&);
+    RecordPtr Verify(const ConstBlockPtr&);
 
     /**
      * TODO:
@@ -110,6 +109,10 @@ public:
 
     static bool IsValidDistance(const RecordPtr&, const arith_uint256&);
 
+    bool IsMilestone(const uint256&) const;
+
+    RecordPtr GetRecord(const uint256&) const;
+
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
@@ -118,18 +121,19 @@ private:
      * Stores a (probabily recent) list of milestones
      * TODO: thinking of a lifetime mechanism for it
      */
+    // std::deque<ChainStatePtr> states_;
     std::deque<ChainStatePtr> states_;
 
     /**
      * Stores data not yet verified in this chain
      */
-    std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
+    ConcurrentHashMap<uint256, ConstBlockPtr> pendingBlocks_;
     std::unordered_map<uint256, UTXOPtr> pendingUTXOs_;
 
     /**
      * Stores verified blocks on this chain as cache
      */
-    std::unordered_map<uint256, RecordPtr> recordHistory_;
+    ConcurrentHashMap<uint256, RecordPtr> recordHistory_;
 
     /*
      * Stores blocks being verified in a level set
@@ -159,13 +163,10 @@ private:
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
     const Coin& GetPrevReward(const NodeRecord& rec) {
-        auto queryRec = GetRecord(rec.cblock->GetPrevHash());
-        return queryRec->cumulativeReward;
+        return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
 
     bool IsValidDistance(const NodeRecord&, const arith_uint256&);
-
-    RecordPtr GetRecord(const uint256&) const;
 
     // friend decleration for running a test
     friend class TestChainVerification;

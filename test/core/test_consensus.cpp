@@ -97,44 +97,15 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 1000;
-    std::vector<ConstBlockPtr> blocks;
-    blocks.reserve(n);
-
-    // Make the genesis first
-    const auto genesisPtr = std::make_shared<const Block>(GENESIS);
-    blocks.emplace_back(genesisPtr);
-
     // Construct a fully connected and syntatical valid random graph
-    for (std::size_t i = 1; i < n; ++i) {
-        Block b = fac.CreateBlock(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
-        b.SetMilestoneHash(GENESIS.GetHash());
-        b.SetPrevHash(blocks[rand() % i]->GetHash());
-        b.SetTipHash(blocks[rand() % i]->GetHash());
-        b.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
 
-        // Special transaction on the first registration block
-        if (b.GetPrevHash() == GENESIS.GetHash()) {
-            Transaction tx;
-            tx.AddInput(TxInput(Hash::GetZeroHash(), UNCONNECTED));
-
-            CKey seckey = CKey();
-            seckey.MakeNewKey(true);
-            CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
-            VStream v(pubkeyHash);
-            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v)));
-            b.AddTransaction(tx);
-        }
-        b.Solve();
-
-        while (CheckMsPOW(std::make_shared<const Block>(b), GENESIS_RECORD.snapshot)) {
-            b.SetNonce(b.GetNonce() + 1);
-            b.Solve();
-        }
-
-        blocks.emplace_back(std::make_shared<Block>(b));
+    std::vector<NodeRecord> blocks;
+    while (blocks.size() <= 2) {
+        blocks = fac.CreateChain(GENESIS_RECORD, 2).back();
+        blocks.pop_back();
     }
+
+    spdlog::info("Number of blocks to be added: {}", blocks.size());
 
     // Shuffle order of blocks to make some of them not solid
     auto rng = std::default_random_engine{};
@@ -156,25 +127,26 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->EnableOBC();
 
     for (const auto& block : blocks) {
-        DAG->AddNewBlock(block, nullptr);
+        DAG->AddNewBlock(block.cblock, nullptr);
     }
 
+    usleep(50000);
     CAT->Stop();
     DAG->Stop();
 
     for (const auto& blk : blocks) {
-        auto bhash = blk->GetHash();
+        auto bhash = blk.cblock->GetHash();
         ASSERT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
-        if (!(*blk == *genesisPtr)) {
-            ASSERT_TRUE(blkCache);
-        }
+        ASSERT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
+    EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size());
 
+    // Delete the temporary test data folder
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());
 
     CAT.reset();
+    DAG.reset();
 }

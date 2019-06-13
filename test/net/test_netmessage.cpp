@@ -3,14 +3,10 @@
 #include <vector>
 
 #include "address_message.h"
-#include "bundle.h"
-#include "getaddr_message.h"
-#include "getblock_message.h"
-#include "getdata_message.h"
-#include "inventory_message.h"
 #include "net_message.h"
 #include "ping.h"
 #include "pong.h"
+#include "sync_messages.h"
 #include "test_factory.h"
 #include "version_ack.h"
 #include "version_message.h"
@@ -89,31 +85,32 @@ TEST_F(TestNetMsg, Bundle) {
 TEST_F(TestNetMsg, Inv) {
     Inv inv(1);
     for (int i = 0; i < 100; i++) {
-        inv.AddBlockHash(factory.CreateRandomHash());
+        inv.AddItem(factory.CreateRandomHash());
     }
     VStream stream(inv);
 
     Inv inv1(stream);
     for (int i = 0; i < 100; i++) {
-        EXPECT_EQ(inv.milestoneHashes[i], inv1.milestoneHashes[i]);
+        EXPECT_EQ(inv.hashes[i], inv1.hashes[i]);
     }
 }
 
-TEST_F(TestNetMsg, GetBlock) {
-    GetBlock getBlock(1);
+TEST_F(TestNetMsg, GetInv) {
+    std::vector<uint256> locator = {Hash::GetZeroHash()};
+    GetInv getInv(locator, 1);
     for (int i = 0; i < 100; i++) {
-        getBlock.AddBlockHash(factory.CreateRandomHash());
+        getInv.AddBlockHash(factory.CreateRandomHash());
     }
-    VStream stream(getBlock);
+    VStream stream(getInv);
 
-    GetBlock getBlock1(stream);
+    GetInv getBlock1(stream);
     for (int i = 0; i < 100; i++) {
-        EXPECT_EQ(getBlock.locator[i], getBlock1.locator[i]);
+        EXPECT_EQ(getInv.locator[i], getBlock1.locator[i]);
     }
 }
 
 TEST_F(TestNetMsg, GetData) {
-    GetData getData(GetData::GetDataType::LEVEL_SET);
+    GetData getData(GetDataTask::LEVEL_SET);
     for (int i = 0; i < 100; i++) {
         getData.AddItem(factory.CreateRandomHash(), i);
     }
@@ -122,7 +119,7 @@ TEST_F(TestNetMsg, GetData) {
 
     GetData getData1(stream);
     for (int i = 0; i < 100; i++) {
-        EXPECT_EQ(getData.blockHashes[i], getData1.blockHashes[i]);
+        EXPECT_EQ(getData.hashes[i], getData1.hashes[i]);
         EXPECT_EQ(getData.bundleNonce[i], getData1.bundleNonce[i]);
     }
 }

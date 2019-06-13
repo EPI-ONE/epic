@@ -24,7 +24,7 @@ public:
         handle.~ECCVerifyHandle();
     }
 
-private: 
+private:
     ECCVerifyHandle handle;
 };
 

@@ -3,11 +3,11 @@
 
 #include <atomic>
 #include <list>
-#include <queue>
 
 #include "chains.h"
 #include "concurrent_container.h"
 #include "consensus.h"
+#include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
 
@@ -27,14 +27,16 @@ public:
     void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
     void CallbackRequestInv(std::shared_ptr<Inv> inv);
 
-    /** Called by Peer and sets a list of inventory as the callback to the task. */
-    void AssembleInv(GetBlockTask& task);
-
     /** Called by batchSync to create a GetDataTask for a given hash. */
-    GetDataTask RequestData(const uint256& hash, GetDataTask::GetDataType& type, PeerPtr peer);
+    std::optional<GetDataTask> RequestData(const uint256& hash, PeerPtr peer);
+    void CallbackRequestData(std::vector<ConstBlockPtr>&);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
-    void GetBundle(GetDataTask& task);
+    void RespondRequestInv(const std::vector<uint256>&, uint32_t, PeerPtr);
+
+    /** Called by Peer and sets a Bundle as the callback to the task. */
+    void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
+    void RespondRequestPending(uint32_t, PeerPtr);
 
     /*
      * Submits tasks to a single thread in which it checks its syntax.
@@ -43,14 +45,14 @@ public:
      */
     void AddNewBlock(const ConstBlockPtr& block, PeerPtr peer);
 
-    const RecordPtr GetHead() const;
-
-    size_t GetBestMilestoneHeight();
-
     // Checkout states either in different chain or in db
-    RecordPtr GetState(const uint256&);
+    const RecordPtr GetState(const uint256&) const;
 
     const Chain& GetBestChain() const;
+
+    size_t GetBestMilestoneHeight() const;
+
+    const RecordPtr GetMilestoneHead() const;
 
     /**
      * Blocks the main thread from going forward
@@ -61,8 +63,8 @@ public:
 
 private:
     ThreadPool verifyThread_;
-    ThreadPool storagePool_ ;
     ThreadPool syncPool_;
+    ThreadPool storagePool_;
 
     /** Indicator of whether we are synching with some peer. */
     std::atomic<bool> isBatchSynching;
@@ -83,7 +85,7 @@ private:
      * A list of tasks we've prepared to deliver to a Peer.
      * Should be thread-safe.
      */
-    BlockingQueue<GetDataTask> preDownloading;
+    BlockingQueue<uint256> preDownloading;
 
     /**
      * A list of milestone chains, with first element being
@@ -96,20 +98,30 @@ private:
      */
     ConcurrentHashMap<uint256, RecordPtr> globalStates_;
 
+    std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, PeerPtr);
+
+    /**
+     * Starting from the given hash, traverses the main milestone chain
+     * backward/forward by the given length
+     */
+    void TraverseMilestoneBackward(RecordPtr, size_t, std::vector<uint256>& result);
+    void TraverseMilestoneForward(RecordPtr, size_t, std::vector<uint256>& result);
+
+    /**
+     * Methods are called when the synchronization status is changed:
+     * on to off and off to on.
+     */
+    void StartBatchSync(PeerPtr);
+    void CompleteBatchSync();
+    void DisconnectPeerSync(PeerPtr);
+
     /**
      * Start a new thread and create a list of GetData tasks that is either added
      * to preDownloading (if it's not empty) or a peer's task queue. If preDownloading
      * is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
-    void BatchSync(std::list<uint256>& requests, PeerPtr requestFrom);
-
-    /**
-     * Methods are called when the synchronization status is changed:
-     * on to off and off to on. Modifies the atomic_flag isBatchSynching.
-     */
-    void StartBatchSync(PeerPtr peer);
-    void CompleteBatchSync();
+    void BatchSync(std::vector<uint256>& requests, PeerPtr requestFrom);
 
     /**
      * TODO:
@@ -118,6 +130,12 @@ private:
      * Returns whether the hash is removed successfully.
      */
     bool UpdateDownloadingQueue(const uint256&);
+
+    void AddToDownloadingQueue(const uint256&);
+
+    bool IsDownloading(const uint256&);
+
+    void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
@@ -131,6 +149,18 @@ private:
     void AddBlockToPending(const ConstBlockPtr& block);
 
     void ProcessMilestone(const ChainPtr&, const ConstBlockPtr&);
+
+    bool IsMainChainMS(const uint256&) const;
+
+    size_t GetHeight(const uint256&) const;
+
+    RecordPtr GetMainChainRecord(const uint256&) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+
+    bool ExistsNode(const uint256&) const;
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);

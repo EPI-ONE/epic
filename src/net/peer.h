@@ -2,23 +2,21 @@
 #define EPIC_PEER_H
 
 #include <atomic>
+#include <shared_mutex>
 
 #include "address_manager.h"
 #include "address_message.h"
 #include "block.h"
 #include "blocking_queue.h"
-#include "bundle.h"
+#include "concurrent_container.h"
 #include "connection_manager.h"
-#include "getaddr_message.h"
-#include "getblock_message.h"
-#include "getdata_message.h"
-#include "inventory_message.h"
 #include "message_type.h"
 #include "net_address.h"
 #include "ping.h"
 #include "pong.h"
 #include "protocol_exception.h"
 #include "spdlog/spdlog.h"
+#include "sync_messages.h"
 #include "version_ack.h"
 #include "version_message.h"
 
@@ -33,13 +31,13 @@ public:
      * @param addressManager
      */
     Peer(NetAddress& netAddress,
-        const void* handle,
-        bool inbound,
-        bool isSeedPeer,
-        ConnectionManager* connectionManager,
-        AddressManager* addressManager);
+         const void* handle,
+         bool inbound,
+         bool isSeedPeer,
+         ConnectionManager* connectionManager,
+         AddressManager* addressManager);
 
-    ~Peer();
+    virtual ~Peer();
 
     void ProcessMessage(NetMessage& message);
 
@@ -177,9 +175,9 @@ private:
     void ProcessBlock(ConstBlockPtr& block);
 
     /**
-     * process GetBlock
+     * process GetInv
      */
-    void ProcessGetBlock(GetBlock& getBlock);
+    void ProcessGetInv(GetInv& getBlock);
 
     /**
      * process Inv
@@ -202,7 +200,6 @@ private:
      */
     uint32_t GetFirstGetDataNonce();
 
-
     /**
      * Parameters of network setting
      */
@@ -219,7 +216,6 @@ private:
     // result in an immediate disconnect
     // TODO to be set
     const int kMinProtocolVersion = 0;
-
 
     /*
      * statistic of peer status
@@ -243,10 +239,21 @@ private:
     // the address queue to send
     BlockingQueue<NetAddress> addrSendQueue;
 
-
     /*
-     * TODO: Synchronization information
+     * Synchronization information
      */
+
+    mutable std::shared_mutex sync_slock;
+
+    // Keep track of the last request we made to the peer in GetInv
+    // so we can avoid redundant and harmful GetInv requests.
+    uint256 lastGetInvBegin, lastGetInvEnd;
+    size_t lastGetInvLength;
+    uint256 lastSentBundleHash, lastSentInvHash;
+
+    std::unordered_map<uint32_t, GetInvTask> getInvsTasks;
+    std::map<uint32_t, GetDataTask> getDataTasks;
+    std::unordered_map<uint32_t, std::shared_ptr<Bundle>> orphanLvsPool;
 
     /*
      * pointer from outside
@@ -254,7 +261,5 @@ private:
     ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
 };
-
-using PeerPtr = std::shared_ptr<Peer>;
 
 #endif // EPIC_PEER_H

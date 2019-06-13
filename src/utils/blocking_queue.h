@@ -60,6 +60,12 @@ public:
         empty_.notify_all();
     }
 
+    void Clear() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        std::queue<T> empty;
+        std::swap(queue_, empty);
+    }
+
 private:
     mutable std::mutex mtx_;
     std::condition_variable full_;

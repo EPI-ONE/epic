@@ -16,11 +16,13 @@
 #include "peer.h"
 #include "spdlog.h"
 
+typedef std::shared_ptr<Peer> PeerPtr;
+
 class PeerManager {
 public:
     PeerManager();
 
-    ~PeerManager();
+    virtual ~PeerManager();
 
     void Start();
 
@@ -120,7 +122,7 @@ public:
      * relay block to neighbors
      * @param block
      */
-    void RelayBlock(ConstBlockPtr block, PeerPtr msg_from);
+    void RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from);
 
 protected:
     /*
@@ -130,7 +132,7 @@ protected:
      * @param inbound
      * @return
      */
-    std::shared_ptr<Peer> CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
+    PeerPtr CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
 
     void RemovePeer(const void* connection_handle);
 
@@ -138,9 +140,9 @@ protected:
      * release resources of a peer and then delete it
      * @param peer
      */
-    void DeletePeer(const std::shared_ptr<Peer>& peer);
+    void DeletePeer(const PeerPtr& peer);
 
-    void DisconnectPeer(std::shared_ptr<Peer>& peer);
+    void DisconnectPeer(PeerPtr& peer);
 
     /*
      * check if we have connected to the ip address
@@ -153,7 +155,7 @@ protected:
      * @param handle
      * @param peer
      */
-    void AddPeer(const void* handle, const std::shared_ptr<Peer>& peer);
+    void AddPeer(const void* handle, const PeerPtr& peer);
 
     /**
      * add a connected address
@@ -225,7 +227,7 @@ protected:
     std::recursive_mutex peerLock_;
 
     // a map to save all peers
-    std::unordered_map<const void*, std::shared_ptr<Peer>> peerMap_;
+    std::unordered_map<const void*, PeerPtr> peerMap_;
 
     // lock of connected address set
     std::mutex addressLock_;
