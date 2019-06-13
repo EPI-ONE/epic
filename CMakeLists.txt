@@ -51,6 +51,18 @@ find_package(Secp256k1 REQUIRED)
 find_package(GMP REQUIRED)
 include_directories(${Secp256k1_INCLUDE_DIR})
 
+# Protobuf and gRPC
+find_package(Protobuf REQUIRED)
+find_package(GRPC REQUIRED)
+set(RPC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/rpc)
+set(PROTOS proto/rpc.proto)
+set(PROTO_SRC_DIR ${RPC_DIR}/proto-gen)
+file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
+
+# Protobuf and gRPC autogeneration
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_SRC_DIR} ${PROTOS})
+grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${PROTO_SRC_DIR} ${PROTOS})
+
 # src codes
 set(NET_DIR src/net)
 set(UTIL_DIR src/utils)
@@ -61,6 +73,7 @@ set(SUPPORT_DIR src/support)
 set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
+aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${TASM_DIR} TASM_SRCS)
@@ -70,6 +83,8 @@ aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
 include_directories(src
+        ${RPC_DIR}
+        ${PROTO_SRC_DIR}
         ${NET_DIR}
         ${UTIL_DIR}
         ${CRYPTO_DIR}
@@ -81,6 +96,9 @@ include_directories(src
         )
 
 set(SRC_CODE
+        ${RPC_DIR}
+        ${PROTO_SRCS}
+        ${GRPC_SRCS}
         ${NET_SRCS}
         ${UTIL_SRCS}
         ${CRYPTO_SRCS}
@@ -127,7 +145,8 @@ target_link_libraries(epiccore ${LIBEVENT_LIBRARIES})
 target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
 target_link_libraries(epiccore ${Secp256k1_LIBRARY})
 target_link_libraries(epiccore ${GMP_LIBRARY})
-
+target_link_libraries(epiccore protobuf::libprotobuf)
+target_link_libraries(epiccore gRPC::grpc++_reflection)
 
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)
