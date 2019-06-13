@@ -25,10 +25,6 @@ public:
         CAT.reset();
     }
 
-    void AddToVerifying(Chain* c, RecordPtr prec) {
-        c->verifying_.emplace(prec->cblock->GetHash(), prec);
-    }
-
     void AddToHistory(Chain* c, RecordPtr prec) {
         c->recordHistory_.emplace(prec->cblock->GetHash(), prec);
     }
@@ -49,10 +45,6 @@ public:
 
     std::optional<TXOC> ValidateTx(Chain* c, NodeRecord& record) {
         return c->ValidateTx(record);
-    }
-
-    void Verify(Chain* c, const ConstBlockPtr& pblock) {
-        c->Verify(pblock);
     }
 
     bool IsValidDistance(const NodeRecord& rec, const arith_uint256& msHashRate) {

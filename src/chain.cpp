@@ -96,9 +96,9 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     arith_uint256 S       = 0;
     arith_uint256 t       = 0;
 
-    auto curr = CAT->GetRecord(b.cblock->GetPrevHash());
+    auto curr = GetRecord(b.cblock->GetPrevHash());
     for (size_t i = 0; i < params.sortitionThreshold && *curr != GENESIS_RECORD;
-         ++i, curr = CAT->GetRecord(curr->cblock->GetPrevHash())) {
+         ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
         S += curr->cblock->GetChainWork();
         t = curr->cblock->GetTime();
     }
@@ -174,23 +174,23 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     const auto& redem   = record.cblock->GetTransaction();
     const auto& vin     = redem->GetInputs().at(0);
     const auto& vout    = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
-    const auto& blkHash = record.cblock->GetHash();
+    const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     // value of the output should be less or equal to the previous counter
     if (!(vout.value <= GetPrevReward(record))) {
-        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", std::to_string(blkHash));
+        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
         return {};
     }
 
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), std::to_string(blkHash));
+        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
         return {};
     }
 
     if (!VerifyInOut(vin, prevReg->cblock->GetTransaction()->GetOutputs()[0].listingContent)) {
-        spdlog::info("Singature failed! [{}]", std::to_string(blkHash));
+        spdlog::info("Singature failed! [{}]", hashstr);
         return {};
     }
 
@@ -203,7 +203,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     const auto& tx      = record.cblock->GetTransaction();
-    const auto& blkHash = record.cblock->GetHash();
+    const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     // check Transaction distance
     RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
@@ -226,7 +226,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
         auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), std::to_string(blkHash));
+            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
             return {};
         }
         valueIn += prevOut->GetOutput().value;
@@ -244,7 +244,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
     if (!(0 <= fee && fee <= params.maxMoney)) {
-        spdlog::info("Transaction input value goes out of range!");
+        spdlog::info("Transaction input value goes out of range! [{}]", hashstr);
         return {};
     }
     record.fee = fee;
@@ -253,7 +253,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     auto itprevOut = prevOutListing.cbegin();
     for (const auto& input : tx->GetInputs()) {
         if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Singature failed! [{}]", std::to_string(blkHash));
+            spdlog::info("Singature failed! [{}]", hashstr);
             return {};
         }
         itprevOut++;
