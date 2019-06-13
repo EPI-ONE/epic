@@ -3,15 +3,9 @@
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
-Chain::Chain() : Chain(true) {
+Chain::Chain() : ismainchain_(true) {
     states_.push_back(make_shared_ChainState());
     recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
-}
-
-Chain::Chain(bool mainchain) : ismainchain_(mainchain) {}
-
-ChainStatePtr Chain::GetChainHead() const {
-    return states_.back();
 }
 
 Chain::Chain(const Chain& chain) : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
@@ -32,6 +26,10 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
         states_.erase(std::next(it).base());
     }
     // note that we don't do any verification here
+}
+
+ChainStatePtr Chain::GetChainHead() const {
+    return states_.back();
 }
 
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {

@@ -11,8 +11,6 @@ public:
 TEST_F(DFSTest, empty_pending_blocks_map) {
     Chain chain;
     ConstBlockPtr block_0 = fac.CreateBlockPtr();
-    // block_0.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
-    // block_0.Solve();
 
     chain.AddPendingBlock(block_0);
     auto graph = chain.GetSortedSubgraph(block_0);

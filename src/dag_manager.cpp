@@ -29,7 +29,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             auto& outs = block->GetTransaction()->GetOutputs();
             utxos.reserve(outs.size());
             for (size_t i = 0; i < outs.size(); ++i) {
-                utxos.push_back(std::make_shared<UTXO>(outs[i], i));
+                utxos.emplace_back(std::make_shared<UTXO>(outs[i], i));
             }
         }
 
@@ -40,10 +40,11 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         }
 
         // Check if it's a new ms from the main chain
-        auto& mainchain   = milestoneChains.best();
-        RecordPtr msBlock = mainchain->GetMilestoneCache(block->GetMilestoneHash());
+        auto& mainchain    = milestoneChains.best();
+        const auto& msHash = block->GetMilestoneHash();
+        RecordPtr msBlock  = mainchain->GetMilestoneCache(msHash);
         if (!msBlock) {
-            msBlock = CAT->GetRecord(block->GetMilestoneHash());
+            msBlock = CAT->GetRecord(msHash);
         }
 
         if (msBlock) {
@@ -70,7 +71,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 continue;
             }
 
-            RecordPtr msBlock = chain->GetMilestoneCache(block->GetMilestoneHash());
+            RecordPtr msBlock = chain->GetMilestoneCache(msHash);
 
             if (!msBlock) {
                 continue;

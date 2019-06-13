@@ -125,7 +125,7 @@ bool Block::Verify() const {
     return true;
 }
 
-void Block::AddTransaction(Transaction tx) {
+void Block::AddTransaction(const Transaction& tx) {
     // Invalidate cached hash to force recomputation
     UnCache();
     transaction_.reset();

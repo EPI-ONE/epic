@@ -20,7 +20,6 @@ class Chain {
 public:
     /** Init a chain with genesis */
     Chain();
-    Chain(bool mainchain);
     Chain(const Chain&);
 
     /**

@@ -57,7 +57,7 @@ public:
 
     bool Verify() const;
 
-    void AddTransaction(Transaction);
+    void AddTransaction(const Transaction&);
 
     bool HasTransaction() const;
 
