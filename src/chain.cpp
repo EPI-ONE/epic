@@ -288,26 +288,6 @@ bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
     return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }
 
-MilestoneStatus Chain::IsMilestone(const ConstBlockPtr& pblock) {
-    auto entry = recordHistory_.find(pblock->GetMilestoneHash());
-    ChainStatePtr ms;
-
-    if (entry == recordHistory_.end()) {
-        auto rec = CAT->GetRecord(pblock->GetMilestoneHash());
-        if (!rec) {
-            return WE_DONT_KNOW;
-        }
-        ms = rec->snapshot;
-    } else {
-        ms = entry->second->snapshot;
-    }
-
-    if (*ms == *GetChainHead() && CheckMsPOW(pblock, ms)) {
-        return IS_TRUE_MILESTONE;
-    }
-    return nullptr;
-}
-
 RecordPtr Chain::GetMilestoneCache(const uint256& msHash) {
     auto entry = recordHistory_.find(msHash);
     if (entry != recordHistory_.end() && entry->second->isMilestone) {
