@@ -26,8 +26,14 @@ uint256 TestFactory::CreateRandomHash() {
     return uint256(vch);
 }
 
-Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
+std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
+    CKey seckey = CKey();
+    seckey.MakeNewKey(compressed);
+    CPubKey pubkey = seckey.GetPubKey();
+    return std::make_pair(std::move(seckey), std::move(pubkey));
+}
 
+Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
@@ -71,7 +77,7 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 }
 
 BlockNet TestFactory::CreateBlockNet(int numTxInput, int numTxOutput, bool finalize) {
-    return CreateBlock(numTxInput, numTxOutput, finalize);
+    return BlockNet{CreateBlock(numTxInput, numTxOutput, finalize)};
 }
 
 ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput , bool finalize) {
@@ -123,8 +129,7 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecor
     return make_shared_ChainState(previous, record, std::move(hashes));
 }
 
-ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous) {
-    auto pRec = CreateConsecutiveRecordPtr();
+ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
     return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
 

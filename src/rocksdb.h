@@ -37,13 +37,13 @@ public:
 
     ~RocksDBStore();
 
-protected:
+private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
     rocksdb::DB* db;
     std::string DBPATH;
-
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
+protected:
     std::string Get(const std::string& column, const rocksdb::Slice& key) const;
 
     std::string Get(const std::string& column, const std::string& key) const;

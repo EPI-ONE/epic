@@ -134,7 +134,7 @@ bool Block::HasTransaction() const {
     return transaction_.has_value();
 }
 
-std::optional<Transaction>& Block::GetTransaction() {
+const std::optional<Transaction>& Block::GetTransaction() const {
     return transaction_;
 }
 
@@ -355,6 +355,10 @@ Block Block::CreateGenesis() {
 }
 
 BlockNet::BlockNet(const Block& b) : Block(b) {
+    SetParents();
+}
+
+BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {
     SetParents();
 }
 

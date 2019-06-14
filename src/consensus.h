@@ -2,6 +2,7 @@
 #define __SRC_CONSENSUS_H__
 
 #include "block.h"
+#include "utxo.h"
 
 class NodeRecord;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
@@ -19,7 +20,7 @@ public:
     // constructor of a chain state of genesis.
     ChainState();
     // constructor of a chain state with all data fields
-    ChainState(std::shared_ptr<ChainState>, const NodeRecord&, std::vector<uint256>&&);
+    ChainState(std::shared_ptr<ChainState>, const ConstBlockPtr&, std::vector<uint256>&&);
     // constructor of a chain state by vstream
     ChainState(VStream&);
     // copy constructor
@@ -48,12 +49,18 @@ public:
     }
 
     const std::vector<uint256>& GetRecordHashes() const {
-        return lvsHash_;
+        return lvsHashes_;
     }
 
     const uint256& GetMilestoneHash() const {
-        return lvsHash_.back(); 
+        return lvsHashes_.back(); 
     }
+
+    const TXOC& GetTXOC() const {
+        return txoc_;
+    }
+
+    void UpdateTXOC(TXOC&&);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -88,8 +95,9 @@ public:
 
 private:
     // a vector consists of hashes of blocks in level set of this chain state
-    std::vector<uint256> lvsHash_;
-    // TODO: a vector of TXOC: changes on transaction outputs from previous chain state
+    std::vector<uint256> lvsHashes_;
+    // TXOC: changes on transaction outputs from previous chain state
+    TXOC txoc_;
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
 };
@@ -105,10 +113,17 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
  */
 class NodeRecord {
 public:
+    // transaction validity
     enum Validity : uint8_t {
         UNKNOWN = 0,
         VALID,
         INVALID,
+    };
+
+    enum RedemptionStatus : uint8_t {
+        IS_NOT_REDEMPTION = 0, // double zero hash
+        NOT_YET_REDEEMED,      // hash of previous redemption block
+        IS_REDEEMED,           // null hash
     };
 
     enum MilestoneStatus : uint8_t {
@@ -120,23 +135,27 @@ public:
     ConstBlockPtr cblock;
 
     Coin cumulativeReward;
-    uint64_t minerChainHeight;
+    Coin fee;
+    uint64_t minerChainHeight = 0;
+
+    RedemptionStatus isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
+    uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
 
     bool isMilestone = false;
-    ChainStatePtr snapshot;
+    ChainStatePtr snapshot = nullptr;
 
-    Validity validity;
-
-    size_t optimalStorageSize;
+    Validity validity = Validity::UNKNOWN;
+    size_t optiomalStorageSize_ = 0;
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
-    NodeRecord(const BlockNet&);
+    NodeRecord(Block&&);
     NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void InvalidateMilestone();
+    void UpdateReward(const Coin&);
 
     void Serialize(VStream& s) const;
     void Deserialize(VStream& s);

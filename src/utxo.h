@@ -3,8 +3,11 @@
 
 #include "block.h"
 
+#include <unordered_set>
+
 class UTXO;
 class TXOC;
+
 namespace std {
 string to_string(const UTXO&);
 string to_string(const TXOC&);
@@ -40,6 +43,10 @@ public:
         return !(*this == another);
     }
 
+    const TxOutput& GetOutput() const {
+        return output_;
+    }
+
     uint256 GetContainingBlkHash() const;
 
     /**
@@ -65,33 +72,51 @@ struct std::hash<UTXO> {
     }
 };
 
+typedef std::shared_ptr<UTXO> UTXOPtr;
+
 /**
  * TXOC stands for a delta of transaction output changes
  */
 class TXOC {
 public:
-    TXOC() : created_(), spent_() {}
-    TXOC(std::vector<UTXO> created, std::vector<uint256> spent)
+    TXOC() = default;
+    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent)
         : created_(std::move(created)), spent_(std::move(spent)) {}
 
-    void AddToCreated(UTXO&&);
-    void AddToCreated(const TxOutput&, uint32_t);
-    void AddToSpent(const UTXO&);
+    void AddToCreated(const UTXOPtr&);
+    void AddToCreated(const uint256&, uint32_t);
     void AddToSpent(const TxInput&);
+    void Merge(TXOC&&);
 
-    const std::vector<UTXO>& GetTxOutsCreated() const {
+    const std::unordered_set<uint256>& GetTxOutsCreated() const {
         return created_;
     }
-    const std::vector<uint256>& GetTxOutsSpent() const {
+    const std::unordered_set<uint256>& GetTxOutsSpent() const {
         return spent_;
     }
 
     friend std::string std::to_string(const TXOC&);
 
 private:
-    std::vector<UTXO> created_;
-    // a vector representing keys of spent UTXO of encoding by XOR function in this file
-    std::vector<uint256> spent_;
+    // vectors representing keys of created and spent UTXO of encoding by the special XOR function respectively
+    std::unordered_set<uint256> created_;
+    std::unordered_set<uint256> spent_;
+};
+
+class ChainLedger {
+public:
+    ChainLedger() = default;
+
+    void AddToPending(UTXOPtr);
+    UTXOPtr GetFromPending(const uint256&);
+    UTXOPtr FindSpendable(const uint256&);
+    void Update(const TXOC&);
+    void Rollback(const TXOC&);
+
+private:
+    std::unordered_map<uint256, UTXOPtr> pending_;
+    std::unordered_map<uint256, UTXOPtr> comfirmed_;
+    std::unordered_map<uint256, UTXOPtr> removed_;
 };
 
 #endif /* ifndef __SRC_UTXO_H__ */

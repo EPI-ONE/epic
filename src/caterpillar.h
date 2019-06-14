@@ -24,6 +24,9 @@ public:
     BlockCache GetBlockCache(const uint256&) const;
     bool IsSolid(const uint256&) const;
 
+    // TODO: search for UTXO in db
+    std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
+
     bool StoreRecord(const RecordPtr&) const;
 
     /* Flush records to db. Called by DAGManager only. */
@@ -56,7 +59,7 @@ private:
     bool IsWeaklySolid(const ConstBlockPtr&) const;
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
     void Cache(const ConstBlockPtr&) const;
-    bool CheckPuntuality(const ConstBlockPtr& blk, const StoredRecord& ms) const;
+    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
     void ReleaseBlocks(const uint256&);
 };
 

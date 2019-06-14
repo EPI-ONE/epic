@@ -1,15 +1,16 @@
 #include <gtest/gtest.h>
 #include <optional>
 
-#include "test_factory.h"
+#include "test_env.h"
 #include "consensus.h"
 #include "key.h"
 
 typedef Tasm::Listing Listing;
 
 class TestSer : public testing::Test {
+public:
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 protected:
-    TestFactory fac;
     Listing randomBytes;
     uint256 rand1;
     uint256 rand2;
@@ -36,18 +37,27 @@ TEST_F(TestSer, SerializeOptional) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
-    ECC_Start();
-    CKey seckey = CKey();
-    seckey.MakeNewKey(true);
-    CPubKey pubkey = seckey.GetPubKey();
+     //ECC_Start();
+    auto pubkey = fac.CreateKeyPair().second;
 
+    // serialize on pubkey
     VStream vstream;
     vstream << pubkey;
     CPubKey outPubkey;
     vstream >> outPubkey;
 
     ASSERT_EQ(pubkey, outPubkey);
-    ECC_Stop();
+    
+    // serialize on address
+    std::string strAddr = EncodeAddress(pubkey.GetID());
+    vstream << strAddr;
+    std::string deserAddr;
+    vstream >> deserAddr;
+    ASSERT_EQ(strAddr, deserAddr);
+    auto decodeDeserAddr = DecodeAddress(deserAddr);
+    ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);
+
+     //ECC_Stop();
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
@@ -186,7 +196,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     EXPECT_EQ(s, soutput.str());
 
     // Check parent pointers
-    Transaction* ptrTx = &*block1.GetTransaction();
+    const Transaction* ptrTx = &(*block1.GetTransaction());
     EXPECT_EQ(&block1, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         EXPECT_EQ(ptrTx, input.GetParentTx());
@@ -222,7 +232,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     blk.AddTransaction(tx);
 
     // Construct NodeRecord
-    NodeRecord block(blk);
+    NodeRecord block(BlockNet(std::move(blk)));
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 

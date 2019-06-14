@@ -20,14 +20,9 @@ public:
 
         Listing() = default;
 
-        Listing(std::vector<uint8_t>& p, VStream& d) {
-            program = p;
-            data    = d;
-        };
-
-        Listing(const VStream& d) {
-            data = d;
-        }
+        Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(std::vector<uint8_t>&& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(const VStream& d) : data(d.cbegin(), d.cend()) {}
 
         ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>
@@ -38,6 +33,17 @@ public:
 
         friend bool operator==(const Listing& a, const Listing& b) {
             return a.program == b.program && a.data == b.data;
+        }
+
+        friend Listing operator+(const Listing& a, const Listing& b) {
+            Listing listing{a.program, a.data};
+            listing.data += b.data;
+            if (!b.program.empty()) {
+                for (const auto& prog : b.program) {
+                    listing.program.emplace_back(prog);
+                }
+            }
+            return listing;
         }
     };
 

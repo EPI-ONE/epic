@@ -61,7 +61,7 @@ public:
 
     bool HasTransaction() const;
 
-    std::optional<Transaction>& GetTransaction();
+    const std::optional<Transaction>& GetTransaction() const;
 
     void SetDifficultyTarget(uint32_t target);
 
@@ -181,8 +181,8 @@ public:
     using Block::Block;
 
     BlockNet(const BlockNet&) = default;
-
     BlockNet(const Block& b);
+    BlockNet(Block&& b);
 
     BlockNet(VStream&);
 

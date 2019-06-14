@@ -2,13 +2,16 @@
 #define __SRC_CHAIN_H__
 
 #include <deque>
+#include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "block.h"
 #include "consensus.h"
 #include "params.h"
 #include "uint256.h"
+#include "utxo.h"
 
 class Chain {
 public:
@@ -21,9 +24,6 @@ public:
     // Moreover, it does not contain the corresponding chain state of this $pfork.
     // We have to further verify it to update chain state.
     Chain(const Chain& chain, ConstBlockPtr pfork);
-
-    // now for test only
-    Chain(const std::deque<ChainStatePtr>& states, bool ismain=false) : ismainchain_(ismain), states_(states) {}
 
     // add block to this chain
     void AddBlock(ConstBlockPtr pblock);
@@ -39,7 +39,7 @@ public:
     std::size_t GetPendingBlockCount() const;
 
     // get a list of block to verify by a post-order DFS
-    std::vector<ConstBlockPtr> GetSortedSubgraph(ConstBlockPtr pblock);
+    std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
         return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
@@ -53,8 +53,6 @@ public:
         return states_; 
     }
 
-    static bool IsValidDistance(const RecordPtr, const arith_uint256);
-
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
@@ -66,16 +64,32 @@ private:
     std::unordered_map<uint256, ConstBlockPtr> pendingBlocks_;
     // store blocks verified in this chain
     std::unordered_map<uint256, RecordPtr> recordHistory_;
+    // store blocks being verified in a level set
+    std::unordered_map<uint256, RecordPtr> verifying_;
+    // store different types of UTXO
+    ChainLedger ledger_;
 
-    bool IsMilestone(const ConstBlockPtr pblock);
+    bool IsMilestone(const ConstBlockPtr& pblock);
 
     // when we add a milestone block to this chain, we start verification
     // TODO: should return tx ouput changes
-    void Verify(std::vector<RecordPtr>&);
-
+    void Verify(const ConstBlockPtr&);
     // do validity check on the block
-    // TODO: should return tx ouput changes
-    void Validate(NodeRecord& record);
+    std::optional<TXOC> Validate(NodeRecord& record);
+    // offline verification for transactions
+    std::optional<TXOC> ValidateRedemption(NodeRecord& record);
+    std::optional<TXOC> ValidateTx(NodeRecord& record);
+
+    const Coin& GetPrevReward(const NodeRecord& rec) {
+        // TODO: may add more check
+        return recordHistory_[rec.cblock->GetPrevHash()]->cumulativeReward;
+    }
+
+    RecordPtr GetRecord(const uint256&) const;
+
+    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
+    // friend decleration for running a test
+    friend class TestChainVerification;
 };
 
 typedef std::unique_ptr<Chain> ChainPtr;

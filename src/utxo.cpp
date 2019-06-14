@@ -1,4 +1,5 @@
 #include "utxo.h"
+#include "caterpillar.h"
 
 uint256 XOR(const uint256& hash, uint32_t index) {
     return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
@@ -22,21 +23,71 @@ uint64_t UTXO::HashCode() const {
 //////////////////////
 // TXOC
 //
-void TXOC::AddToCreated(UTXO&& utxo) {
-    created_.emplace_back(utxo);
+void TXOC::AddToCreated(const UTXOPtr& putxo) {
+    created_.emplace(putxo->GetKey());
 }
 
-void TXOC::AddToCreated(const TxOutput& output, uint32_t index) {
-    created_.emplace_back(UTXO(output, index));
-}
-
-void TXOC::AddToSpent(const UTXO& utxo) {
-    spent_.emplace_back(utxo.GetKey());
+void TXOC::AddToCreated(const uint256& blkHash, uint32_t index) {
+    created_.emplace(XOR(blkHash, index));
 }
 
 void TXOC::AddToSpent(const TxInput& input) {
-    auto outpoint = input.outpoint;
-    spent_.emplace_back(XOR(outpoint.bHash, outpoint.index));
+    auto& outpoint = input.outpoint;
+    spent_.emplace(XOR(outpoint.bHash, outpoint.index));
+}
+
+void TXOC::Merge(TXOC&& another) {
+    created_.merge(std::move(another.created_));
+    for (const auto& utxokey : another.spent_) {
+        if (created_.erase(utxokey) == 0) {
+            spent_.emplace(utxokey);
+        }
+    }
+}
+
+//////////////////////
+// ChainLedger
+//
+void ChainLedger::AddToPending(UTXOPtr putxo) {
+    pending_.insert({putxo->GetKey(), putxo});
+}
+
+UTXOPtr ChainLedger::GetFromPending(const uint256& xorkey) {
+    auto query = pending_.find(xorkey);
+    if (query != pending_.end()) {
+        return query->second;
+    }
+    return nullptr;
+}
+
+UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
+    auto query = removed_.find(xorkey);
+    if (query != removed_.end()) {
+        return nullptr;
+    }
+    query = comfirmed_.find(xorkey);
+    if (query != comfirmed_.end()) {
+        return query->second;
+    }
+    return CAT->GetTransactionOutput(xorkey);
+}
+
+void ChainLedger::Update(const TXOC& txoc) {
+    for (const auto& utxokey : txoc.GetTxOutsCreated()) {
+        comfirmed_.insert(pending_.extract(utxokey));
+    }
+    for (const auto& utxokey : txoc.GetTxOutsSpent()) {
+        removed_.insert(comfirmed_.extract(utxokey));
+    }
+}
+
+void ChainLedger::Rollback(const TXOC& txoc) {
+    for (const auto& utxokey : txoc.GetTxOutsCreated()) {
+        pending_.insert(comfirmed_.extract(utxokey));
+    }
+    for (const auto& utxokey : txoc.GetTxOutsSpent()) {
+        comfirmed_.insert(removed_.extract(utxokey));
+    }
 }
 
 //////////////////////

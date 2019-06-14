@@ -9,10 +9,9 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
     hashRate        = GetMsDifficulty() / params.timeInterval;
 }
 
-ChainState::ChainState(std::shared_ptr<ChainState> previous, const NodeRecord& rec, std::vector<uint256>&& lvsHash)
+ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
-      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHash_(lvsHash) {
-    auto msBlock = rec.cblock;
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
     chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
@@ -55,12 +54,16 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     lastUpdateTime = blockUpdateTime;
 }
 
+void ChainState::UpdateTXOC(TXOC&& txoc) {
+    txoc_.Merge(std::move(txoc));
+}
+
 ChainStatePtr make_shared_ChainState() {
     return std::make_shared<ChainState>();
 }
 
 ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
-    auto pcs = std::make_shared<ChainState>(previous, record, std::move(hashes));
+    auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(hashes));
     record.LinkChainState(pcs);
     return pcs;
 }
@@ -68,13 +71,13 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {}
+    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(const BlockNet& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize(0) {
-    cblock = std::make_shared<BlockNet>(blk);
+NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {
+    cblock = std::make_shared<BlockNet>(std::move(blk));
 }
 
 NodeRecord::NodeRecord(VStream& s) {
@@ -91,6 +94,23 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
     isMilestone = true;
 }
 
+void NodeRecord::UpdateReward(const Coin& prevReward) {
+    assert(validity != Validity::UNKNOWN);
+    // cumulate reward without fee
+    cumulativeReward = prevReward + params.reward;
+
+    if (!(cblock->HasTransaction() && validity == Validity::VALID)) {
+        return;
+    }
+
+    if (cblock->IsRegistration()) {
+        // remaining reward = last cumulative reward - redemption amount
+        cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
+    } else { // for normal valid transaction
+        cumulativeReward = prevReward + fee;
+    }
+}
+
 void NodeRecord::Serialize(VStream& s) const {
     s << *cblock;
     s << VARINT(cumulativeReward.GetValue());
@@ -98,6 +118,11 @@ void NodeRecord::Serialize(VStream& s) const {
 
     if (cblock->HasTransaction()) {
         s << (uint8_t) validity;
+    }
+
+    s << (uint8_t) isRedeemed;
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+        s << prevRedemHash;
     }
 
     if (isMilestone) {
@@ -121,11 +146,16 @@ void NodeRecord::Deserialize(VStream& s) {
     s >> VARINT(minerChainHeight);
 
     if (cblock->HasTransaction()) {
-        validity = (Validity) ser_readdata8(s);
+        validity = static_cast<Validity>(ser_readdata8(s));
     }
 
-    enum MilestoneStatus msFlag = (MilestoneStatus) ser_readdata8(s);
-    isMilestone                 = msFlag == IS_TRUE_MILESTONE;
+    isRedeemed = static_cast<RedemptionStatus>(ser_readdata8(s));
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+        s >> prevRedemHash;
+    }
+
+    auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
+    isMilestone = (msFlag == IS_TRUE_MILESTONE);
 
     if (msFlag > 0) {
         snapshot = std::make_shared<ChainState>(s);
@@ -133,29 +163,33 @@ void NodeRecord::Deserialize(VStream& s) {
 }
 
 size_t NodeRecord::GetOptimalStorageSize() {
-    if (optimalStorageSize > 0) {
-        return optimalStorageSize;
+    if (optiomalStorageSize_ > 0) {
+        return optiomalStorageSize_;
     }
-    optimalStorageSize = cblock->GetOptimalEncodingSize();
-    optimalStorageSize += GetSizeOfVarInt(cumulativeReward.GetValue());
-    optimalStorageSize += GetSizeOfVarInt(minerChainHeight);
+    optiomalStorageSize_ = cblock->GetOptimalEncodingSize();
+    optiomalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
+    optiomalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
 
     if (cblock->HasTransaction()) {
-        optimalStorageSize += 1;
+        optiomalStorageSize_ += 1;
     }
 
-    optimalStorageSize += 1;
+    optiomalStorageSize_ += 1; // RedemptionStatus
+    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+        optiomalStorageSize_ += 32; // prevRedemHash size
+    }
+    optiomalStorageSize_ += 1; // MilestoneStatus
 
     if (snapshot != nullptr) {
-        optimalStorageSize += GetSizeOfVarInt(snapshot->height);
-        optimalStorageSize += 4;
-        optimalStorageSize += 8;
-        optimalStorageSize += 4;
-        optimalStorageSize += 4;
-        optimalStorageSize += GetSizeOfVarInt(snapshot->hashRate);
+        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->height);
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += 8;
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += 4;
+        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);
     }
 
-    return optimalStorageSize;
+    return optiomalStorageSize_;
 }
 
 std::string std::to_string(const ChainState& cs) {
@@ -187,7 +221,7 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
 }
 
 NodeRecord NodeRecord::CreateGenesisRecord() {
-    NodeRecord genesis(GENESIS);
+    NodeRecord genesis{BlockNet{GENESIS}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
     return genesis;

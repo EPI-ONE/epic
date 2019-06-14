@@ -8,9 +8,11 @@
 
 #include "hash.h"
 #include "params.h"
+#include "pubkey.h"
 #include "spdlog.h"
 #include "stream.h"
 #include "tasm.h"
+#include "tasm/functors.h"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
@@ -61,7 +63,7 @@ public:
 
     explicit TxInput(const TxOutPoint& outpoint, const Tasm::Listing& listingContent = Tasm::Listing());
 
-    TxInput(const uint256& fromBlock, const uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
+    TxInput(const uint256& fromBlock, uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
 
     TxInput(const Tasm::Listing& script);
 
@@ -120,34 +122,40 @@ private:
 
 class Transaction {
 public:
+    /**
+     * constructor of an empty transcation
+     */
     Transaction();
-
+    /**
+     * copy constructor with computing hash and setting parent block
+     */
     Transaction(const Transaction& tx);
+    /**
+     * constructor of first registration where $addr is the address to redeem in the future
+     */
+    explicit Transaction(const CKeyID& addr);
 
     Transaction& AddInput(TxInput&& input);
-
+    Transaction& AddSignedInput(const TxOutPoint& outpoint,
+        const CPubKey& pubkey,
+        const uint256& hashMsg,
+        const std::vector<unsigned char>& sig);
     Transaction& AddOutput(TxOutput&& output);
+    Transaction& AddOutput(uint64_t, const CKeyID&);
+    Transaction& AddOutput(const Coin&, const CKeyID&);
 
     void FinalizeHash();
 
     const std::vector<TxInput>& GetInputs() const;
-
     std::vector<TxInput>& GetInputs();
-
     const std::vector<TxOutput>& GetOutputs() const;
-
-    const Tasm::Listing GetListing() const;
-
     std::vector<TxOutput>& GetOutputs();
-
     const uint256& GetHash() const;
 
     bool IsRegistration() const;
-
     bool IsFirstRegistration() const;
 
     void SetParent(const Block* const blk);
-
     const Block* GetParentBlock() const;
 
     uint64_t HashCode() const;
@@ -168,8 +176,6 @@ private:
     std::vector<TxOutput> outputs_;
 
     uint256 hash_;
-    Coin fee_;
-
     const Block* parentBlock_;
 };
 
@@ -189,6 +195,8 @@ struct std::equal_to<std::shared_ptr<const Transaction>> {
         return lhs->GetHash() == rhs->GetHash();
     }
 };
+
+bool VerifyInOut(const TxInput&, const Tasm::Listing&);
 
 namespace std {
 string to_string(const TxOutPoint& outpoint);

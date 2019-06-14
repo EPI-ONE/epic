@@ -1,5 +1,7 @@
 #include "transaction.h"
 
+using Listing = Tasm::Listing;
+
 /*
  * TxInput class START
  */
@@ -9,7 +11,7 @@ TxInput::TxInput(const TxOutPoint& outpointToPrev, const Tasm::Listing& listingD
     listingContent = listingData;
 }
 
-TxInput::TxInput(const uint256& fromBlockHash, const uint32_t indexNum, const Tasm::Listing& listingData) {
+TxInput::TxInput(const uint256& fromBlockHash, uint32_t indexNum, const Tasm::Listing& listingData) {
     outpoint       = TxOutPoint(fromBlockHash, indexNum);
     listingContent = listingData;
 }
@@ -76,7 +78,6 @@ Transaction::Transaction(const Transaction& tx) {
     hash_.SetNull();
     inputs_      = tx.inputs_;
     outputs_     = tx.outputs_;
-    fee_         = tx.fee_;
     parentBlock_ = tx.parentBlock_;
     FinalizeHash();
 
@@ -90,10 +91,26 @@ Transaction::Transaction(const Transaction& tx) {
     }
 }
 
+Transaction::Transaction(const CKeyID& addr) {
+    AddInput(TxInput{Listing{}});
+    Coin zero{};
+    AddOutput(zero, addr);
+}
+
 Transaction& Transaction::AddInput(TxInput&& txin) {
     hash_.SetNull();
     txin.SetParent(this);
     inputs_.push_back(txin);
+    return *this;
+}
+
+Transaction& Transaction::AddSignedInput(const TxOutPoint& outpoint,
+    const CPubKey& pubkey,
+    const uint256& hashMsg,
+    const std::vector<unsigned char>& sig) {
+
+    VStream indata{pubkey, sig, hashMsg};
+    AddInput(TxInput{outpoint, Tasm::Listing{indata}});
     return *this;
 }
 
@@ -102,6 +119,16 @@ Transaction& Transaction::AddOutput(TxOutput&& txout) {
     txout.SetParent(this);
     outputs_.push_back(txout);
     return *this;
+}
+
+Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
+    Coin coin{value};
+    return AddOutput(coin, addr);
+}
+
+Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
+    VStream vstream{EncodeAddress(addr)};
+    return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, vstream}});
 }
 
 void Transaction::FinalizeHash() {
@@ -115,21 +142,6 @@ const std::vector<TxInput>& Transaction::GetInputs() const {
 
 const std::vector<TxOutput>& Transaction::GetOutputs() const {
     return outputs_;
-}
-
-const Tasm::Listing Transaction::GetListing() const {
-    Tasm::Listing l;
-    if (inputs_.size() > 1 && outputs_.size() > 1) {
-        throw std::runtime_error("Transaction is inconsistent. Input size and output size currently supported is <= 1");
-    }
-
-    if (inputs_.size() == 1 && outputs_.size() == 1) {
-        l.program.push_back(VERIFY);
-        l.data << outputs_[0].listingContent.data;
-        l.data << inputs_[0].listingContent.data;
-    }
-
-    return l;
 }
 
 std::vector<TxInput>& Transaction::GetInputs() {
@@ -163,6 +175,12 @@ const Block* Transaction::GetParentBlock() const {
 
 uint64_t Transaction::HashCode() const {
     return hash_.GetCheapHash();
+}
+
+bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
+    Tasm tasm(functors);
+    Tasm::Listing listing(input.listingContent + outputListing);
+    return tasm.ExecListing(listing);
 }
 
 /*

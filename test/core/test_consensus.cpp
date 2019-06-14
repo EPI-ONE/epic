@@ -4,7 +4,6 @@
 
 #include "block.h"
 #include "caterpillar.h"
-#include "chain.h"
 #include "dag_manager.h"
 #include "key.h"
 #include "test_factory.h"
@@ -30,19 +29,20 @@ TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
     BlockNet b1 = fac.CreateBlockNet();
-    NodeRecord bs1(b1);
+    BlockNet b2{b1};
+    NodeRecord bs1{std::move(b1)};
 
     // test without a tx
     EXPECT_EQ(VStream(bs1).size(), bs1.GetOptimalStorageSize());
 
-    // with a big-enough tx to test the variable-size ints (e.g., VarInt, CompactSize)
+    // with a big-enough tx to test the variable-size ints (e.g. VarInt, CompactSize)
     Transaction tx;
     for (int i = 0; i < 512; ++i) {
         tx.AddInput(TxInput(Hash::GetZeroHash(), i, Tasm::Listing(VStream(i))));
         tx.AddOutput(TxOutput(i, Tasm::Listing(VStream(i))));
     }
-    b1.AddTransaction(tx);
-    NodeRecord bs2(b1);
+    b2.AddTransaction(tx);
+    NodeRecord bs2{std::move(b2)};
     EXPECT_EQ(VStream(bs2).size(), bs2.GetOptimalStorageSize());
 }
 
@@ -80,9 +80,10 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     arrayMs[0] = make_shared_ChainState();
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    size_t LOOPS = 100;
+    constexpr size_t LOOPS = 100;
     for (size_t i = 1; i < LOOPS; i++) {
-        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1]);
+        auto rec = fac.CreateConsecutiveRecordPtr();
+        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % params.timeInterval) == 0) {
@@ -95,32 +96,6 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
-}
-
-TEST_F(TestConsensus, Chain) {
-    Chain chain1{};
-    Chain chain2{false};
-    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
-
-    // construct the main chain and fork
-    std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};
-    ConstBlockPtr forkblk;
-    ChainStatePtr split;
-    for (int i = 1; i < 10; i++) { // reach height 9
-        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1]));
-        if (i == 5) {
-            // create a forked chain state at height 5
-            auto blk = fac.CreateBlock();
-            split    = dqcs[i];
-            blk.SetMilestoneHash(split->GetMilestoneHash());
-            blk.Solve();
-            forkblk = std::make_shared<const BlockNet>(blk);
-        }
-    }
-    Chain chain{dqcs, true}, fork{chain, forkblk};
-
-    ASSERT_EQ(fork.GetChainHead()->height, 5);
-    ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
 TEST_F(TestConsensus, AddNewBlocks) {
@@ -136,7 +111,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
     blocks.emplace_back(genesisPtr);
 
     // Construct a fully connected and syntatical valid random graph
-    ECC_Start();
     for (std::size_t i = 1; i < n; ++i) {
         BlockNet b = fac.CreateBlockNet(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
@@ -161,7 +135,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
         blocks.emplace_back(std::make_shared<BlockNet>(b));
     }
-    ECC_Stop();
 
     // Shuffle order of blocks to make some of them not solid
     auto rng = std::default_random_engine{};
@@ -178,22 +151,23 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::ostringstream os;
     os << time(nullptr);
     std::string filename = prefix + os.str();
-    Caterpillar cat(filename);
+
+    CAT = std::make_unique<Caterpillar>(filename);
 
     // Initialize DB and pending with genesis block
-    cat.StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
     DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
-        cat.AddNewBlock(block, nullptr);
+        CAT->AddNewBlock(block, nullptr);
     }
 
-    cat.Stop();
+    CAT->Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
-        EXPECT_TRUE(cat.IsSolid(bhash));
-        auto blkCache = cat.GetBlockCache(bhash);
+        EXPECT_TRUE(CAT->IsSolid(bhash));
+        auto blkCache = CAT->GetBlockCache(bhash);
         EXPECT_TRUE(blkCache);
     }
 
@@ -201,4 +175,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());
+
+    CAT.reset();
 }
