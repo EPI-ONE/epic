@@ -87,7 +87,7 @@ private:
 
     RecordPtr GetRecord(const uint256&) const;
 
-    static bool IsValidDistance(const NodeRecord&, const arith_uint256&);
+    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
     // friend decleration for running a test
     friend class TestChainVerification;
 };

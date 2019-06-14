@@ -20,7 +20,7 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
       recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
-    assert(recordHistory_.at(target));
+    assert(recordHistory_.find(target) != recordHistory_.end());
 
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
         for (const auto& h : (*it)->GetRecordHashes()) {
@@ -147,10 +147,10 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     std::optional<TXOC> result;
 
     // first check whether it is a fork of its peer chain
-    auto prevRec        = GetRecord(record.cblock->GetPrevHash());
+    auto prevRec = GetRecord(record.cblock->GetPrevHash());
     if (!prevRec->prevRedemHash.IsNull()) {
         // then its previous block is valid in the sense of reward
-        record.prevRedemHash   = prevRec->prevRedemHash;
+        record.prevRedemHash = prevRec->prevRedemHash;
         prevRec->prevRedemHash.SetNull();
     } else {
         record.prevRedemHash.SetNull();
@@ -163,6 +163,10 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
         } else {
             result = ValidateTx(record);
         }
+    } else {
+        // regarded as a valid transaction but not updating ledger
+        record.validity = NodeRecord::VALID;
+        result = std::make_optional<TXOC>();
     }
 
     record.UpdateReward(GetPrevReward(record));

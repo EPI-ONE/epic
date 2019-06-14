@@ -47,8 +47,8 @@ public:
         return c->ValidateTx(record);
     }
 
-    bool IsValidDistance(const NodeRecord& rec, const arith_uint256& msHashRate) {
-        return Chain::IsValidDistance(rec, msHashRate);
+    bool IsValidDistance(Chain* c, const NodeRecord& rec, const arith_uint256& msHashRate) {
+        return c->IsValidDistance(rec, msHashRate);
     }
 
     Chain* pchain;
@@ -149,7 +149,8 @@ TEST_F(TestChainVerification, ValidDistanceNormalChain) {
     CAT->StoreRecord(goodBlockR);
 
     arith_uint256 ms_hashrate = 1;
-    EXPECT_TRUE(IsValidDistance(*goodBlockR, ms_hashrate));
+    Chain c{};
+    EXPECT_TRUE(IsValidDistance(&c, *goodBlockR, ms_hashrate));
 }
 
 TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
@@ -192,5 +193,6 @@ TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
     CAT->StoreRecord(badBlockR);
 
     arith_uint256 ms_hashrate = 9999;
-    EXPECT_FALSE(IsValidDistance(*badBlockR, ms_hashrate));
+    Chain c{};
+    EXPECT_FALSE(IsValidDistance(&c, *badBlockR, ms_hashrate));
 }
