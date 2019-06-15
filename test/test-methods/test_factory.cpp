@@ -100,8 +100,8 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
 
     if (GetRand() % 2) {
         // Link a ms instance
-        auto cs = std::make_shared<ChainState>(NextTime(), GetRand(), GetRand(), arith_uint256(GetRand()).GetCompact(),
-            arith_uint256(GetRand()).GetCompact(), arith_uint256(GetRand()));
+        auto cs = std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(),
+            arith_uint256(GetRand()), arith_uint256(GetRand()), GetRand(), std::vector<uint256>{});
         rec.LinkChainState(cs);
 
         if (GetRand() % 2) {
@@ -125,7 +125,7 @@ RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool fin
 
 RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
     Block b{};
-    b.SetDifficultyTarget(params.maxTarget.GetCompact());
+    b.SetDifficultyTarget(GetParams().maxTarget.GetCompact());
     b.SetTime(timeGenerator.NextTime());
     b.Solve();
 

@@ -4,9 +4,9 @@
 // ChainState
 //
 ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTime(GENESIS.GetTime()) {
-    milestoneTarget = params.initialMsTarget * 2 / arith_uint256(params.targetTimespan);
-    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS) * arith_uint256(params.timeInterval);
-    hashRate        = GetMsDifficulty() / params.timeInterval;
+    milestoneTarget = GetParams().initialMsTarget * 2 / arith_uint256(GetParams().targetTimespan);
+    blockTarget     = milestoneTarget * arith_uint256(GetParams().targetTPS) * arith_uint256(GetParams().timeInterval);
+    hashRate        = GetMsDifficulty() / GetParams().timeInterval;
 
     lvsHashes_ = {GENESIS.GetHash()};
 }
@@ -14,7 +14,7 @@ ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTim
 ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
-    chainwork    = previous->chainwork + (params.maxTarget / UintToArith256(msBlock->GetHash()));
+    chainwork    = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
 
@@ -23,7 +23,7 @@ ChainState::ChainState(VStream& payload) {
 }
 
 void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
-    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = params.targetTimespan;
+    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = GetParams().targetTimespan;
     if (timespan < targetTimespan / 4) {
         timespan = targetTimespan / 4;
     }
@@ -34,23 +34,23 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
 
     if (height == 1) {
         lastUpdateTime = blockUpdateTime;
-        timespan       = params.timeInterval;
+        timespan       = GetParams().timeInterval;
     }
 
     if (!IsDiffTransition()) {
-        hashRate = ((height + 1) % params.interval) * GetMsDifficulty() / timespan;
+        hashRate = ((height + 1) % GetParams().interval) * GetMsDifficulty() / timespan;
         return;
     }
 
-    hashRate        = params.interval * GetMsDifficulty() / timespan;
+    hashRate        = GetParams().interval * GetMsDifficulty() / timespan;
     milestoneTarget = milestoneTarget * timespan / targetTimespan;
-    blockTarget     = milestoneTarget * arith_uint256(params.targetTPS);
-    blockTarget *= params.timeInterval;
+    blockTarget     = milestoneTarget * arith_uint256(GetParams().targetTPS);
+    blockTarget *= GetParams().timeInterval;
 
-    if (blockTarget > params.maxTarget) {
+    if (blockTarget > GetParams().maxTarget) {
         // in case that it is not difficult in this round
-        blockTarget     = params.maxTarget;
-        milestoneTarget = blockTarget * arith_uint256(params.timeInterval / params.targetTPS);
+        blockTarget     = GetParams().maxTarget;
+        milestoneTarget = blockTarget * arith_uint256(GetParams().timeInterval / GetParams().targetTPS);
     }
 
     lastUpdateTime = blockUpdateTime;
@@ -73,12 +73,12 @@ ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record,
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
+NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {}
+    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optiomalStorageSize_(0) {
+NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {
     cblock = std::make_shared<BlockNet>(std::move(blk));
 }
 
@@ -99,7 +99,7 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
 void NodeRecord::UpdateReward(const Coin& prevReward) {
     assert(validity != Validity::UNKNOWN);
     // cumulate reward without fee
-    cumulativeReward = prevReward + params.reward;
+    cumulativeReward = prevReward + GetParams().reward;
 
     if (!(cblock->HasTransaction() && validity == Validity::VALID)) {
         return;
@@ -165,33 +165,33 @@ void NodeRecord::Deserialize(VStream& s) {
 }
 
 size_t NodeRecord::GetOptimalStorageSize() {
-    if (optiomalStorageSize_ > 0) {
-        return optiomalStorageSize_;
+    if (optimalStorageSize_ > 0) {
+        return optimalStorageSize_;
     }
-    optiomalStorageSize_ = cblock->GetOptimalEncodingSize();
-    optiomalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
-    optiomalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
+    optimalStorageSize_ = cblock->GetOptimalEncodingSize();
+    optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
+    optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
 
     if (cblock->HasTransaction()) {
-        optiomalStorageSize_ += 1;
+        optimalStorageSize_ += 1;
     }
 
-    optiomalStorageSize_ += 1; // RedemptionStatus
+    optimalStorageSize_ += 1; // RedemptionStatus
     if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
-        optiomalStorageSize_ += 32; // prevRedemHash size
+        optimalStorageSize_ += 32; // prevRedemHash size
     }
-    optiomalStorageSize_ += 1; // MilestoneStatus
+    optimalStorageSize_ += 1; // MilestoneStatus
 
     if (snapshot != nullptr) {
-        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->height);
-        optiomalStorageSize_ += 4;
-        optiomalStorageSize_ += 8;
-        optiomalStorageSize_ += 4;
-        optiomalStorageSize_ += 4;
-        optiomalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);
+        optimalStorageSize_ += GetSizeOfVarInt(snapshot->height);
+        optimalStorageSize_ += 4;
+        optimalStorageSize_ += 8;
+        optimalStorageSize_ += 4;
+        optimalStorageSize_ += 4;
+        optimalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);
     }
 
-    return optiomalStorageSize_;
+    return optimalStorageSize_;
 }
 
 std::string std::to_string(const ChainState& cs) {
@@ -222,11 +222,11 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
     return s;
 }
 
-NodeRecord NodeRecord::CreateGenesisRecord() {
+/*NodeRecord NodeRecord::CreateGenesisRecord() {
     NodeRecord genesis{BlockNet{Block::CreateGenesis()}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
     genesis.isMilestone = true;
     return genesis;
-}
+}*/
 

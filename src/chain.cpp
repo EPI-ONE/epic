@@ -106,13 +106,13 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 
     auto curr = GetRecord(b.cblock->GetPrevHash());
     assert(curr);
-    for (size_t i = 0; i < params.sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
+    for (size_t i = 0; i < GetParams().sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
          ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
         S += curr->cblock->GetChainWork();
         t = curr->cblock->GetTime();
     }
 
-    auto allowed_distance = (params.maxTarget / params.sortitionCoefficient) * S / (ms_hashrate * t);
+    auto allowed_distance = (GetParams().maxTarget / GetParams().sortitionCoefficient) * S / (ms_hashrate * t);
     return current_distance <= allowed_distance;
 }
 

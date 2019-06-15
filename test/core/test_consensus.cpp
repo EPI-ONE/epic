@@ -83,11 +83,11 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
-        if (((i + 1) % params.timeInterval) == 0) {
+        if (((i + 1) % GetParams().timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
             ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
             ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if (i > 1 && ((i + 1) % params.timeInterval) != 1) {
+        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
@@ -151,6 +151,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    DAG = std::make_unique<DAGManager>();
+    DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);

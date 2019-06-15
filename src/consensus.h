@@ -33,25 +33,26 @@ public:
     ChainState(const ChainState&) = default;
 
     /* simple constructor (now for test only) */
-    ChainState(uint64_t lastUpdateTime,
-        uint64_t hashRate,
-        uint64_t height,
+    ChainState(uint64_t height,
+        arith_uint256 chainwork,
+        uint64_t lastUpdateTime,
         arith_uint256 milestoneTarget,
         arith_uint256 blockTarget,
-        arith_uint256 chainwork)
+        uint64_t hashRate,
+        std::vector<uint256>&& lvsHashes)
         : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
-          blockTarget(blockTarget), hashRate(hashRate) {}
+          blockTarget(blockTarget), hashRate(hashRate), lvsHashes_(std::move(lvsHashes)) {}
 
     inline bool IsDiffTransition() const {
-        return ((height + 1) % params.interval) == 0;
+        return ((height + 1) % GetParams().interval) == 0;
     }
 
     inline uint64_t GetBlockDifficulty() const {
-        return (arith_uint256(params.maxTarget) / (blockTarget + 1)).GetLow64();
+        return (arith_uint256(GetParams().maxTarget) / (blockTarget + 1)).GetLow64();
     }
 
     inline uint64_t GetMsDifficulty() const {
-        return (arith_uint256(params.maxTarget) / (milestoneTarget + 1)).GetLow64();
+        return (arith_uint256(GetParams().maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
     const std::vector<uint256>& GetRecordHashes() const {
@@ -147,7 +148,6 @@ public:
     ChainStatePtr snapshot = nullptr;
 
     Validity validity = Validity::UNKNOWN;
-    size_t optiomalStorageSize_ = 0;
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
@@ -172,7 +172,9 @@ public:
         return !(*this == another);
     }
 
-    static NodeRecord CreateGenesisRecord();
+    //static NodeRecord CreateGenesisRecord();
+private:
+    size_t optimalStorageSize_ = 0;
 };
 
 namespace std {

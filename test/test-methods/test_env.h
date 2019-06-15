@@ -4,11 +4,11 @@
 #include <gtest/gtest.h>
 
 #include "test_factory.h"
-#include "init.h"
+#include "params.h"
 
 class EpicTestEnvironment : public ::testing::Environment {
 public:
-    static TestFactory GetFactory() {
+    static const TestFactory& GetFactory() {
         static const TestFactory fac{};
         return fac;
     }
@@ -16,8 +16,7 @@ public:
     void SetUp() override {
         ECC_Start();
         handle = ECCVerifyHandle();
-        char** c = nullptr;
-        Init(0, c);
+        SelectParams(ParamsType::TESTNET);
     }
 
     void TearDown() override {

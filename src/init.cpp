@@ -6,7 +6,6 @@
 
 std::unique_ptr<Config> config;
 
-Params params;
 Block GENESIS;
 NodeRecord GENESIS_RECORD;
 std::unique_ptr<Caterpillar> CAT;
@@ -35,10 +34,8 @@ void Init(int argc, char* argv[]) {
     config->ShowConfig();
 
     // set global variables
-    params = TestNetParams::GetParams();
-
-    GENESIS        = Block::CreateGenesis();
-    GENESIS_RECORD = NodeRecord::CreateGenesisRecord();
+    //params = TestNetParams::GetParams();
+    SelectParams(ParamsType::TESTNET);
 
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
     DAG = std::make_unique<DAGManager>(); // DAGManager::GetDAGManager();

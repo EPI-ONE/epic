@@ -321,7 +321,7 @@ CKey DecodeSecret(const std::string& str) {
     CKey key;
     std::vector<unsigned char> data;
     if (DecodeBase58Check(str, data)) {
-        const std::vector<unsigned char> privkey_prefix(1, params.GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
+        const std::vector<unsigned char> privkey_prefix(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
         if ((data.size() == 32 + privkey_prefix.size() ||
             (data.size() == 33 + privkey_prefix.size() && data.back() == 1)) &&
             std::equal(
@@ -339,7 +339,7 @@ CKey DecodeSecret(const std::string& str) {
 
 std::string EncodeSecret(const CKey& key) {
     assert(key.IsValid());
-    std::vector<unsigned char> data(1, params.GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
+    std::vector<unsigned char> data(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::SECRET_KEY));
     data.insert(data.end(), key.begin(), key.end());
     if (key.IsCompressed()) {
         data.push_back(1);

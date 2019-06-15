@@ -164,7 +164,7 @@ public:
 
 protected:
     uint256 hash_;
-    size_t optimalEncodingSize_;
+    size_t optimalEncodingSize_ = 0;
 
     uint32_t version_;
     uint256 milestoneBlockHash_;

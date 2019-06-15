@@ -118,7 +118,7 @@ bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms)
         return true;
     }
 
-    if (blk->GetTime() - ms->cblock->GetTime() > params.punctualityThred) {
+    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
         spdlog::info("Block is too old [{}]", std::to_string(blk->GetHash()));
         return false;
     }

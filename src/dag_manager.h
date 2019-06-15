@@ -122,6 +122,6 @@ private:
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
 
-extern DAGManager& DAG;
+extern std::unique_ptr<DAGManager> DAG;
 
 #endif // __SRC_DAG_MANAGER_H__

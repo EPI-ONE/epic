@@ -9,6 +9,8 @@
 #include "arith_uint256.h"
 #include "coin.h"
 
+class Block;
+class NodeRecord;
 // 1 day per diffculty cycle on average
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
 // 10 seconds per milestone block
@@ -32,6 +34,12 @@ static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
+
+enum ParamsType : uint8_t {
+    MAINNET = 1,
+    TESTNET,
+    UNITTEST,
+};
 
 class Params {
 public:
@@ -64,13 +72,20 @@ public:
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
 
+    const Block& GetGenesis() const;
+    const NodeRecord& GetGenesisRecord() const;
+
 protected:
     Params() = default;
+
+    std::unique_ptr<Block> genesis_;
+    std::unique_ptr<NodeRecord> genesisRecord_;
+    void CreateGenesis();
 };
 
 class TestNetParams : public Params {
 public:
-    static Params GetParams();
+    static const Params& GetParams();
 
 //protected:
     TestNetParams();
@@ -78,13 +93,14 @@ public:
 
 class UnitTestParams : public Params {
 public:
-    static const Params GetParams();
+    static const Params& GetParams();
 
 //protected:
     UnitTestParams();
 };
 
 // instance of the parameters for usage throughout the project
-extern Params params;
+const Params& GetParams();
+void SelectParams(ParamsType type);
 
 #endif // __SRC_PARAMS_H__

@@ -77,7 +77,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
     auto b1hash             = b1.GetHash();
@@ -86,8 +86,9 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
     // construct redemption block
     Transaction redeem{};
+    TxOutPoint outpoint{b1hash, 0};
     redeem.AddSignedInput(outpoint, keypair.second, hashMsg, sig).AddOutput(0, addr);
-    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b2.AddTransaction(redeem);
     NodeRecord redemption{BlockNet{std::move(b2)}};
     redemption.prevRedemHash = b1hash;
@@ -113,7 +114,7 @@ TEST_F(TestChainVerification, VerifyTx) {
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
     TxOutput output{4, outputListing};
-    BlockNet b1{Block{1, ghash, ghash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0}};
+    BlockNet b1{Block{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0}};
     Transaction tx1{};
     b1.AddTransaction(tx1.AddOutput(std::move(output)));
     b1.Solve();
@@ -130,7 +131,7 @@ TEST_F(TestChainVerification, VerifyTx) {
     Transaction tx{};
     VStream indata{keypair.second, sig, hashMsg};
     tx.AddInput(TxInput{b1hash, 0, Tasm::Listing{indata}}).AddOutput(0, addr);
-    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), params.maxTarget.GetCompact(), 0};
+    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b2.AddTransaction(tx);
     NodeRecord record{BlockNet{std::move(b2)}};
 
@@ -166,12 +167,12 @@ TEST_F(TestChainVerification, ChainForking) {
 }
 
 TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
+    //auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
 
     BlockNet registration = fac.CreateBlockNet(1, 1);
     registration.SetMilestoneHash(GENESIS.GetHash());
-    registration.SetPrevHash(genesisPtr->GetHash());
-    registration.SetTipHash(genesisPtr->GetHash());
+    registration.SetPrevHash(GENESIS.GetHash());
+    registration.SetTipHash(GENESIS.GetHash());
     registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
     registration.SetTime(1);
 
