@@ -1,6 +1,5 @@
 #include "dag_manager.h"
 #include "caterpillar.h"
-#include "chain.h"
 
 DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {

@@ -205,6 +205,7 @@ void PeerManager::OpenConnection() {
 void PeerManager::ScheduleTask() {
     while (!interrupt_) {
         sleep(1 * 60);
+        std::unique_lock<std::recursive_mutex> lk(peerLock_);
         for (auto& it : peerMap_) {
             std::shared_ptr<Peer> peer = it.second;
             if (peer->isFullyConnected) {
