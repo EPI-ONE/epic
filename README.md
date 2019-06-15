@@ -13,6 +13,7 @@
   $ mkdir build && cd build
   $ cmake ..
   $ make
+  $ make install
   ```
 #### libsecp256k1
    This is a stand-alone library in the bitcoin-core project. Please clone the source code and compile it.
