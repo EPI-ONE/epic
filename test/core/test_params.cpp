@@ -6,7 +6,7 @@
 
 class TestParams : public testing::Test {
 public:
-    const Params& params = TestNetParams::GetParams();
+    const Params& params = GetParams();
 };
 
 TEST_F(TestParams, Basic_Value_Check) {
@@ -16,6 +16,6 @@ TEST_F(TestParams, Basic_Value_Check) {
 }
 
 TEST_F(TestParams, Singleton_Check) {
-    const Params& params2 = TestNetParams::GetParams();
+    const Params& params2 = GetParams();
     EXPECT_EQ(&params, &params2);
 }

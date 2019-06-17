@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include "test_factory.h"
 #include "params.h"
+#include "test_factory.h"
 
 class EpicTestEnvironment : public ::testing::Environment {
 public:
@@ -16,7 +16,7 @@ public:
     void SetUp() override {
         ECC_Start();
         handle = ECCVerifyHandle();
-        SelectParams(ParamsType::TESTNET);
+        SelectParams(ParamsType::UNITTEST);
     }
 
     void TearDown() override {

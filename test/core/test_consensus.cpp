@@ -74,7 +74,7 @@ TEST_F(TestConsensus, UTXO) {
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     std::array<std::shared_ptr<ChainState>, 100> arrayMs;
-    arrayMs[0] = make_shared_ChainState();
+    arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     constexpr size_t LOOPS = 100;
@@ -152,14 +152,13 @@ TEST_F(TestConsensus, AddNewBlocks) {
     // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
     DAG = std::make_unique<DAGManager>();
-    DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
     }
 
     CAT->Stop();
-    DAG.Stop();
+    DAG->Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
@@ -168,7 +167,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         EXPECT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG.GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
+    EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
 
     CAT.reset();
 

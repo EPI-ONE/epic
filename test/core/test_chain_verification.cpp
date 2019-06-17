@@ -77,9 +77,9 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+    Block b1{1, ghash, ghash, ghash, GetParams().maxTarget.GetCompact(), fac.NextTime(), 0};
     b1.AddTransaction(Transaction{addr});
-    b1.Solve();
+    b1.FinalizeHash();
     auto b1hash             = b1.GetHash();
     RecordPtr firstRecord   = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
     firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
@@ -103,6 +103,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 }
 
 TEST_F(TestChainVerification, VerifyTx) {
+    Coin valueIn{4}, valueOut1{2}, valueOut2{1};
     // prepare keys and signature
     auto keypair        = fac.CreateKeyPair();
     auto addr           = keypair.second.GetID();
@@ -110,32 +111,46 @@ TEST_F(TestChainVerification, VerifyTx) {
 
     // construct transaction output to add into the ledger
     const auto& ghash = GENESIS.GetHash();
-    auto encodedAddr = EncodeAddress(addr);
+    auto encodedAddr  = EncodeAddress(addr);
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
-    TxOutput output{4, outputListing};
-    BlockNet b1{Block{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0}};
+    TxOutput output{valueIn, outputListing};
+    BlockNet b1{Block{1, ghash, ghash, ghash, GENESIS.GetTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0}};
     Transaction tx1{};
     b1.AddTransaction(tx1.AddOutput(std::move(output)));
-    b1.Solve();
-    auto rec1 = std::make_shared<NodeRecord>(std::move(b1));
+    b1.FinalizeHash();
+    ASSERT_NE(b1.GetChainWork(), 0);
+
+    auto rec1          = std::make_shared<NodeRecord>(std::move(b1));
     const auto& b1hash = rec1->cblock->GetHash();
 
     Chain c{};
+    DAG        = std::make_unique<DAGManager>();
     auto putxo = std::make_shared<UTXO>(rec1->cblock->GetTransaction()->GetOutputs()[0], 0);
-    ChainLedger ledger{std::unordered_map<uint256, UTXOPtr>{}, {{putxo->GetKey(), putxo}}, std::unordered_map<uint256, UTXOPtr>{}};
+    ChainLedger ledger{
+        std::unordered_map<uint256, UTXOPtr>{}, {{putxo->GetKey(), putxo}}, std::unordered_map<uint256, UTXOPtr>{}};
     AddToLedger(&c, std::move(ledger));
     AddToHistory(&c, rec1);
 
     // construct block
     Transaction tx{};
     VStream indata{keypair.second, sig, hashMsg};
-    tx.AddInput(TxInput{b1hash, 0, Tasm::Listing{indata}}).AddOutput(0, addr);
-    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+    tx.AddInput(TxInput{b1hash, 0, Tasm::Listing{indata}}).AddOutput(valueOut1, addr).AddOutput(valueOut2, addr);
+    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b2.AddTransaction(tx);
     NodeRecord record{BlockNet{std::move(b2)}};
 
-    ASSERT_TRUE(bool(ValidateTx(&c, record)));
+    auto txoc{ValidateTx(&c, record)};
+    ASSERT_TRUE(bool(txoc));
+
+    auto& spent =txoc->GetTxOutsSpent();
+    auto spentKey = XOR(b1hash, 0);
+    ASSERT_EQ(spent.size(), 1);
+    ASSERT_EQ(spent.count(spentKey), 1);
+
+    auto& created = txoc->GetTxOutsCreated();
+    ASSERT_EQ(created.size(), 2);
+    ASSERT_EQ(record.fee, valueIn - valueOut1 - valueOut2);
 }
 
 TEST_F(TestChainVerification, ChainForking) {
@@ -143,7 +158,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
-    std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};
+    std::deque<ChainStatePtr> dqcs{std::make_shared<ChainState>()};
     std::vector<RecordPtr> recs{};
     ConstBlockPtr forkblk;
     ChainStatePtr split;
@@ -167,19 +182,17 @@ TEST_F(TestChainVerification, ChainForking) {
 }
 
 TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    //auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
-
     BlockNet registration = fac.CreateBlockNet(1, 1);
     registration.SetMilestoneHash(GENESIS.GetHash());
     registration.SetPrevHash(GENESIS.GetHash());
     registration.SetTipHash(GENESIS.GetHash());
     registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-    registration.SetTime(1);
+    registration.SetTime(GENESIS.GetTime());
+    ASSERT_NE(registration.GetChainWork(), 0);
 
     auto registrationPtr      = std::make_shared<BlockNet>(registration);
     NodeRecord registrationNR = NodeRecord(registrationPtr);
     RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
-
 
     BlockNet goodBlock = fac.CreateBlockNet(170, 170);
     goodBlock.SetMilestoneHash(GENESIS.GetHash());

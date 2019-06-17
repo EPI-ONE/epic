@@ -15,7 +15,7 @@ class NodeRecord;
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
 // 10 seconds per milestone block
 static constexpr uint32_t TIME_INTERVAL = 10;
-static constexpr uint32_t INTERVAL      = TARGET_TIMESPAN / TIME_INTERVAL;
+static constexpr uint32_t INTERVAL      = TARGET_TIMESPAN / static_cast<double>(TIME_INTERVAL);
 // transaction per second
 static constexpr uint32_t TPS = 1000;
 // threshold for rejecting an old block
@@ -68,34 +68,32 @@ public:
     uint64_t initialDifficulty;
     arith_uint256 initialMsTarget;
 
-    std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
-
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
-
     const Block& GetGenesis() const;
     const NodeRecord& GetGenesisRecord() const;
 
 protected:
     Params() = default;
 
+    std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
+
     std::unique_ptr<Block> genesis_;
     std::unique_ptr<NodeRecord> genesisRecord_;
-    void CreateGenesis();
+    void CreateGenesis(const std::string& genesisHexStr);
+};
+
+class MainNetParams : public Params {
+public:
+    MainNetParams();
 };
 
 class TestNetParams : public Params {
 public:
-    static const Params& GetParams();
-
-//protected:
     TestNetParams();
 };
 
 class UnitTestParams : public Params {
 public:
-    static const Params& GetParams();
-
-//protected:
     UnitTestParams();
 };
 

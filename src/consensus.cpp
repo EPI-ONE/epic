@@ -3,14 +3,6 @@
 ////////////////
 // ChainState
 //
-ChainState::ChainState() : height(0), chainwork(arith_uint256(0)), lastUpdateTime(GENESIS.GetTime()) {
-    milestoneTarget = GetParams().initialMsTarget * 2 / arith_uint256(GetParams().targetTimespan);
-    blockTarget     = milestoneTarget * arith_uint256(GetParams().targetTPS) * arith_uint256(GetParams().timeInterval);
-    hashRate        = GetMsDifficulty() / GetParams().timeInterval;
-
-    lvsHashes_ = {GENESIS.GetHash()};
-}
-
 ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
@@ -58,10 +50,6 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
 
 void ChainState::UpdateTXOC(TXOC&& txoc) {
     txoc_.Merge(std::move(txoc));
-}
-
-ChainStatePtr make_shared_ChainState() {
-    return std::make_shared<ChainState>();
 }
 
 ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
@@ -217,16 +205,7 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
         s += to_string(*(rec.snapshot));
     }
 
-    static const std::string enumName[] = {"UNKNOWN", "VALID", "INVALID"};
+    static const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
     s += strprintf("   status: %s \n }", enumName[rec.validity]);
     return s;
 }
-
-/*NodeRecord NodeRecord::CreateGenesisRecord() {
-    NodeRecord genesis{BlockNet{Block::CreateGenesis()}};
-    static auto genesisState = make_shared_ChainState();
-    genesis.LinkChainState(genesisState);
-    genesis.isMilestone = true;
-    return genesis;
-}*/
-

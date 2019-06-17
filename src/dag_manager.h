@@ -54,11 +54,6 @@ public:
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
-    static DAGManager& GetDAGManager() {
-        static DAGManager DAG;
-        return DAG;
-    }
-
     /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks

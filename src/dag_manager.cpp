@@ -5,7 +5,7 @@ DAGManager::DAGManager()
     : thread_(1), isBatchSynching(false), syncingPeer(nullptr), isVerifying(false), milestoneChains() {
     milestoneChains.push(std::make_unique<Chain>());
     thread_.Start();
-    globalStates_.emplace(GENESIS.GetHash(), make_shared_ChainState());
+    globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
 }
 
 DAGManager::~DAGManager() {
@@ -117,8 +117,6 @@ bool DAGManager::UpdateDownloadingQueue(const uint256&) {
 const Chain& DAGManager::GetBestChain() const {
     return *milestoneChains.best();
 }
-
-DAGManager& DAG = DAGManager::GetDAGManager();
 
 void DAGManager::Stop() {
     while (thread_.GetTaskSize() > 0) {

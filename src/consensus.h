@@ -24,7 +24,7 @@ public:
     uint64_t hashRate;
 
     // constructor of a chain state of genesis.
-    ChainState();
+    ChainState() = default;
     // constructor of a chain state with all data fields
     ChainState(std::shared_ptr<ChainState>, const ConstBlockPtr&, std::vector<uint256>&&);
     // constructor of a chain state by vstream
@@ -107,13 +107,10 @@ private:
     TXOC txoc_;
 
     void UpdateDifficulty(uint64_t blockUpdateTime);
-
-    friend std::shared_ptr<ChainState>make_shared_ChainState();
 };
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
-ChainStatePtr make_shared_ChainState();
 ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
@@ -172,7 +169,6 @@ public:
         return !(*this == another);
     }
 
-    //static NodeRecord CreateGenesisRecord();
 private:
     size_t optimalStorageSize_ = 0;
 };

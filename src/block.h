@@ -10,7 +10,6 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
-//extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
@@ -29,11 +28,11 @@ public:
         uint256 milestoneHash,
         uint256 prevBlockHash,
         uint256 tipBlockHash,
-        uint32_t time,
+        uint64_t time,
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), diffTarget_(difficultyTarget), time_(time), nonce_(nonce) {
+          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
 
@@ -170,8 +169,8 @@ protected:
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    uint32_t diffTarget_;
     uint64_t time_;
+    uint32_t diffTarget_;
     uint32_t nonce_;
     std::optional<Transaction> transaction_;
 };

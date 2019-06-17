@@ -34,11 +34,10 @@ void Init(int argc, char* argv[]) {
     config->ShowConfig();
 
     // set global variables
-    //params = TestNetParams::GetParams();
+    // TODO: add argument parsing
     SelectParams(ParamsType::TESTNET);
-
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
-    DAG = std::make_unique<DAGManager>(); // DAGManager::GetDAGManager();
+    DAG = std::make_unique<DAGManager>(); 
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -181,6 +180,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         exit(LOG_INIT_FAILURE);
     }
 }
+
 void ShutDown() {
     CAT.reset();
 }
