@@ -2,12 +2,9 @@
 #include <gtest/gtest.h>
 #include <random>
 
-#include "block.h"
 #include "caterpillar.h"
-#include "dag_manager.h"
 #include "key.h"
 #include "test_factory.h"
-#include "utxo.h"
 
 class TestConsensus : public testing::Test {
 public:
@@ -133,6 +130,10 @@ TEST_F(TestConsensus, AddNewBlocks) {
         }
         b.Solve();
 
+        while (CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
+            b.Solve();
+        }
+
         blocks.emplace_back(std::make_shared<BlockNet>(b));
     }
 
@@ -140,29 +141,23 @@ TEST_F(TestConsensus, AddNewBlocks) {
     auto rng = std::default_random_engine{};
     std::shuffle(std::begin(blocks), std::end(blocks), rng);
 
-    // Add GENESIS to the front
-    // Note that now we have 2 GENESIS in blocks
-    blocks.emplace(blocks.begin(), genesisPtr);
-
     ///////////////////////////
     // Test starts here
     //
     std::string prefix = "test_consensus/";
     std::ostringstream os;
     os << time(nullptr);
-    std::string filename = prefix + os.str();
+    CAT = std::make_unique<Caterpillar>(prefix + os.str());
 
-    CAT = std::make_unique<Caterpillar>(filename);
-
-    // Initialize DB and pending with genesis block
+    // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    DAG->pending.push_back(std::make_shared<BlockNet>(GENESIS));
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
     }
 
     CAT->Stop();
+    DAG.Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
@@ -171,7 +166,9 @@ TEST_F(TestConsensus, AddNewBlocks) {
         EXPECT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG->pending.size(), blocks.size() - 1);
+    EXPECT_EQ(DAG.GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
+
+    CAT.reset();
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());

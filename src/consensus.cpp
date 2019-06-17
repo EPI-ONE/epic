@@ -139,7 +139,7 @@ void NodeRecord::Serialize(VStream& s) const {
 }
 
 void NodeRecord::Deserialize(VStream& s) {
-    cblock = std::make_shared<BlockNet>(s);
+    cblock     = std::make_shared<BlockNet>(s);
     uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);
@@ -224,6 +224,7 @@ NodeRecord NodeRecord::CreateGenesisRecord() {
     NodeRecord genesis{BlockNet{GENESIS}};
     static auto genesisState = make_shared_ChainState();
     genesis.LinkChainState(genesisState);
+    genesis.isMilestone = true;
     return genesis;
 }
 

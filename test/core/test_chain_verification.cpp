@@ -92,8 +92,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
 TEST_F(TestChainVerification, ChainForking) {
     Chain chain1{};
-    Chain chain2{false};
-    ASSERT_EQ(chain1.GetChainHead()->height, chain2.GetChainHead()->height);
+    ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
     std::deque<ChainStatePtr> dqcs{make_shared_ChainState()};

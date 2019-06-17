@@ -21,7 +21,7 @@ class Block {
 public:
     Block();
 
-    Block(const Block&) = default;
+    Block(const Block&);
 
     Block(uint32_t versionNum);
 
@@ -57,7 +57,7 @@ public:
 
     bool Verify() const;
 
-    void AddTransaction(Transaction);
+    void AddTransaction(const Transaction&);
 
     bool HasTransaction() const;
 

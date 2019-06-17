@@ -6,9 +6,6 @@
 #include "rocksdb.h"
 #include "test_factory.h"
 
-// Temporary db folder prefix
-static std::string PREFIX = "test_rocks/";
-
 class TestImplRocksDBStore : public RocksDBStore {
 public:
     TestImplRocksDBStore(std::string dbPath) : RocksDBStore(dbPath) {}
@@ -40,6 +37,7 @@ public:
 
 class TestRocksDB : public testing::Test {
 public:
+    static std::string prefix;
     static TestImplRocksDBStore* db;
     static std::vector<RecordPtr> records;
     static std::vector<uint256> keys;
@@ -54,14 +52,13 @@ protected:
         // Get the current time and make into a temp file name
         std::ostringstream os;
         os << time(nullptr);
-        auto filename = PREFIX + os.str();
-        db            = new TestImplRocksDBStore(filename);
-        fac           = new TestFactory();
+        db  = new TestImplRocksDBStore(prefix + os.str());
+        fac = new TestFactory();
         // Initialize batch blocks and keys
         for (size_t i = 0; i < size; ++i) {
-            RecordPtr rec = fac->CreateRecordPtr(fac->GetRand() % 100 + 1, fac->GetRand() % 100 + 1, true);
-            records[i]    = rec;
-            keys[i]       = rec->cblock->GetHash();
+            auto rec   = fac->CreateRecordPtr(fac->GetRand() % 100 + 1, fac->GetRand() % 100 + 1, true);
+            records[i] = rec;
+            keys[i]    = rec->cblock->GetHash();
         }
     }
 
@@ -71,7 +68,7 @@ protected:
     // One tear down after all test cases
     static void TearDownTestCase() {
         // Remove the temporary db folder
-        std::string cmd = "exec rm -r " + PREFIX;
+        std::string cmd = "exec rm -r " + prefix;
         system(cmd.c_str());
         delete db;
         delete fac;
@@ -80,16 +77,17 @@ protected:
     }
 };
 
-TestImplRocksDBStore* TestRocksDB::db       = nullptr;
-TestFactory* TestRocksDB::fac               = nullptr;
-size_t TestRocksDB::size                    = 1000;
-std::vector<RecordPtr> TestRocksDB::records = std::vector<RecordPtr>(size);
-std::vector<uint256> TestRocksDB::keys      = std::vector<uint256>(size);
+std::string TestRocksDB::prefix       = "test_rocks/"; // temporary db folder prefix
+TestImplRocksDBStore* TestRocksDB::db = nullptr;
+TestFactory* TestRocksDB::fac         = nullptr;
+size_t TestRocksDB::size              = 100;
+auto TestRocksDB::records             = std::vector<RecordPtr>(size);
+auto TestRocksDB::keys                = std::vector<uint256>(size);
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
-    const std::string column = "default";
-    std::string key          = "a random key";
-    std::string value        = "a random value";
+    const auto column = "default";
+    std::string key   = "a random key";
+    std::string value = "a random value";
     // Insert
     ASSERT_TRUE(db->Write(column, key, value));
     ASSERT_EQ(value, db->Get(column, key));
@@ -99,8 +97,8 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
 }
 
 TEST_F(TestRocksDB, batch_insertion) {
-    const std::string column                 = "default";
-    std::map<std::string, std::string> batch = {};
+    const auto column = "default";
+    std::map<std::string, std::string> batch;
     for (int i = 0; i < 1000; ++i) {
         auto key   = fac->GetRandomString(32);
         auto value = fac->GetRandomString(500);

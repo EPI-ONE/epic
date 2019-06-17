@@ -11,8 +11,6 @@ public:
 TEST_F(DFSTest, empty_pending_blocks_map) {
     Chain chain;
     ConstBlockPtr block_0 = fac.CreateBlockPtr();
-    //block_0.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
-    //block_0.Solve();
 
     chain.AddPendingBlock(block_0);
     auto graph = chain.GetSortedSubgraph(block_0);
@@ -22,7 +20,7 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 
 TEST_F(DFSTest, complex_test) {
     Chain chain;
-    std::size_t N = 10; 
+    std::size_t N = 10;
     std::vector<BlockNet> blocks;
     blocks.reserve(N);
 

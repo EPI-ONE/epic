@@ -72,7 +72,7 @@ struct std::hash<UTXO> {
     }
 };
 
-typedef std::shared_ptr<UTXO> UTXOPtr;
+typedef std::shared_ptr<const UTXO> UTXOPtr;
 
 /**
  * TXOC stands for a delta of transaction output changes

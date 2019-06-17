@@ -3,14 +3,9 @@
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
-Chain::Chain(bool mainchain) : ismainchain_(mainchain) {
-    pendingBlocks_ = {};
-    recordHistory_ = {};
-    states_        = {std::make_shared<ChainState>()};
-}
-
-ChainStatePtr Chain::GetChainHead() const {
-    return states_.back();
+Chain::Chain() : ismainchain_(true) {
+    states_.push_back(make_shared_ChainState());
+    recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
 }
 
 Chain::Chain(const Chain& chain) : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_) {}
@@ -33,8 +28,21 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     // note that we don't do any verification here
 }
 
+ChainStatePtr Chain::GetChainHead() const {
+    return states_.back();
+}
+
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+}
+
+void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
+    if (utxos.empty()) {
+        return;
+    }
+    for (const auto& u : utxos) {
+        pendingUTXOs_.emplace(u->GetKey(), u);
+    }
 }
 
 void Chain::RemovePendingBlock(const uint256& hash) {
@@ -210,7 +218,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     // check Transaction distance
-    RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+    RecordPtr prevMs = DAG.GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
     if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
         return {};
@@ -275,3 +283,25 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
     }
     return result->second;
 }
+
+bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+}
+
+RecordPtr Chain::GetMsRecordCache(const uint256& msHash) {
+    auto entry = recordHistory_.find(msHash);
+    if (entry != recordHistory_.end() && entry->second->isMilestone) {
+        return entry->second;
+    }
+    return nullptr;
+}
+
+RecordPtr Chain::GetRecordCache(const uint256& h) {
+    auto entry = recordHistory_.find(h);
+    if (entry != recordHistory_.end()) {
+        return entry->second;
+    }
+    return nullptr;
+}
+
+void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}

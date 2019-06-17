@@ -55,7 +55,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            RecordPtr ms = DAG->GetState(msHash);
+            RecordPtr ms = DAG.GetState(msHash);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
@@ -64,7 +64,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
                 mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
 
             if (peer) {
-                DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
+                DAG.RequestInv(Hash::GetZeroHash(), 5, peer);
             }
 
             return false;
@@ -72,7 +72,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
 
         // Check difficulty target ///////////////////////
 
-        RecordPtr ms = DAG->GetState(msHash);
+        RecordPtr ms = DAG.GetState(msHash);
         if (!ms) {
             spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return false;
@@ -95,7 +95,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
         //////////////////////////////////////////////////
 
         Cache(blk);
-        DAG->AddBlockToPending(blk);
+        DAG.AddBlockToPending(blk);
         ReleaseBlocks(blk->GetHash());
 
         return true;

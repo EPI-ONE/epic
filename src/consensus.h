@@ -4,10 +4,13 @@
 #include "block.h"
 #include "utxo.h"
 
-class NodeRecord;
-typedef std::shared_ptr<NodeRecord> RecordPtr;
-extern const NodeRecord GENESIS_RECORD;
+enum MilestoneStatus : uint8_t {
+    IS_NOT_MILESTONE = 0,
+    IS_TRUE_MILESTONE,
+    IS_FAKE_MILESTONE,
+};
 
+class NodeRecord;
 class ChainState {
 public:
     uint64_t height;
@@ -53,7 +56,7 @@ public:
     }
 
     const uint256& GetMilestoneHash() const {
-        return lvsHashes_.back(); 
+        return lvsHashes_.back();
     }
 
     const TXOC& GetTXOC() const {
@@ -126,12 +129,6 @@ public:
         IS_REDEEMED,           // null hash
     };
 
-    enum MilestoneStatus : uint8_t {
-        IS_NOT_MILESTONE = 0,
-        IS_TRUE_MILESTONE,
-        IS_FAKE_MILESTONE,
-    };
-
     ConstBlockPtr cblock;
 
     Coin cumulativeReward;
@@ -177,5 +174,9 @@ namespace std {
 string to_string(const ChainState&);
 string to_string(const NodeRecord& rec, bool showtx = false);
 } // namespace std
+
+typedef std::shared_ptr<NodeRecord> RecordPtr;
+
+extern const NodeRecord GENESIS_RECORD;
 
 #endif // __SRC_CONSENSUS_H__
