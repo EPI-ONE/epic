@@ -40,7 +40,7 @@ public:
 
     void AddPendingUTXOs(const std::vector<UTXOPtr>&);
 
-    RecordPtr GetMilestoneCache(const uint256&);
+    RecordPtr GetMsRecordCache(const uint256&);
 
     RecordPtr GetRecordCache(const uint256&);
 

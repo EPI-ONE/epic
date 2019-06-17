@@ -41,7 +41,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         // Check if it's a new ms from the main chain
         auto& mainchain    = milestoneChains.best();
         const auto& msHash = block->GetMilestoneHash();
-        RecordPtr msBlock  = mainchain->GetMilestoneCache(msHash);
+        RecordPtr msBlock  = mainchain->GetMsRecordCache(msHash);
         if (!msBlock) {
             msBlock = CAT->GetRecord(msHash);
         }
@@ -70,7 +70,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 continue;
             }
 
-            RecordPtr msBlock = chain->GetMilestoneCache(msHash);
+            msBlock = chain->GetMsRecordCache(msHash);
 
             if (!msBlock) {
                 continue;
@@ -124,4 +124,8 @@ void DAGManager::Stop() {
         std::this_thread::yield();
     }
     thread_.Stop();
+}
+
+bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }

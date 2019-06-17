@@ -27,7 +27,7 @@ private:
 public:
     Chains() : c(), m(0), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
     Chains(Chains&& q)
-        : c(std::move(q.c)), m(std::move(q.m)), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
+        : c(std::move(q.c)), m(q.m), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
 
     bool empty() const {
         return c.empty();

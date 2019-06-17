@@ -54,10 +54,6 @@ public:
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
-    static bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
-        return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
-    }
-
     static DAGManager& GetDAGManager() {
         static DAGManager DAG;
         return DAG;
@@ -123,6 +119,8 @@ private:
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
 };
+
+bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
 
 extern DAGManager& DAG;
 

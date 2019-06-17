@@ -130,7 +130,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         }
         b.Solve();
 
-        while (DAG.CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
+        while (CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
             b.Solve();
         }
 

@@ -288,7 +288,7 @@ bool Chain::CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
     return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }
 
-RecordPtr Chain::GetMilestoneCache(const uint256& msHash) {
+RecordPtr Chain::GetMsRecordCache(const uint256& msHash) {
     auto entry = recordHistory_.find(msHash);
     if (entry != recordHistory_.end() && entry->second->isMilestone) {
         return entry->second;
