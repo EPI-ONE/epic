@@ -1,5 +1,4 @@
 #include "block.h"
-#include "params.h"
 
 Block::Block() {
     SetNull();

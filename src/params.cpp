@@ -127,7 +127,7 @@ void SelectParams(ParamsType type) {
     } else if (type == ParamsType::UNITTEST) {
         pparams = std::make_unique<UnitTestParams>();
     } else {
-        // TODO: error handling
+        throw std::invalid_argument("Invalid Param Type!");
     }
 
     GENESIS = pparams->GetGenesis();

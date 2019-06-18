@@ -1,8 +1,5 @@
 #include "init.h"
-#include "block.h"
-#include "consensus.h"
 #include "dag_manager.h"
-#include "params.h"
 
 std::unique_ptr<Config> config;
 
@@ -35,7 +32,12 @@ void Init(int argc, char* argv[]) {
 
     // set global variables
     // TODO: add argument parsing
-    SelectParams(ParamsType::TESTNET);
+    try {
+        SelectParams(ParamsType::TESTNET);
+    } catch (const std::invalid_argument& err) {
+        std::cerr<< "error choosing params: " << err.what() << std::endl;
+    }
+
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
     DAG = std::make_unique<DAGManager>(); 
 }

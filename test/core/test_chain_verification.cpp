@@ -60,13 +60,12 @@ public:
     }
 };
 
-TEST_F(TestChainVerification, try_syntax) {
+TEST_F(TestChainVerification, chain_with_genesis) {
     Chain c{};
     ASSERT_EQ(c.GetChainHead()->height, 0);
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes().size(), 1);
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes()[0], GENESIS.GetHash());
-    ASSERT_TRUE(GetRecord(&c, GENESIS.GetHash()) != nullptr);
-    ASSERT_TRUE(*GetRecord(&c, GENESIS.GetHash()) == GENESIS_RECORD);
+    ASSERT_EQ(*GetRecord(&c, GENESIS.GetHash()), GENESIS_RECORD);
 }
 
 TEST_F(TestChainVerification, VerifyRedemption) {
@@ -86,8 +85,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 
     // construct redemption block
     Transaction redeem{};
-    TxOutPoint outpoint{b1hash, 0};
-    redeem.AddSignedInput(outpoint, keypair.second, hashMsg, sig).AddOutput(0, addr);
+    redeem.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig).AddOutput(0, addr);
     Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b2.AddTransaction(redeem);
     NodeRecord redemption{BlockNet{std::move(b2)}};
@@ -134,8 +132,9 @@ TEST_F(TestChainVerification, VerifyTx) {
 
     // construct block
     Transaction tx{};
-    VStream indata{keypair.second, sig, hashMsg};
-    tx.AddInput(TxInput{b1hash, 0, Tasm::Listing{indata}}).AddOutput(valueOut1, addr).AddOutput(valueOut2, addr);
+    tx.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig)
+        .AddOutput(valueOut1, addr)
+        .AddOutput(valueOut2, addr);
     Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b2.AddTransaction(tx);
     NodeRecord record{BlockNet{std::move(b2)}};
