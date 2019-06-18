@@ -25,7 +25,7 @@ private:
 
 class TimeGenerator {
 public:
-    TimeGenerator() : simulatedTime(1560941102L), distribution(1, 30) {}
+    TimeGenerator() : simulatedTime(GENESIS.GetTime()), distribution(1, 10) {}
     TimeGenerator(uint32_t timeStart, uint32_t rangeStart, uint32_t rangeEnd, uint32_t seed)
         : simulatedTime(timeStart), generator(seed), distribution(rangeStart, rangeEnd) {}
 

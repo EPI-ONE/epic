@@ -291,7 +291,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
-    if (!(0 <= fee && fee <= GetParams().maxMoney)) {
+    if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
         spdlog::info("Transaction input value goes out of range! [{}]", hashstr);
         return {};
     }

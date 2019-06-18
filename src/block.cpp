@@ -217,8 +217,8 @@ size_t Block::CalculateOptimalEncodingSize() {
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t listingDataSize    = output.listingContent.data.size();
         size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (GetSizeOfVarInt(output.value.GetValue()) + ::GetSizeOfCompactSize(listingDataSize) +
+                                 listingDataSize + ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
     return optimalEncodingSize_;
@@ -252,6 +252,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
 
 bool Block::CheckPOW() const {
     if (hash_.IsNull()) {
+        spdlog::info("No hash in this block!");
         return false;
     }
 
@@ -264,7 +265,7 @@ bool Block::CheckPOW() const {
     }
 
     if (UintToArith256(hash_) > target) {
-        spdlog::info("Hash {} is higher than target: {} v.s. {}", std::to_string(GetHash()), std::to_string(target));
+        spdlog::info("Hash {} is higher than target {}", std::to_string(GetHash()), std::to_string(target));
         return false;
     }
 
@@ -273,16 +274,12 @@ bool Block::CheckPOW() const {
 
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
-
+    
     CalculateHash();
-    for (;;) {
-        if (UintToArith256(hash_) <= target) {
-            return;
-        }
-
-        if (nonce_ == UINT_LEAST32_MAX)
+    while (UintToArith256(hash_) > target) {
+        if (nonce_ == UINT_LEAST32_MAX) {
             time_ = time(nullptr);
-
+        }
         nonce_++;
         CalculateHash();
     }

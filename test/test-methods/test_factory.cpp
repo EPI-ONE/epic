@@ -56,7 +56,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 
-    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), time(nullptr), 0x1f00ffffL, 0);
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
@@ -72,7 +72,6 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
         b.AddTransaction(tx);
     }
 
-    b.SetTime(timeGenerator.NextTime());
     b.CalculateOptimalEncodingSize();
 
     if (finalize) {
@@ -120,13 +119,13 @@ RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool fin
 }
 
 RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
-    Block b{};
-    b.SetDifficultyTarget(GetParams().maxTarget.GetCompact());
-    b.SetTime(timeGenerator.NextTime());
-    b.Solve();
+    Block b = CreateBlock(0, 0, false);
+    do {
+        b.SetNonce(b.GetNonce() + 1);
+        b.Solve();
+    } while (UintToArith256(b.GetHash()) > GENESIS_RECORD.snapshot->milestoneTarget);
 
-    auto pb = std::make_shared<const Block>(b);
-    return std::make_shared<NodeRecord>(pb);
+    return std::make_shared<NodeRecord>(std::move(b));
 }
 
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
