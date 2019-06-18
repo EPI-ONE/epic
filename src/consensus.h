@@ -149,6 +149,7 @@ public:
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
     NodeRecord(const Block&);
+    NodeRecord(Block&&);
     NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);
@@ -156,8 +157,47 @@ public:
     void InvalidateMilestone();
     void UpdateReward(const Coin&);
 
-    void Serialize(VStream& s) const;
-    void Deserialize(VStream& s);
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        // READWRITE(cblock);
+        if (ser_action.ForRead()) {
+            cblock = std::make_shared<BlockNet>(s);
+        } else {
+            ::Serialize(s, *cblock);
+        }
+
+        READWRITE(cumulativeReward);
+        READWRITE(VARINT(minerChainHeight));
+
+        if (cblock->HasTransaction()) {
+            READWRITE(static_cast<uint8_t>(validity));
+        }
+
+        READWRITE(static_cast<uint8_t>(isRedeemed));
+        if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+            READWRITE(prevRedemHash);
+        }
+
+        if (ser_action.ForRead()) {
+            auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
+            isMilestone = (msFlag == IS_TRUE_MILESTONE);
+            if (msFlag > 0) {
+                snapshot = std::make_shared<ChainState>(s);
+            }
+        } else {
+            if (isMilestone) {
+                ::Serialize(s, static_cast<uint8_t>(IS_TRUE_MILESTONE));
+            } else if (snapshot != nullptr) {
+                ::Serialize(s, static_cast<uint8_t>(IS_FAKE_MILESTONE));
+            } else {
+                ::Serialize(s, static_cast<uint8_t>(IS_NOT_REDEMPTION));
+            }
+            if (snapshot != nullptr) {
+                ::Serialize(s, *snapshot);
+            }
+        }
+    }
 
     bool operator==(const NodeRecord& another) const {
         return std::tie(*cblock, cumulativeReward, minerChainHeight) ==

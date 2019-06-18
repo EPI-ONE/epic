@@ -217,8 +217,8 @@ size_t Block::CalculateOptimalEncodingSize() {
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t listingDataSize    = output.listingContent.data.size();
         size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize_ += (8 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (GetSizeOfVarInt(output.value.GetValue()) + ::GetSizeOfCompactSize(listingDataSize) +
+                                 listingDataSize + ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
     return optimalEncodingSize_;

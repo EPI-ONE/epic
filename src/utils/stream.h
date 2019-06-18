@@ -70,7 +70,7 @@ public:
     }
 
     friend bool operator==(const VStream& a, const VStream& b) {
-        return a.size() == b.size() && (a.empty() || std::memcmp(a.data(), b.data(), a.size()) != 0);
+        return a.size() == b.size() && (a.empty() || std::memcmp(a.data(), b.data(), a.size()) == 0);
     }
 
     std::string str() const {

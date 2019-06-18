@@ -2,10 +2,10 @@
 #define __SRC_UTILS_FILE_UTILS_H__
 
 #include <cerrno>
+#include <climits>
+#include <cstring>
 #include <fstream>
 #include <iostream>
-#include <limits.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 

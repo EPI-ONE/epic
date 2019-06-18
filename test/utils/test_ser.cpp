@@ -86,6 +86,10 @@ TEST_F(TestSer, SerializeEqDeserializeVStream) {
     soutput << v2;
 
     EXPECT_EQ(s, soutput.str());
+
+    VStream soutput1;
+    soutput1 << v2;
+    ASSERT_EQ(soutput, soutput1);
 }
 
 
@@ -105,6 +109,7 @@ TEST_F(TestSer, SerializeEqDeserializeListing) {
     soutput << l2;
 
     EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(l1, l2);
 }
 
 
@@ -119,12 +124,24 @@ TEST_F(TestSer, SerializeEqDeserializeTxInput) {
     sinput >> inputFromDeserialization;
 
     VStream soutput;
+
     soutput << inputFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
+    // coin test first
+    Coin coin{100};
+    VStream vscoin{coin};
+    Coin coin1;
+    std::string strcoin = vscoin.str();
+    vscoin >> coin1;
+    ASSERT_EQ(coin, coin1);
+    VStream vscoin1{coin1};
+    ASSERT_EQ(strcoin, vscoin1.str());
+    
+    // then test TxOutput
     TxOutput output = TxOutput(100, randomBytes);
     VStream sinput;
     sinput << output;
@@ -137,6 +154,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
     soutput << outputFromDeserialization;
 
     EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(output, outputFromDeserialization);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
@@ -227,6 +245,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     tx.AddInput(TxInput(outpoint, randomBytes));
     tx.AddOutput(TxOutput(100, randomBytes));
     blk.AddTransaction(tx);
+    blk.FinalizeHash();
 
     // Construct NodeRecord
     NodeRecord block(Block(std::move(blk)));
@@ -251,5 +270,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     VStream soutput;
     block1.Serialize(soutput);
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
+    ASSERT_EQ(*(block.cblock), *(block1.cblock));
+    ASSERT_EQ(block, block1);
 }
