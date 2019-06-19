@@ -15,7 +15,7 @@ public:
     NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd) : generator(seed), distribution(rangeStart, rangeEnd) {}
 
     uint32_t GetRand() {
-        return distribution(generator);    
+        return distribution(generator);
     }
 
 private:
@@ -53,7 +53,6 @@ public:
     Transaction CreateTx(int numTxInput, int numTxOutput);
 
     Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
-    BlockNet CreateBlockNet(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     NodeRecord CreateNodeRecord(ConstBlockPtr b);
     RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);

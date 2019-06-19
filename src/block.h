@@ -36,6 +36,8 @@ public:
         CalculateOptimalEncodingSize();
     }
 
+    Block(VStream&);
+
     void SetNull();
 
     bool IsNull() const;
@@ -147,6 +149,12 @@ public:
         READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
+        READWRITE(transaction_);
+        if (ser_action.ForRead() == true) {
+            SetParents();
+            FinalizeHash();
+            CalculateOptimalEncodingSize();
+        }
     }
 
     bool operator==(const Block& another) const {
@@ -173,30 +181,7 @@ protected:
     size_t optimalEncodingSize_ = 0;
 };
 
-class BlockNet : public Block {
-public:
-    using Block::Block;
-
-    BlockNet(const BlockNet&) = default;
-    BlockNet(const Block& b);
-    BlockNet(Block&& b);
-
-    BlockNet(VStream&);
-
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITEAS(Block, *this);
-        READWRITE(transaction_);
-        if (ser_action.ForRead() == true) {
-            SetParents();
-            FinalizeHash();
-            CalculateOptimalEncodingSize();
-        }
-    }
-};
-
-typedef std::shared_ptr<const BlockNet> ConstBlockPtr;
+typedef std::shared_ptr<const Block> ConstBlockPtr;
 extern Block GENESIS;
 
 #endif //__SRC_BLOCK_H__

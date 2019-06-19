@@ -14,12 +14,12 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
 
     const std::vector<unsigned char> parsed = ParseHex(genesisHexStr);
     VStream vs(parsed);
-    BlockNet genesisBlock{vs};
+    Block genesisBlock{vs};
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
     genesis_       = std::make_unique<Block>(genesisBlock);
-    genesisRecord_ = std::make_unique<NodeRecord>(BlockNet{genesisBlock});
+    genesisRecord_ = std::make_unique<NodeRecord>(genesisBlock);
 
     arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
     arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};

@@ -5,9 +5,9 @@ Block::Block() {
 }
 
 Block::Block(const Block& b)
-    : hash_(b.hash_), optimalEncodingSize_(b.optimalEncodingSize_), version_(b.version_),
-      milestoneBlockHash_(b.milestoneBlockHash_), prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_),
-      time_(b.time_), diffTarget_(b.diffTarget_), nonce_(b.nonce_), transaction_(b.transaction_) {
+    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
+      nonce_(b.nonce_), transaction_(b.transaction_), optimalEncodingSize_(b.optimalEncodingSize_) {
     SetParents();
 }
 
@@ -16,6 +16,10 @@ Block::Block(uint32_t versionNum) : Block() {
     milestoneBlockHash_ = Hash::GetZeroHash();
     prevBlockHash_      = Hash::GetZeroHash();
     tipBlockHash_       = Hash::GetZeroHash();
+}
+
+Block::Block(VStream& payload) {
+    payload >> *this;
 }
 
 void Block::SetNull() {
@@ -178,8 +182,14 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     VStream s;
-    Block::Serialize(s);
-    FinalizeTxHash().Serialize(s);
+    s << version_;
+    s << milestoneBlockHash_;
+    s << prevBlockHash_;
+    s << tipBlockHash_;
+    s << time_;
+    s << diffTarget_;
+    s << nonce_;
+    s << FinalizeTxHash();
     hash_ = Hash<1>(s);
 }
 
@@ -318,12 +328,3 @@ std::string std::to_string(const Block& block, bool showtx) {
 
     return s;
 }
-
-BlockNet::BlockNet(const Block& b) : Block(b) {}
-
-BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {}
-
-BlockNet::BlockNet(VStream& payload) {
-    payload >> *this;
-}
-

@@ -114,7 +114,7 @@ typedef std::shared_ptr<ChainState> ChainStatePtr;
 ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
- * A structure that contains a shared_ptr<const BlockNet> that will
+ * A structure that contains a shared_ptr<const Block> that will
  * be passed to different chains
  */
 class NodeRecord {
@@ -148,7 +148,7 @@ public:
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
-    NodeRecord(Block&&);
+    NodeRecord(const Block&);
     NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);

@@ -80,7 +80,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
     b1.AddTransaction(Transaction{addr});
     b1.FinalizeHash();
     auto b1hash             = b1.GetHash();
-    RecordPtr firstRecord   = std::make_shared<NodeRecord>(BlockNet(std::move(b1)));
+    RecordPtr firstRecord   = std::make_shared<NodeRecord>(Block(std::move(b1)));
     firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
 
     // construct redemption block
@@ -88,7 +88,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
     redeem.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig).AddOutput(0, addr);
     Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b2.AddTransaction(redeem);
-    NodeRecord redemption{BlockNet{std::move(b2)}};
+    NodeRecord redemption{Block{std::move(b2)}};
     redemption.prevRedemHash = b1hash;
 
     // start testing
@@ -113,7 +113,7 @@ TEST_F(TestChainVerification, VerifyTx) {
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
     TxOutput output{valueIn, outputListing};
-    BlockNet b1{Block{1, ghash, ghash, ghash, GENESIS.GetTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0}};
+    Block b1{Block{1, ghash, ghash, ghash, GENESIS.GetTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0}};
     Transaction tx1{};
     b1.AddTransaction(tx1.AddOutput(std::move(output)));
     b1.FinalizeHash();
@@ -137,7 +137,7 @@ TEST_F(TestChainVerification, VerifyTx) {
         .AddOutput(valueOut2, addr);
     Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b2.AddTransaction(tx);
-    NodeRecord record{BlockNet{std::move(b2)}};
+    NodeRecord record{Block{std::move(b2)}};
 
     auto txoc{ValidateTx(&c, record)};
     ASSERT_TRUE(bool(txoc));
@@ -170,7 +170,7 @@ TEST_F(TestChainVerification, ChainForking) {
             split    = dqcs[i];
             blk.SetMilestoneHash(split->GetMilestoneHash());
             blk.Solve();
-            forkblk = std::make_shared<const BlockNet>(blk);
+            forkblk = std::make_shared<const Block>(blk);
         }
     }
     Chain chain = make_chain(dqcs, recs, true);
@@ -181,7 +181,7 @@ TEST_F(TestChainVerification, ChainForking) {
 }
 
 TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    BlockNet registration = fac.CreateBlockNet(1, 1);
+    Block registration = fac.CreateBlock(1, 1);
     registration.SetMilestoneHash(GENESIS.GetHash());
     registration.SetPrevHash(GENESIS.GetHash());
     registration.SetTipHash(GENESIS.GetHash());
@@ -189,17 +189,17 @@ TEST_F(TestChainVerification, ValidDistanceNormalChain) {
     registration.SetTime(GENESIS.GetTime());
     ASSERT_NE(registration.GetChainWork(), 0);
 
-    auto registrationPtr      = std::make_shared<BlockNet>(registration);
+    auto registrationPtr      = std::make_shared<Block>(registration);
     NodeRecord registrationNR = NodeRecord(registrationPtr);
     RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
 
-    BlockNet goodBlock = fac.CreateBlockNet(170, 170);
+    Block goodBlock = fac.CreateBlock(170, 170);
     goodBlock.SetMilestoneHash(GENESIS.GetHash());
     goodBlock.SetPrevHash(registrationPtr->GetHash());
     goodBlock.SetTipHash(registrationPtr->GetHash());
     goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
 
-    auto goodBlockPtr      = std::make_shared<BlockNet>(goodBlock);
+    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
     NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
     RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
 
@@ -213,36 +213,36 @@ TEST_F(TestChainVerification, ValidDistanceNormalChain) {
 }
 
 TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
-    auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
+    auto genesisPtr = std::make_shared<Block>(GENESIS);
 
-    BlockNet registration = fac.CreateBlockNet(1, 1);
+    Block registration = fac.CreateBlock(1, 1);
     registration.SetMilestoneHash(GENESIS.GetHash());
     registration.SetPrevHash(genesisPtr->GetHash());
     registration.SetTipHash(genesisPtr->GetHash());
     registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
     registration.SetTime(666);
 
-    auto registrationPtr      = std::make_shared<BlockNet>(registration);
+    auto registrationPtr      = std::make_shared<Block>(registration);
     NodeRecord registrationNR = NodeRecord(registrationPtr);
     RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
 
-    BlockNet goodBlock = fac.CreateBlockNet(170, 170);
+    Block goodBlock = fac.CreateBlock(170, 170);
     goodBlock.SetMilestoneHash(GENESIS.GetHash());
     goodBlock.SetPrevHash(registrationPtr->GetHash());
     goodBlock.SetTipHash(registrationPtr->GetHash());
     goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
 
-    auto goodBlockPtr      = std::make_shared<BlockNet>(goodBlock);
+    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
     NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
     RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
 
-    BlockNet badBlock = fac.CreateBlockNet(2, 2);
+    Block badBlock = fac.CreateBlock(2, 2);
     badBlock.SetMilestoneHash(GENESIS.GetHash());
     badBlock.SetPrevHash(goodBlockPtr->GetHash());
     badBlock.SetTipHash(goodBlockPtr->GetHash());
     badBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
 
-    auto badBlockPtr      = std::make_shared<BlockNet>(badBlock);
+    auto badBlockPtr      = std::make_shared<Block>(badBlock);
     NodeRecord badBlockNR = NodeRecord(goodBlockPtr);
     RecordPtr badBlockR   = std::make_shared<NodeRecord>(badBlockNR);
 

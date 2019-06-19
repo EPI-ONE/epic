@@ -12,7 +12,7 @@
 #include "threadpool.h"
 
 typedef std::unique_ptr<NodeRecord> StoredRecord;
-typedef std::unique_ptr<BlockNet> BlockCache;
+typedef std::unique_ptr<Block> BlockCache;
 
 class Caterpillar {
 public:

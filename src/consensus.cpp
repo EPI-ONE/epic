@@ -3,10 +3,12 @@
 ////////////////
 // ChainState
 //
-ChainState::ChainState(std::shared_ptr<ChainState> previous, const ConstBlockPtr& msBlock, std::vector<uint256>&& lvsHash)
+ChainState::ChainState(std::shared_ptr<ChainState> previous,
+    const ConstBlockPtr& msBlock,
+    std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
-    chainwork    = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
+    chainwork = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
 
@@ -66,8 +68,8 @@ NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorag
 NodeRecord::NodeRecord(const ConstBlockPtr& blk)
     : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {
-    cblock = std::make_shared<BlockNet>(std::move(blk));
+NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {
+    cblock = std::make_shared<Block>(std::move(blk));
 }
 
 NodeRecord::NodeRecord(VStream& s) {
@@ -129,7 +131,7 @@ void NodeRecord::Serialize(VStream& s) const {
 }
 
 void NodeRecord::Deserialize(VStream& s) {
-    cblock     = std::make_shared<BlockNet>(s);
+    cblock     = std::make_shared<Block>(s);
     uint64_t r = 0;
     s >> VARINT(r);
     cumulativeReward = Coin(r);

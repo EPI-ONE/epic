@@ -84,12 +84,8 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     }
 }
 
-BlockNet TestFactory::CreateBlockNet(int numTxInput, int numTxOutput, bool finalize) {
-    return BlockNet{CreateBlock(numTxInput, numTxOutput, finalize)};
-}
-
 ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput , bool finalize) {
-    return std::make_shared<const BlockNet>(CreateBlockNet(numTxInput, numTxOutput, finalize));
+    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize));
 }
 
 NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
@@ -129,7 +125,7 @@ RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
     b.SetTime(timeGenerator.NextTime());
     b.Solve();
 
-    auto pb = std::make_shared<const BlockNet>(b);
+    auto pb = std::make_shared<const Block>(b);
     return std::make_shared<NodeRecord>(pb);
 }
 
@@ -140,4 +136,3 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecor
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
     return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
-
