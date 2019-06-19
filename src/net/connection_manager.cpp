@@ -11,12 +11,33 @@
 typedef struct sockaddr sockaddr_t;
 typedef struct sockaddr_in sockaddr_in_t;
 
-#define MAKE_SOCKADDR_IN(var, address, port) \
-    sockaddr_in_t var;                       \
-    memset(&var, 0, sizeof(var));            \
-    var.sin_family      = AF_INET;           \
-    var.sin_addr.s_addr = (htonl(address));  \
-    var.sin_port        = (htons(port));
+static void MakeSockaddr(sockaddr_t* sa, uint32_t ipv4, uint16_t port) {
+    memset(sa, 0, sizeof(sockaddr_t));
+    auto sin             = (sockaddr_in_t*) sa;
+    sin->sin_family      = AF_INET;
+    sin->sin_addr.s_addr = htonl(ipv4);
+    sin->sin_port        = htons(port);
+}
+
+static int NewSocket(uint32_t ip) {
+    /* create socket*/
+    int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fd == -1) {
+        spdlog::warn("[net] Fail to create socket");
+        return -1;
+    }
+
+    /* bind local ip*/
+    sockaddr_t bind_addr;
+    MakeSockaddr(&bind_addr, ip, 0);
+    if (bind(fd, &bind_addr, sizeof(bind_addr)) == -1) {
+        spdlog::warn("[net] Fail to bind ip {}", inet_ntoa({htonl(ip)}));
+        close(fd);
+        return -1;
+    }
+
+    return fd;
+}
 
 /**
  * convert socket struct to a address string
@@ -26,7 +47,7 @@ typedef struct sockaddr_in sockaddr_in_t;
 static std::string Address2String(sockaddr_t* addr) {
     char buf[64];
     memset(buf, 0, sizeof(buf));
-    sockaddr_in_t* sin = (sockaddr_in_t*) addr;
+    auto sin = (sockaddr_in_t*) addr;
     evutil_inet_ntop(sin->sin_family, &sin->sin_addr, buf, sizeof(buf));
     return std::string(buf) + ":" + std::to_string(ntohs(sin->sin_port));
 }
@@ -37,12 +58,15 @@ static std::string Address2String(sockaddr_t* addr) {
  * @return string format ip:port
  */
 static std::string getRemoteAddress(bufferevent_t* bev) {
-    evutil_socket_t socket_id = bufferevent_getfd(bev);
+    evutil_socket_t socket_fd = bufferevent_getfd(bev);
     sockaddr_t addr;
     socklen_t len = sizeof(sockaddr);
-    getpeername(socket_id, &addr, &len);
-
-    return Address2String(&addr);
+    int ret       = getpeername(socket_fd, &addr, &len);
+    if (ret != 0) {
+        return std::string(evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
+    } else {
+        return Address2String(&addr);
+    }
 }
 
 /**
@@ -63,25 +87,20 @@ static void ReadCallback(bufferevent_t* bev, void* ctx) {
 static void EventCallback(bufferevent_t* bev, short events, void* ctx) {
     /* socket connect success */
     if (events & BEV_EVENT_CONNECTED) {
-        std::string remote_address = getRemoteAddress(bev);
-        spdlog::info("[net] Socket connected: {}", remote_address);
+        std::string remote = getRemoteAddress(bev);
         bufferevent_enable(bev, EV_READ);
-        ((ConnectionManager*) ctx)->NewConnectionCallback((void*) bev, remote_address, false);
+        ((ConnectionManager*) ctx)->NewConnectionCallback((void*) bev, remote, false);
+        spdlog::info("[net] Socket connected: {}", remote);
     }
 
-
-    /* socket unrecoverable error. for example failed to connect to remote */
-    if (events & BEV_EVENT_ERROR) {
-        spdlog::info("[net] Socket error: {}", evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
-        ((ConnectionManager*) ctx)->FreeBufferevent(bev);
-    }
-
-    /* remote disconnect the socket or socket read and write error */
-    if (events & (BEV_EVENT_EOF | BEV_EVENT_READING | BEV_EVENT_WRITING)) {
-        spdlog::info("[net] Socket disconnected: {}", getRemoteAddress(bev));
+    /* socket error */
+    if (events & (BEV_EVENT_EOF | BEV_EVENT_READING | BEV_EVENT_WRITING | BEV_EVENT_ERROR)) {
+        std::string remote = getRemoteAddress(bev);
         ((ConnectionManager*) ctx)->DeleteConnectionCallback((void*) bev);
         std::thread t(&ConnectionManager::FreeBufferevent, (ConnectionManager*) ctx, bev);
         t.detach();
+        spdlog::info("[net] socket exception: {} event {:x} error {}", remote, events,
+            evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
     }
 }
 
@@ -109,8 +128,7 @@ static void AcceptCallback(evconnlistener_t* listener, evutil_socket_t fd, socka
 
 ConnectionManager::ConnectionManager() {
     evthread_use_pthreads();
-    base_                   = event_base_new();
-    interrupt_send_message_ = false;
+    base_ = event_base_new();
 }
 
 ConnectionManager::~ConnectionManager() {
@@ -126,51 +144,61 @@ ConnectionManager::~ConnectionManager() {
     }
 }
 
-int ConnectionManager::Listen(uint32_t port, uint32_t local_bind_address) {
-    if (port > 65535) {
-        return -1;
+bool ConnectionManager::Bind(uint32_t ip) {
+    int fd = NewSocket(ip);
+    if (fd == -1) {
+        return false;
     }
+    close(fd);
 
-    MAKE_SOCKADDR_IN(sock_addr_in, local_bind_address, port);
-    listener_ = evconnlistener_new_bind(base_, AcceptCallback, this, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE, -1,
-        (struct sockaddr*) &sock_addr_in, sizeof(sock_addr_in));
-
-    if (!listener_) {
-        return -1;
-    }
-
-    spdlog::info("[net] Start listen on {}", Address2String((sockaddr_t*) &sock_addr_in));
-
-    return 0;
+    bind_ip_ = ip;
+    return true;
 }
 
-int ConnectionManager::Connect(uint32_t remote, uint32_t port) {
-    if (port > 65535) {
-        return -1;
+bool ConnectionManager::Listen(uint16_t port) {
+    sockaddr_t sock_addr;
+    MakeSockaddr(&sock_addr, bind_ip_, port);
+    listener_ = evconnlistener_new_bind(
+        base_, AcceptCallback, this, LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE, -1, &sock_addr, sizeof(sock_addr));
+
+    if (!listener_) {
+        return false;
+    }
+
+    spdlog::info("[net] Start listen on {}", Address2String(&sock_addr));
+
+    return true;
+}
+
+bool ConnectionManager::Connect(uint32_t ip, uint16_t port) {
+    /* new socket with bind ip*/
+    int fd = NewSocket(bind_ip_);
+    if (fd == -1) {
+        return false;
     }
 
     /* create bufferevent and set callback */
     bufferevent_t* bev;
-    bev = CreateBufferevent(base_, -1, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE, false);
+    bev = CreateBufferevent(base_, fd, BEV_OPT_CLOSE_ON_FREE | BEV_OPT_THREADSAFE, false);
     bufferevent_setcb(bev, ReadCallback, nullptr, EventCallback, this);
 
-    MAKE_SOCKADDR_IN(sock_addr_in, remote, port);
+    sockaddr_t sock_addr;
+    MakeSockaddr(&sock_addr, ip, port);
 
-    if (bufferevent_socket_connect(bev, (sockaddr_t*) &sock_addr_in, sizeof(sock_addr_in)) != 0) {
-        spdlog::info("[net] Fail to connect: {}", Address2String((sockaddr_t*) &sock_addr_in));
+    if (bufferevent_socket_connect(bev, &sock_addr, sizeof(sock_addr)) != 0) {
+        spdlog::info("[net] Fail to connect: {}", Address2String(&sock_addr));
         FreeBufferevent(bev);
-        return -1;
+        return false;
     }
+    spdlog::info("[net] Try to connect: {}", Address2String(&sock_addr));
 
-    spdlog::info("[net] Try to connect: {}", Address2String((sockaddr_t*) &sock_addr_in));
-
-    return 0;
+    return true;
 }
 
 void ConnectionManager::Disconnect(const void* connection_handle) {
-    if (isExist_((bufferevent*) connection_handle)) {
+    if (isExist_((bufferevent_t*) connection_handle)) {
         spdlog::info("[net] Active disconnect: {}", getRemoteAddress((bufferevent_t*) connection_handle));
-        FreeBufferevent((bufferevent*) connection_handle);
+        FreeBufferevent((bufferevent_t*) connection_handle);
     } else {
         spdlog::info("[net] Not found connection handle {}", connection_handle);
     }
@@ -179,7 +207,6 @@ void ConnectionManager::Disconnect(const void* connection_handle) {
 void ConnectionManager::Start() {
     /* thread for listen accept event callback and receive message to the queue */
     thread_event_base_ = std::thread(event_base_loop, base_, EVLOOP_NO_EXIT_ON_EMPTY);
-
     /* thread for send message from the queue */
     thread_send_message_ = std::thread(&ConnectionManager::ThreadSendMessage_, this);
     spdlog::info("[net] Connection manager start");
@@ -231,21 +258,19 @@ void ConnectionManager::DeleteConnectionCallback(void* connection_handle) {
 bufferevent_t* ConnectionManager::CreateBufferevent(event_base_t* base, evutil_socket_t fd, int options, bool inbound) {
     bufferevent_t* bev;
     bev = bufferevent_socket_new(base, fd, options);
-    bev_mtx_.lock();
     inbound ? inbound_num_++ : outbound_num_++;
+    std::unique_lock<std::shared_mutex> lock(bev_lock_);
     bufferevent_map_.insert(std::pair<bufferevent_t*, bev_info_t>(bev, std::make_tuple(inbound, 0)));
-    bev_mtx_.unlock();
     return bev;
 }
 
 void ConnectionManager::FreeBufferevent(bufferevent_t* bev) {
-    bev_mtx_.lock();
+    std::unique_lock<std::shared_mutex> lock(bev_lock_);
     if (isExist_(bev)) {
         std::get<0>(bufferevent_map_.at(bev)) ? inbound_num_-- : outbound_num_--;
         bufferevent_map_.erase(bev);
         bufferevent_free(bev);
     }
-    bev_mtx_.unlock();
 }
 
 void ConnectionManager::FreeAllBufferevent_() {
@@ -286,18 +311,24 @@ void ConnectionManager::WriteOneMessage_(NetMessage& message) {
         evbuffer_add(send_buffer, message.payload.data(), message.header.payload_length);
     }
 
-    bev_mtx_.lock();
+    std::shared_lock<std::shared_mutex> lock(bev_lock_);
     auto bev = (bufferevent_t*) message.GetConnectionHandle();
     if (isExist_(bev)) {
+        send_bytes_ += message.header.payload_length;
+        send_packages_ += 1;
         bufferevent_write_buffer(bev, send_buffer);
     }
-    bev_mtx_.unlock();
+
 
     evbuffer_free(send_buffer);
 }
 
 void ConnectionManager::ReadMessages(bufferevent_t* bev) {
-    while (ReadOneMessage_(bev, std::get<1>(bufferevent_map_.at(bev)))) {
+    try {
+        while (ReadOneMessage_(bev, std::get<1>(bufferevent_map_.at(bev)))) {
+        }
+    } catch (std::exception& e) {
+        spdlog::warn(e.what());
     }
 }
 
@@ -357,7 +388,6 @@ bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, size_t& next_message
         next_message_length = SeekNextMessageLength_(input_buffer);
     }
 
-
     /* found a complete message header, but the length is greater than the max limit, discard the message header */
     if (next_message_length > MAX_MESSAGE_LENGTH) {
         evbuffer_drain(input_buffer, MESSAGE_HEADER_LENGTH);
@@ -383,7 +413,12 @@ bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, size_t& next_message
 
             /* check message checksum ,discard the message if failed*/
             if (message.VerifyChecksum()) {
+                receive_bytes_ += header.payload_length;
+                receive_packages_ += 1;
                 receive_message_queue_.Put(message);
+            } else {
+                checksum_error_bytes_ += header.payload_length;
+                checksum_error_packages_ += 1;
             }
 
             next_message_length = 0;

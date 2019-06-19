@@ -13,8 +13,6 @@
 
 #define MAX_MESSAGE_LENGTH 4 * 1000 * 1000
 
-enum protocol_message_type { MESSAGE_TYPE_VERSION = 1, MESSAGE_TYPE_VERACK };
-
 typedef struct {
     uint32_t magic_number;
     uint32_t type;
@@ -24,7 +22,7 @@ typedef struct {
 
 /* magic number defined by protocol */
 inline uint32_t GetMagicNumber() {
-    return 0xD9B4BEF9;
+    return 0x44535A5A;
 }
 
 #endif // EPIC_MESSAGE_HEADER_H

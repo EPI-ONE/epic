@@ -80,7 +80,7 @@ void Peer::ProcessPing(const Ping& ping) {
 void Peer::ProcessPong(const Pong& pong) {
     lastPongTime = time(nullptr);
     nPingFailed  = pong.nonce == lastNonce ? 0 : nPingFailed + 1;
-    spdlog::info("receive pong from {}, nonce = ", address.ToString(), pong.nonce);
+    spdlog::info("receive pong from {}, nonce = {}", address.ToString(), pong.nonce);
 }
 
 void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
@@ -154,6 +154,7 @@ void Peer::ProcessAddressMessage(AddressMessage& addressMessage) {
 
     // disconnect the connection after we get the addresses if the peer is a seed
     if (isSeed) {
+        spdlog::warn("disconnect seed {}", address.ToString());
         disconnect = true;
     }
 }
@@ -218,17 +219,17 @@ void Peer::SendMessages() {
 }
 
 void Peer::SendPing() {
-    if (lastPingTime + kPingSendInterval < time(nullptr)) {
+    if (lastPingTime + kPingSendInterval < (uint64_t) time(nullptr)) {
         lastNonce = time(nullptr);
         Ping ping(lastNonce);
         NetMessage msg(connection_handle, PING, VStream(ping));
         SendMessage(msg);
-        spdlog::info("send ping to {}, nonce = ", address.ToString(), lastNonce);
+        spdlog::info("send ping to {}, nonce = {}", address.ToString(), lastNonce);
     }
 }
 
 void Peer::SendAddresses() {
-    if (lastSendAddressTime + kSendAddressInterval < time(nullptr) && !addrSendQueue.Empty()) {
+    if (lastSendAddressTime + kSendAddressInterval < (uint64_t) time(nullptr) && !addrSendQueue.Empty()) {
         AddressMessage msg;
         NetAddress addr;
 

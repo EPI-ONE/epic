@@ -1,5 +1,8 @@
 #include "init.h"
 #include "dag_manager.h"
+#include <atomic>
+#include <net/peer_manager.h>
+#include <signal.h>
 
 std::unique_ptr<Config> config;
 
@@ -7,6 +10,38 @@ Block GENESIS;
 NodeRecord GENESIS_RECORD;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
+std::unique_ptr<PeerManager> peer_manager;
+static std::atomic_bool b_shutdown = false;
+typedef void (*signal_handler_t)(int);
+
+static void KickShutdown(int) {
+    b_shutdown = true;
+}
+
+static void RegisterSignalHandler(int signal, signal_handler_t handler) {
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(signal, &sa, nullptr);
+}
+
+void InitSignal() {
+    RegisterSignalHandler(SIGTERM, KickShutdown);
+    RegisterSignalHandler(SIGINT, KickShutdown);
+
+    signal(SIGPIPE, SIG_IGN);
+}
+
+void CreateRoot(const std::string& path) {
+    if (!CheckDirExist(path)) {
+        if (Mkdir_recursive(path)) {
+            spdlog::info("root {} has been created", path);
+        } else {
+            throw spdlog::spdlog_ex("fail to create the path" + path);
+        }
+    }
+}
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -28,6 +63,8 @@ void Init(int argc, char* argv[]) {
     // init logger
     InitLogger();
 
+    InitSignal();
+
     config->ShowConfig();
 
     // set global variables
@@ -35,11 +72,12 @@ void Init(int argc, char* argv[]) {
     try {
         SelectParams(ParamsType::TESTNET);
     } catch (const std::invalid_argument& err) {
-        std::cerr<< "error choosing params: " << err.what() << std::endl;
+        std::cerr << "error choosing params: " << err.what() << std::endl;
     }
 
-    CAT = std::make_unique<Caterpillar>(config->GetDBPath());
-    DAG = std::make_unique<DAGManager>(); 
+    CAT          = std::make_unique<Caterpillar>(config->GetDBPath());
+    DAG          = std::make_unique<DAGManager>();
+    peer_manager = std::make_unique<PeerManager>();
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -47,7 +85,8 @@ void SetupCommandline(cxxopts::Options& options) {
     options.add_options()
     ("c,configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
     ("b,bindip", "bind ip address",cxxopts::value<std::string>())
-    ("p,bindport", "bind port", cxxopts::value<uint16_t>());
+    ("p,bindport", "bind port", cxxopts::value<uint16_t>())
+    ("connect", "connect", cxxopts::value<std::string>());
     // clang-format on
 }
 
@@ -63,6 +102,9 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     if (result.count("bindport") > 0) {
         config->SetBindPort(result["bindport"].as<uint16_t>());
     }
+    if (result.count("connect") > 0) {
+        config->SetConnect(result["connect"].as<std::string>());
+    }
 }
 
 void LoadConfigFile() {
@@ -73,6 +115,16 @@ void LoadConfigFile() {
     }
 
     auto configContent = cpptoml::parse_file(config_path);
+
+    auto global_config = configContent->get_table("global");
+    if (global_config) {
+        auto root = global_config->get_as<std::string>("root");
+        if (root) {
+            config->SetRoot(*root);
+        }
+    }
+
+    CreateRoot(config->GetRoot());
 
     // logger
     auto log_config = configContent->get_table("logs");
@@ -158,7 +210,9 @@ void InitLogger() {
     if (config->IsUseFileLogger()) {
         UseFileLogger(config->GetLoggerPath(), config->GetLoggerFilename());
     }
-    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S] [%l] %v");
+    spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e][%t][%l] %v");
+    spdlog::set_level(spdlog::level::info);
+    spdlog::flush_on(spdlog::level::info);
 }
 
 void UseFileLogger(const std::string& path, const std::string& filename) {
@@ -181,6 +235,24 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
     }
 }
 
+bool Start() {
+    if (!peer_manager->Init(config)) {
+        return false;
+    }
+    peer_manager->Start();
+    return true;
+}
+
 void ShutDown() {
+    spdlog::info("shutdown start");
+    peer_manager->Stop();
     CAT.reset();
+    spdlog::info("shutdown finish");
+    spdlog::shutdown();
+}
+
+void WaitShutdown() {
+    while (!b_shutdown) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
