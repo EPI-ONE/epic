@@ -30,11 +30,6 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
     obc_dep_ptr dep(new obc_dep);
     dep->block = block;
 
-    /* insert new dependency into block_dep_map_ */
-    std::unique_lock<std::shared_mutex> writer(mutex_);
-    block_dep_map_.insert_or_assign(block->GetHash(), dep);
-    writer.unlock();
-
     std::unordered_set<uint256> unique_missing_hashes;
 
     auto common_insert = [&](uint256&& hash) {
@@ -52,7 +47,11 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
         }
     };
 
-    std::shared_lock<std::shared_mutex> reader(mutex_);
+    /* insert new dependency into block_dep_map_ */
+    std::unique_lock<std::shared_mutex> writer(mutex_);
+
+    block_dep_map_.insert_or_assign(block->GetHash(), dep);
+
     if (missing_mask & M_MISSING) {
         common_insert(block->GetMilestoneHash());
     }
@@ -64,7 +63,6 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
     if (missing_mask & P_MISSING) {
         common_insert(block->GetPrevHash());
     }
-    reader.unlock();
 
     dep->ndeps = unique_missing_hashes.size();
 }
