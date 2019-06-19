@@ -54,10 +54,7 @@ TEST_F(TestTasm, transaction_in_out_verify) {
 
     auto keypair = fac.CreateKeyPair();
     CKeyID addr  = keypair.second.GetID();
-    auto msg     = fac.GetRandomString(10);
-    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
-    std::vector<unsigned char> sig;
-    keypair.first.Sign(hashMsg, sig);
+    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
 
     // construct transaction output listing
     auto encodedAddr = EncodeAddress(addr);

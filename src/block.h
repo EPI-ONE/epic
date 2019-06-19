@@ -10,7 +10,6 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
-extern const Block GENESIS;
 static constexpr std::size_t HEADER_SIZE = 116;
 
 namespace std {
@@ -20,10 +19,9 @@ string to_string(const Block& b, bool showtx = true);
 class Block {
 public:
     Block();
-
     Block(const Block&);
-
     Block(uint32_t versionNum);
+    Block(VStream&);
 
     Block(uint32_t version,
         uint256 milestoneHash,
@@ -33,63 +31,46 @@ public:
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), diffTarget_(difficultyTarget), time_(time), nonce_(nonce) {
+          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
 
     void SetNull();
-
     bool IsNull() const;
-
-    uint256 GetMilestoneHash() const;
-
-    uint256 GetPrevHash() const;
-
-    uint256 GetTipHash() const;
-
-    void SetMilestoneHash(const uint256&);
-
-    void SetPrevHash(const uint256&);
-
-    void SetTipHash(const uint256&);
-
     void UnCache();
 
-    bool Verify() const;
-
-    void AddTransaction(const Transaction&);
-
-    bool HasTransaction() const;
-
-    const std::optional<Transaction>& GetTransaction() const;
-
-    void SetDifficultyTarget(uint32_t target);
-
+    uint256 GetMilestoneHash() const;
+    uint256 GetPrevHash() const;
+    uint256 GetTipHash() const;
     uint32_t GetDifficultyTarget() const;
-
-    void SetTime(uint64_t);
-
-    uint64_t GetTime() const;
-
-    void SetNonce(uint32_t);
-
+    uint32_t GetTime() const;
     uint32_t GetNonce() const;
 
-    void InvalidateMilestone();
+    void SetMilestoneHash(const uint256&);
+    void SetPrevHash(const uint256&);
+    void SetTipHash(const uint256&);
+    void SetDifficultyTarget(uint32_t target);
+    void SetTime(uint32_t);
+    void SetNonce(uint32_t);
+
+    void AddTransaction(const Transaction&);
+    bool HasTransaction() const;
+    const std::optional<Transaction>& GetTransaction() const;
 
     const uint256& GetHash() const;
-
+    void CalculateHash();
     void FinalizeHash();
 
-    void CalculateHash();
-
     const uint256& FinalizeTxHash();
-
     const uint256& GetTxHash() const;
 
+    size_t CalculateOptimalEncodingSize();
     size_t GetOptimalEncodingSize() const;
 
-    size_t CalculateOptimalEncodingSize();
+    /*
+     * Checks whether the block is correct in format.
+     */
+    bool Verify() const;
 
     /*
      * Checks whether the block is a registration block.
@@ -148,6 +129,12 @@ public:
         READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
+        READWRITE(transaction_);
+        if (ser_action.ForRead() == true) {
+            SetParents();
+            FinalizeHash();
+            CalculateOptimalEncodingSize();
+        }
     }
 
     bool operator==(const Block& another) const {
@@ -160,45 +147,21 @@ public:
 
     friend std::string std::to_string(const Block& b, bool showtx);
 
-    static Block CreateGenesis();
-
 protected:
     uint256 hash_;
-    size_t optimalEncodingSize_;
-
     uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    uint32_t diffTarget_;
     uint64_t time_;
+    uint32_t diffTarget_;
     uint32_t nonce_;
     std::optional<Transaction> transaction_;
+
+    size_t optimalEncodingSize_ = 0;
 };
 
-class BlockNet : public Block {
-public:
-    using Block::Block;
-
-    BlockNet(const BlockNet&) = default;
-    BlockNet(const Block& b);
-    BlockNet(Block&& b);
-
-    BlockNet(VStream&);
-
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITEAS(Block, *this);
-        READWRITE(transaction_);
-        if (ser_action.ForRead() == true) {
-            SetParents();
-            FinalizeHash();
-            CalculateOptimalEncodingSize();
-        }
-    }
-};
-
-typedef std::shared_ptr<const BlockNet> ConstBlockPtr;
+typedef std::shared_ptr<const Block> ConstBlockPtr;
+extern Block GENESIS;
 
 #endif //__SRC_BLOCK_H__

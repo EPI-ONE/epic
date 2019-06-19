@@ -37,7 +37,6 @@ TEST_F(TestSer, SerializeOptional) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
-     //ECC_Start();
     auto pubkey = fac.CreateKeyPair().second;
 
     // serialize on pubkey
@@ -47,7 +46,7 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     vstream >> outPubkey;
 
     ASSERT_EQ(pubkey, outPubkey);
-    
+
     // serialize on address
     std::string strAddr = EncodeAddress(pubkey.GetID());
     vstream << strAddr;
@@ -56,8 +55,6 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     ASSERT_EQ(strAddr, deserAddr);
     auto decodeDeserAddr = DecodeAddress(deserAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);
-
-     //ECC_Stop();
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
@@ -173,7 +170,7 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
-    BlockNet block = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
+    Block block = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
 
     // Add tx to block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
@@ -187,7 +184,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     sinput << block;
     std::string s = sinput.str();
 
-    BlockNet block1;
+    Block block1;
     sinput >> block1;
 
     VStream soutput;
@@ -205,7 +202,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
         EXPECT_EQ(ptrTx, output.GetParentTx());
     }
 
-    BlockNet block2(soutput);
+    Block block2(soutput);
 
     // check parent pointers
     ptrTx = &*block2.GetTransaction();
@@ -222,7 +219,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
-    BlockNet blk = BlockNet(1, rand1, zeros, rand2, time(nullptr), 1, 1);
+    Block blk = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
 
     // Add a tx into the block
     TxOutPoint outpoint = TxOutPoint(rand1, 1);
@@ -232,13 +229,13 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     blk.AddTransaction(tx);
 
     // Construct NodeRecord
-    NodeRecord block(BlockNet(std::move(blk)));
+    NodeRecord block(Block(std::move(blk)));
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 
     // Link the chain state
-    auto pstate = std::make_shared<ChainState>(time(nullptr), 100000, 100, arith_uint256(0X3E8).GetCompact(),
-        arith_uint256(0).GetCompact(), arith_uint256(0X3E8));
+    auto pstate = std::make_shared<ChainState>(100, arith_uint256(0), fac.NextTime(), arith_uint256(0X3E8),
+        arith_uint256(0X3E8), 100000, std::vector<uint256>{});
     block.LinkChainState(pstate);
 
     // Make it a fake milestone

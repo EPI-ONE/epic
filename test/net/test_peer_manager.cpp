@@ -8,13 +8,7 @@ public:
     PeerManager client;
 
     static void SetUpTestCase() {
-        char** s = new char*[1];
-        s[0]     = new char[5];
-        strcpy(s[0], "epic");
-        Init(1, s);
-
-        delete[] s[0];
-        delete[] s;
+        config = std::make_unique<Config>();
     }
     static void TearDownTestCase() {
         ShutDown();

@@ -1,7 +1,12 @@
 #include "init.h"
+#include "dag_manager.h"
 
 std::unique_ptr<Config> config;
+
+Block GENESIS;
+NodeRecord GENESIS_RECORD;
 std::unique_ptr<Caterpillar> CAT;
+std::unique_ptr<DAGManager> DAG;
 
 void Init(int argc, char* argv[]) {
     config = std::make_unique<Config>();
@@ -25,7 +30,16 @@ void Init(int argc, char* argv[]) {
 
     config->ShowConfig();
 
+    // set global variables
+    // TODO: add argument parsing
+    try {
+        SelectParams(ParamsType::TESTNET);
+    } catch (const std::invalid_argument& err) {
+        std::cerr<< "error choosing params: " << err.what() << std::endl;
+    }
+
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
+    DAG = std::make_unique<DAGManager>(); 
 }
 
 void SetupCommandline(cxxopts::Options& options) {
@@ -54,9 +68,7 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
 void LoadConfigFile() {
     std::string config_path = config->GetConfigFilePath();
     if (!CheckFileExist(config_path)) {
-        std::cerr << "config.toml not found in current directory, will use the "
-                     "default config"
-                  << std::endl;
+        std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
         return;
     }
 
@@ -168,6 +180,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
         exit(LOG_INIT_FAILURE);
     }
 }
+
 void ShutDown() {
     CAT.reset();
 }

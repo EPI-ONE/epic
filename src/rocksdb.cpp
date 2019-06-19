@@ -74,7 +74,7 @@ std::unique_ptr<NodeRecord> RocksDBStore::GetRecord(const uint256& blockHash) co
     return pnodeRecord;
 }
 
-std::unique_ptr<BlockNet> RocksDBStore::GetBlockCache(const uint256& blockHash) const {
+std::unique_ptr<Block> RocksDBStore::GetBlockCache(const uint256& blockHash) const {
     VStream key;
     key.reserve(Hash::SIZE);
     key << blockHash;
@@ -89,10 +89,10 @@ std::unique_ptr<BlockNet> RocksDBStore::GetBlockCache(const uint256& blockHash) 
         return nullptr;
     }
 
-    std::unique_ptr<BlockNet> pblock;
+    std::unique_ptr<Block> pblock;
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        pblock = std::make_unique<BlockNet>(value);
+        pblock = std::make_unique<Block>(value);
     } catch (const std::exception&) {
         return nullptr;
     }

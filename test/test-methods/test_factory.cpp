@@ -33,6 +33,14 @@ std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
     return std::make_pair(std::move(seckey), std::move(pubkey));
 }
 
+std::pair<uint256, std::vector<unsigned char>> TestFactory::CreateSig(const CKey& privateKey) {
+    auto msg     = GetRandomString(10);
+    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
+    std::vector<unsigned char> sig;
+    privateKey.Sign(hashMsg, sig);
+    return std::make_pair(hashMsg, sig);
+}
+
 Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;
@@ -48,7 +56,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 
-    Block b = Block(1, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), time(nullptr), 0x1f00ffffL, 0);
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), time(nullptr), 0x1f00ffffL, 0);
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
@@ -76,12 +84,8 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     }
 }
 
-BlockNet TestFactory::CreateBlockNet(int numTxInput, int numTxOutput, bool finalize) {
-    return BlockNet{CreateBlock(numTxInput, numTxOutput, finalize)};
-}
-
 ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput , bool finalize) {
-    return std::make_shared<const BlockNet>(CreateBlockNet(numTxInput, numTxOutput, finalize));
+    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize));
 }
 
 NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
@@ -92,8 +96,8 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
 
     if (GetRand() % 2) {
         // Link a ms instance
-        auto cs = std::make_shared<ChainState>(NextTime(), GetRand(), GetRand(), arith_uint256(GetRand()).GetCompact(),
-            arith_uint256(GetRand()).GetCompact(), arith_uint256(GetRand()));
+        auto cs = std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(),
+            arith_uint256(GetRand()), arith_uint256(GetRand()), GetRand(), std::vector<uint256>{});
         rec.LinkChainState(cs);
 
         if (GetRand() % 2) {
@@ -117,11 +121,11 @@ RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool fin
 
 RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
     Block b{};
-    b.SetDifficultyTarget(params.maxTarget.GetCompact());
+    b.SetDifficultyTarget(GetParams().maxTarget.GetCompact());
     b.SetTime(timeGenerator.NextTime());
     b.Solve();
 
-    auto pb = std::make_shared<const BlockNet>(b);
+    auto pb = std::make_shared<const Block>(b);
     return std::make_shared<NodeRecord>(pb);
 }
 
@@ -132,4 +136,3 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecor
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
     return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
-

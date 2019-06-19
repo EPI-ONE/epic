@@ -54,11 +54,6 @@ public:
     void StartBatchSync(std::shared_ptr<Peer> peer);
     void CompleteBatchSync();
 
-    static DAGManager& GetDAGManager() {
-        static DAGManager DAG;
-        return DAG;
-    }
-
     /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks
@@ -122,6 +117,6 @@ private:
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
 
-extern DAGManager& DAG;
+extern std::unique_ptr<DAGManager> DAG;
 
 #endif // __SRC_DAG_MANAGER_H__

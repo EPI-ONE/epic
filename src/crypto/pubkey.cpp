@@ -226,7 +226,7 @@ bool CPubKey::Decompress() {
 }
 
 std::string EncodeAddress(const CKeyID& addr) {
-    std::vector<unsigned char> data(1, params.GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
+    std::vector<unsigned char> data(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
     data.insert(data.end(), addr.begin(), addr.end());
     return EncodeBase58Check(data);
 }
@@ -238,7 +238,7 @@ std::optional<CKeyID> DecodeAddress(const std::string str) {
         // base58-encoded Public-key-hash-addresses have version 0 
         // The data vector contains SHA160(pubkey), where pubkey is
         // the serialized public key.
-        const std::vector<unsigned char> pubkey_prefix(1, params.GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
+        const std::vector<unsigned char> pubkey_prefix(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
         if (data.size() == hash.size() + pubkey_prefix.size() &&
             std::equal(
                 pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {

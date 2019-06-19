@@ -12,12 +12,12 @@ public:
 };
 
 TEST_F(TestConsensus, SyntaxChecking) {
-    BlockNet b = GENESIS;
+    Block b = GENESIS;
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    BlockNet block =
-        BlockNet(1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
+    Block block =
+        Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 
@@ -25,8 +25,8 @@ TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
     NodeRecord bs = GENESIS_RECORD;
     EXPECT_EQ(VStream(bs).size(), bs.GetOptimalStorageSize());
 
-    BlockNet b1 = fac.CreateBlockNet();
-    BlockNet b2{b1};
+    Block b1 = fac.CreateBlock();
+    Block b2{b1};
     NodeRecord bs1{std::move(b1)};
 
     // test without a tx
@@ -43,11 +43,11 @@ TEST_F(TestConsensus, NodeRecordOptimalStorageEncodingSize) {
     EXPECT_EQ(VStream(bs2).size(), bs2.GetOptimalStorageSize());
 }
 
-TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
-    BlockNet b = GENESIS;
+TEST_F(TestConsensus, BlockOptimalEncodingSize) {
+    Block b = GENESIS;
     EXPECT_EQ(VStream(b).size(), b.GetOptimalEncodingSize());
 
-    BlockNet b1 = fac.CreateBlockNet();
+    Block b1 = fac.CreateBlock();
 
     // test without a tx
     EXPECT_EQ(VStream(b1).size(), b1.GetOptimalEncodingSize());
@@ -63,7 +63,7 @@ TEST_F(TestConsensus, BlockNetOptimalEncodingSize) {
 }
 
 TEST_F(TestConsensus, UTXO) {
-    BlockNet b  = fac.CreateBlockNet(1, 67);
+    Block b  = fac.CreateBlock(1, 67);
     UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
@@ -74,7 +74,7 @@ TEST_F(TestConsensus, UTXO) {
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     std::array<std::shared_ptr<ChainState>, 100> arrayMs;
-    arrayMs[0] = make_shared_ChainState();
+    arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     constexpr size_t LOOPS = 100;
@@ -83,11 +83,11 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
-        if (((i + 1) % params.timeInterval) == 0) {
+        if (((i + 1) % GetParams().timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
             ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
             ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if (i > 1 && ((i + 1) % params.timeInterval) != 1) {
+        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
@@ -104,12 +104,12 @@ TEST_F(TestConsensus, AddNewBlocks) {
     blocks.reserve(n);
 
     // Make the genesis first
-    auto genesisPtr = std::make_shared<BlockNet>(GENESIS);
+    auto genesisPtr = std::make_shared<Block>(GENESIS);
     blocks.emplace_back(genesisPtr);
 
     // Construct a fully connected and syntatical valid random graph
     for (std::size_t i = 1; i < n; ++i) {
-        BlockNet b = fac.CreateBlockNet(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
+        Block b = fac.CreateBlock(fac.GetRand() % 11 + 1, fac.GetRand() % 11 + 1);
         b.SetMilestoneHash(GENESIS.GetHash());
         b.SetPrevHash(blocks[rand() % i]->GetHash());
         b.SetTipHash(blocks[rand() % i]->GetHash());
@@ -130,11 +130,11 @@ TEST_F(TestConsensus, AddNewBlocks) {
         }
         b.Solve();
 
-        while (CheckMsPOW(std::make_shared<const BlockNet>(b), GENESIS_RECORD.snapshot)) {
+        while (CheckMsPOW(std::make_shared<const Block>(b), GENESIS_RECORD.snapshot)) {
             b.Solve();
         }
 
-        blocks.emplace_back(std::make_shared<BlockNet>(b));
+        blocks.emplace_back(std::make_shared<Block>(b));
     }
 
     // Shuffle order of blocks to make some of them not solid
@@ -148,6 +148,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::ostringstream os;
     os << time(nullptr);
     CAT = std::make_unique<Caterpillar>(prefix + os.str());
+    DAG = std::make_unique<DAGManager>();
 
     // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
@@ -157,7 +158,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     CAT->Stop();
-    DAG.Stop();
+    DAG->Stop();
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
@@ -166,7 +167,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
         EXPECT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG.GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
+    EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
 
     CAT.reset();
 

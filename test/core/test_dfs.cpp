@@ -21,11 +21,11 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 TEST_F(DFSTest, complex_test) {
     Chain chain;
     std::size_t N = 10;
-    std::vector<BlockNet> blocks;
+    std::vector<Block> blocks;
     blocks.reserve(N);
 
     for (std::size_t i = 0; i < N; i++) {
-        blocks.emplace_back(fac.CreateBlockNet());
+        blocks.emplace_back(fac.CreateBlock());
 
         // time is used as the node id
         blocks[i].SetTime(i);
@@ -65,7 +65,7 @@ TEST_F(DFSTest, complex_test) {
     /* populate the pending Block
      * map for the first time */
     for (std::size_t i = 0; i < N; i++) {
-        vpblocks[i] = std::make_shared<BlockNet>(blocks[i]);
+        vpblocks[i] = std::make_shared<Block>(blocks[i]);
         chain.AddPendingBlock(vpblocks[i]);
     }
 

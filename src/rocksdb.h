@@ -27,7 +27,7 @@ public:
 
     std::unique_ptr<NodeRecord> GetRecord(const uint256&) const;
 
-    std::unique_ptr<BlockNet> GetBlockCache(const uint256&) const;
+    std::unique_ptr<Block> GetBlockCache(const uint256&) const;
 
     bool WriteBlockCache(const ConstBlockPtr&) const;
 

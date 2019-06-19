@@ -1,10 +1,14 @@
+#ifndef __TEST_ENV__
+#define __TEST_ENV__
+
 #include <gtest/gtest.h>
 
+#include "params.h"
 #include "test_factory.h"
 
 class EpicTestEnvironment : public ::testing::Environment {
 public:
-    static TestFactory GetFactory() {
+    static const TestFactory& GetFactory() {
         static const TestFactory fac{};
         return fac;
     }
@@ -12,6 +16,7 @@ public:
     void SetUp() override {
         ECC_Start();
         handle = ECCVerifyHandle();
+        SelectParams(ParamsType::UNITTEST);
     }
 
     void TearDown() override {
@@ -22,3 +27,5 @@ public:
 private: 
     ECCVerifyHandle handle;
 };
+
+#endif // __TEST_ENV__

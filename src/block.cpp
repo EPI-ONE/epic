@@ -5,9 +5,9 @@ Block::Block() {
 }
 
 Block::Block(const Block& b)
-    : hash_(b.hash_), optimalEncodingSize_(b.optimalEncodingSize_), version_(b.version_),
-      milestoneBlockHash_(b.milestoneBlockHash_), prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_),
-      diffTarget_(b.diffTarget_), time_(b.time_), nonce_(b.nonce_), transaction_(b.transaction_) {
+    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
+      nonce_(b.nonce_), transaction_(b.transaction_), optimalEncodingSize_(b.optimalEncodingSize_) {
     SetParents();
 }
 
@@ -16,6 +16,10 @@ Block::Block(uint32_t versionNum) : Block() {
     milestoneBlockHash_ = Hash::GetZeroHash();
     prevBlockHash_      = Hash::GetZeroHash();
     tipBlockHash_       = Hash::GetZeroHash();
+}
+
+Block::Block(VStream& payload) {
+    payload >> *this;
 }
 
 void Block::SetNull() {
@@ -64,8 +68,8 @@ void Block::UnCache() {
 
 bool Block::Verify() const {
     // checks version
-    if (version_ != GENESIS_BLOCK_VERSION) {
-        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GENESIS_BLOCK_VERSION,
+    if (version_ != GetParams().version) {
+        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
             std::to_string(hash_));
         return false;
     }
@@ -150,11 +154,11 @@ uint32_t Block::GetDifficultyTarget() const {
     return diffTarget_;
 }
 
-void Block::SetTime(uint64_t time) {
+void Block::SetTime(uint32_t time) {
     time_ = time;
 }
 
-uint64_t Block::GetTime() const {
+uint32_t Block::GetTime() const {
     return time_;
 }
 
@@ -178,8 +182,8 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     VStream s;
-    Block::Serialize(s);
-    FinalizeTxHash().Serialize(s);
+    s << version_ << milestoneBlockHash_ << prevBlockHash_ << tipBlockHash_ << time_ << diffTarget_ << nonce_
+      << FinalizeTxHash();
     hash_ = Hash<1>(s);
 }
 
@@ -205,7 +209,7 @@ size_t Block::CalculateOptimalEncodingSize() {
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t listingDataSize    = input.listingContent.data.size();
         size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+        optimalEncodingSize_ += (Hash::SIZE + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
                                  ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 
@@ -234,12 +238,12 @@ bool Block::IsFirstRegistration() const {
 
 arith_uint256 Block::GetChainWork() const {
     arith_uint256 target = GetTargetAsInteger();
-    return params.maxTarget / (target + 1);
+    return GetParams().maxTarget / target;
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
     arith_uint256 target = arith_uint256().SetCompact(diffTarget_);
-    if (target <= 0 || target > params.maxTarget) {
+    if (target <= 0 || target > GetParams().maxTarget) {
         throw "Bad difficulty target: " + std::to_string(target);
     }
 
@@ -318,53 +322,3 @@ std::string std::to_string(const Block& block, bool showtx) {
 
     return s;
 }
-
-Block Block::CreateGenesis() {
-    Block genesisBlock(GENESIS_BLOCK_VERSION);
-    Transaction tx;
-
-    // Construct a script containing the difficulty bits
-    // and the following message:
-    std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
-                       "4656e20696e20746865206576656e696e6720616e64207765206172"
-                       "65207374696c6c20776f726b696e6721");
-
-    // Convert the string to bytes
-    auto vs = VStream(ParseHex(hexStr));
-
-    // Add input and output
-    tx.AddInput(TxInput(Tasm::Listing(vs)));
-
-    std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
-
-    genesisBlock.AddTransaction(tx);
-    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
-    genesisBlock.SetTime(1548078136L);
-    genesisBlock.SetNonce(2081807681);
-    genesisBlock.FinalizeHash();
-    genesisBlock.CalculateOptimalEncodingSize();
-
-    // The following commented lines were used for mining a genesis block
-    // int numThreads = 44;
-    // ThreadPool solverPool(numThreads);
-    // solverPool.Start();
-    // Miner m;
-    // m.Solve(genesisBlock, solverPool);
-    // solverPool.Stop();
-    // std::cout << std::to_string(genesisBlock) << std::endl;
-
-    return genesisBlock;
-}
-
-BlockNet::BlockNet(const Block& b) : Block(b) {}
-
-BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {
-    SetParents();
-}
-
-BlockNet::BlockNet(VStream& payload) {
-    payload >> *this;
-}
-
-const Block GENESIS = Block::CreateGenesis();

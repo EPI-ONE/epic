@@ -4,7 +4,7 @@
 #include "tasm/tasm.h"
 
 Chain::Chain() : ismainchain_(true) {
-    states_.push_back(make_shared_ChainState());
+    states_.push_back(GENESIS_RECORD.snapshot);
     recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
 }
 
@@ -101,17 +101,21 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 
 bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
     auto current_distance = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
-    arith_uint256 S       = 0;
-    arith_uint256 t       = 0;
+    arith_uint256 chainworkSum{0};
 
     auto curr = GetRecord(b.cblock->GetPrevHash());
-    for (size_t i = 0; i < params.sortitionThreshold && *curr != GENESIS_RECORD;
-         ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
-        S += curr->cblock->GetChainWork();
-        t = curr->cblock->GetTime();
-    }
+    assert(curr);
 
-    auto allowed_distance = (params.maxTarget / params.sortitionCoefficient) * S / (ms_hashrate * t);
+    uint64_t timeEnd{curr->cblock->GetTime()};
+
+    for (size_t i = 0; i < GetParams().sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
+         ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
+        chainworkSum += curr->cblock->GetChainWork();
+    }
+    
+    uint64_t timeStart{curr->cblock->GetTime()};
+    auto allowed_distance = (GetParams().maxTarget / GetParams().sortitionCoefficient) * chainworkSum /
+                            (ms_hashrate * (timeEnd - timeStart + 1));
     return current_distance <= allowed_distance;
 }
 
@@ -218,9 +222,10 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     // check Transaction distance
-    RecordPtr prevMs = DAG.GetState(record.cblock->GetMilestoneHash());
+    RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
     if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
+        spdlog::info("Transaction distance exceeds its allowed distance!");
         return {};
     }
 
@@ -255,7 +260,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
-    if (!(0 <= fee && fee <= params.maxMoney)) {
+    if (!(0 <= fee && fee <= GetParams().maxMoney)) {
         spdlog::info("Transaction input value goes out of range! [{}]", hashstr);
         return {};
     }
