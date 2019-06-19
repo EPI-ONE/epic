@@ -54,7 +54,7 @@ include_directories(${Secp256k1_INCLUDE_DIR})
 # Protobuf and gRPC
 find_package(Protobuf REQUIRED)
 find_package(GRPC REQUIRED)
-set(RPC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/rpc)
+set(RPC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/rpc)
 set(PROTOS proto/rpc.proto)
 set(PROTO_SRC_DIR ${RPC_DIR}/proto-gen)
 file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
