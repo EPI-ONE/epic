@@ -19,16 +19,15 @@ string to_string(const Block& b, bool showtx = true);
 class Block {
 public:
     Block();
-
     Block(const Block&);
-
     Block(uint32_t versionNum);
+    Block(VStream&);
 
     Block(uint32_t version,
         uint256 milestoneHash,
         uint256 prevBlockHash,
         uint256 tipBlockHash,
-        uint64_t time,
+        uint32_t time,
         uint32_t difficultyTarget,
         uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
@@ -36,61 +35,42 @@ public:
         CalculateOptimalEncodingSize();
     }
 
-    Block(VStream&);
-
     void SetNull();
-
     bool IsNull() const;
-
-    uint256 GetMilestoneHash() const;
-
-    uint256 GetPrevHash() const;
-
-    uint256 GetTipHash() const;
-
-    void SetMilestoneHash(const uint256&);
-
-    void SetPrevHash(const uint256&);
-
-    void SetTipHash(const uint256&);
-
     void UnCache();
 
-    bool Verify() const;
-
-    void AddTransaction(const Transaction&);
-
-    bool HasTransaction() const;
-
-    const std::optional<Transaction>& GetTransaction() const;
-
-    void SetDifficultyTarget(uint32_t target);
-
+    uint256 GetMilestoneHash() const;
+    uint256 GetPrevHash() const;
+    uint256 GetTipHash() const;
     uint32_t GetDifficultyTarget() const;
-
-    void SetTime(uint64_t);
-
-    uint64_t GetTime() const;
-
-    void SetNonce(uint32_t);
-
+    uint32_t GetTime() const;
     uint32_t GetNonce() const;
 
-    void InvalidateMilestone();
+    void SetMilestoneHash(const uint256&);
+    void SetPrevHash(const uint256&);
+    void SetTipHash(const uint256&);
+    void SetDifficultyTarget(uint32_t target);
+    void SetTime(uint32_t);
+    void SetNonce(uint32_t);
+
+    void AddTransaction(const Transaction&);
+    bool HasTransaction() const;
+    const std::optional<Transaction>& GetTransaction() const;
 
     const uint256& GetHash() const;
-
+    void CalculateHash();
     void FinalizeHash();
 
-    void CalculateHash();
-
     const uint256& FinalizeTxHash();
-
     const uint256& GetTxHash() const;
 
+    size_t CalculateOptimalEncodingSize();
     size_t GetOptimalEncodingSize() const;
 
-    size_t CalculateOptimalEncodingSize();
+    /*
+     * Checks whether the block is correct in format.
+     */
+    bool Verify() const;
 
     /*
      * Checks whether the block is a registration block.

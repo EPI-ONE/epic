@@ -154,11 +154,11 @@ uint32_t Block::GetDifficultyTarget() const {
     return diffTarget_;
 }
 
-void Block::SetTime(uint64_t time) {
+void Block::SetTime(uint32_t time) {
     time_ = time;
 }
 
-uint64_t Block::GetTime() const {
+uint32_t Block::GetTime() const {
     return time_;
 }
 
@@ -182,14 +182,8 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     VStream s;
-    s << version_;
-    s << milestoneBlockHash_;
-    s << prevBlockHash_;
-    s << tipBlockHash_;
-    s << time_;
-    s << diffTarget_;
-    s << nonce_;
-    s << FinalizeTxHash();
+    s << version_ << milestoneBlockHash_ << prevBlockHash_ << tipBlockHash_ << time_ << diffTarget_ << nonce_
+      << FinalizeTxHash();
     hash_ = Hash<1>(s);
 }
 
@@ -215,7 +209,7 @@ size_t Block::CalculateOptimalEncodingSize() {
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t listingDataSize    = input.listingContent.data.size();
         size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize_ += (32 + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
+        optimalEncodingSize_ += (Hash::SIZE + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
                                  ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
     }
 

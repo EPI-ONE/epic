@@ -68,9 +68,7 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
 void LoadConfigFile() {
     std::string config_path = config->GetConfigFilePath();
     if (!CheckFileExist(config_path)) {
-        std::cerr << "config.toml not found in current directory, will use the "
-                     "default config"
-                  << std::endl;
+        std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
         return;
     }
 
