@@ -148,10 +148,10 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::ostringstream os;
     os << time(nullptr);
     CAT = std::make_unique<Caterpillar>(prefix + os.str());
+    DAG = std::make_unique<DAGManager>();
 
     // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    DAG = std::make_unique<DAGManager>();
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
