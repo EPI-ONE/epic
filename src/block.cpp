@@ -7,7 +7,7 @@ Block::Block() {
 Block::Block(const Block& b)
     : hash_(b.hash_), optimalEncodingSize_(b.optimalEncodingSize_), version_(b.version_),
       milestoneBlockHash_(b.milestoneBlockHash_), prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_),
-      diffTarget_(b.diffTarget_), time_(b.time_), nonce_(b.nonce_), transaction_(b.transaction_) {
+      time_(b.time_), diffTarget_(b.diffTarget_), nonce_(b.nonce_), transaction_(b.transaction_) {
     SetParents();
 }
 
@@ -319,49 +319,9 @@ std::string std::to_string(const Block& block, bool showtx) {
     return s;
 }
 
-Block Block::CreateGenesis() {
-    Block genesisBlock(GENESIS_BLOCK_VERSION);
-    Transaction tx;
-
-    // Construct a script containing the difficulty bits
-    // and the following message:
-    std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
-                       "4656e20696e20746865206576656e696e6720616e64207765206172"
-                       "65207374696c6c20776f726b696e6721");
-
-    // Convert the string to bytes
-    auto vs = VStream(ParseHex(hexStr));
-
-    // Add input and output
-    tx.AddInput(TxInput(Tasm::Listing(vs)));
-
-    std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
-
-    genesisBlock.AddTransaction(tx);
-    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
-    genesisBlock.SetTime(1548078136L);
-    genesisBlock.SetNonce(2081807681);
-    genesisBlock.FinalizeHash();
-    genesisBlock.CalculateOptimalEncodingSize();
-
-    // The following commented lines were used for mining a genesis block
-    // int numThreads = 44;
-    // ThreadPool solverPool(numThreads);
-    // solverPool.Start();
-    // Miner m;
-    // m.Solve(genesisBlock, solverPool);
-    // solverPool.Stop();
-    // std::cout << std::to_string(genesisBlock) << std::endl;
-
-    return genesisBlock;
-}
-
 BlockNet::BlockNet(const Block& b) : Block(b) {}
 
-BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {
-    SetParents();
-}
+BlockNet::BlockNet(Block&& b) : Block(std::move(b)) {}
 
 BlockNet::BlockNet(VStream& payload) {
     payload >> *this;

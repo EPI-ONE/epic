@@ -159,12 +159,8 @@ public:
 
     friend std::string std::to_string(const Block& b, bool showtx);
 
-    static Block CreateGenesis();
-
 protected:
     uint256 hash_;
-    size_t optimalEncodingSize_ = 0;
-
     uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
@@ -173,6 +169,8 @@ protected:
     uint32_t diffTarget_;
     uint32_t nonce_;
     std::optional<Transaction> transaction_;
+
+    size_t optimalEncodingSize_ = 0;
 };
 
 class BlockNet : public Block {
