@@ -56,7 +56,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
 
-    Block b = Block(1, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), time(nullptr), 0x1f00ffffL, 0);
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), time(nullptr), 0x1f00ffffL, 0);
 
     if (numTxInput || numTxOutput) {
         Transaction tx;

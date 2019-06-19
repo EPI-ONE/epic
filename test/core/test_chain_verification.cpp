@@ -30,13 +30,13 @@ public:
     }
 
     void AddToLedger(Chain* c, ChainLedger&& ledger) {
-        c->ledger_  = ledger;
+        c->ledger_ = ledger;
     }
 
     Chain make_chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain = false) {
         Chain chain{};
         chain.ismainchain_ = ismain;
-        chain.states_ = states;
+        chain.states_      = states;
         for (const auto& pRec : recs) {
             chain.recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
         }
@@ -142,7 +142,7 @@ TEST_F(TestChainVerification, VerifyTx) {
     auto txoc{ValidateTx(&c, record)};
     ASSERT_TRUE(bool(txoc));
 
-    auto& spent =txoc->GetTxOutsSpent();
+    auto& spent   = txoc->GetTxOutsSpent();
     auto spentKey = XOR(b1hash, 0);
     ASSERT_EQ(spent.size(), 1);
     ASSERT_EQ(spent.count(spentKey), 1);

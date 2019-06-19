@@ -53,6 +53,7 @@ public:
     };
 
     // consensus parameter setting
+    uint32_t version;
     uint32_t targetTimespan;
     uint32_t timeInterval;
     uint32_t interval;

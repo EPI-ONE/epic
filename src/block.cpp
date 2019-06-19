@@ -68,8 +68,8 @@ void Block::UnCache() {
 
 bool Block::Verify() const {
     // checks version
-    if (version_ != GENESIS_BLOCK_VERSION) {
-        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GENESIS_BLOCK_VERSION,
+    if (version_ != GetParams().version) {
+        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
             std::to_string(hash_));
         return false;
     }
@@ -238,7 +238,7 @@ bool Block::IsFirstRegistration() const {
 
 arith_uint256 Block::GetChainWork() const {
     arith_uint256 target = GetTargetAsInteger();
-    return GetParams().maxTarget / (target + 1);
+    return GetParams().maxTarget / target;
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
