@@ -16,6 +16,9 @@ public:
     // default bind port
     static const uint16_t defaultPort = 7877;
 
+    // default rpc port
+    static const uint16_t defaultRPCPort = 3777;
+
     const std::string& GetConfigFilePath() const {
         return configFilePath_;
     }
@@ -129,6 +132,22 @@ public:
         return seeds_.size();
     }
 
+    void SetDisableRPC(bool flag) {
+        disableRPC_ = flag;
+    }
+
+    bool GetDisableRPC() const {
+        return disableRPC_;
+    }
+
+    void SetRPCPort(uint16_t port) {
+        rpcPort_ = port;
+    }
+
+    uint16_t GetRPCPort() const {
+        return rpcPort_;
+    }
+
     void ShowConfig() {
         std::stringstream ss;
         ss << "current config: " << std::endl;
@@ -140,6 +159,8 @@ public:
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
         ss << "dbpath = " << GetDBPath() << std::endl;
+        ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
+        ss << "rpc port = " << rpcPort_ << std::endl;
         ss << "seeds = [" << std::endl;
 
         for (const NetAddress& addr : seeds_) {
@@ -157,6 +178,7 @@ public:
     const std::string& GetConnect() const {
         return connect_;
     }
+
 private:
     // config file
     std::string configFilePath_;
@@ -181,6 +203,10 @@ private:
     // db
     std::string dbPath_ = "db/";
     std::string connect_;
+
+    // rpc
+    bool disableRPC_;
+    uint16_t rpcPort_ = defaultRPCPort;
 };
 
 extern std::unique_ptr<Config> config;

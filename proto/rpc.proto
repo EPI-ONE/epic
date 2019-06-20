@@ -8,7 +8,7 @@ message Block {
   Hash milestoneBlockHash = 3;
   Hash prevBlockHash = 4;
   Hash tipBlockHash = 5;
-  Hash diffTarget = 6;
+  uint32 diffTarget = 6;
   uint32 nonce = 7;
   uint64 time = 8;
   Transaction transactions = 9;

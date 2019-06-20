@@ -96,7 +96,7 @@ include_directories(src
         )
 
 set(SRC_CODE
-        ${RPC_DIR}
+        ${RPC_SRCS}
         ${PROTO_SRCS}
         ${GRPC_SRCS}
         ${NET_SRCS}
@@ -112,6 +112,7 @@ set(SRC_MAIN src/main.cpp)
 # test codes
 set(TEST_METHODS_SRCS test/test-methods)
 
+aux_source_directory(test/rpc TEST_RPC_SRCS)
 aux_source_directory(test/net TEST_NET_SRCS)
 aux_source_directory(test/utils TEST_UTILS_SRCS)
 aux_source_directory(test/tasm TEST_TASM_SRCS)
@@ -125,6 +126,7 @@ include_directories(test
     )
 
 set(TEST_CODE
+        ${TEST_RPC_SRCS}
         ${TEST_NET_SRCS}
         ${TEST_UTILS_SRCS}
         ${TEST_TASM_SRCS}

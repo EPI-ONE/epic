@@ -24,3 +24,6 @@ port = 7877
 
 [db]
 path = "db/"
+
+[rpc]
+port = 3777

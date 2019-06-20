@@ -1,5 +1,6 @@
 #include "init.h"
 #include "dag_manager.h"
+#include "rpc_server.h"
 #include <atomic>
 #include <net/peer_manager.h>
 #include <signal.h>
@@ -11,6 +12,7 @@ NodeRecord GENESIS_RECORD;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<PeerManager> peer_manager;
+std::unique_ptr<RPCServer> rpc_server;
 static std::atomic_bool b_shutdown = false;
 typedef void (*signal_handler_t)(int);
 
@@ -50,9 +52,9 @@ void Init(int argc, char* argv[]) {
 
     try {
         SetupCommandline(options);
-        std::cout << options.help() << std::endl;
         ParseCommandLine(argc, argv, options);
     } catch (const cxxopts::OptionException& e) {
+        std::cout << options.help() << std::endl;
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(COMMANDLINE_INIT_FAILURE);
     }
@@ -78,20 +80,32 @@ void Init(int argc, char* argv[]) {
     CAT          = std::make_unique<Caterpillar>(config->GetDBPath());
     DAG          = std::make_unique<DAGManager>();
     peer_manager = std::make_unique<PeerManager>();
+    if (!(config->GetDisableRPC())) {
+        std::string rpc_addr_str = "0.0.0.0:" + std::to_string(config->GetRPCPort());
+        auto rpcAddress          = NetAddress::GetByIP(rpc_addr_str);
+        rpc_server               = std::make_unique<RPCServer>(*rpcAddress);
+    }
 }
 
 void SetupCommandline(cxxopts::Options& options) {
     // clang-format off
     options.add_options()
+    ("h,help", "print this message", cxxopts::value<bool>())
     ("c,configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
     ("b,bindip", "bind ip address",cxxopts::value<std::string>())
     ("p,bindport", "bind port", cxxopts::value<uint16_t>())
-    ("connect", "connect", cxxopts::value<std::string>());
+    ("connect", "connect", cxxopts::value<std::string>())
+    ("disable-rpc", "disable rpc server", cxxopts::value<bool>())
+    ;
     // clang-format on
 }
 
 void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     auto result = options.parse(argc, argv);
+    if (result["help"].as<bool>()) {
+        std::cout << options.help() << std::endl;
+        exit(0);
+    }
     // since these two params have been set default values, there is no need to
     // call result.count() to detect if they have values
     config->SetConfigFilePath(result["configpath"].as<std::string>());
@@ -105,6 +119,7 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     if (result.count("connect") > 0) {
         config->SetConnect(result["connect"].as<std::string>());
     }
+    config->SetDisableRPC(result["disable-rpc"].as<bool>());
 }
 
 void LoadConfigFile() {
@@ -197,11 +212,21 @@ void LoadConfigFile() {
         }
     }
 
+    // db
     auto db_config = configContent->get_table("db");
     if (db_config) {
         auto db_path = db_config->get_as<std::string>("path");
         if (db_path) {
             config->SetDBPath(*db_path);
+        }
+    }
+
+    // rpc
+    auto rpc_config = configContent->get_table("rpc");
+    if (rpc_config) {
+        auto rpc_port = rpc_config->get_as<uint16_t>("port");
+        if (rpc_port) {
+            config->SetRPCPort(*rpc_port);
         }
     }
 }
@@ -240,12 +265,18 @@ bool Start() {
         return false;
     }
     peer_manager->Start();
+    if (!(config->GetDisableRPC())) {
+        rpc_server->Start();
+    }
     return true;
 }
 
 void ShutDown() {
     spdlog::info("shutdown start");
     peer_manager->Stop();
+    if (!(config->GetDisableRPC())) {
+        rpc_server->Shutdown();
+    }
     CAT.reset();
     spdlog::info("shutdown finish");
     spdlog::shutdown();
