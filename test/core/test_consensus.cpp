@@ -106,7 +106,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     blocks.reserve(n);
 
     // Make the genesis first
-    auto genesisPtr = std::make_shared<Block>(GENESIS);
+    const auto genesisPtr = std::make_shared<const Block>(GENESIS);
     blocks.emplace_back(genesisPtr);
 
     // Construct a fully connected and syntatical valid random graph
@@ -156,6 +156,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     // Initialize DB with genesis block
     CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    CAT->EnableOBC();
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
@@ -166,14 +167,12 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     /*for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
-        EXPECT_TRUE(CAT->IsSolid(bhash));
+        EXPECT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
         EXPECT_TRUE(blkCache);
     }*/
 
     EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
-
-    CAT.reset();
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());

@@ -1,6 +1,7 @@
 #include "caterpillar.h"
 
-Caterpillar::Caterpillar(const std::string& dbPath) : verifyThread_(1), obcThread_(1), dbStore_(dbPath) {
+Caterpillar::Caterpillar(const std::string& dbPath)
+    : verifyThread_(1), obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     verifyThread_.Start();
     obcThread_.Start();
 }
@@ -42,13 +43,12 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
         const uint256& prevHash = blk->GetPrevHash();
         const uint256& tipHash  = blk->GetTipHash();
 
-        static auto mask = [](bool m, bool p, bool t) { return ((!m << 0) | (!p << 2) | (!t << 1)); };
+        static auto mask = [](bool m, bool p, bool t) -> uint8_t { return ((!m << 0) | (!p << 2) | (!t << 1)); };
 
         // First, check if we already received its preceding blocks
         if (IsWeaklySolid(blk)) {
             if (AnyLinkIsOrphan(blk)) {
-                obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk,
-                    mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
+                AddBlockToOBC(blk, mask(DAGExists(msHash), DAGExists(prevHash), DAGExists(tipHash)));
                 return false;
             }
         } else {
@@ -59,12 +59,11 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
             if (ms && !CheckPuntuality(blk, ms)) {
                 return false;
             }
-            // Abort and send GetBlock requests.
-            obcThread_.Execute(std::bind(&OrphanBlocksContainer::AddBlock, &obc_, blk,
-                mask(IsSolid(msHash), IsSolid(prevHash), IsSolid(tipHash))));
+            AddBlockToOBC(blk, mask(DAGExists(msHash), DAGExists(prevHash), DAGExists(tipHash)));
 
+            // Abort and send GetInv requests.
             if (peer) {
-                DAG->RequestInv(Hash::GetZeroHash(), 5, peer);
+                DAG->RequestInv(uint256(), 5, peer);
             }
 
             return false;
@@ -81,7 +80,7 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
             spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                blk->GetDifficultyTarget(), expectedTarget);
+                         blk->GetDifficultyTarget(), expectedTarget);
             return false;
         }
 
@@ -99,10 +98,10 @@ bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pe
         ReleaseBlocks(blk->GetHash());
 
         return true;
-
     }).get();
     // clang-format on
 }
+
 
 bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const {
     if (ms == nullptr) {
@@ -125,12 +124,13 @@ bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms)
     return true;
 }
 
-StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
-    return dbStore_.GetRecord(blkHash);
-}
-
-BlockCache Caterpillar::GetBlockCache(const uint256& blkHash) const {
-    return dbStore_.GetBlockCache(blkHash);
+void Caterpillar::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
+    obcThread_.Execute([blk, mask, this]() {
+        if (!obcEnabled_.load()) {
+            return;
+        }
+        obc_.AddBlock(blk, mask);
+    });
 }
 
 void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
@@ -144,16 +144,66 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
     });
 }
 
-bool Caterpillar::Exists(const uint256& blkHash) const {
-    return dbStore_.Exists(blkHash) || obc_.IsOrphan(blkHash);
+void Caterpillar::EnableOBC() {
+    static bool flag = false;
+    if (obcEnabled_.compare_exchange_strong(flag, true)) {
+        spdlog::info("OBC enabled.");
+    }
 }
 
-bool Caterpillar::IsSolid(const uint256& blkHash) const {
+void Caterpillar::DisableOBC() {
+    static bool flag = true;
+    if (obcEnabled_.compare_exchange_strong(flag, false)) {
+        spdlog::info("OBC disabled.");
+    }
+}
+
+StoredRecord Caterpillar::GetMilestoneAt(size_t height) const {
+    return dbStore_.GetMsRecordAt(height);
+}
+
+StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
+    return dbStore_.GetRecord(blkHash);
+}
+
+ConstBlockPtr Caterpillar::GetBlockCache(const uint256& blkHash) const {
+    try {
+        return blockCache_.at(blkHash);
+    } catch (std::exception&) {
+        return nullptr;
+    }
+}
+
+std::vector<StoredRecord> Caterpillar::GetLevelSetAt(size_t height) const {
+    return dbStore_.GetLevelSetAt(height);
+}
+
+size_t Caterpillar::GetHeight(const uint256& blkHash) const {
+    return dbStore_.GetHeight(blkHash);
+}
+
+bool Caterpillar::Exists(const uint256& blkHash) const {
+    return blockCache_.contains(blkHash) || dbStore_.Exists(blkHash) || obc_.IsOrphan(blkHash);
+}
+
+bool Caterpillar::DAGExists(const uint256& blkHash) const {
+    return blockCache_.contains(blkHash) || dbStore_.Exists(blkHash);
+}
+
+bool Caterpillar::DBExists(const uint256& blkHash) const {
     return dbStore_.Exists(blkHash);
+}
+
+bool Caterpillar::IsMilestone(const uint256& blkHash) const {
+    return dbStore_.IsMilestone(blkHash);
 }
 
 bool Caterpillar::IsWeaklySolid(const ConstBlockPtr& blk) const {
     return Exists(blk->GetMilestoneHash()) && Exists(blk->GetPrevHash()) && Exists(blk->GetTipHash());
+}
+
+bool Caterpillar::IsSolid(const ConstBlockPtr& blk) const {
+    return DAGExists(blk->GetMilestoneHash()) && DAGExists(blk->GetPrevHash()) && DAGExists(blk->GetTipHash());
 }
 
 bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
@@ -161,18 +211,14 @@ bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
            obc_.IsOrphan(blk->GetTipHash());
 }
 
-void Caterpillar::Cache(const ConstBlockPtr& blk) const {
-    dbStore_.WriteBlockCache(blk);
+void Caterpillar::Cache(const ConstBlockPtr& blk) {
+    blockCache_.emplace(blk->GetHash(), blk);
 }
 
 void Caterpillar::Stop() {
-    while (obcThread_.GetTaskSize() > 0) {
+    while (verifyThread_.GetTaskSize() > 0 || obcThread_.GetTaskSize() > 0 ) {
         std::this_thread::yield();
     }
     obcThread_.Stop();
-
-    while (verifyThread_.GetTaskSize() > 0) {
-        std::this_thread::yield();
-    }
     verifyThread_.Stop();
 }
