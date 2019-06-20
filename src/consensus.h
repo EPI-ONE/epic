@@ -18,7 +18,7 @@ class ChainState {
 public:
     uint64_t height;
     arith_uint256 chainwork;
-    uint64_t lastUpdateTime;
+    uint32_t lastUpdateTime;
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
     uint64_t hashRate;
@@ -160,7 +160,7 @@ public:
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        // READWRITE(cblock);
+        // TODO: remove cblokc
         if (ser_action.ForRead()) {
             cblock = std::make_shared<BlockNet>(s);
         } else {
@@ -169,12 +169,9 @@ public:
 
         READWRITE(cumulativeReward);
         READWRITE(VARINT(minerChainHeight));
-
-        if (cblock->HasTransaction()) {
-            READWRITE(static_cast<uint8_t>(validity));
-        }
-
+        READWRITE(static_cast<uint8_t>(validity));
         READWRITE(static_cast<uint8_t>(isRedeemed));
+
         if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
             READWRITE(prevRedemHash);
         }
