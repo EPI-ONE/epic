@@ -100,19 +100,19 @@ public:
     }
 
     friend inline Coin operator+(const Coin& a, uint64_t b) {
-        return Coin(a.value_ + b); 
+        return Coin(a.value_ + b);
     }
 
     friend inline Coin operator-(const Coin& a, uint64_t b) {
-        return Coin(a.value_ - b); 
+        return Coin(a.value_ - b);
     }
 
     friend inline Coin operator+(const Coin& a, const Coin& b) {
-        return Coin(a.value_ + b.value_); 
+        return Coin(a.value_ + b.value_);
     }
 
     friend inline Coin operator-(const Coin& a, const Coin& b) {
-        return Coin(a.value_ - b.value_); 
+        return Coin(a.value_ - b.value_);
     }
 
 private:

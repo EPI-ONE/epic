@@ -77,7 +77,7 @@ public:
     }
 
     std::string GetFileName() const {
-        return filename_; 
+        return filename_;
     }
 
     uint32_t GetOffset() {
@@ -115,7 +115,7 @@ public:
     }
 
     std::string GetFileName() const {
-        return filename_; 
+        return filename_;
     }
 
     uint32_t GetOffset() {
