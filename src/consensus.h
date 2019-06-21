@@ -35,7 +35,7 @@ public:
     /* simple constructor (now for test only) */
     ChainState(uint64_t height,
         arith_uint256 chainwork,
-        uint64_t lastUpdateTime,
+        uint32_t lastUpdateTime,
         arith_uint256 milestoneTarget,
         arith_uint256 blockTarget,
         uint64_t hashRate,
@@ -162,7 +162,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         // TODO: remove cblokc
         if (ser_action.ForRead()) {
-            cblock = std::make_shared<BlockNet>(s);
+            cblock = std::make_shared<const Block>(s);
         } else {
             ::Serialize(s, *cblock);
         }
