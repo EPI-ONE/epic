@@ -110,6 +110,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 
     auto search = cumulatorMap_.find(b.cblock->GetPrevHash());
     if (search == cumulatorMap_.end()) {
+        // Construct a cumulator for the block if it is not cached
         Cumulator cum;
 
         ConstBlockPtr cursor = b.cblock;
@@ -128,19 +129,22 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
         cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
     }
 
+    // Distance of the transaction hash and previous block hash
     auto dist = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
 
     auto nodeHandler = cumulatorMap_.extract(b.cblock->GetPrevHash());
     Cumulator& cum   = nodeHandler.mapped();
 
-    auto allowed_distance =
+    // Allowed distance
+    auto allowed =
         (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / ms_hashrate);
 
+    // Update key for the cumulator
     cum.Add(b.cblock, true);
     nodeHandler.key() = b.cblock->GetHash();
     cumulatorMap_.insert(std::move(nodeHandler));
 
-    return dist <= allowed_distance;
+    return dist <= allowed;
 }
 
 void Chain::Verify(const ConstBlockPtr& pblock) {
@@ -343,12 +347,10 @@ void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
 ////////////////////
 
 void Cumulator::Add(const ConstBlockPtr& block, bool ascending) {
-    static const size_t capacity = GetParams().sortitionThreshold;
-
     const auto& chainwork   = block->GetChainWork();
     uint32_t chainwork_comp = chainwork.GetCompact();
 
-    if (timestamps.size() < capacity) {
+    if (timestamps.size() < GetParams().sortitionThreshold) {
         sum += chainwork;
     } else {
         arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);

@@ -28,7 +28,8 @@ public:
     friend std::string std::to_string(const Cumulator&);
 
 private:
-    // Elements in chainworks: {chainwork, counter of consecutive chainworks that are equal}
+    // Elements in chainworks:
+    //      {chainwork, counter of consecutive chainworks that are equal}
     // For example, the queue of chainworks
     //      { 1, 1, 3, 2, 2, 2, 2, 2, 2, 2 }
     // are stored as:
