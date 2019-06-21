@@ -248,7 +248,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     blk.FinalizeHash();
 
     // Construct NodeRecord
-    NodeRecord block(Block(std::move(blk)));
+    NodeRecord block(std::move(blk));
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 
@@ -266,11 +266,11 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
 
     NodeRecord block1;
     block1.Deserialize(sinput);
+    block1.cblock = block.cblock;
 
     VStream soutput;
     block1.Serialize(soutput);
 
     ASSERT_EQ(s, soutput.str());
-    ASSERT_EQ(*(block.cblock), *(block1.cblock));
     ASSERT_EQ(block, block1);
 }

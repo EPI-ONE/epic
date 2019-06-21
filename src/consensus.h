@@ -106,7 +106,7 @@ private:
     // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
-    void UpdateDifficulty(uint64_t blockUpdateTime);
+    void UpdateDifficulty(uint32_t blockUpdateTime);
 };
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
@@ -160,13 +160,6 @@ public:
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        // TODO: remove cblokc
-        if (ser_action.ForRead()) {
-            cblock = std::make_shared<const Block>(s);
-        } else {
-            ::Serialize(s, *cblock);
-        }
-
         READWRITE(cumulativeReward);
         READWRITE(VARINT(minerChainHeight));
         READWRITE(static_cast<uint8_t>(validity));

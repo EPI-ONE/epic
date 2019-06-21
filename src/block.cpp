@@ -274,16 +274,12 @@ bool Block::CheckPOW() const {
 
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
-
+    
     CalculateHash();
-    for (;;) {
-        if (UintToArith256(hash_) <= target) {
-            return;
-        }
-
-        if (nonce_ == UINT_LEAST32_MAX)
+    while (UintToArith256(hash_) > target) {
+        if (nonce_ == UINT_LEAST32_MAX) {
             time_ = time(nullptr);
-
+        }
         nonce_++;
         CalculateHash();
     }

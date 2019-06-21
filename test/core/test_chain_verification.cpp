@@ -181,77 +181,24 @@ TEST_F(TestChainVerification, ChainForking) {
 }
 
 TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    Block registration = fac.CreateBlock(1, 1);
-    registration.SetMilestoneHash(GENESIS.GetHash());
-    registration.SetPrevHash(GENESIS.GetHash());
-    registration.SetTipHash(GENESIS.GetHash());
-    registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-    registration.SetTime(GENESIS.GetTime());
-    ASSERT_NE(registration.GetChainWork(), 0);
+    const auto& ghash = GENESIS.GetHash();
+    const auto target = GENESIS_RECORD.snapshot->blockTarget.GetCompact();
 
-    auto registrationPtr      = std::make_shared<Block>(registration);
-    NodeRecord registrationNR = NodeRecord(registrationPtr);
-    RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
+    RecordPtr registrationR =
+        std::make_shared<NodeRecord>(Block{GetParams().version, ghash, ghash, ghash, GENESIS.GetTime(), target, 0});
 
-    Block goodBlock = fac.CreateBlock(170, 170);
-    goodBlock.SetMilestoneHash(GENESIS.GetHash());
-    goodBlock.SetPrevHash(registrationPtr->GetHash());
-    goodBlock.SetTipHash(registrationPtr->GetHash());
-    goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
+    RecordPtr goodBlockR = std::make_shared<NodeRecord>(
+        Block{GetParams().version, ghash, registrationR->cblock->GetHash(), ghash, GENESIS.GetTime() + 1, target, 0});
 
-    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
-    NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
+    RecordPtr badBlockR = std::make_shared<NodeRecord>(
+        Block{GetParams().version, ghash, goodBlockR->cblock->GetHash(), ghash, GENESIS.GetTime() + 2, target, 0});
 
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    CAT->StoreRecord(registrationR);
-    CAT->StoreRecord(goodBlockR);
+    Chain c{};
+    AddToHistory(&c, registrationR);
+    AddToHistory(&c, goodBlockR);
 
     arith_uint256 ms_hashrate = 1;
-    Chain c{};
     EXPECT_TRUE(IsValidDistance(&c, *goodBlockR, ms_hashrate));
-}
-
-TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
-    auto genesisPtr = std::make_shared<Block>(GENESIS);
-
-    Block registration = fac.CreateBlock(1, 1);
-    registration.SetMilestoneHash(GENESIS.GetHash());
-    registration.SetPrevHash(genesisPtr->GetHash());
-    registration.SetTipHash(genesisPtr->GetHash());
-    registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-    registration.SetTime(666);
-
-    auto registrationPtr      = std::make_shared<Block>(registration);
-    NodeRecord registrationNR = NodeRecord(registrationPtr);
-    RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
-
-    Block goodBlock = fac.CreateBlock(170, 170);
-    goodBlock.SetMilestoneHash(GENESIS.GetHash());
-    goodBlock.SetPrevHash(registrationPtr->GetHash());
-    goodBlock.SetTipHash(registrationPtr->GetHash());
-    goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-
-    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
-    NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
-
-    Block badBlock = fac.CreateBlock(2, 2);
-    badBlock.SetMilestoneHash(GENESIS.GetHash());
-    badBlock.SetPrevHash(goodBlockPtr->GetHash());
-    badBlock.SetTipHash(goodBlockPtr->GetHash());
-    badBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-
-    auto badBlockPtr      = std::make_shared<Block>(badBlock);
-    NodeRecord badBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr badBlockR   = std::make_shared<NodeRecord>(badBlockNR);
-
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    CAT->StoreRecord(registrationR);
-    CAT->StoreRecord(goodBlockR);
-    CAT->StoreRecord(badBlockR);
-
-    arith_uint256 ms_hashrate = 9999;
-    Chain c{};
+    ms_hashrate = 9999;
     EXPECT_FALSE(IsValidDistance(&c, *badBlockR, ms_hashrate));
 }

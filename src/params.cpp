@@ -95,8 +95,8 @@ TestNetParams::TestNetParams() {
 
 UnitTestParams::UnitTestParams() {
     version              = 100;
-    targetTimespan       = 100;
-    timeInterval         = TIME_INTERVAL;
+    targetTimespan       = 10;
+    timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;
     punctualityThred     = PUNTUALITY_THRESHOLD;
@@ -121,9 +121,9 @@ UnitTestParams::UnitTestParams() {
 
     CreateGenesis(genesisHexStr);
 
-    genesisRecord_->snapshot->hashRate        = 1;
-    genesisRecord_->snapshot->blockTarget     = maxTarget;
-    genesisRecord_->snapshot->milestoneTarget = arith_uint256(0x2000ffffL);
+    genesisRecord_->snapshot->hashRate    = 1;
+    genesisRecord_->snapshot->blockTarget = maxTarget;
+    genesisRecord_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
 }
 
 static std::unique_ptr<const Params> pparams;

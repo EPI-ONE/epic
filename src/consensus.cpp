@@ -7,7 +7,7 @@ ChainState::ChainState(std::shared_ptr<ChainState> previous,
     const ConstBlockPtr& msBlock,
     std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
-      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(lvsHash) {
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(std::move(lvsHash)) {
     chainwork = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
     UpdateDifficulty(msBlock->GetTime());
 }
@@ -16,8 +16,8 @@ ChainState::ChainState(VStream& payload) {
     payload >> *this;
 }
 
-void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
-    uint64_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = GetParams().targetTimespan;
+void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
+    uint32_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = GetParams().targetTimespan;
     if (timespan < targetTimespan / 4) {
         timespan = targetTimespan / 4;
     }
@@ -27,8 +27,7 @@ void ChainState::UpdateDifficulty(const uint64_t blockUpdateTime) {
     }
 
     if (height == 1) {
-        lastUpdateTime = blockUpdateTime;
-        timespan       = GetParams().timeInterval;
+        timespan = GetParams().timeInterval;
     }
 
     if (!IsDiffTransition()) {
@@ -112,14 +111,11 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize_ > 0) {
         return optimalStorageSize_;
     }
-    optimalStorageSize_ = cblock->GetOptimalEncodingSize();
+    //optimalStorageSize_ = cblock->GetOptimalEncodingSize();
     optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
     optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
 
-    if (cblock->HasTransaction()) {
-        optimalStorageSize_ += 1; // Validity
-    }
-
+    optimalStorageSize_ += 1; // Validity
     optimalStorageSize_ += 1; // RedemptionStatus
     if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
         optimalStorageSize_ += Hash::SIZE; // prevRedemHash size
@@ -129,7 +125,7 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (snapshot != nullptr) { // ChainState
         optimalStorageSize_ += GetSizeOfVarInt(snapshot->height);
         optimalStorageSize_ += 4;
-        optimalStorageSize_ += 8;
+        optimalStorageSize_ += 4;
         optimalStorageSize_ += 4;
         optimalStorageSize_ += 4;
         optimalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);

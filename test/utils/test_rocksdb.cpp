@@ -110,7 +110,7 @@ TEST_F(TestRocksDB, batch_insertion) {
     }
 }
 
-TEST_F(TestRocksDB, write_single_block) {
+/*TEST_F(TestRocksDB, write_single_block) {
     RecordPtr rec = fac->CreateRecordPtr(1, 1, true);
     ASSERT_TRUE(db->WriteRecord(rec));
 
@@ -136,4 +136,4 @@ TEST_F(TestRocksDB, write_blocks_one_by_one) {
         auto pblock = db->GetRecord(keys[i]);
         ASSERT_EQ(*records[i], *pblock);
     }
-}
+}*/
