@@ -4,11 +4,11 @@
 
 #include "caterpillar.h"
 #include "key.h"
-#include "test_factory.h"
+#include "test_env.h"
 
 class TestConsensus : public testing::Test {
 public:
-    TestFactory fac;
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 };
 
 TEST_F(TestConsensus, SyntaxChecking) {

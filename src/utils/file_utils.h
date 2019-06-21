@@ -69,7 +69,6 @@ public:
         ifbuf_.close();
     }
 
-    void read();
     template<typename T>
     FileReader& operator>>(T&& obj) {
         ::Deserialize(ifbuf_, obj);
@@ -96,8 +95,13 @@ class FileWriter {
 public:
     FileWriter(file::FileType type, const FilePos& pos)
         : filename_(file::CreatePath(type, pos.nEpoch, pos.nName)),
-          ofbuf_(filename_, std::ostream::out | std::ofstream::app | std::ofstream::binary) {
+          ofbuf_(filename_, std::ostream::out | /*std::ofstream::app |*/ std::ofstream::binary) {
+
+        std::cout << filename_ << std::endl;
         ofbuf_.seekp(pos.nOffset);
+        if (!ofbuf_.is_open()) {
+            throw std::string("file is not opened");
+        }
     }
 
     FileWriter()                  = delete;
