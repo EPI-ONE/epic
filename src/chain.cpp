@@ -112,7 +112,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
          ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
         chainworkSum += curr->cblock->GetChainWork();
     }
-    
+
     uint64_t timeStart{curr->cblock->GetTime()};
     auto allowed_distance = (GetParams().maxTarget / GetParams().sortitionCoefficient) * chainworkSum /
                             (ms_hashrate * (timeEnd - timeStart + 1));
