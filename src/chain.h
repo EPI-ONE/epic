@@ -13,8 +13,70 @@
 #include "uint256.h"
 #include "utxo.h"
 
-class Chain;
-typedef std::unique_ptr<Chain> ChainPtr;
+class Cumulator {
+public:
+    void Add(const ConstBlockPtr& block, bool ascending) {
+        static const size_t capacity = GetParams().sortitionThreshold;
+
+        const auto& chainwork   = block->GetChainWork();
+        uint32_t chainwork_comp = chainwork.GetCompact();
+
+        if (timestamps.size() < capacity) {
+            sum += chainwork;
+        } else {
+            arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
+            sum += (chainwork - subtrahend);
+
+            // Pop the first element if the counter is already 1,
+            // or decrease the counter of the first element by 1
+            if (chainworks.front().second == 1) {
+                chainworks.pop_front();
+            } else {
+                chainworks.front().second--;
+            }
+
+            timestamps.pop_front();
+        }
+
+        if (ascending) {
+            if (chainworks.back().first == chainwork_comp) {
+                chainworks.back().second++;
+            } else {
+                chainworks.emplace_back(chainwork_comp, 1);
+            }
+            timestamps.emplace_back(block->GetTime());
+        } else {
+            if (chainworks.front().first == chainwork_comp) {
+                chainworks.front().second++;
+            } else {
+                chainworks.emplace_front(chainwork_comp, 1);
+            }
+            timestamps.emplace_front(block->GetTime());
+        }
+    }
+
+    arith_uint256 Sum() {
+        return sum;
+    }
+
+    uint32_t TimeSpan() {
+        return timestamps.back() - timestamps.front();
+    }
+
+    bool Full() {
+        return timestamps.size() == GetParams().sortitionThreshold;
+    }
+
+private:
+    // Elements in chainworks: {chainwork, counter of consecutive chainworks that are equal}
+    // For example, the queue of chainworks
+    //      { 1, 1, 3, 2, 2, 2, 2, 2, 2, 2 }
+    // are stored as:
+    //      { {1, 2}, {3, 1}, {2, 7} }
+    std::deque<std::pair<uint32_t, uint16_t>> chainworks;
+    std::deque<uint32_t> timestamps;
+    arith_uint256 sum = 0;
+};
 
 class Chain {
 public:
@@ -115,65 +177,7 @@ private:
      * Caches the sum of chainwork and timestamps in the sortition window
      * to speed up calculation of transaction distance
      */
-    struct Cumulator {
-        // Elements in chainworks: {chainwork, number of consecutive chainworks that are equal}
-        // For example, the queue of chainworks
-        //      { 1, 1, 3, 2, 2, 2, 2, 2, 2, 2 }
-        // are stored as:
-        //      { {1, 2}, {3, 1}, {2, 7} }
-        std::deque<std::pair<uint32_t, uint16_t>> chainworks;
-        std::deque<uint32_t> timestamps;
-        arith_uint256 sum = 0;
-
-        void add(ConstBlockPtr block, bool ascending) {
-            static const size_t capacity = GetParams().sortitionThreshold;
-
-            const auto& chainwork   = block->GetChainWork();
-            uint32_t chainwork_comp = chainwork.GetCompact();
-
-            if (timestamps.size() < capacity) {
-                sum += chainwork;
-            } else {
-                arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
-                if (chainworks.front().second == 1) {
-                    chainworks.pop_front();
-                } else {
-                    chainworks.front().second--;
-                }
-                timestamps.pop_front();
-                sum += (chainwork - subtrahend);
-            }
-            if (ascending) {
-                if (chainworks.back().first == chainwork_comp) {
-                    chainworks.back().second++;
-                } else {
-                    chainworks.emplace_back(chainwork_comp, 1);
-                }
-                timestamps.emplace_back(block->GetTime());
-            } else {
-                if (chainworks.front().first == chainwork_comp) {
-                    chainworks.front().second++;
-                } else {
-                    chainworks.emplace_front(chainwork_comp, 1);
-                }
-                timestamps.emplace_front(block->GetTime());
-            }
-        }
-
-        arith_uint256 Sum() {
-            return sum;
-        }
-
-        uint32_t TimeSpan() {
-            return timestamps.back() - timestamps.front();
-        }
-
-        bool Full() {
-            return timestamps.size() == GetParams().sortitionThreshold;
-        }
-    };
-
-    std::unordered_map<uint256, Cumulator> txSortitionWindow_;
+    std::unordered_map<uint256, Cumulator> cumulatorMap_;
 
     bool CheckMsPOW(const ConstBlockPtr&, const ChainStatePtr&);
 
@@ -200,5 +204,7 @@ private:
     // friend decleration for running a test
     friend class TestChainVerification;
 };
+
+typedef std::unique_ptr<Chain> ChainPtr;
 
 #endif // __SRC_CHAIN_H__

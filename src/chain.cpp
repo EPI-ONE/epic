@@ -1,5 +1,5 @@
-#include "caterpillar.h"
 #include "chain.h"
+#include "caterpillar.h"
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
@@ -100,23 +100,43 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 }
 
 bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
-    auto current_distance = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
-    arith_uint256 chainworkSum{0};
-
-    auto curr = GetRecord(b.cblock->GetPrevHash());
-    assert(curr);
-
-    uint64_t timeEnd{curr->cblock->GetTime()};
-
-    for (size_t i = 0; i < GetParams().sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
-         ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
-        chainworkSum += curr->cblock->GetChainWork();
+    if (b.minerChainHeight < GetParams().sortitionThreshold) {
+        return !(b.cblock->HasTransaction());
     }
 
-    uint64_t timeStart{curr->cblock->GetTime()};
-    auto allowed_distance = (GetParams().maxTarget / GetParams().sortitionCoefficient) * chainworkSum /
-                            (ms_hashrate * (timeEnd - timeStart + 1));
-    return current_distance <= allowed_distance;
+    auto search = cumulatorMap_.find(b.cblock->GetPrevHash());
+    if (search == cumulatorMap_.end()) {
+        Cumulator cum;
+
+        ConstBlockPtr cursor = b.cblock;
+        RecordPtr prev;
+        while (!cum.Full()) {
+            prev = GetRecord(cursor->GetPrevHash());
+
+            if (!prev) {
+                // cannot happen
+                throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap_.");
+            }
+            cum.Add(prev->cblock, false);
+            cursor = prev->cblock;
+        }
+
+        cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
+    }
+
+    auto dist = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
+
+    auto nodeHandler = cumulatorMap_.extract(b.cblock->GetPrevHash());
+    Cumulator& cum   = nodeHandler.mapped();
+
+    auto allowed_distance =
+        (GetParams().maxTarget / GetParams().sortitionCoefficient) * cum.Sum() / (ms_hashrate * cum.TimeSpan());
+
+    cum.Add(b.cblock, true);
+    nodeHandler.key() = b.cblock->GetHash();
+    cumulatorMap_.insert(std::move(nodeHandler));
+
+    return dist <= allowed_distance;
 }
 
 void Chain::Verify(const ConstBlockPtr& pblock) {
@@ -178,7 +198,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     } else {
         // regarded as a valid transaction but not updating ledger
         record.validity = NodeRecord::VALID;
-        result = std::make_optional<TXOC>();
+        result          = std::make_optional<TXOC>();
     }
 
     record.UpdateReward(GetPrevReward(record));
@@ -201,7 +221,8 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
+        spdlog::info(
+            "Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
         return {};
     }
 
@@ -238,12 +259,13 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check previous vouts that are used in this transaction and compute total value in along the way
     for (const auto& vin : tx->GetInputs()) {
-        const TxOutPoint& outpoint    = vin.outpoint;
+        const TxOutPoint& outpoint = vin.outpoint;
         // this ensures that $prevOut has not been spent yet
         auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
+            spdlog::info(
+                "Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
             return {};
         }
         valueIn += prevOut->GetOutput().value;
