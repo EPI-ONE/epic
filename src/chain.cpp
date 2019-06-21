@@ -3,6 +3,10 @@
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
+////////////////////
+// Chain
+////////////////////
+
 Chain::Chain() : ismainchain_(true) {
     states_.push_back(GENESIS_RECORD.snapshot);
     recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
@@ -100,7 +104,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 }
 
 bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
-    if (b.minerChainHeight < GetParams().sortitionThreshold) {
+    if (b.minerChainHeight <= GetParams().sortitionThreshold) {
         return !(b.cblock->HasTransaction());
     }
 
@@ -115,7 +119,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 
             if (!prev) {
                 // cannot happen
-                throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap_.");
+                throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap.");
             }
             cum.Add(prev->cblock, false);
             cursor = prev->cblock;
@@ -130,7 +134,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     Cumulator& cum   = nodeHandler.mapped();
 
     auto allowed_distance =
-        (GetParams().maxTarget / GetParams().sortitionCoefficient) * cum.Sum() / (ms_hashrate * cum.TimeSpan());
+        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / ms_hashrate);
 
     cum.Add(b.cblock, true);
     nodeHandler.key() = b.cblock->GetHash();
@@ -187,6 +191,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     } else {
         record.prevRedemHash.SetNull();
     }
+    record.minerChainHeight = prevRec->minerChainHeight + 1;
 
     // then check its transaction and update UTXO
     if (pblock->HasTransaction()) {
@@ -332,3 +337,77 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
 }
 
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
+
+////////////////////
+// Cumulator
+////////////////////
+
+void Cumulator::Add(const ConstBlockPtr& block, bool ascending) {
+    static const size_t capacity = GetParams().sortitionThreshold;
+
+    const auto& chainwork   = block->GetChainWork();
+    uint32_t chainwork_comp = chainwork.GetCompact();
+
+    if (timestamps.size() < capacity) {
+        sum += chainwork;
+    } else {
+        arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
+        sum += (chainwork - subtrahend);
+
+        // Pop the first element if the counter is already 1,
+        // or decrease the counter of the first element by 1
+        if (chainworks.front().second == 1) {
+            chainworks.pop_front();
+        } else {
+            chainworks.front().second--;
+        }
+
+        timestamps.pop_front();
+    }
+
+    if (ascending) {
+        if (!chainworks.empty() && chainworks.back().first == chainwork_comp) {
+            chainworks.back().second++;
+        } else {
+            chainworks.emplace_back(chainwork_comp, 1);
+        }
+        timestamps.emplace_back(block->GetTime());
+    } else {
+        if (!chainworks.empty() && chainworks.front().first == chainwork_comp) {
+            chainworks.front().second++;
+        } else {
+            chainworks.emplace_front(chainwork_comp, 1);
+        }
+        timestamps.emplace_front(block->GetTime());
+    }
+}
+
+arith_uint256 Cumulator::Sum() const {
+    return sum;
+}
+
+uint32_t Cumulator::TimeSpan() const {
+    return timestamps.back() - timestamps.front();
+}
+
+bool Cumulator::Full() const {
+    return timestamps.size() == GetParams().sortitionThreshold;
+}
+
+std::string std::to_string(const Cumulator& cum) {
+    std::string s;
+    s += " Cumulator { \n";
+    s += "   chainworks { \n";
+    for (auto& e : cum.chainworks) {
+        s += strprintf("     { %s, %s }\n", std::to_string(arith_uint256().SetCompact(e.first).GetLow64()), e.second);
+    }
+    s += "   }\n";
+    s += "   timestamps { \n";
+    for (auto& t : cum.timestamps) {
+        s += strprintf("     %s\n", t);
+    }
+    s += "   }\n";
+    s += " }";
+
+    return s;
+}

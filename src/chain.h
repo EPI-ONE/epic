@@ -13,59 +13,19 @@
 #include "uint256.h"
 #include "utxo.h"
 
+class Cumulator;
+namespace std {
+string to_string(const Cumulator& b);
+} // namespace std
+
 class Cumulator {
 public:
-    void Add(const ConstBlockPtr& block, bool ascending) {
-        static const size_t capacity = GetParams().sortitionThreshold;
+    void Add(const ConstBlockPtr& block, bool ascending);
+    arith_uint256 Sum() const;
+    uint32_t TimeSpan() const;
+    bool Full() const;
 
-        const auto& chainwork   = block->GetChainWork();
-        uint32_t chainwork_comp = chainwork.GetCompact();
-
-        if (timestamps.size() < capacity) {
-            sum += chainwork;
-        } else {
-            arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
-            sum += (chainwork - subtrahend);
-
-            // Pop the first element if the counter is already 1,
-            // or decrease the counter of the first element by 1
-            if (chainworks.front().second == 1) {
-                chainworks.pop_front();
-            } else {
-                chainworks.front().second--;
-            }
-
-            timestamps.pop_front();
-        }
-
-        if (ascending) {
-            if (chainworks.back().first == chainwork_comp) {
-                chainworks.back().second++;
-            } else {
-                chainworks.emplace_back(chainwork_comp, 1);
-            }
-            timestamps.emplace_back(block->GetTime());
-        } else {
-            if (chainworks.front().first == chainwork_comp) {
-                chainworks.front().second++;
-            } else {
-                chainworks.emplace_front(chainwork_comp, 1);
-            }
-            timestamps.emplace_front(block->GetTime());
-        }
-    }
-
-    arith_uint256 Sum() {
-        return sum;
-    }
-
-    uint32_t TimeSpan() {
-        return timestamps.back() - timestamps.front();
-    }
-
-    bool Full() {
-        return timestamps.size() == GetParams().sortitionThreshold;
-    }
+    friend std::string std::to_string(const Cumulator&);
 
 private:
     // Elements in chainworks: {chainwork, counter of consecutive chainworks that are equal}
@@ -76,6 +36,14 @@ private:
     std::deque<std::pair<uint32_t, uint16_t>> chainworks;
     std::deque<uint32_t> timestamps;
     arith_uint256 sum = 0;
+};
+
+/** Hasher for unordered_map */
+template <>
+struct std::hash<Cumulator> {
+    size_t operator()(const Cumulator& x) const {
+        return x.Sum().GetCompact() ^ x.TimeSpan();
+    }
 };
 
 class Chain {

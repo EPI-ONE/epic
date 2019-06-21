@@ -88,7 +88,7 @@ TEST_F(TestChainVerification, VerifyRedemption) {
     redeem.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig).AddOutput(0, addr);
     Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b2.AddTransaction(redeem);
-    NodeRecord redemption{Block{std::move(b2)}};
+    NodeRecord redemption{std::move(b2)};
     redemption.prevRedemHash = b1hash;
 
     // start testing
@@ -101,11 +101,16 @@ TEST_F(TestChainVerification, VerifyRedemption) {
 }
 
 TEST_F(TestChainVerification, VerifyTx) {
+    DAG = std::make_unique<DAGManager>();
+    Chain c{};
+
     Coin valueIn{4}, valueOut1{2}, valueOut2{1};
     // prepare keys and signature
-    auto keypair        = fac.CreateKeyPair();
-    auto addr           = keypair.second.GetID();
-    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
+    auto key     = DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
+    auto addr    = key.GetPubKey().GetID();
+    auto hashMsg = uint256S("4de04506f44155e2a59d2e8af4e6e15e9f50f5f0b1dc7a0742021799981180c2");
+    std::vector<unsigned char> sig;
+    key.Sign(hashMsg, sig);
 
     // construct transaction output to add into the ledger
     const auto& ghash = GENESIS.GetHash();
@@ -113,33 +118,43 @@ TEST_F(TestChainVerification, VerifyTx) {
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
     TxOutput output{valueIn, outputListing};
-    Block b1{Block{1, ghash, ghash, ghash, GENESIS.GetTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0}};
+
+    uint32_t t = 1561117638;
+    Block b1{GetParams().version, ghash, ghash, ghash, t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     Transaction tx1{};
     b1.AddTransaction(tx1.AddOutput(std::move(output)));
-    b1.FinalizeHash();
+    b1.Solve();
     ASSERT_NE(b1.GetChainWork(), 0);
+    auto rec1              = std::make_shared<NodeRecord>(std::move(b1));
+    rec1->minerChainHeight = 1;
+    const auto& b1hash     = rec1->cblock->GetHash();
 
-    auto rec1          = std::make_shared<NodeRecord>(std::move(b1));
-    const auto& b1hash = rec1->cblock->GetHash();
-
-    Chain c{};
-    DAG        = std::make_unique<DAGManager>();
     auto putxo = std::make_shared<UTXO>(rec1->cblock->GetTransaction()->GetOutputs()[0], 0);
     ChainLedger ledger{
         std::unordered_map<uint256, UTXOPtr>{}, {{putxo->GetKey(), putxo}}, std::unordered_map<uint256, UTXOPtr>{}};
     AddToLedger(&c, std::move(ledger));
     AddToHistory(&c, rec1);
 
-    // construct block
+    // construct an empty block
+    Block b2{GetParams().version, ghash, b1hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    b2.Solve();
+    NodeRecord rec2{std::move(b2)};
+    rec2.minerChainHeight = 2;
+    const auto& b2hash    = rec2.cblock->GetHash();
+    AddToHistory(&c, std::make_shared<NodeRecord>(rec2));
+
+    // construct another block
     Transaction tx{};
-    tx.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig)
+    tx.AddSignedInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig)
         .AddOutput(valueOut1, addr)
         .AddOutput(valueOut2, addr);
-    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
-    b2.AddTransaction(tx);
-    NodeRecord record{Block{std::move(b2)}};
+    Block b3{GetParams().version, ghash, b2hash, ghash, t + 2, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    b3.AddTransaction(tx);
+    b3.Solve();
+    NodeRecord rec3{std::move(b3)};
+    rec3.minerChainHeight = 3;
 
-    auto txoc{ValidateTx(&c, record)};
+    auto txoc{ValidateTx(&c, rec3)};
     ASSERT_TRUE(bool(txoc));
 
     auto& spent   = txoc->GetTxOutsSpent();
@@ -149,7 +164,7 @@ TEST_F(TestChainVerification, VerifyTx) {
 
     auto& created = txoc->GetTxOutsCreated();
     ASSERT_EQ(created.size(), 2);
-    ASSERT_EQ(record.fee, valueIn - valueOut1 - valueOut2);
+    ASSERT_EQ(rec3.fee, valueIn - valueOut1 - valueOut2);
 }
 
 TEST_F(TestChainVerification, ChainForking) {
@@ -180,78 +195,35 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
-TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    Block registration = fac.CreateBlock(1, 1);
-    registration.SetMilestoneHash(GENESIS.GetHash());
-    registration.SetPrevHash(GENESIS.GetHash());
-    registration.SetTipHash(GENESIS.GetHash());
-    registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-    registration.SetTime(GENESIS.GetTime());
-    ASSERT_NE(registration.GetChainWork(), 0);
+TEST_F(TestChainVerification, ValidDistance) {
+    // Test for block with valid distance has been done in the above test case VerifyTx.
+    // Here we only test for malicious blocks.
 
-    auto registrationPtr      = std::make_shared<Block>(registration);
-    NodeRecord registrationNR = NodeRecord(registrationPtr);
-    RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
-
-    Block goodBlock = fac.CreateBlock(170, 170);
-    goodBlock.SetMilestoneHash(GENESIS.GetHash());
-    goodBlock.SetPrevHash(registrationPtr->GetHash());
-    goodBlock.SetTipHash(registrationPtr->GetHash());
-    goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-
-    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
-    NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
-
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    CAT->StoreRecord(registrationR);
-    CAT->StoreRecord(goodBlockR);
-
-    arith_uint256 ms_hashrate = 1;
     Chain c{};
-    EXPECT_TRUE(IsValidDistance(&c, *goodBlockR, ms_hashrate));
-}
 
-TEST_F(TestChainVerification, ValidDistanceMaliciousChain) {
-    auto genesisPtr = std::make_shared<Block>(GENESIS);
+    // Block with transaction but minerChainHeight not reached sortitionThreshold
+    auto ghash = GENESIS.GetHash();
+    Block b1{
+        GetParams().version, ghash, ghash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    NodeRecord rec1{b1};
+    rec1.minerChainHeight = 1;
+    AddToHistory(&c, std::make_shared<NodeRecord>(rec1));
 
-    Block registration = fac.CreateBlock(1, 1);
-    registration.SetMilestoneHash(GENESIS.GetHash());
-    registration.SetPrevHash(genesisPtr->GetHash());
-    registration.SetTipHash(genesisPtr->GetHash());
-    registration.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-    registration.SetTime(666);
+    Block b2{GetParams().version, ghash, b1.GetHash(), ghash, fac.NextTime(),
+        GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Transaction tx = fac.CreateTx(1, 1);
+    b2.AddTransaction(tx);
+    NodeRecord rec2{b2};
+    rec2.minerChainHeight = 2;
+    AddToHistory(&c, std::make_shared<NodeRecord>(rec2));
+    EXPECT_FALSE(IsValidDistance(&c, rec2, GENESIS_RECORD.snapshot->hashRate));
 
-    auto registrationPtr      = std::make_shared<Block>(registration);
-    NodeRecord registrationNR = NodeRecord(registrationPtr);
-    RecordPtr registrationR   = std::make_shared<NodeRecord>(registrationNR);
-
-    Block goodBlock = fac.CreateBlock(170, 170);
-    goodBlock.SetMilestoneHash(GENESIS.GetHash());
-    goodBlock.SetPrevHash(registrationPtr->GetHash());
-    goodBlock.SetTipHash(registrationPtr->GetHash());
-    goodBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-
-    auto goodBlockPtr      = std::make_shared<Block>(goodBlock);
-    NodeRecord goodBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr goodBlockR   = std::make_shared<NodeRecord>(goodBlockNR);
-
-    Block badBlock = fac.CreateBlock(2, 2);
-    badBlock.SetMilestoneHash(GENESIS.GetHash());
-    badBlock.SetPrevHash(goodBlockPtr->GetHash());
-    badBlock.SetTipHash(goodBlockPtr->GetHash());
-    badBlock.SetDifficultyTarget(GENESIS_RECORD.snapshot->blockTarget.GetCompact());
-
-    auto badBlockPtr      = std::make_shared<Block>(badBlock);
-    NodeRecord badBlockNR = NodeRecord(goodBlockPtr);
-    RecordPtr badBlockR   = std::make_shared<NodeRecord>(badBlockNR);
-
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
-    CAT->StoreRecord(registrationR);
-    CAT->StoreRecord(goodBlockR);
-    CAT->StoreRecord(badBlockR);
-
-    arith_uint256 ms_hashrate = 9999;
-    Chain c{};
-    EXPECT_FALSE(IsValidDistance(&c, *badBlockR, ms_hashrate));
+    // Block with invalid distance
+    Block b3{GetParams().version, ghash, b2.GetHash(), ghash, fac.NextTime(),
+        GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Transaction tx1 = fac.CreateTx(1, 1);
+    b3.AddTransaction(tx1);
+    NodeRecord rec3{b3};
+    rec3.minerChainHeight = 3;
+    EXPECT_FALSE(IsValidDistance(&c, rec3, 10000000));
 }
