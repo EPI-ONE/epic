@@ -1,9 +1,11 @@
 #ifndef __SRC_CATERPILLAR_H__
 #define __SRC_CATERPILLAR_H__
 
+#include <atomic>
 #include <list>
 #include <memory>
 #include <vector>
+#include <numeric>
 
 #include "block.h"
 #include "dag_manager.h"
@@ -23,9 +25,9 @@ public:
     StoredRecord GetMilestoneAt(size_t height) const;
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
-    std::vector<StoredRecord> GetLevelSetAt(size_t height) const;
-    // TODO: get raw data stream of a level set from file
+    std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
     VStream GetRawLevelSetAt(size_t height) const;
+    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
     size_t GetHeight(const uint256&) const;
 
     bool DAGExists(const uint256&) const;
@@ -33,7 +35,7 @@ public:
     // TODO: search for UTXO in db
     std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
 
-    bool StoreRecord(const RecordPtr&) const;
+    bool StoreRecords(const std::vector<RecordPtr>&);
 
     /* Flush records to db. Called by DAGManager only. */
     void Store(const std::vector<NodeRecord>&);
@@ -77,14 +79,14 @@ private:
     /**
      * params for file storage
      */
-    static const uint32_t fileCapacity_     = 2 ^ 28;
-    static const uint16_t epochCapacity_    = UINT_LEAST16_MAX;
-    std::atomic<uint32_t> currentBlkEpoch_ = 0;
-    std::atomic<uint16_t> currentBlkName_  = 0;
-    std::atomic<uint32_t> currentBlkSize_  = 0;
-    std::atomic<uint32_t> currentRecEpoch_ = 0;
-    std::atomic<uint16_t> currentRecName_  = 0;
-    std::atomic<uint32_t> currentRecSize_  = 0;
+    static const uint32_t fileCapacity_        = 2 ^ 28;
+    static const uint16_t epochCapacity_       = UINT_LEAST16_MAX;
+    std::atomic_uint_fast32_t currentBlkEpoch_ = 0;
+    std::atomic_uint_fast32_t currentRecEpoch_ = 0;
+    std::atomic_uint_fast16_t currentBlkName_  = 0;
+    std::atomic_uint_fast16_t currentRecName_  = 0;
+    std::atomic_uint_fast32_t currentBlkSize_  = 0;
+    std::atomic_uint_fast32_t currentRecSize_  = 0;
 
     bool IsSolid(const ConstBlockPtr&) const;
     bool IsWeaklySolid(const ConstBlockPtr&) const;
@@ -93,6 +95,23 @@ private:
     bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
     void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
     void ReleaseBlocks(const uint256&);
+
+    uint32_t loadCurrentBlkEpoch();
+    uint32_t loadCurrentRecEpoch();
+    uint16_t loadCurrentBlkName();
+    uint16_t loadCurrentRecName();
+    uint32_t loadCurrentBlkSize();
+    uint32_t loadCurrentRecSize();
+
+    void InspectCurrentBlkEpoch();
+    void InspectCurrentRecEpoch();
+    void InspectCurrentBlkName(uint32_t);
+    void InspectCurrentRecName(uint32_t);
+    void AddCurrentBlkSize(uint32_t);
+    void AddCurrentRecSize(uint32_t);
+
+    StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;
+    FilePos& NextFile(FilePos&) const;
 };
 
 extern std::unique_ptr<Caterpillar> CAT;

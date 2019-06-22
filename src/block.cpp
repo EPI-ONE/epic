@@ -18,8 +18,12 @@ Block::Block(uint32_t versionNum) : Block() {
     tipBlockHash_       = Hash::GetZeroHash();
 }
 
-Block::Block(VStream& payload) {
-    payload >> *this;
+Block::Block(VStream& s) {
+    s >> *this;
+}
+
+Block::Block(FileReader&& s) {
+    s >> *this;
 }
 
 void Block::SetNull() {
@@ -70,7 +74,7 @@ bool Block::Verify() const {
     // checks version
     if (version_ != GetParams().version) {
         spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
-            std::to_string(hash_));
+                     std::to_string(hash_));
         return false;
     }
 
@@ -83,7 +87,7 @@ bool Block::Verify() const {
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
         spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", ctime((time_t*) &time_),
-            time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
+                     time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
         return false;
     }
 
@@ -274,7 +278,7 @@ bool Block::CheckPOW() const {
 
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
-    
+
     CalculateHash();
     while (UintToArith256(hash_) > target) {
         if (nonce_ == UINT_LEAST32_MAX) {

@@ -1,8 +1,6 @@
 #include "file_utils.h"
 #include "tinyformat.h"
 
-#include "tinyformat.h"
-
 bool CheckDirExist(const std::string& dirPath) {
     struct stat info;
     if (stat(dirPath.c_str(), &info) != 0)
@@ -48,11 +46,11 @@ bool Mkdir_recursive(const std::string& path) {
 }
 
 std::string file::GetPath(FileType type, uint32_t epoch) {
-    return std::string{prefixes[type] + "epoch" + std::to_string(epoch)};
+    return std::string{prefixes[type] + "epoch" + tfm::format("%05d", epoch)};
 }
 
 std::string file::GetFileName(FileType type, uint32_t name) {
-    return std::string{typestr[type] + std::to_string(name) + ".dat"};
+    return std::string{typestr[type] + tfm::format("%05d", name) + ".dat"};
 }
 
 std::string std::to_string(FileReader& freader) {

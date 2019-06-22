@@ -41,6 +41,7 @@ public:
      * Returns {ms hash, blk FilePos, rec FilePos}
      */
     optional<pair<FilePos, FilePos>> GetMsPos(const uint64_t& height) const;
+    optional<FilePos> GetMsBlockPos(const uint64_t& height) const;
 
     /**
      * Gets the milesonte file posisionts at height of blk

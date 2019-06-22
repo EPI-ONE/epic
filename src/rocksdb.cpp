@@ -109,6 +109,10 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint256& blkHash) 
     return GetMsPos(GetHeight(blkHash));
 }
 
+optional<FilePos> RocksDBStore::GetMsBlockPos(const uint64_t &height) const {
+    return GetMsPos(height)->first;
+}
+
 optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash, Hash::SIZE);
     PinnableSlice valueSlice;
