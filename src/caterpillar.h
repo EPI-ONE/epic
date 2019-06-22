@@ -11,6 +11,9 @@
 #include "rocksdb.h"
 #include "threadpool.h"
 
+typedef std::unique_ptr<NodeRecord> StoredRecord;
+typedef std::unique_ptr<Block> BlockCache;
+
 class Caterpillar {
 public:
     Caterpillar() = delete;
@@ -71,10 +74,22 @@ private:
 
     ConcurrentHashMap<uint256, ConstBlockPtr> blockCache_;
 
+    /**
+     * params for file storage
+     */
+    static const uint32_t fileCapacity_     = 2 ^ 28;
+    static const uint16_t epochCapacity_    = UINT_LEAST16_MAX;
+    std::atomic<uint32_t> currentBlkEpoch_ = 0;
+    std::atomic<uint16_t> currentBlkName_  = 0;
+    std::atomic<uint32_t> currentBlkSize_  = 0;
+    std::atomic<uint32_t> currentRecEpoch_ = 0;
+    std::atomic<uint16_t> currentRecName_  = 0;
+    std::atomic<uint32_t> currentRecSize_  = 0;
+
     bool IsSolid(const ConstBlockPtr&) const;
     bool IsWeaklySolid(const ConstBlockPtr&) const;
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
-    void Cache(const ConstBlockPtr&) ;
+    void Cache(const ConstBlockPtr&);
     bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
     void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
     void ReleaseBlocks(const uint256&);

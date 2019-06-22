@@ -1,8 +1,6 @@
 #ifndef __SRC_UTILS_FILE_UTILS_H__
 #define __SRC_UTILS_FILE_UTILS_H__
 
-#include "serialize.h"
-
 #include <array>
 #include <cerrno>
 #include <climits>
@@ -12,6 +10,8 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include "stream.h"
 
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);
@@ -42,6 +42,9 @@ struct FilePos {
 
     FilePos() : nEpoch(-1), nName(0), nOffset(0) {}
     FilePos(uint32_t epoch, uint32_t name, uint32_t offset) : nEpoch(epoch), nName(name), nOffset(offset) {}
+    FilePos(VStream& vs) {
+        vs >> *this;
+    }
 
     bool operator==(const FilePos& another) {
         return (nEpoch == another.nEpoch) && nName == another.nName && nOffset == another.nOffset;
@@ -49,6 +52,14 @@ struct FilePos {
 
     bool operator!=(const FilePos& another) {
         return !(*this == another);
+    }
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(VARINT(nEpoch));
+        READWRITE(VARINT(nName));
+        READWRITE(VARINT(nOffset));
     }
 };
 
@@ -73,7 +84,10 @@ public:
         ifbuf_.close();
     }
 
-    template<typename T>
+    template <typename T>
+    void read();
+
+    template <typename T>
     FileReader& operator>>(T&& obj) {
         ::Deserialize(ifbuf_, obj);
         return *this;
@@ -116,7 +130,7 @@ public:
     FileWriter& operator=(const FileWriter&) = delete;
 
     ~FileWriter() {
-        ofbuf_.close(); 
+        ofbuf_.close();
     }
 
     template <typename T>

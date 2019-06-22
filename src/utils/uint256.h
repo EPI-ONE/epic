@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "crypto/common.h"
+#include "stream.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template <unsigned int BITS>
@@ -122,6 +123,10 @@ public:
     uint256() {}
     explicit uint256(const std::vector<unsigned char>& vch) : base_blob<256>(vch) {}
 
+    explicit uint256(VStream& vs) {
+        vs >> *this;
+    }
+
     /** A cheap hash function that just returns 64 bits from the result, it can
      * be used when the contents are considered uniformly random. It is not
      * appropriate when the value can easily be influenced from outside as e.g.
@@ -169,7 +174,7 @@ struct std::hash<uint256> {
 template <>
 struct std::equal_to<uint256> {
     bool operator()(const uint256& lhs, const uint256& rhs) const {
-        return lhs == rhs; 
+        return lhs == rhs;
     }
 };
 
