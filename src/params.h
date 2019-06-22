@@ -15,7 +15,8 @@ class NodeRecord;
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
 // 10 seconds per milestone block
 static constexpr uint32_t TIME_INTERVAL = 10;
-static constexpr uint32_t INTERVAL      = TARGET_TIMESPAN / static_cast<double>(TIME_INTERVAL);
+// number of milestones between two difficulty adjustment
+static constexpr uint32_t INTERVAL = TARGET_TIMESPAN / static_cast<double>(TIME_INTERVAL);
 // transaction per second
 static constexpr uint32_t TPS = 1000;
 // threshold for rejecting an old block

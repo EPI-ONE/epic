@@ -13,7 +13,21 @@ Caterpillar::~Caterpillar() {
 }
 
 bool Caterpillar::StoreRecord(const RecordPtr& rec) const {
-    return dbStore_.WriteRecord(rec);
+    try {
+        // Write files
+        FilePos blkPos{currentBlkEpoch_, currentBlkName_, currentBlkSize_};
+        FileWriter fs1{file::BLK, blkPos};
+        fs1 << *(rec->cblock);
+
+        FilePos recPos{currentRecEpoch_, currentRecName_, currentRecSize_};
+        FileWriter fs2{file::BLK, blkPos};
+        fs2 << *(rec);
+
+        // Write db
+    } catch (const std::exception&) {
+        return false;
+    }
+    return true;
 }
 
 std::unique_ptr<UTXO> Caterpillar::GetTransactionOutput(const uint256&) {
@@ -217,7 +231,7 @@ void Caterpillar::Cache(const ConstBlockPtr& blk) {
 }
 
 void Caterpillar::Stop() {
-    while (verifyThread_.GetTaskSize() > 0 || obcThread_.GetTaskSize() > 0 ) {
+    while (verifyThread_.GetTaskSize() > 0 || obcThread_.GetTaskSize() > 0) {
         std::this_thread::yield();
     }
     obcThread_.Stop();

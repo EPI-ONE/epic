@@ -1,4 +1,5 @@
 #include "file_utils.h"
+#include "tinyformat.h"
 
 #include "tinyformat.h"
 
@@ -15,7 +16,7 @@ bool CheckFileExist(const std::string& filePath) {
 }
 
 // used c like way to implement this
-bool Mkdir_recursive(const std::string &path) {
+bool Mkdir_recursive(const std::string& path) {
     if (path.empty()) {
         return true;
     }
