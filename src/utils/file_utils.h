@@ -15,9 +15,7 @@
 
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);
-
 bool CheckFileExist(const std::string& filePath);
-
 bool Mkdir_recursive(const std::string& path);
 
 struct FilePos;
@@ -31,9 +29,10 @@ std::string to_string(FileWriter& fwriter);
 
 namespace file {
 enum FileType : uint8_t { BLK = 0, REC = 1 };
-static const std::array<std::string, 2> prefixes{"data/blk/", "data/rec"};
-static const std::array<std::string, 2> typestr{"/blk", "/rec"};
-std::string CreatePath(FileType type, uint32_t epoch, uint32_t name);
+static const std::array<std::string, 2> prefixes{"data/blk/", "data/rec/"};
+static const std::array<std::string, 2> typestr{"blk", "rec"};
+std::string GetPath(FileType type, uint32_t epoch);
+std::string GetFileName(FileType type, uint32_t name);
 } // namespace file
 
 struct FilePos {
@@ -55,10 +54,15 @@ struct FilePos {
 
 class FileReader {
 public:
-    FileReader(file::FileType type, const FilePos& pos)
-        : filename_(file::CreatePath(type, pos.nEpoch, pos.nName)),
-          ifbuf_(filename_, std::ifstream::in | std::ifstream::binary) {
-        ifbuf_.seekg(pos.nOffset);
+    // check if dir and file exist; if not, it can't read
+    FileReader(file::FileType type, const FilePos& pos) {
+        std::string dir = file::GetPath(type, pos.nEpoch);
+        if (!CheckDirExist(dir)) {
+            throw std::ios_base::failure("Can't open file because it doesn't exits");
+        }
+        filename_ = dir + "/" + file::GetFileName(type, pos.nName);
+        ifbuf_.open(filename_, std::ifstream::in | std::ifstream::binary);
+        ifbuf_.seekg(pos.nOffset, std::ios::beg);
     }
 
     FileReader()                  = delete;
@@ -93,15 +97,18 @@ private:
 // writer can write to
 class FileWriter {
 public:
-    FileWriter(file::FileType type, const FilePos& pos)
-        : filename_(file::CreatePath(type, pos.nEpoch, pos.nName)),
-          ofbuf_(filename_, std::ostream::out | /*std::ofstream::app |*/ std::ofstream::binary) {
-
-        std::cout << filename_ << std::endl;
-        ofbuf_.seekp(pos.nOffset);
-        if (!ofbuf_.is_open()) {
-            throw std::string("file is not opened");
+    // check if dir exists. If not, create one
+    FileWriter(file::FileType type, const FilePos& pos) {
+        std::string dir = file::GetPath(type, pos.nEpoch);
+        if (!CheckDirExist(dir)) {
+            Mkdir_recursive(dir);
         }
+        std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
+        ofbuf_.open(filename_, std::ostream::out | std::ofstream::binary);
+        if (!ofbuf_.is_open()) {
+            throw std::string("file stream is not opened");
+        }
+        ofbuf_.seekp(pos.nOffset, std::ios::beg);
     }
 
     FileWriter()                  = delete;

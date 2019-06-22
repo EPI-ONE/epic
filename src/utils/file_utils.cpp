@@ -46,9 +46,12 @@ bool Mkdir_recursive(const std::string &path) {
     return true;
 }
 
-std::string file::CreatePath(FileType type, uint32_t epoch, uint32_t name) {
-    return std::string{
-        prefixes[type] + "epoch" + std::to_string(epoch) + typestr[type] + std::to_string(name) + ".dat"};
+std::string file::GetPath(FileType type, uint32_t epoch) {
+    return std::string{prefixes[type] + "epoch" + std::to_string(epoch)};
+}
+
+std::string file::GetFileName(FileType type, uint32_t name) {
+    return std::string{typestr[type] + std::to_string(name) + ".dat"};
 }
 
 std::string std::to_string(FileReader& freader) {
