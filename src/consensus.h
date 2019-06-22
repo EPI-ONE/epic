@@ -142,7 +142,7 @@ public:
     uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
 
     bool isMilestone = false;
-    ChainStatePtr snapshot = nullptr;
+    std::shared_ptr<ChainState> snapshot = nullptr;
 
     Validity validity = Validity::UNKNOWN;
 
@@ -173,7 +173,9 @@ public:
             auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
             isMilestone = (msFlag == IS_TRUE_MILESTONE);
             if (msFlag > 0) {
-                snapshot = std::make_shared<ChainState>(s);
+                ChainState cs{};
+                ::Deserialize(s, cs);
+                snapshot = std::make_shared<ChainState>(std::move(cs));
             }
         } else {
             if (isMilestone) {
@@ -190,9 +192,10 @@ public:
     }
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(*cblock, cumulativeReward, minerChainHeight) ==
-                   std::tie(*(another.cblock), another.cumulativeReward, another.minerChainHeight) &&
-               ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot));
+        return std::tie(cumulativeReward, minerChainHeight) ==
+                   std::tie(another.cumulativeReward, another.minerChainHeight) &&
+               ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
+               ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));
     }
 
     bool operator!=(const NodeRecord& another) const {

@@ -89,7 +89,7 @@ public:
 
 private:
     std::string filename_;
-    std::ifstream ifbuf_;
+    std::fstream ifbuf_;
 
     std::string to_string(FileReader& freader);
 };
@@ -135,7 +135,7 @@ public:
 
 private:
     std::string filename_;
-    std::ofstream ofbuf_;
+    std::fstream ofbuf_;
 
     std::string to_string(FileWriter& fwriter);
 };

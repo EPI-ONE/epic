@@ -16,6 +16,7 @@ public:
 TEST_F(TestFileStorage, basic_read_write) {
     auto blk = fac.CreateBlock();
     blk.Solve();
+    NodeRecord rec{blk};
     std::string name{};
     FilePos fpos{0, 0, 0};
 
@@ -25,6 +26,8 @@ TEST_F(TestFileStorage, basic_read_write) {
         EXPECT_EQ(writer.GetOffset(), 0);
         writer << blk;
         EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize());
+        writer << rec;
+        EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
     }
 
     FileReader reader{file::FileType::BLK, fpos};
@@ -33,4 +36,9 @@ TEST_F(TestFileStorage, basic_read_write) {
     reader >> blk1;
     EXPECT_EQ(reader.GetOffset(), blk.GetOptimalEncodingSize());
     EXPECT_EQ(blk, blk1);
+
+    NodeRecord rec1{};
+    reader >> rec1;
+    EXPECT_EQ(reader.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
+    EXPECT_EQ(rec, rec1);
 }
