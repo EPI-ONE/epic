@@ -34,12 +34,12 @@ public:
 
     /* simple constructor (now for test only) */
     ChainState(uint64_t height,
-        arith_uint256 chainwork,
-        uint32_t lastUpdateTime,
-        arith_uint256 milestoneTarget,
-        arith_uint256 blockTarget,
-        uint64_t hashRate,
-        std::vector<uint256>&& lvsHashes)
+               arith_uint256 chainwork,
+               uint32_t lastUpdateTime,
+               arith_uint256 milestoneTarget,
+               arith_uint256 blockTarget,
+               uint64_t hashRate,
+               std::vector<uint256>&& lvsHashes)
         : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
           blockTarget(blockTarget), hashRate(hashRate), lvsHashes_(std::move(lvsHashes)) {}
 
@@ -134,6 +134,7 @@ public:
 
     ConstBlockPtr cblock;
 
+    uint64_t height;
     Coin cumulativeReward;
     Coin fee;
     uint64_t minerChainHeight = 0;
@@ -160,6 +161,7 @@ public:
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(VARINT(height));
         READWRITE(cumulativeReward);
         READWRITE(VARINT(minerChainHeight));
         READWRITE(static_cast<uint8_t>(validity));
@@ -169,7 +171,7 @@ public:
             READWRITE(prevRedemHash);
         }
 
-        if (ser_action.ForRead()) {
+        if (ser_action.ForRead() == true) {
             auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
             isMilestone = (msFlag == IS_TRUE_MILESTONE);
             if (msFlag > 0) {

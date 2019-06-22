@@ -4,8 +4,8 @@
 // ChainState
 //
 ChainState::ChainState(std::shared_ptr<ChainState> previous,
-    const ConstBlockPtr& msBlock,
-    std::vector<uint256>&& lvsHash)
+                       const ConstBlockPtr& msBlock,
+                       std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(std::move(lvsHash)) {
     chainwork = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
@@ -110,7 +110,7 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize_ > 0) {
         return optimalStorageSize_;
     }
-
+    optimalStorageSize_ += GetSizeOfVarInt(height);
     optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
     optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
     optimalStorageSize_ += 1; // Validity

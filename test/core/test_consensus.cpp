@@ -16,8 +16,8 @@ TEST_F(TestConsensus, SyntaxChecking) {
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    Block block =
-        Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
+    Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
+                        time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 
@@ -63,7 +63,7 @@ TEST_F(TestConsensus, BlockOptimalEncodingSize) {
 }
 
 TEST_F(TestConsensus, UTXO) {
-    Block b  = fac.CreateBlock(1, 67);
+    Block b     = fac.CreateBlock(1, 67);
     UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
@@ -87,8 +87,6 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 
         if (((i + 1) % GetParams().timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-            ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
-            ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
         } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 0) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
@@ -154,7 +152,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     DAG = std::make_unique<DAGManager>();
 
     // Initialize DB with genesis block
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+    CAT->StoreRecords(genesisLvs);
     CAT->EnableOBC();
 
     for (const auto& block : blocks) {

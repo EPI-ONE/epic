@@ -47,12 +47,27 @@ struct FilePos {
         vs >> *this;
     }
 
+    bool SameFileAs(const FilePos& another) {
+        return nEpoch == another.nEpoch && nName == another.nName;
+    }
+
     bool operator==(const FilePos& another) {
-        return (nEpoch == another.nEpoch) && nName == another.nName && nOffset == another.nOffset;
+        return nEpoch == another.nEpoch && nName == another.nName && nOffset == another.nOffset;
     }
 
     bool operator!=(const FilePos& another) {
         return !(*this == another);
+    }
+
+    bool operator<(const FilePos& another) {
+        if (nEpoch < another.nEpoch) {
+            return true;
+        } else if (nName < another.nName) {
+            return true;
+        } else if (nOffset < another.nOffset) {
+            return true;
+        }
+        return false;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -85,8 +100,11 @@ public:
         ifbuf_.close();
     }
 
-    template <typename T>
-    void read();
+    template <typename Stream>
+    FileReader& read(size_t size, Stream& s) {
+        s.write(reinterpret_cast<char*>(ifbuf_.rdbuf() + GetOffset()), size);
+        return *this;
+    }
 
     template <typename T>
     FileReader& operator>>(T&& obj) {
@@ -100,6 +118,14 @@ public:
 
     uint32_t GetOffset() {
         return ifbuf_.tellg();
+    }
+
+    uint32_t Size() {
+        auto currentPos = GetOffset(); // record the current offset
+        ifbuf_.seekg(0, std::ios::end);   // seek to end of file
+        auto size = ifbuf_.tellg();    // record offset as size
+        ifbuf_.seekg(currentPos);      // restore offset
+        return size;
     }
 
 private:
