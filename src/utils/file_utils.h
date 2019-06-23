@@ -23,8 +23,9 @@ class FileReader;
 class FileWriter;
 
 namespace std {
-std::string to_string(FileReader& freader);
-std::string to_string(FileWriter& fwriter);
+std::string to_string(FilePos&);
+std::string to_string(FileReader&);
+std::string to_string(FileWriter&);
 } // namespace std
 
 namespace file {
@@ -51,8 +52,8 @@ struct FilePos {
         return nEpoch == another.nEpoch && nName == another.nName;
     }
 
-    bool operator==(const FilePos& another) {
-        return nEpoch == another.nEpoch && nName == another.nName && nOffset == another.nOffset;
+    friend bool operator==(const FilePos& thisone, const FilePos& another) {
+        return thisone.nEpoch == another.nEpoch && thisone.nName == another.nName && thisone.nOffset == another.nOffset;
     }
 
     bool operator!=(const FilePos& another) {
@@ -121,10 +122,10 @@ public:
     }
 
     uint32_t Size() {
-        auto currentPos = GetOffset(); // record the current offset
-        ifbuf_.seekg(0, std::ios::end);   // seek to end of file
-        auto size = ifbuf_.tellg();    // record offset as size
-        ifbuf_.seekg(currentPos);      // restore offset
+        auto currentPos = GetOffset();  // record the current offset
+        ifbuf_.seekg(0, std::ios::end); // seek to end of file
+        auto size = ifbuf_.tellg();     // record offset as size
+        ifbuf_.seekg(currentPos);       // restore offset
         return size;
     }
 

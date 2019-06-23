@@ -66,15 +66,13 @@ size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
     PinnableSlice valueSlice;
     Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
 
-    uint64_t height;
-    if (!s.ok()) {
-        height = -1;
-    } else {
+    uint64_t height = -1;
+    if (s.ok()) {
         try {
             VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-            value >> height;
+            value >> VARINT(height);
         } catch (const std::exception&) {
-            height = 0;
+            // do nothing
         }
     }
 
@@ -82,7 +80,12 @@ size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
 }
 
 bool RocksDBStore::IsMilestone(const uint256& blkHash) const {
-    return blkHash == GetMsHashAt(GetHeight(blkHash));
+    auto value = GetRecordOffsets(blkHash);
+    if (!value) {
+        return false;
+    }
+
+    return std::get<1>(*value) == 0 && std::get<2>(*value) == 0;
 }
 
 optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) const {
@@ -109,47 +112,35 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint256& blkHash) 
     return GetMsPos(GetHeight(blkHash));
 }
 
-optional<FilePos> RocksDBStore::GetMsBlockPos(const uint64_t &height) const {
+optional<FilePos> RocksDBStore::GetMsBlockPos(const uint64_t& height) const {
     return GetMsPos(height)->first;
 }
 
 optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHash) const {
-    MAKE_KEY_SLICE(blkHash, Hash::SIZE);
-    PinnableSlice valueSlice;
-    Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
-
-    if (!s.ok()) {
+    auto offsets = GetRecordOffsets(blkHash);
+    if (!offsets) {
         return {};
     }
 
-    try {
-        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        uint64_t height;
-        uint32_t blkOffset, recOffset;
-        value >> VARINT(height) >> blkOffset >> recOffset;
+    auto [height, blkOffset, recOffset] = *offsets;
+    auto [blkPos, recPos]               = *GetMsPos(height);
 
-        auto [blkPos, recPos] = *GetMsPos(blkHash);
-
-        blkPos.nOffset += blkOffset;
-        recPos.nOffset += recOffset;
-        return std::make_pair(blkPos, recPos);
-
-    } catch (const std::exception&) {
-        return {};
-    }
+    blkPos.nOffset += blkOffset;
+    recPos.nOffset += recOffset;
+    return std::make_pair(blkPos, recPos);
 }
 
 bool RocksDBStore::WriteRecPos(const uint256& key,
                                const uint64_t& height,
                                const uint32_t& blkOffset,
                                const uint32_t& recOffset) const {
-    return WritePosImpl(kDefaultColumnFamilyName, key, height, blkOffset, recOffset);
+    return WritePosImpl(kDefaultColumnFamilyName, key, VARINT(height), blkOffset, recOffset);
 }
 
-bool RocksDBStore::WriteRecPoses(std::vector<uint256>&& keys,
-                                 std::vector<uint64_t>&& heights,
-                                 std::vector<uint32_t>&& blkOffsets,
-                                 std::vector<uint32_t>&& recOffsets) const {
+bool RocksDBStore::WriteRecPoses(const std::vector<uint256>& keys,
+                                 const std::vector<uint64_t>& heights,
+                                 const std::vector<uint32_t>& blkOffsets,
+                                 const std::vector<uint32_t>& recOffsets) const {
     class WriteBatch wb;
     VStream keyStream;
     keyStream.reserve(Hash::SIZE);
@@ -172,11 +163,6 @@ bool RocksDBStore::WriteRecPoses(std::vector<uint256>&& keys,
         keyStream.clear();
         valueStream.clear();
     }
-
-    keys.clear();
-    heights.clear();
-    blkOffsets.clear();
-    recOffsets.clear();
 
     return db->Write(WriteOptions(), &wb).ok();
 }
@@ -207,7 +193,11 @@ bool RocksDBStore::DeleteRecPos(const uint256& h) const {
 }
 
 bool RocksDBStore::DeleteMsPos(const uint256& h) const {
-    return db->Delete(WriteOptions(), db->DefaultColumnFamily(), std::to_string(GetHeight(h))).ok();
+    bool status = db->Delete(WriteOptions(), handleMap.at("ms"), std::to_string(GetHeight(h))).ok();
+    if (status && IsMilestone(h)) {
+        return DeleteRecPos(h);
+    }
+    return status;
 }
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
@@ -239,6 +229,27 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
         } catch (const std::exception&) {
             return uint256();
         }
+    }
+}
+
+optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(const uint256& blkHash) const {
+    MAKE_KEY_SLICE(blkHash, Hash::SIZE);
+    PinnableSlice valueSlice;
+    Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
+
+    if (!s.ok()) {
+        return {};
+    }
+
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        uint64_t height;
+        uint32_t blkOffset, recOffset;
+        value >> VARINT(height) >> blkOffset >> recOffset;
+        return std::make_tuple(height, blkOffset, recOffset);
+
+    } catch (const std::exception&) {
+        return {};
     }
 }
 

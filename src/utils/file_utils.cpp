@@ -57,6 +57,10 @@ std::string file::GetFileName(FileType type, uint32_t name) {
     return std::string{typestr[type] + tfm::format("%05d", name) + ".dat"};
 }
 
+std::string std::to_string(FilePos& fpos) {
+    return strprintf("{ epoch %s, name %s, offset %s }", fpos.nEpoch, fpos.nName, fpos.nOffset);
+}
+
 std::string std::to_string(FileReader& freader) {
     std::string s;
     s += strprintf("Reading file %s at position %i.", freader.GetFileName(), freader.GetOffset());
