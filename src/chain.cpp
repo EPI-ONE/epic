@@ -114,16 +114,16 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
         Cumulator cum;
 
         ConstBlockPtr cursor = b.cblock;
-        RecordPtr prev;
+        RecordPtr previous;
         while (!cum.Full()) {
-            prev = GetRecord(cursor->GetPrevHash());
+            previous = GetRecord(cursor->GetPrevHash());
 
-            if (!prev) {
+            if (!previous) {
                 // cannot happen
                 throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap.");
             }
-            cum.Add(prev->cblock, false);
-            cursor = prev->cblock;
+            cum.Add(previous->cblock, false);
+            cursor = previous->cblock;
         }
 
         cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
@@ -401,7 +401,7 @@ std::string std::to_string(const Cumulator& cum) {
     s += " Cumulator { \n";
     s += "   chainworks { \n";
     for (auto& e : cum.chainworks) {
-        s += strprintf("     { %s, %s }\n", std::to_string(arith_uint256().SetCompact(e.first).GetLow64()), e.second);
+        s += strprintf("     { %s, %s }\n", arith_uint256().SetCompact(e.first).GetLow64(), e.second);
     }
     s += "   }\n";
     s += "   timestamps { \n";
