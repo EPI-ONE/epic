@@ -3,6 +3,7 @@
 Caterpillar::Caterpillar(const std::string& dbPath) : verifyThread_(1), obcThread_(1), dbStore_(dbPath) {
     verifyThread_.Start();
     obcThread_.Start();
+    file::SetDataDirPrefix(dbPath);
 }
 
 Caterpillar::~Caterpillar() {

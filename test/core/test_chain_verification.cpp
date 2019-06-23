@@ -227,26 +227,3 @@ TEST_F(TestChainVerification, ValidDistance) {
     rec3.minerChainHeight = 3;
     EXPECT_FALSE(IsValidDistance(&c, rec3, 10000000));
 }
-
-TEST_F(TestChainVerification, ValidDistanceNormalChain) {
-    const auto& ghash = GENESIS.GetHash();
-    const auto target = GENESIS_RECORD.snapshot->blockTarget.GetCompact();
-
-    RecordPtr registrationR =
-        std::make_shared<NodeRecord>(Block{GetParams().version, ghash, ghash, ghash, GENESIS.GetTime(), target, 0});
-
-    RecordPtr goodBlockR = std::make_shared<NodeRecord>(
-        Block{GetParams().version, ghash, registrationR->cblock->GetHash(), ghash, GENESIS.GetTime() + 1, target, 0});
-
-    RecordPtr badBlockR = std::make_shared<NodeRecord>(
-        Block{GetParams().version, ghash, goodBlockR->cblock->GetHash(), ghash, GENESIS.GetTime() + 2, target, 0});
-
-    Chain c{};
-    AddToHistory(&c, registrationR);
-    AddToHistory(&c, goodBlockR);
-
-    arith_uint256 ms_hashrate = 1;
-    EXPECT_TRUE(IsValidDistance(&c, *goodBlockR, ms_hashrate));
-    ms_hashrate = 9999;
-    EXPECT_FALSE(IsValidDistance(&c, *badBlockR, ms_hashrate));
-}

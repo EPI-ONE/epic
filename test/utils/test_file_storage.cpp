@@ -11,7 +11,19 @@
 class TestFileStorage : public testing::Test {
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
+    static std::string prefix;
+
+    static void SetUpTestCase() {
+        file::SetDataDirPrefix(prefix);
+    }
+
+    static void TearDownTestCase () {
+        std::string cmd = "rm -r " + prefix;
+        system(cmd.c_str());
+    }
 };
+
+std::string TestFileStorage::prefix = "test_file_store/";
 
 TEST_F(TestFileStorage, basic_read_write) {
     auto blk = fac.CreateBlock();

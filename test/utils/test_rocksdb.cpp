@@ -39,7 +39,7 @@ class TestRocksDB : public testing::Test {
 public:
     static std::string prefix;
     static TestImplRocksDBStore* db;
-    static std::vector<RecordPtr> records;
+    //static std::vector<RecordPtr> records;
     static std::vector<uint256> keys;
     static size_t size;
     static TestFactory* fac;
@@ -57,7 +57,7 @@ protected:
         // Initialize batch blocks and keys
         for (size_t i = 0; i < size; ++i) {
             auto rec   = fac->CreateRecordPtr(fac->GetRand() % 100 + 1, fac->GetRand() % 100 + 1, true);
-            records[i] = rec;
+            //records[i] = rec;
             keys[i]    = rec->cblock->GetHash();
         }
     }
@@ -72,7 +72,7 @@ protected:
         system(cmd.c_str());
         delete db;
         delete fac;
-        records.clear();
+        //records.clear();
         keys.clear();
     }
 };
@@ -81,7 +81,7 @@ std::string TestRocksDB::prefix       = "test_rocks/"; // temporary db folder pr
 TestImplRocksDBStore* TestRocksDB::db = nullptr;
 TestFactory* TestRocksDB::fac         = nullptr;
 size_t TestRocksDB::size              = 100;
-auto TestRocksDB::records             = std::vector<RecordPtr>(size);
+//auto TestRocksDB::records             = std::vector<RecordPtr>(size);
 auto TestRocksDB::keys                = std::vector<uint256>(size);
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {

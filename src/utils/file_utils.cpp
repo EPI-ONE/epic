@@ -46,8 +46,12 @@ bool Mkdir_recursive(const std::string &path) {
     return true;
 }
 
+void file::SetDataDirPrefix(std::string strprefix) {
+    prefix = strprefix;
+}
+
 std::string file::GetPath(FileType type, uint32_t epoch) {
-    return std::string{prefixes[type] + "epoch" + std::to_string(epoch)};
+    return std::string{prefix + typestr[type] + "/epoch" + std::to_string(epoch)};
 }
 
 std::string file::GetFileName(FileType type, uint32_t name) {
@@ -64,5 +68,4 @@ std::string std::to_string(FileWriter& fwriter) {
     std::string s;
     s += strprintf("Writing file %s at position %i.", fwriter.GetFileName(), fwriter.GetOffset());
     return s;
-
 }

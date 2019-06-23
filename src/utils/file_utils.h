@@ -29,7 +29,8 @@ std::string to_string(FileWriter& fwriter);
 
 namespace file {
 enum FileType : uint8_t { BLK = 0, REC = 1 };
-static const std::array<std::string, 2> prefixes{"data/blk/", "data/rec/"};
+static std::string prefix = "data/";
+void SetDataDirPrefix(std::string strprefix);
 static const std::array<std::string, 2> typestr{"blk", "rec"};
 std::string GetPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
@@ -90,8 +91,6 @@ public:
 private:
     std::string filename_;
     std::fstream ifbuf_;
-
-    std::string to_string(FileReader& freader);
 };
 
 // writer can write to
@@ -136,8 +135,6 @@ public:
 private:
     std::string filename_;
     std::fstream ofbuf_;
-
-    std::string to_string(FileWriter& fwriter);
 };
 
 #endif // __SRC_UTILS_FILE_UTILS_H__

@@ -141,8 +141,8 @@ public:
     RedemptionStatus isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
     uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
 
-    bool isMilestone = false;
-    std::shared_ptr<ChainState> snapshot = nullptr;
+    bool isMilestone       = false;
+    ChainStatePtr snapshot = nullptr;
 
     Validity validity = Validity::UNKNOWN;
 

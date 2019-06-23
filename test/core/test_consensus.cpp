@@ -144,7 +144,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
     auto rng = std::default_random_engine{};
     std::shuffle(std::begin(blocks), std::end(blocks), rng);
 
-    std::cout << "Test starts! \n";
     ///////////////////////////
     // Test starts here
     //

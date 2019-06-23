@@ -77,7 +77,6 @@ NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), op
 
 NodeRecord::NodeRecord(VStream& s) {
     s >> *this;
-    //Deserialize(s);
 }
 
 void NodeRecord::InvalidateMilestone() {
@@ -92,10 +91,10 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
 
 void NodeRecord::UpdateReward(const Coin& prevReward) {
     assert(validity != Validity::UNKNOWN);
-    // cumulate reward without fee
+    // cumulate reward without fee; default for blocks except first registration
     cumulativeReward = prevReward + GetParams().reward;
 
-    if (!(cblock->HasTransaction() && validity == Validity::VALID)) {
+    if (!cblock->HasTransaction() || validity == Validity::INVALID) {
         return;
     }
 
@@ -111,12 +110,12 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize_ > 0) {
         return optimalStorageSize_;
     }
-    //optimalStorageSize_ = cblock->GetOptimalEncodingSize();
+
     optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
     optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
-
     optimalStorageSize_ += 1; // Validity
     optimalStorageSize_ += 1; // RedemptionStatus
+
     if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
         optimalStorageSize_ += Hash::SIZE; // prevRedemHash size
     }
