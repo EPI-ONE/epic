@@ -15,7 +15,9 @@ enum : uint8_t {
 
 void Init(int argc, char* argv[]);
 
+bool Start();
 void ShutDown();
+void WaitShutdown();
 
 void LoadConfigFile();
 

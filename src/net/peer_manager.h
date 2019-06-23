@@ -26,15 +26,24 @@ public:
 
     void Stop();
 
+    bool Init(std::unique_ptr<Config>& config);
+
     /**
-     * bind and listen to a local address
+     * listen
+     * @param port
+     * @return true if success
+     */
+    bool Listen(uint16_t port);
+
+    /**
+     * bind a local address
      * @param bindAddress
      * @return true if success
      */
-    bool Bind(NetAddress& bindAddress);
+    bool Bind(IPAddress& bindAddress);
 
     /**
-     * bind and listen to a local address string
+     * bind a local address string
      * @param bindAddress
      * @return true if success
      */
@@ -110,11 +119,15 @@ private:
      */
     std::shared_ptr<Peer> CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
 
+    void RemovePeer(const void* connection_handle);
+
     /*
      * release resources of a peer and then delete it
      * @param peer
      */
     void DeletePeer(const std::shared_ptr<Peer>& peer);
+
+    void DisconnectPeer(std::shared_ptr<Peer>& peer);
 
     /*
      * check if we have connected to the ip address
@@ -163,16 +176,10 @@ private:
      */
     void ScheduleTask();
 
-    /**
-     * check if one pending peer' s connection is timeout
-     */
-    void CheckPendingPeers();
+    void CheckTimeout();
 
-    /**
-     * check and then earse the address in pending peers
-     * @param address
-     */
-    void UpdatePendingPeers(IPAddress& address);
+    void BroadcastMessage();
+
 
     /*
      * default network parameter based on the protocol
@@ -214,9 +221,6 @@ private:
     // a map to save all peers
     std::unordered_map<const void*, std::shared_ptr<Peer>> peerMap_;
 
-    // a map to save pending peers
-    std::unordered_map<IPAddress, uint64_t> pending_peers;
-
     // lock of connected address set
     std::mutex addressLock_;
 
@@ -242,6 +246,8 @@ private:
 
     // do some periodical tasks
     std::thread scheduleTask_;
+
+    std::string connect_;
 };
 
 extern std::unique_ptr<PeerManager> peerManager;

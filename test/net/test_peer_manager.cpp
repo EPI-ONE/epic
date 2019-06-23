@@ -10,9 +10,7 @@ public:
     static void SetUpTestCase() {
         config = std::make_unique<Config>();
     }
-    static void TearDownTestCase() {
-        ShutDown();
-    }
+    static void TearDownTestCase() {}
     void SetUp() {
         server.Start();
         client.Start();
@@ -25,7 +23,8 @@ public:
 };
 
 TEST_F(TestPeerManager, CallBack) {
-    EXPECT_TRUE(server.Bind("127.0.0.1:7877"));
+    ASSERT_TRUE(server.Bind("127.0.0.1"));
+    EXPECT_TRUE(server.Listen(7877));
     EXPECT_TRUE(client.ConnectTo("127.0.0.1:7877"));
     usleep(50000);
     EXPECT_EQ(server.GetFullyConnectedPeerSize(), 1);
@@ -33,7 +32,8 @@ TEST_F(TestPeerManager, CallBack) {
 }
 
 TEST_F(TestPeerManager, CheckHaveConnectedSameIP) {
-    EXPECT_TRUE(server.Bind("127.0.0.1:7877"));
+    ASSERT_TRUE(server.Bind("127.0.0.1"));
+    EXPECT_TRUE(server.Listen(7877));
     EXPECT_TRUE(client.ConnectTo("127.0.0.1:7877"));
     usleep(50000);
 

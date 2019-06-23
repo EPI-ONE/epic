@@ -24,6 +24,17 @@ public:
         configFilePath_ = configFilePath;
     }
 
+    void SetRoot(const std::string& root) {
+        root_ = root;
+        if (root_.back() != '/') {
+            root_.append("/");
+        }
+    }
+
+    const std::string& GetRoot() const {
+        return root_;
+    }
+
     bool IsUseFileLogger() const {
         return useFileLogger_;
     }
@@ -32,8 +43,8 @@ public:
         useFileLogger_ = useFileLogger;
     }
 
-    const std::string& GetLoggerPath() const {
-        return loggerPath_;
+    const std::string GetLoggerPath() const {
+        return GetRoot() + loggerPath_;
     }
 
     void SetLoggerPath(const std::string& loggerPath) {
@@ -48,16 +59,16 @@ public:
         loggerFilename_ = loggerFilename;
     }
 
-    const std::string& GetAddressPath() const {
-        return addressPath_;
+    const std::string GetAddressPath() const {
+        return GetRoot() + addressPath_;
     }
 
     void SetAddressPath(const std::string& addressPath) {
         addressPath_ = addressPath;
     }
 
-    const std::string& GetAddressFilename() const {
-        return addressFilename_;
+    const std::string GetAddressFilename() const {
+        return GetRoot() + addressFilename_;
     }
 
     void SetAddressFilename(const std::string& addressFilename) {
@@ -88,8 +99,8 @@ public:
         bindPort_ = bindPort;
     }
 
-    const std::string& GetDBPath() const {
-        return dbPath_;
+    const std::string GetDBPath() const {
+        return GetRoot() + dbPath_;
     }
 
     void SetDBPath(const std::string& dbPath) {
@@ -121,15 +132,14 @@ public:
     void ShowConfig() {
         std::stringstream ss;
         ss << "current config: " << std::endl;
-        ss << "config file path = " << configFilePath_ << std::endl;
-        std::string usefilelogger = useFileLogger_ ? "true" : "false";
-        ss << "use logger file = " << usefilelogger << std::endl;
-        ss << "logger file path = " << loggerPath_ << loggerFilename_ << std::endl;
-        ss << "saved address path = " << addressPath_ << addressFilename_ << std::endl;
+        ss << "config file path = " << GetConfigFilePath() << std::endl;
+        ss << "use logger file = " << useFileLogger_ << std::endl;
+        ss << "logger file path = " << GetLoggerPath() << loggerFilename_ << std::endl;
+        ss << "saved address path = " << GetAddressPath() << addressFilename_ << std::endl;
         ss << "interval of saving address = " << saveInterval_ << " seconds" << std::endl;
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
-        ss << "dbpath = " << dbPath_ << std::endl;
+        ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "seeds = [" << std::endl;
 
         for (const NetAddress& addr : seeds_) {
@@ -140,9 +150,17 @@ public:
         spdlog::info(ss.str());
     }
 
+    void SetConnect(const std::string& connect) {
+        connect_ = connect;
+    }
+
+    const std::string& GetConnect() const {
+        return connect_;
+    }
 private:
     // config file
     std::string configFilePath_;
+    std::string root_ = "data/";
 
     // logger
     bool useFileLogger_         = true;
@@ -162,6 +180,7 @@ private:
 
     // db
     std::string dbPath_ = "db/";
+    std::string connect_;
 };
 
 extern std::unique_ptr<Config> config;

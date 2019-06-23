@@ -96,10 +96,10 @@ public:
 
     // a peer is fully connected when we receive his version message and version
     // ack
-    std::atomic_bool isFullyConnected;
+    std::atomic_bool isFullyConnected = false;
 
     // if we will disconnect the peer
-    std::atomic_bool disconnect;
+    std::atomic_bool disconnect = false;
 
 private:
     /*

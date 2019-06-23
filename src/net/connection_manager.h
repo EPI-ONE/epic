@@ -9,6 +9,7 @@
 #include <event2/listener.h>
 #include <functional>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -37,21 +38,26 @@ public:
     ConnectionManager();
     virtual ~ConnectionManager();
 
-    /*
-     * listen
-     * @param port less than 65536
-     * @param local_bind_address ipv4 for example 0x7f000001 means 127.0.0.1
-     * @return 0 if successful, other on failure.
+    /**
+     * bind
+     * @param ip ipv4 for example 0x7f000001 means 127.0.0.1
      */
-    int Listen(uint32_t port, uint32_t local_bind_address = 0);
+    bool Bind(uint32_t ip);
 
-    /*
-     * connect
-     * @param remote ipv4 for example 0x7f000001 means 127.0.0.1
-     * @param port less than 65536
-     * @return 0 if successful, other on failure.
+    /**
+     * listen
+     * @param port
+     * @return true if success
      */
-    int Connect(uint32_t remote, uint32_t port);
+    bool Listen(uint16_t port);
+
+    /**
+     * connect
+     * @param ip ipv4 for example 0x7f000001 means 127.0.0.1
+     * @param port
+     * @return true if success
+     */
+    bool Connect(uint32_t ip, uint16_t port);
 
     /*
      * disconnect
@@ -133,12 +139,12 @@ private:
     new_connection_callback_t new_connection_callback_       = nullptr;
     delete_connection_callback_t delete_connection_callback_ = nullptr;
 
-    std::atomic<bool> interrupt_send_message_;
+    std::atomic_bool interrupt_send_message_ = false;
 
     std::thread thread_event_base_;
     std::thread thread_send_message_;
 
-    std::mutex bev_mtx_;
+    std::shared_mutex bev_lock_;
 
     /* the key is bufferevent, the value store the custom information of the bufferevent */
     std::unordered_map<bufferevent_t*, bev_info_t> bufferevent_map_;
@@ -146,8 +152,18 @@ private:
     BlockingQueue<NetMessage> receive_message_queue_;
     BlockingQueue<NetMessage> send_message_queue_;
 
-    uint32_t inbound_num_  = 0;
-    uint32_t outbound_num_ = 0;
+    std::atomic_uint32_t inbound_num_  = 0;
+    std::atomic_uint32_t outbound_num_ = 0;
+
+    uint32_t bind_ip_ = INADDR_ANY;
+
+    std::atomic_size_t receive_bytes_    = 0;
+    std::atomic_size_t receive_packages_ = 0;
+    std::atomic_size_t send_bytes_       = 0;
+    std::atomic_size_t send_packages_    = 0;
+
+    std::atomic_size_t checksum_error_bytes_    = 0;
+    std::atomic_size_t checksum_error_packages_ = 0;
 
     void FreeAllBufferevent_();
     bool isExist_(bufferevent_t* bev);
