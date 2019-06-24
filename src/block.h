@@ -23,7 +23,6 @@ public:
     Block(const Block&);
     Block(uint32_t versionNum);
     Block(VStream&);
-    Block(FileReader&&);
 
     Block(uint32_t version,
           uint256 milestoneHash,

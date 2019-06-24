@@ -111,7 +111,7 @@ private:
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
  * A structure that contains a shared_ptr<const Block> that will

@@ -53,7 +53,7 @@ void ChainState::UpdateTXOC(TXOC&& txoc) {
     txoc_.Merge(std::move(txoc));
 }
 
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
     auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(hashes));
     record.LinkChainState(pcs);
     return pcs;

@@ -55,8 +55,8 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 }
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
-
-    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(),
+                    timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
 
     if (numTxInput || numTxOutput) {
         Transaction tx;
@@ -83,7 +83,7 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     }
 }
 
-ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput , bool finalize) {
+ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool finalize) {
     return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize));
 }
 
@@ -95,8 +95,9 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
 
     if (GetRand() % 2) {
         // Link a ms instance
-        auto cs = std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(),
-            arith_uint256(GetRand()), arith_uint256(GetRand()), GetRand(), std::vector<uint256>{});
+        auto cs =
+            std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(), arith_uint256(GetRand()),
+                                         arith_uint256(GetRand()), GetRand(), std::vector<uint256>{});
         rec.LinkChainState(cs);
 
         if (GetRand() % 2) {
@@ -128,10 +129,12 @@ RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
     return std::make_shared<NodeRecord>(std::move(b));
 }
 
-ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
-    return make_shared_ChainState(previous, record, std::move(hashes));
+ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous,
+                                               NodeRecord& record,
+                                               std::vector<uint256>&& hashes) {
+    return CreateNextChainState(previous, record, std::move(hashes));
 }
 
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
-    return make_shared_ChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
+    return CreateNextChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }

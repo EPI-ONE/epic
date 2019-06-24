@@ -50,14 +50,14 @@ void file::SetDataDirPrefix(std::string strprefix) {
 }
 
 std::string file::GetPath(FileType type, uint32_t epoch) {
-    return std::string{prefix + typestr[type] + "/epoch" + tfm::format("%05d", epoch)};
+    return std::string{prefix + typestr[type] + "/E" + tfm::format("%06d", epoch)};
 }
 
 std::string file::GetFileName(FileType type, uint32_t name) {
-    return std::string{typestr[type] + tfm::format("%05d", name) + ".dat"};
+    return std::string{typestr[type] + tfm::format("%06d", name) + ".dat"};
 }
 
-std::string std::to_string(FilePos& fpos) {
+std::string std::to_string(const FilePos& fpos) {
     return strprintf("{ epoch %s, name %s, offset %s }", fpos.nEpoch, fpos.nName, fpos.nOffset);
 }
 

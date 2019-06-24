@@ -4,14 +4,14 @@
 #include <string>
 
 #include "rocksdb.h"
-#include "test_factory.h"
+#include "test_env.h"
 
 class TestRocksDB : public testing::Test {
 public:
     // Shared resource across all test cases
     static string prefix;
     static RocksDBStore* db;
-    static TestFactory* fac;
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 
 protected:
     // One set up before all test cases
@@ -19,8 +19,7 @@ protected:
         // Get the current time and make into a temp file name
         std::ostringstream os;
         os << time(nullptr);
-        db  = new RocksDBStore(prefix + os.str());
-        fac = new TestFactory();
+        db = new RocksDBStore(prefix + os.str());
     }
 
     // One tear down after all test cases
@@ -29,26 +28,24 @@ protected:
         std::string cmd = "exec rm -r " + prefix;
         system(cmd.c_str());
         delete db;
-        delete fac;
     }
 };
 
-string TestRocksDB::prefix    = "test_rocks/"; // temporary db folder prefix
+string TestRocksDB::prefix    = "test_rocks/"; // temporary db folder prefix RocksDBStore* TestRocksDB::db = nullptr;
 RocksDBStore* TestRocksDB::db = nullptr;
-TestFactory* TestRocksDB::fac = nullptr;
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     // Consturct a milestone file position
-    auto msHash     = fac->CreateRandomHash();
-    uint32_t height = fac->GetRand();
-    FilePos msBlkPos{fac->GetRand() % 10, fac->GetRand() % 100, fac->GetRand()};
-    FilePos msRecPos{fac->GetRand() % 10, fac->GetRand() % 100, fac->GetRand()};
+    auto msHash     = fac.CreateRandomHash();
+    uint32_t height = fac.GetRand();
+    FilePos msBlkPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
+    FilePos msRecPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
 
     // Construct a normal block file position contained
     // in the same level set as the above milestone
-    auto blkHash       = fac->CreateRandomHash();
-    uint32_t blkOffset = fac->GetRand();
-    uint32_t recOffset = fac->GetRand();
+    auto blkHash       = fac.CreateRandomHash();
+    uint32_t blkOffset = fac.GetRand();
+    uint32_t recOffset = fac.GetRand();
     FilePos blkPos{msBlkPos.nEpoch, msBlkPos.nName, msBlkPos.nOffset + blkOffset};
     FilePos recPos{msRecPos.nEpoch, msRecPos.nName, msRecPos.nOffset + recOffset};
 
@@ -85,10 +82,10 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
 
 TEST_F(TestRocksDB, batch_insertion) {
     // Consturct a milestone file position
-    auto msHash     = fac->CreateRandomHash();
-    uint32_t height = fac->GetRand();
-    FilePos msBlkPos{fac->GetRand() % 10, fac->GetRand() % 100, fac->GetRand()};
-    FilePos msRecPos{fac->GetRand() % 10, fac->GetRand() % 100, fac->GetRand()};
+    auto msHash     = fac.CreateRandomHash();
+    uint32_t height = fac.GetRand();
+    FilePos msBlkPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
+    FilePos msRecPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
 
     ASSERT_TRUE(db->WriteMsPos(height, msHash, msBlkPos, msRecPos));
 
@@ -101,13 +98,13 @@ TEST_F(TestRocksDB, batch_insertion) {
     std::vector<FilePos> blkPoses = {msBlkPos};
     std::vector<FilePos> recPoses = {msRecPos};
 
-    int size = 2;
+    int size = 100;
 
     for (int i = 1; i < size; ++i) {
-        hashes.push_back(fac->CreateRandomHash());
+        hashes.push_back(fac.CreateRandomHash());
         heights.push_back(height);
-        blkOffsets.push_back(fac->GetRand() % 500 + blkOffsets.back());
-        recOffsets.push_back(fac->GetRand() % 50 + recOffsets.back());
+        blkOffsets.push_back(fac.GetRand() % 500 + blkOffsets.back());
+        recOffsets.push_back(fac.GetRand() % 50 + recOffsets.back());
         blkPoses.emplace_back(msBlkPos.nEpoch, msBlkPos.nName, msBlkPos.nOffset + blkOffsets.back());
         recPoses.emplace_back(msRecPos.nEpoch, msRecPos.nName, msRecPos.nOffset + recOffsets.back());
     }

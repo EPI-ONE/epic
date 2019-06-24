@@ -4,8 +4,8 @@
 #include <atomic>
 #include <list>
 #include <memory>
-#include <vector>
 #include <numeric>
+#include <vector>
 
 #include "block.h"
 #include "dag_manager.h"
@@ -21,7 +21,9 @@ public:
     Caterpillar() = delete;
     Caterpillar(const std::string& dbPath);
 
-    /* API for other modules for searching a block */
+    /**
+     * API for other modules for searching a block
+     */
     StoredRecord GetMilestoneAt(size_t height) const;
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
@@ -30,19 +32,20 @@ public:
     VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
     size_t GetHeight(const uint256&) const;
 
-    bool DAGExists(const uint256&) const;
-
     // TODO: search for UTXO in db
     std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
 
+    /*
+     * Flush records to db. Called by DAGManager only.
+     */
     bool StoreRecords(const std::vector<RecordPtr>&);
 
-    /* Flush records to db. Called by DAGManager only. */
-    void Store(const std::vector<NodeRecord>&);
-
+    /*
+     * Returns true is the hash exists in one of DAG, DB, or OBC
+     */
     bool Exists(const uint256&) const;
-
     bool DBExists(const uint256&) const;
+    bool DAGExists(const uint256&) const;
 
     bool IsMilestone(const uint256&) const;
 
@@ -54,8 +57,9 @@ public:
     bool AddNewBlock(const ConstBlockPtr& block, std::shared_ptr<Peer> peer);
 
     void EnableOBC();
-
     void DisableOBC();
+
+    void SetFileCapacities(uint32_t, uint16_t);
 
     /**
      * Blocks the main thread from going forward
@@ -79,8 +83,8 @@ private:
     /**
      * params for file storage
      */
-    static const uint32_t fileCapacity_        = 2 ^ 28;
-    static const uint16_t epochCapacity_       = UINT_LEAST16_MAX;
+    uint32_t fileCapacity_                     = 2 ^ 28;
+    uint16_t epochCapacity_                    = UINT_LEAST16_MAX;
     std::atomic_uint_fast32_t currentBlkEpoch_ = 0;
     std::atomic_uint_fast32_t currentRecEpoch_ = 0;
     std::atomic_uint_fast16_t currentBlkName_  = 0;
@@ -103,15 +107,14 @@ private:
     uint32_t loadCurrentBlkSize();
     uint32_t loadCurrentRecSize();
 
-    void InspectCurrentBlkEpoch();
-    void InspectCurrentRecEpoch();
-    void InspectCurrentBlkName(uint32_t);
-    void InspectCurrentRecName(uint32_t);
-    void AddCurrentBlkSize(uint32_t);
-    void AddCurrentRecSize(uint32_t);
+    void InspectCurrentEpoch();
+    void InspectCurrentName(std::pair<uint32_t, uint32_t>);
+    void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
     StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;
     FilePos& NextFile(FilePos&) const;
+
+    friend class TestFileStorage;
 };
 
 extern std::unique_ptr<Caterpillar> CAT;

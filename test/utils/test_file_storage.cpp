@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
 
+#include "caterpillar.h"
 #include "file_utils.h"
 #include "test_env.h"
 
 #include <fstream>
 #include <iostream>
 #include <string>
-
 
 class TestFileStorage : public testing::Test {
 public:
@@ -17,7 +17,7 @@ public:
         file::SetDataDirPrefix(prefix);
     }
 
-    static void TearDownTestCase () {
+    static void TearDownTestCase() {
         std::string cmd = "rm -r " + prefix;
         system(cmd.c_str());
     }
@@ -29,7 +29,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     auto blk = fac.CreateBlock();
     blk.Solve();
     NodeRecord rec{blk};
-    FilePos fpos{0, 0, 0};
+    FilePos fpos{100000, 0, 0};
 
     {
         FileWriter writer{file::FileType::BLK, fpos};
@@ -59,11 +59,11 @@ TEST_F(TestFileStorage, multiple_read_write) {
     blk1.Solve();
     blk2.Solve();
 
-    FilePos pos1{0,1,0};
-    FilePos pos2{0,1,0};
+    FilePos pos1{100000, 1, 0};
+    FilePos pos2{100000, 1, 0};
     pos2.nOffset = blk1.GetOptimalEncodingSize();
 
-    //multiple writing
+    // multiple writing
     {
         FileWriter writer1(file::FileType::BLK, pos1);
         FileWriter writer2(file::FileType::BLK, pos2);
@@ -71,13 +71,13 @@ TEST_F(TestFileStorage, multiple_read_write) {
         EXPECT_EQ(writer1.GetFileName(), writer2.GetFileName());
 
         writer2 << blk2;
-        writer1 << blk1; 
+        writer1 << blk1;
 
         EXPECT_EQ(writer1.GetOffset(), blk1.GetOptimalEncodingSize());
         EXPECT_EQ(writer2.GetOffset(), blk1.GetOptimalEncodingSize() + blk2.GetOptimalEncodingSize());
     }
 
-    //multiple reading
+    // multiple reading
     FileReader reader1{file::FileType::BLK, pos1};
     FileReader reader2{file::FileType::BLK, pos2};
 
@@ -87,4 +87,40 @@ TEST_F(TestFileStorage, multiple_read_write) {
 
     EXPECT_EQ(blk1, deser_blk1);
     EXPECT_EQ(blk2, deser_blk2);
+}
+
+TEST_F(TestFileStorage, caterpillar_api) {
+    std::ostringstream os;
+    os << time(nullptr);
+    CAT = std::make_unique<Caterpillar>(prefix + os.str());
+    CAT->SetFileCapacities(3000, 2);
+
+    // Consturct two consecutive milestones
+    auto ms1 = fac.CreateRecordPtr(1, 1, true);
+    fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, ms1);
+    ms1->isMilestone = true;
+
+    auto ms2 = fac.CreateRecordPtr(1, 1, true);
+    fac.CreateChainStatePtr(ms1->snapshot, ms2);
+    ms2->isMilestone = true;
+
+    int size = 10;
+
+    // Construct the level set of ms1
+    std::vector<RecordPtr> lvs  = {ms1};
+    std::vector<RecordPtr> lvs2 = {ms2};
+    for (int i = 1; i < size; ++i) {
+        lvs.emplace_back(fac.CreateRecordPtr(fac.GetRand() % 10, fac.GetRand() % 10, true));
+        lvs.back()->isMilestone = false;
+    }
+
+    ASSERT_TRUE(CAT->StoreRecords(lvs));
+    ASSERT_TRUE(CAT->StoreRecords(lvs2));
+
+    for (int i = 0; i < size; ++i) {
+        auto blk = CAT->GetRecord(lvs[i]->cblock->GetHash());
+        ASSERT_EQ(*blk, *lvs[i]);
+    }
+
+    CAT.reset();
 }

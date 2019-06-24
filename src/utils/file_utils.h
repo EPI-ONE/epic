@@ -23,7 +23,7 @@ class FileReader;
 class FileWriter;
 
 namespace std {
-std::string to_string(FilePos&);
+std::string to_string(const FilePos&);
 std::string to_string(FileReader&);
 std::string to_string(FileWriter&);
 } // namespace std
@@ -32,7 +32,7 @@ namespace file {
 enum FileType : uint8_t { BLK = 0, REC = 1 };
 static std::string prefix = "data/";
 void SetDataDirPrefix(std::string strprefix);
-static const std::array<std::string, 2> typestr{"blk", "rec"};
+static const std::array<std::string, 2> typestr{"BLK", "REC"};
 std::string GetPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
 } // namespace file
@@ -86,7 +86,7 @@ public:
     FileReader(file::FileType type, const FilePos& pos) {
         std::string dir = file::GetPath(type, pos.nEpoch);
         if (!CheckDirExist(dir)) {
-            throw std::ios_base::failure("Can't open file because it doesn't exits");
+            throw std::ios_base::failure("Can't open file because path \"./" + dir + "\" doesn't exits");
         }
         filename_ = dir + "/" + file::GetFileName(type, pos.nName);
         ifbuf_.open(filename_, std::ifstream::in | std::ifstream::binary);
@@ -144,7 +144,7 @@ public:
             Mkdir_recursive(dir);
         }
         std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        ofbuf_.open(filename_, std::ostream::out | std::ofstream::binary);
+        ofbuf_.open(filename_, std::ios::out | std::ios::app | std::ios::binary);
         if (!ofbuf_.is_open()) {
             throw std::string("file stream is not opened");
         }
@@ -156,7 +156,8 @@ public:
     FileWriter& operator=(const FileWriter&) = delete;
 
     ~FileWriter() {
-        ofbuf_.close(); 
+        ofbuf_.flush();
+        ofbuf_.close();
     }
 
     template <typename T>

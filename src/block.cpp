@@ -22,10 +22,6 @@ Block::Block(VStream& s) {
     s >> *this;
 }
 
-Block::Block(FileReader&& s) {
-    s >> *this;
-}
-
 void Block::SetNull() {
     milestoneBlockHash_.SetNull();
     prevBlockHash_.SetNull();
