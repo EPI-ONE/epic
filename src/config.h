@@ -102,6 +102,14 @@ public:
         bindPort_ = bindPort;
     }
 
+    std::string GetNetworkType() const {
+        return networkType_;
+    }
+
+    void SetNetType(const std::string& networkType) {
+        networkType_ = networkType;
+    }
+
     const std::string GetDBPath() const {
         return GetRoot() + dbPath_;
     }
@@ -158,6 +166,7 @@ public:
         ss << "interval of saving address = " << saveInterval_ << " seconds" << std::endl;
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
+        ss << "network type = " << networkType_ << std::endl;
         ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
         ss << "rpc port = " << rpcPort_ << std::endl;
@@ -197,6 +206,7 @@ private:
     // network config
     std::string bindAddress_ = defaultIP;
     uint16_t bindPort_       = defaultPort;
+    std::string networkType_ = "Testnet";
 
     std::vector<NetAddress> seeds_;
 

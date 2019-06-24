@@ -1,9 +1,10 @@
 #include "init.h"
 #include "dag_manager.h"
 #include "rpc_server.h"
+
 #include <atomic>
 #include <net/peer_manager.h>
-#include <signal.h>
+#include <csignal>
 
 std::unique_ptr<Config> config;
 
@@ -70,13 +71,17 @@ void Init(int argc, char* argv[]) {
     config->ShowConfig();
 
     // set global variables
-    // TODO: add argument parsing
+    const std::map<std::string, ParamsType> parseType = {
+        {"Mainnet", ParamsType::MAINNET}, {"Testnet", ParamsType::TESTNET}, {"Unittest", ParamsType::UNITTEST}};
     try {
-        SelectParams(ParamsType::TESTNET);
+        SelectParams(parseType.at(config->GetNetworkType()));
+    } catch (const std::out_of_range& err) {
+        std::cerr << "wrong format of network type in config.toml";
     } catch (const std::invalid_argument& err) {
         std::cerr << "error choosing params: " << err.what() << std::endl;
     }
 
+    file::SetDataDirPrefix(config->GetRoot());
     CAT          = std::make_unique<Caterpillar>(config->GetDBPath());
     DAG          = std::make_unique<DAGManager>();
     peer_manager = std::make_unique<PeerManager>();
@@ -175,6 +180,7 @@ void LoadConfigFile() {
     if (network_config) {
         auto ip   = network_config->get_as<std::string>("ip");
         auto port = network_config->get_as<uint16_t>("port");
+        auto type = network_config->get_as<std::string>("type");
         if (ip && config->GetBindAddress() == config->defaultIP) {
             config->SetBindAddress(*ip);
         } else {
@@ -186,6 +192,7 @@ void LoadConfigFile() {
         } else {
             spdlog::info("bind port has been specified in the command line, discard the port in the config file");
         }
+        config->SetNetType(*type);
     }
 
     // seeds
