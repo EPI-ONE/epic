@@ -130,7 +130,7 @@ public:
         READWRITE(diffTarget_);
         READWRITE(nonce_);
         READWRITE(transaction_);
-        if (ser_action.ForRead() == true) {
+        if (ser_action.ForRead()) {
             SetParents();
             FinalizeHash();
             CalculateOptimalEncodingSize();

@@ -18,7 +18,7 @@ class ChainState {
 public:
     uint64_t height;
     arith_uint256 chainwork;
-    uint64_t lastUpdateTime;
+    uint32_t lastUpdateTime;
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
     uint64_t hashRate;
@@ -35,7 +35,7 @@ public:
     /* simple constructor (now for test only) */
     ChainState(uint64_t height,
         arith_uint256 chainwork,
-        uint64_t lastUpdateTime,
+        uint32_t lastUpdateTime,
         arith_uint256 milestoneTarget,
         arith_uint256 blockTarget,
         uint64_t hashRate,
@@ -106,7 +106,7 @@ private:
     // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
-    void UpdateDifficulty(uint64_t blockUpdateTime);
+    void UpdateDifficulty(uint32_t blockUpdateTime);
 };
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
@@ -141,7 +141,7 @@ public:
     RedemptionStatus isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
     uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
 
-    bool isMilestone = false;
+    bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
 
     Validity validity = Validity::UNKNOWN;
@@ -149,6 +149,7 @@ public:
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
     NodeRecord(const Block&);
+    NodeRecord(Block&&);
     NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);
@@ -156,13 +157,45 @@ public:
     void InvalidateMilestone();
     void UpdateReward(const Coin&);
 
-    void Serialize(VStream& s) const;
-    void Deserialize(VStream& s);
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(cumulativeReward);
+        READWRITE(VARINT(minerChainHeight));
+        READWRITE(static_cast<uint8_t>(validity));
+        READWRITE(static_cast<uint8_t>(isRedeemed));
+
+        if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+            READWRITE(prevRedemHash);
+        }
+
+        if (ser_action.ForRead()) {
+            auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
+            isMilestone = (msFlag == IS_TRUE_MILESTONE);
+            if (msFlag > 0) {
+                ChainState cs{};
+                ::Deserialize(s, cs);
+                snapshot = std::make_shared<ChainState>(std::move(cs));
+            }
+        } else {
+            if (isMilestone) {
+                ::Serialize(s, static_cast<uint8_t>(IS_TRUE_MILESTONE));
+            } else if (snapshot != nullptr) {
+                ::Serialize(s, static_cast<uint8_t>(IS_FAKE_MILESTONE));
+            } else {
+                ::Serialize(s, static_cast<uint8_t>(IS_NOT_REDEMPTION));
+            }
+            if (snapshot != nullptr) {
+                ::Serialize(s, *snapshot);
+            }
+        }
+    }
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(*cblock, cumulativeReward, minerChainHeight) ==
-                   std::tie(*(another.cblock), another.cumulativeReward, another.minerChainHeight) &&
-               ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot));
+        return std::tie(cumulativeReward, minerChainHeight) ==
+                   std::tie(another.cumulativeReward, another.minerChainHeight) &&
+               ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
+               ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));
     }
 
     bool operator!=(const NodeRecord& another) const {

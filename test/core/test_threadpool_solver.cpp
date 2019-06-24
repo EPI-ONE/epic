@@ -59,7 +59,7 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
 
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetDifficultyTarget(0x1f00ffffL);
-    genesisBlock.SetTime(1560941102L);
+    genesisBlock.SetTime(1559859000L);
     genesisBlock.SetNonce(0);
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
@@ -79,7 +79,9 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    genesisBlock.SetNonce(105198);
+    genesisBlock.SetNonce(144412); // UnitTest
+    // genesisBlock.SetNonce(11433695); // TestNet
+    // genesisBlock.SetNonce(2217850746); // MainNet
     genesisBlock.FinalizeHash();
     EXPECT_TRUE(genesisBlock.Verify());
 }

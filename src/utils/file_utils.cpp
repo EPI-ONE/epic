@@ -1,5 +1,7 @@
 #include "file_utils.h"
 
+#include "tinyformat.h"
+
 bool CheckDirExist(const std::string& dirPath) {
     struct stat info;
     if (stat(dirPath.c_str(), &info) != 0)
@@ -13,7 +15,6 @@ bool CheckFileExist(const std::string& filePath) {
 }
 
 // used c like way to implement this
-// TODO later can try to use c++17 std::filesystem to implement this
 bool Mkdir_recursive(const std::string &path) {
     if (path.empty()) {
         return true;
@@ -43,4 +44,28 @@ bool Mkdir_recursive(const std::string &path) {
             return false;
     }
     return true;
+}
+
+void file::SetDataDirPrefix(std::string strprefix) {
+    prefix = strprefix;
+}
+
+std::string file::GetPath(FileType type, uint32_t epoch) {
+    return std::string{prefix + typestr[type] + "/epoch" + std::to_string(epoch)};
+}
+
+std::string file::GetFileName(FileType type, uint32_t name) {
+    return std::string{typestr[type] + std::to_string(name) + ".dat"};
+}
+
+std::string std::to_string(FileReader& freader) {
+    std::string s;
+    s += strprintf("Reading file %s at position %i.", freader.GetFileName(), freader.GetOffset());
+    return s;
+}
+
+std::string std::to_string(FileWriter& fwriter) {
+    std::string s;
+    s += strprintf("Writing file %s at position %i.", fwriter.GetFileName(), fwriter.GetOffset());
+    return s;
 }

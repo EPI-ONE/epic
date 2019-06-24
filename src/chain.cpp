@@ -169,12 +169,14 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
             rec->prevRedemHash = rec->cblock->GetHash();
         } else {
             if (auto update = Validate(*rec)) {
+                rec->validity = NodeRecord::VALID;
                 ledger_.Update(*update);
                 state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
                 spdlog::info("Transaction in block {} is invalid!", std::to_string(rec->cblock->GetHash()));
             }
+            rec->UpdateReward(GetPrevReward(*rec));
         }
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
@@ -183,11 +185,11 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
 }
 
 std::optional<TXOC> Chain::Validate(NodeRecord& record) {
-    auto& pblock = record.cblock;
+    const auto& pblock = record.cblock;
     std::optional<TXOC> result;
 
     // first check whether it is a fork of its peer chain
-    auto prevRec = GetRecord(record.cblock->GetPrevHash());
+    auto prevRec = GetRecord(pblock->GetPrevHash());
     if (!prevRec->prevRedemHash.IsNull()) {
         // then its previous block is valid in the sense of reward
         record.prevRedemHash = prevRec->prevRedemHash;
@@ -197,7 +199,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     }
     record.minerChainHeight = prevRec->minerChainHeight + 1;
 
-    // then check its transaction and update UTXO
+    // then verify its transaction and return the updating UTXO
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
             result = ValidateRedemption(record);
@@ -206,11 +208,8 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
         }
     } else {
         // regarded as a valid transaction but not updating ledger
-        record.validity = NodeRecord::VALID;
-        result          = std::make_optional<TXOC>();
+        result = std::make_optional<TXOC>();
     }
-
-    record.UpdateReward(GetPrevReward(record));
     return result;
 }
 
@@ -291,7 +290,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check total amount of value in and value out and take a note of fee received
     Coin fee = valueIn - valueOut;
-    if (!(0 <= fee && fee <= GetParams().maxMoney)) {
+    if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
         spdlog::info("Transaction input value goes out of range! [{}]", hashstr);
         return {};
     }
