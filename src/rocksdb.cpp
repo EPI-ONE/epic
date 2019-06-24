@@ -1,5 +1,9 @@
 #include "rocksdb.h"
 
+using std::optional;
+using std::pair;
+using std::string;
+using std::tuple;
 using namespace rocksdb;
 
 RocksDBStore::RocksDBStore(string dbPath) {
@@ -99,9 +103,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        uint256 h;
-        value >> h;
-        // value.ignore(Hash::SIZE);
+        value.ignore(Hash::SIZE);
         FilePos blkPos(value);
         FilePos recPos(value);
         return std::make_pair(blkPos, recPos);
@@ -115,7 +117,11 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint256& blkHash) 
 }
 
 optional<FilePos> RocksDBStore::GetMsBlockPos(const uint64_t& height) const {
-    return GetMsPos(height)->first;
+    auto value = GetMsPos(height);
+    if (value) {
+        return value->first;
+    }
+    return {};
 }
 
 optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHash) const {

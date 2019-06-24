@@ -10,7 +10,6 @@
 #include "consensus.h"
 #include "params.h"
 #include "uint256.h"
-#include "concurrent_container.h"
 #include "utxo.h"
 
 class Cumulator;

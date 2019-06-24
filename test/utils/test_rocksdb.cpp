@@ -9,7 +9,7 @@
 class TestRocksDB : public testing::Test {
 public:
     // Shared resource across all test cases
-    static string prefix;
+    static std::string prefix;
     static RocksDBStore* db;
     TestFactory fac = EpicTestEnvironment::GetFactory();
 
@@ -31,7 +31,7 @@ protected:
     }
 };
 
-string TestRocksDB::prefix    = "test_rocks/"; // temporary db folder prefix RocksDBStore* TestRocksDB::db = nullptr;
+std::string TestRocksDB::prefix    = "test_rocks/"; // temporary db folder prefix RocksDBStore* TestRocksDB::db = nullptr;
 RocksDBStore* TestRocksDB::db = nullptr;
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {

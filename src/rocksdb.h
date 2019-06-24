@@ -13,12 +13,7 @@
 #include "rocksdb/options.h"
 #include "rocksdb/slice.h"
 
-using std::optional;
-using std::pair;
-using std::string;
-using std::tuple;
-
-static const std::vector<string> COLUMN_NAMES = {
+static const std::vector<std::string> COLUMN_NAMES = {
     rocksdb::kDefaultColumnFamilyName, // (key) block hash
                                        // (value) {height, blk offset, ms offset}
                                        // Note: offsets are relative to the offsets of
@@ -38,7 +33,7 @@ class RocksDBStore {
 public:
     RocksDBStore()                    = delete;
     RocksDBStore(const RocksDBStore&) = delete;
-    RocksDBStore(string dbPath);
+    RocksDBStore(std::string dbPath);
 
     ~RocksDBStore();
 
@@ -50,20 +45,20 @@ public:
      * Gets the milesonte file posisionts at height
      * Returns {ms hash, blk FilePos, rec FilePos}
      */
-    optional<pair<FilePos, FilePos>> GetMsPos(const uint64_t& height) const;
-    optional<FilePos> GetMsBlockPos(const uint64_t& height) const;
+    std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint64_t& height) const;
+    std::optional<FilePos> GetMsBlockPos(const uint64_t& height) const;
 
     /**
      * Gets the milesonte file posisionts at height of blk
      * Returns {blk FilePos, rec FilePos}
      */
-    optional<pair<FilePos, FilePos>> GetMsPos(const uint256& blk) const;
+    std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint256& blk) const;
 
     /**
      * Gets the file posisionts of the hash.
      * Returns {blk FilePos, rec FilePos}
      */
-    optional<pair<FilePos, FilePos>> GetRecordPos(const uint256&) const;
+    std::optional<std::pair<FilePos, FilePos>> GetRecordPos(const uint256&) const;
 
     /**
      * Writes the file offsets of the milestone hash
@@ -85,20 +80,20 @@ public:
     bool DeleteMsPos(const uint256&) const;
 
 private:
-    std::unordered_map<string, rocksdb::ColumnFamilyHandle*> handleMap;
+    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
     rocksdb::DB* db;
-    string DBPATH;
+    std::string DBPATH;
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
     uint256 GetMsHashAt(const uint64_t& height) const;
-    optional<tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
+    std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
 
-    string Get(const string& column, const rocksdb::Slice& key) const;
-    string Get(const string& column, const string& key) const;
-    bool Delete(const string& column, const string& key) const;
+    std::string Get(const std::string& column, const rocksdb::Slice& key) const;
+    std::string Get(const std::string& column, const std::string& key) const;
+    bool Delete(const std::string& column, const std::string& key) const;
 
     template <typename K, typename H, typename P1, typename P2>
-    bool WritePosImpl(const string& column, const K&, const H&, const P1&, const P2&) const;
+    bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;
 };
 
 #endif /* ifndef __SRC_ROCKSDB_H__ */

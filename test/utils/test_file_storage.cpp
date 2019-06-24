@@ -29,7 +29,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     auto blk = fac.CreateBlock();
     blk.Solve();
     NodeRecord rec{blk};
-    FilePos fpos{100000, 0, 0};
+    FilePos fpos{0, 0, 0};
 
     {
         FileWriter writer{file::FileType::BLK, fpos};
@@ -59,8 +59,8 @@ TEST_F(TestFileStorage, basic_read_write) {
 // blk1.Solve();
 // blk2.Solve();
 
-// FilePos pos1{100000, 1, 0};
-// FilePos pos2{100000, 1, 0};
+// FilePos pos1{0,1,0};
+// FilePos pos2{0,1,0};
 // pos2.nOffset = blk1.GetOptimalEncodingSize();
 
 //// multiple writing
@@ -94,7 +94,7 @@ TEST_F(TestFileStorage, basic_read_write) {
 // EXPECT_EQ(blk2, deser_blk2);
 //}
 
-TEST_F(TestFileStorage, cat_store_and_get_records) {
+TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     std::ostringstream os;
     os << time(nullptr);
     CAT = std::make_unique<Caterpillar>(prefix + os.str());
@@ -133,9 +133,19 @@ TEST_F(TestFileStorage, cat_store_and_get_records) {
         ASSERT_TRUE(CAT->StoreRecords(lvs));
     }
 
+    // Inspect inserted records
     for (size_t i = 0; i < blocks.size(); ++i) {
         auto blk = CAT->GetRecord(blocks[i]->cblock->GetHash());
         ASSERT_EQ(*blocks[i], *blk);
     }
+
+    // Recover level sets in batch
+    VStream vs = CAT->GetRawLevelSetBetween(0, nLvs - 1);
+
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        Block recovered(vs);
+        ASSERT_EQ(*blocks[i]->cblock, recovered);
+    }
+
     CAT.reset();
 }

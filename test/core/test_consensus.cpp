@@ -4,11 +4,11 @@
 
 #include "caterpillar.h"
 #include "key.h"
-#include "test_env.h"
+#include "test_factory.h"
 
 class TestConsensus : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
+    TestFactory fac;
 };
 
 TEST_F(TestConsensus, SyntaxChecking) {
@@ -73,21 +73,19 @@ TEST_F(TestConsensus, UTXO) {
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
-    constexpr size_t HEIGHT = 100;
-    std::array<std::shared_ptr<ChainState>, HEIGHT> arrayMs;
+    std::array<std::shared_ptr<ChainState>, 100> arrayMs;
     arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec = fac.CreateConsecutiveRecordPtr();
-        ASSERT_NE(UintToArith256(rec->cblock->GetHash()), arith_uint256{0});
-
+    constexpr size_t LOOPS = 100;
+    for (size_t i = 1; i < LOOPS; i++) {
+        auto rec   = fac.CreateConsecutiveRecordPtr();
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % GetParams().timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 0) {
+        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
@@ -99,7 +97,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 100;
+    std::size_t n = 1000;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 
@@ -163,12 +161,17 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->Stop();
     DAG->Stop();
 
-    /*for (const auto& blk : blocks) {
+    for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
         EXPECT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
-        EXPECT_TRUE(blkCache);
-    }*/
+        if (!(*blk == *genesisPtr)) {
+            if (!blkCache) {
+                std::cout << std::to_string(bhash) << std::endl;
+            }
+            EXPECT_TRUE(blkCache);
+        }
+    }
 
     EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
 

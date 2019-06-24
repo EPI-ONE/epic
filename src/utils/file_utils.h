@@ -33,8 +33,9 @@ enum FileType : uint8_t { BLK = 0, REC = 1 };
 static std::string prefix = "data/";
 void SetDataDirPrefix(std::string strprefix);
 static const std::array<std::string, 2> typestr{"BLK", "REC"};
-std::string GetPath(FileType type, uint32_t epoch);
+std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
+std::string GetFilePath(FileType type, const FilePos&);
 } // namespace file
 
 struct FilePos {
@@ -52,8 +53,8 @@ struct FilePos {
         return nEpoch == another.nEpoch && nName == another.nName;
     }
 
-    friend bool operator==(const FilePos& thisone, const FilePos& another) {
-        return thisone.nEpoch == another.nEpoch && thisone.nName == another.nName && thisone.nOffset == another.nOffset;
+    friend bool operator==(const FilePos& a, const FilePos& b) {
+        return a.nEpoch == b.nEpoch && a.nName == b.nName && a.nOffset == b.nOffset;
     }
 
     bool operator!=(const FilePos& another) {
@@ -84,12 +85,12 @@ class FileReader {
 public:
     // check if dir and file exist; if not, it can't read
     FileReader(file::FileType type, const FilePos& pos) {
-        std::string dir = file::GetPath(type, pos.nEpoch);
+        std::string dir = file::GetEpochPath(type, pos.nEpoch);
         if (!CheckDirExist(dir)) {
             throw std::ios_base::failure("Can't open file because path \"./" + dir + "\" doesn't exits");
         }
         filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        ifbuf_.open(filename_, std::ios::in | std::ios::binary);
+        ifbuf_.open(filename_, std::ifstream::in | std::ifstream::binary);
         ifbuf_.seekg(pos.nOffset, std::ios::beg);
     }
 
@@ -103,7 +104,11 @@ public:
 
     template <typename Stream>
     FileReader& read(size_t size, Stream& s) {
-        s.write(reinterpret_cast<char*>(ifbuf_.rdbuf() + GetOffset()), size);
+        size_t nSize = s.size();
+        s.resize(nSize + size);
+        for (size_t i = nSize; i < s.size(); ++i) {
+            ifbuf_.read(&s[i], 1);
+        }
         return *this;
     }
 
@@ -129,6 +134,10 @@ public:
         return size;
     }
 
+    void Close() {
+        ifbuf_.close();
+    }
+
 private:
     std::string filename_;
     std::fstream ifbuf_;
@@ -139,7 +148,7 @@ class FileWriter {
 public:
     // check if dir exists. If not, create one
     FileWriter(file::FileType type, const FilePos& pos) {
-        std::string dir = file::GetPath(type, pos.nEpoch);
+        std::string dir = file::GetEpochPath(type, pos.nEpoch);
         if (!CheckDirExist(dir)) {
             Mkdir_recursive(dir);
         }

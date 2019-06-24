@@ -18,8 +18,8 @@ Block::Block(uint32_t versionNum) : Block() {
     tipBlockHash_       = Hash::GetZeroHash();
 }
 
-Block::Block(VStream& s) {
-    s >> *this;
+Block::Block(VStream& payload) {
+    payload >> *this;
 }
 
 void Block::SetNull() {

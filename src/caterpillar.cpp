@@ -210,32 +210,44 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const
     }
 
     FileReader reader(file::BLK, *leftPos);
-    auto leftOffset = leftPos->nOffset;
+    auto leftOffset  = leftPos->nOffset;
+    auto rightOffset = rightPos ? rightPos->nOffset : 0;
 
-    // Read the first file
-    reader.read(reader.Size() - leftOffset, result);
-
-    if (!rightPos) {
-        return result;
-    }
-
-    assert(*leftPos < *rightPos);
-
-    auto rightOffset = rightPos->nOffset;
-
-    if (leftPos->SameFileAs(*rightPos)) {
+    if (rightPos && leftPos->SameFileAs(*rightPos)) {
         reader.read(rightOffset - leftOffset, result);
         return result;
     }
 
-    // Read files between leftPos and rightPos (exclusive)
-    for (auto file = NextFile(*leftPos); file < *rightPos && !file.SameFileAs(*rightPos); NextFile(file)) {
-        reader.read(reader.Size(), result);
+    // Read all of the first file
+    auto size = reader.Size();
+    reader.read(size - leftOffset, result);
+    reader.Close();
+
+    if (rightPos) {
+        // Read files between leftPos and rightPos (exclusive)
+        auto file = NextFile(*leftPos);
+        while (file < *rightPos && !file.SameFileAs(*rightPos)) {
+            FileReader cursor(file::BLK, file);
+            size =  cursor.Size();
+            cursor.read(size, result);
+            NextFile(file);
+            cursor.Close();
+        }
+
+        // Read the last file
+        FileReader cursor(file::BLK, file);
+        reader.read(rightOffset, result);
+        return result;
     }
 
-    // Read the last file
-    reader.read(rightOffset, result);
-
+    // Read all the reset of files
+    auto file = NextFile(*leftPos);
+    while (CheckFileExist(file::GetFilePath(file::BLK, file))) {
+        FileReader cursor(file::BLK, file);
+        size = cursor.Size();
+        cursor.read(size, result);
+        NextFile(file);
+    }
     return result;
 }
 
@@ -272,6 +284,8 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         uint32_t msBlkOffset = msBlkPos.nOffset;
         uint32_t msRecOffset = msRecPos.nOffset;
 
+        uint64_t height = lvs.front()->snapshot->height;
+
         for (const auto& rec : lvs) {
             // Write to file
             blkOffset = blkFs.GetOffset() - msBlkOffset;
@@ -281,9 +295,9 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
             // Write positions to db
             if (rec->isMilestone) {
-                dbStore_.WriteMsPos(rec->snapshot->height, rec->cblock->GetHash(), msBlkPos, msRecPos);
+                dbStore_.WriteMsPos(height, rec->cblock->GetHash(), msBlkPos, msRecPos);
             }
-            dbStore_.WriteRecPos(rec->cblock->GetHash(), rec->height, blkOffset, recOffset);
+            dbStore_.WriteRecPos(rec->cblock->GetHash(), height, blkOffset, recOffset);
         }
 
         AddCurrentSize(totalSize);
@@ -391,9 +405,11 @@ void Caterpillar::AddCurrentSize(std::pair<uint32_t, uint32_t> size) {
 }
 
 FilePos& Caterpillar::NextFile(FilePos& pos) const {
-    pos.nName++;
-    if (pos.nName == 0) {
+    if (pos.nName == epochCapacity_ - 1) {
+        pos.nName = 0;
         pos.nEpoch++;
+    } else {
+       pos.nName++;
     }
     pos.nOffset = 0;
     return pos;

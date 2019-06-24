@@ -170,7 +170,7 @@ public:
             READWRITE(prevRedemHash);
         }
 
-        if (ser_action.ForRead() == true) {
+        if (ser_action.ForRead()) {
             auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
             isMilestone = (msFlag == IS_TRUE_MILESTONE);
             if (msFlag > 0) {
