@@ -158,6 +158,8 @@ private:
     std::optional<TXOC> ValidateRedemption(NodeRecord& record);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
+    void UpdateMsReward(std::vector<RecordPtr>&);
+
     const Coin& GetPrevReward(const NodeRecord& rec) {
         // TODO: may add more check
         return recordHistory_[rec.cblock->GetPrevHash()]->cumulativeReward;

@@ -45,6 +45,7 @@ MainNetParams::MainNetParams() {
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
     reward               = 1;
+    msRewardCoefficient  = REWARD_COEFFICIENT;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
@@ -74,6 +75,7 @@ TestNetParams::TestNetParams() {
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
     reward               = 1;
+    msRewardCoefficient  = REWARD_COEFFICIENT;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
@@ -103,6 +105,7 @@ UnitTestParams::UnitTestParams() {
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
     reward               = 1;
+    msRewardCoefficient  = REWARD_COEFFICIENT;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;
