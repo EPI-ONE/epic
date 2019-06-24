@@ -155,7 +155,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->EnableOBC();
 
     for (const auto& block : blocks) {
-        CAT->AddNewBlock(block, nullptr);
+        DAG->AddNewBlock(block, nullptr);
     }
 
     CAT->Stop();

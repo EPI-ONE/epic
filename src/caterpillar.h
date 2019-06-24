@@ -70,7 +70,6 @@ public:
     ~Caterpillar();
 
 private:
-    ThreadPool verifyThread_;
     ThreadPool obcThread_;
 
     RocksDBStore dbStore_;

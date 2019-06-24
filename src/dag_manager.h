@@ -33,11 +33,12 @@ public:
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void GetBundle(GetDataTask& task);
 
-    /**
-     * Adds a newly received block to the corresponding chain
-     * that passes syntax checking .
+    /*
+     * Submits tasks to a single thread in which it checks its syntax.
+     * If the block passes the checking, add them to pendings in dag_manager.
+     * Returns true only if the new block is successfully submitted to pendings.
      */
-    void AddBlockToPending(const ConstBlockPtr& block);
+    void AddNewBlock(const ConstBlockPtr& block, std::shared_ptr<Peer> peer);
 
     const RecordPtr GetHead() const;
 
@@ -62,7 +63,7 @@ public:
     void Stop();
 
 private:
-    ThreadPool thread_;
+    ThreadPool verifyThread_;
 
     /** Indicator of whether we are synching with some peer. */
     std::atomic<bool> isBatchSynching;
@@ -114,9 +115,16 @@ private:
 
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
+
+    /**
+     * Adds a newly received block to the corresponding chain
+     * that passes syntax checking .
+     */
+    void AddBlockToPending(const ConstBlockPtr& block);
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
+bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
 
 extern std::unique_ptr<DAGManager> DAG;
 
