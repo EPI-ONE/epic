@@ -45,7 +45,7 @@ struct FilePos {
     FilePos() : nEpoch(-1), nName(0), nOffset(0) {}
     FilePos(uint32_t epoch, uint32_t name, uint32_t offset) : nEpoch(epoch), nName(name), nOffset(offset) {}
     FilePos(VStream& vs) {
-        vs >> *this;
+        Deserialize(vs);
     }
 
     bool SameFileAs(const FilePos& another) {
@@ -89,7 +89,7 @@ public:
             throw std::ios_base::failure("Can't open file because path \"./" + dir + "\" doesn't exits");
         }
         filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        ifbuf_.open(filename_, std::ifstream::in | std::ifstream::binary);
+        ifbuf_.open(filename_, std::ios::in | std::ios::binary);
         ifbuf_.seekg(pos.nOffset, std::ios::beg);
     }
 

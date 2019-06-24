@@ -174,10 +174,6 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
 
     auto [blkPos, recPos] = *value;
 
-    std::cout << "========================================" << std::endl;
-    std::cout << std::to_string(blkPos) << std::endl;
-    std::cout << std::to_string(recPos) << std::endl;
-
     FileReader blkReader{file::BLK, blkPos};
     Block blk{};
     blkReader >> blk;
@@ -264,7 +260,7 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         std::pair<uint32_t, uint32_t> totalSize =
             std::accumulate(lvs.begin(), lvs.end(), std::make_pair(0, 0), sumSize);
 
-        InspectCurrentName(totalSize);
+        CarryOverFileName(totalSize);
 
         FilePos msBlkPos{loadCurrentBlkEpoch(), loadCurrentBlkName(), loadCurrentBlkSize()};
         FilePos msRecPos{loadCurrentRecEpoch(), loadCurrentRecName(), loadCurrentRecSize()};
@@ -275,9 +271,6 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         uint32_t recOffset;
         uint32_t msBlkOffset = msBlkPos.nOffset;
         uint32_t msRecOffset = msRecPos.nOffset;
-
-        std::cout << "ms blk pos" << std::to_string(msBlkPos) << std::endl;
-        std::cout << "ms rec pos" << std::to_string(msRecPos) << std::endl;
 
         for (const auto& rec : lvs) {
             // Write to file
@@ -291,14 +284,9 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
                 dbStore_.WriteMsPos(rec->snapshot->height, rec->cblock->GetHash(), msBlkPos, msRecPos);
             }
             dbStore_.WriteRecPos(rec->cblock->GetHash(), rec->height, blkOffset, recOffset);
-
-            std::cout << "========================================" << std::endl;
-            std::cout << "blk offset" << std::to_string(blkOffset) << std::endl;
-            std::cout << "rec offset" << std::to_string(recOffset) << std::endl;
         }
 
         AddCurrentSize(totalSize);
-        InspectCurrentEpoch();
 
     } catch (const std::exception&) {
         return false;
@@ -377,27 +365,23 @@ uint32_t Caterpillar::loadCurrentRecSize() {
     return currentRecSize_.load(std::memory_order_seq_cst);
 }
 
-void Caterpillar::InspectCurrentEpoch() {
-    if (loadCurrentBlkName() == epochCapacity_) {
-        currentBlkEpoch_.fetch_add(1, std::memory_order_seq_cst);
-        currentBlkName_.store(0, std::memory_order_seq_cst);
-        currentBlkSize_.store(0, std::memory_order_seq_cst);
-    }
-    if (loadCurrentRecName() == epochCapacity_) {
-        currentRecEpoch_.fetch_add(1, std::memory_order_seq_cst);
-        currentRecName_.store(0, std::memory_order_seq_cst);
-        currentRecSize_.store(0, std::memory_order_seq_cst);
-    }
-}
-
-void Caterpillar::InspectCurrentName(std::pair<uint32_t, uint32_t> addon) {
+void Caterpillar::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentBlkSize() > 0 && loadCurrentBlkSize() + addon.first > fileCapacity_) {
         currentBlkName_.fetch_add(1, std::memory_order_seq_cst);
         currentBlkSize_.store(0, std::memory_order_seq_cst);
+        if (loadCurrentBlkName() == epochCapacity_) {
+            currentBlkEpoch_.fetch_add(1, std::memory_order_seq_cst);
+            currentBlkName_.store(0, std::memory_order_seq_cst);
+        }
     }
+
     if (loadCurrentRecSize() > 0 && loadCurrentRecSize() + addon.second > fileCapacity_) {
         currentRecName_.fetch_add(1, std::memory_order_seq_cst);
         currentRecSize_.store(0, std::memory_order_seq_cst);
+        if (loadCurrentRecName() == epochCapacity_) {
+            currentRecEpoch_.fetch_add(1, std::memory_order_seq_cst);
+            currentRecName_.store(0, std::memory_order_seq_cst);
+        }
     }
 }
 

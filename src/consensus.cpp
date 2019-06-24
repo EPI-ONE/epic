@@ -79,11 +79,6 @@ NodeRecord::NodeRecord(VStream& s) {
     s >> *this;
 }
 
-void NodeRecord::InvalidateMilestone() {
-    isMilestone = false;
-    snapshot.reset();
-}
-
 void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
     snapshot    = pcs;
     isMilestone = true;
@@ -147,6 +142,7 @@ std::string std::to_string(const ChainState& cs) {
 
 std::string std::to_string(const NodeRecord& rec, bool showtx) {
     std::string s = "NodeRecord {\n";
+    s += strprintf("   is milestone: %s \n\n", rec.isMilestone);
     s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());

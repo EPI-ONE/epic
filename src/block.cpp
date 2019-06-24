@@ -302,14 +302,14 @@ void Block::SetParents() {
 std::string std::to_string(const Block& block, bool showtx) {
     std::string s;
     s += " Block { \n";
-    s += strprintf("   hash: %s \n", std::to_string(block.GetHash()));
-    s += strprintf("   version: %s \n", block.version_);
-    s += strprintf("   milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
-    s += strprintf("   previous block: %s \n", std::to_string(block.prevBlockHash_));
-    s += strprintf("   tip block: %s \n", std::to_string(block.tipBlockHash_));
-    s += strprintf("   time: %d \n", std::to_string(block.time_));
-    s += strprintf("   difficulty target: %d \n", std::to_string(block.diffTarget_));
-    s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
+    s += strprintf("      hash: %s \n", std::to_string(block.GetHash()));
+    s += strprintf("      version: %s \n", block.version_);
+    s += strprintf("      milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
+    s += strprintf("      previous block: %s \n", std::to_string(block.prevBlockHash_));
+    s += strprintf("      tip block: %s \n", std::to_string(block.tipBlockHash_));
+    s += strprintf("      time: %d \n", std::to_string(block.time_));
+    s += strprintf("      difficulty target: %d \n", std::to_string(block.diffTarget_));
+    s += strprintf("      nonce: %d \n ", std::to_string(block.nonce_));
 
     if (block.HasTransaction() && showtx) {
         s += strprintf("  with %s\n", std::to_string(*(block.transaction_)));

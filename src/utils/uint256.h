@@ -124,7 +124,7 @@ public:
     explicit uint256(const std::vector<unsigned char>& vch) : base_blob<256>(vch) {}
 
     explicit uint256(VStream& vs) {
-        vs >> *this;
+        Deserialize(vs);
     }
 
     /** A cheap hash function that just returns 64 bits from the result, it can

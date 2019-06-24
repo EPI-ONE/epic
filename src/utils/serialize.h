@@ -502,7 +502,7 @@ public:
         static_assert(std::is_unsigned<I>::value, "BigEndian type must be unsigned integer");
         static_assert(sizeof(I) == 2 && std::numeric_limits<I>::min() == 0 &&
                           std::numeric_limits<I>::max() == std::numeric_limits<uint16_t>::max(),
-            "Unsupported BigEndian size");
+                      "Unsupported BigEndian size");
     }
 
     template <typename Stream>
@@ -648,6 +648,17 @@ template <typename Stream, typename T>
 void Serialize(Stream& os, const std::optional<const T>& p);
 template <typename Stream, typename T>
 void Deserialize(Stream& os, std::optional<const T>& p);
+
+
+template<typename Stream, typename EnumClass, EnumClass EnumVal>
+inline void Serialize(Stream&s, const EnumClass a) {
+    ser_writedata8(s, static_cast<EnumClass>(a));
+}
+
+template<typename Stream, typename EnumClass, EnumClass EnumVal>
+inline void Deserialize(Stream&s, const EnumClass a) {
+    a = static_cast<EnumClass>(ser_readdata8(s));
+}
 
 /**
  * If none of the specialized versions above matched, default to calling member

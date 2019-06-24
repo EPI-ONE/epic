@@ -107,8 +107,7 @@ private:
     uint32_t loadCurrentBlkSize();
     uint32_t loadCurrentRecSize();
 
-    void InspectCurrentEpoch();
-    void InspectCurrentName(std::pair<uint32_t, uint32_t>);
+    void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
     StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;

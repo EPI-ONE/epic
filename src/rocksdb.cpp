@@ -99,7 +99,8 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        uint256 h(value);
+        uint256 h;
+        value >> h;
         // value.ignore(Hash::SIZE);
         FilePos blkPos(value);
         FilePos recPos(value);
@@ -128,6 +129,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHa
 
     blkPos.nOffset += blkOffset;
     recPos.nOffset += recOffset;
+
     return std::make_pair(blkPos, recPos);
 }
 
@@ -172,10 +174,6 @@ bool RocksDBStore::WriteMsPos(const uint64_t& key,
                               const uint256& msHash,
                               const FilePos& blkPos,
                               const FilePos& recPos) const {
-    std::cout << "============ ROCKS DB ====================" << std::endl;
-    std::cout << std::to_string(blkPos) << std::endl;
-    std::cout << std::to_string(recPos) << std::endl;
-
     return WritePosImpl("ms", key, msHash, blkPos, recPos);
 }
 

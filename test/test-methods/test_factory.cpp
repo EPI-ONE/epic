@@ -102,7 +102,7 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
 
         if (GetRand() % 2) {
             // Make it a fake milestone
-            rec.InvalidateMilestone();
+            rec.isMilestone = false;
         }
     }
 
