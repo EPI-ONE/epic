@@ -105,7 +105,7 @@ UnitTestParams::UnitTestParams() {
     reward               = 1;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);
-    sortitionThreshold   = 1;
+    sortitionThreshold   = 2;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -121,7 +121,7 @@ UnitTestParams::UnitTestParams() {
 
     CreateGenesis(genesisHexStr);
 
-    genesisRecord_->snapshot->hashRate        = 1;
+    genesisRecord_->snapshot->hashRate        = 2;
     genesisRecord_->snapshot->blockTarget     = maxTarget;
     genesisRecord_->snapshot->milestoneTarget = arith_uint256(0x2000ffffL);
 }

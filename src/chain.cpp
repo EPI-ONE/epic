@@ -1,7 +1,11 @@
-#include "caterpillar.h"
 #include "chain.h"
+#include "caterpillar.h"
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
+
+////////////////////
+// Chain
+////////////////////
 
 Chain::Chain() : ismainchain_(true) {
     states_.push_back(GENESIS_RECORD.snapshot);
@@ -100,23 +104,47 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 }
 
 bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
-    auto current_distance = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
-    arith_uint256 chainworkSum{0};
-
-    auto curr = GetRecord(b.cblock->GetPrevHash());
-    assert(curr);
-
-    uint64_t timeEnd{curr->cblock->GetTime()};
-
-    for (size_t i = 0; i < GetParams().sortitionThreshold && curr->cblock->GetHash() != GENESIS.GetHash();
-         ++i, curr = GetRecord(curr->cblock->GetPrevHash())) {
-        chainworkSum += curr->cblock->GetChainWork();
+    if (b.minerChainHeight <= GetParams().sortitionThreshold) {
+        return !(b.cblock->HasTransaction());
     }
-    
-    uint64_t timeStart{curr->cblock->GetTime()};
-    auto allowed_distance = (GetParams().maxTarget / GetParams().sortitionCoefficient) * chainworkSum /
-                            (ms_hashrate * (timeEnd - timeStart + 1));
-    return current_distance <= allowed_distance;
+
+    auto search = cumulatorMap_.find(b.cblock->GetPrevHash());
+    if (search == cumulatorMap_.end()) {
+        // Construct a cumulator for the block if it is not cached
+        Cumulator cum;
+
+        ConstBlockPtr cursor = b.cblock;
+        RecordPtr previous;
+        while (!cum.Full()) {
+            previous = GetRecord(cursor->GetPrevHash());
+
+            if (!previous) {
+                // cannot happen
+                throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap.");
+            }
+            cum.Add(previous->cblock, false);
+            cursor = previous->cblock;
+        }
+
+        cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
+    }
+
+    // Distance of the transaction hash and previous block hash
+    auto dist = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
+
+    auto nodeHandler = cumulatorMap_.extract(b.cblock->GetPrevHash());
+    Cumulator& cum   = nodeHandler.mapped();
+
+    // Allowed distance
+    auto allowed =
+        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / ms_hashrate);
+
+    // Update key for the cumulator
+    cum.Add(b.cblock, true);
+    nodeHandler.key() = b.cblock->GetHash();
+    cumulatorMap_.insert(std::move(nodeHandler));
+
+    return dist <= allowed;
 }
 
 void Chain::Verify(const ConstBlockPtr& pblock) {
@@ -167,6 +195,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     } else {
         record.prevRedemHash.SetNull();
     }
+    record.minerChainHeight = prevRec->minerChainHeight + 1;
 
     // then check its transaction and update UTXO
     if (pblock->HasTransaction()) {
@@ -178,7 +207,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     } else {
         // regarded as a valid transaction but not updating ledger
         record.validity = NodeRecord::VALID;
-        result = std::make_optional<TXOC>();
+        result          = std::make_optional<TXOC>();
     }
 
     record.UpdateReward(GetPrevReward(record));
@@ -201,7 +230,8 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
+        spdlog::info(
+            "Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
         return {};
     }
 
@@ -238,12 +268,13 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
 
     // check previous vouts that are used in this transaction and compute total value in along the way
     for (const auto& vin : tx->GetInputs()) {
-        const TxOutPoint& outpoint    = vin.outpoint;
+        const TxOutPoint& outpoint = vin.outpoint;
         // this ensures that $prevOut has not been spent yet
         auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
+            spdlog::info(
+                "Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
             return {};
         }
         valueIn += prevOut->GetOutput().value;
@@ -310,3 +341,75 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
 }
 
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
+
+////////////////////
+// Cumulator
+////////////////////
+
+void Cumulator::Add(const ConstBlockPtr& block, bool ascending) {
+    const auto& chainwork   = block->GetChainWork();
+    uint32_t chainwork_comp = chainwork.GetCompact();
+
+    if (timestamps.size() < GetParams().sortitionThreshold) {
+        sum += chainwork;
+    } else {
+        arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
+        sum += (chainwork - subtrahend);
+
+        // Pop the first element if the counter is already 1,
+        // or decrease the counter of the first element by 1
+        if (chainworks.front().second == 1) {
+            chainworks.pop_front();
+        } else {
+            chainworks.front().second--;
+        }
+
+        timestamps.pop_front();
+    }
+
+    if (ascending) {
+        if (!chainworks.empty() && chainworks.back().first == chainwork_comp) {
+            chainworks.back().second++;
+        } else {
+            chainworks.emplace_back(chainwork_comp, 1);
+        }
+        timestamps.emplace_back(block->GetTime());
+    } else {
+        if (!chainworks.empty() && chainworks.front().first == chainwork_comp) {
+            chainworks.front().second++;
+        } else {
+            chainworks.emplace_front(chainwork_comp, 1);
+        }
+        timestamps.emplace_front(block->GetTime());
+    }
+}
+
+arith_uint256 Cumulator::Sum() const {
+    return sum;
+}
+
+uint32_t Cumulator::TimeSpan() const {
+    return timestamps.back() - timestamps.front();
+}
+
+bool Cumulator::Full() const {
+    return timestamps.size() == GetParams().sortitionThreshold;
+}
+
+std::string std::to_string(const Cumulator& cum) {
+    std::string s;
+    s += " Cumulator { \n";
+    s += "   chainworks { \n";
+    for (auto& e : cum.chainworks) {
+        s += strprintf("     { %s, %s }\n", arith_uint256().SetCompact(e.first).GetLow64(), e.second);
+    }
+    s += "   }\n";
+    s += "   timestamps { \n";
+    for (auto& t : cum.timestamps) {
+        s += strprintf("     %s\n", t);
+    }
+    s += "   }\n";
+    s += " }";
+
+    return s;
+}

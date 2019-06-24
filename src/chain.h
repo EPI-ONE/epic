@@ -13,8 +13,39 @@
 #include "uint256.h"
 #include "utxo.h"
 
-class Chain;
-typedef std::unique_ptr<Chain> ChainPtr;
+class Cumulator;
+namespace std {
+string to_string(const Cumulator& b);
+} // namespace std
+
+class Cumulator {
+public:
+    void Add(const ConstBlockPtr& block, bool ascending);
+    arith_uint256 Sum() const;
+    uint32_t TimeSpan() const;
+    bool Full() const;
+
+    friend std::string std::to_string(const Cumulator&);
+
+private:
+    // Elements in chainworks:
+    //      {chainwork, counter of consecutive chainworks that are equal}
+    // For example, the queue of chainworks
+    //      { 1, 1, 3, 2, 2, 2, 2, 2, 2, 2 }
+    // are stored as:
+    //      { {1, 2}, {3, 1}, {2, 7} }
+    std::deque<std::pair<uint32_t, uint16_t>> chainworks;
+    std::deque<uint32_t> timestamps;
+    arith_uint256 sum = 0;
+};
+
+/** Hasher for unordered_map */
+template <>
+struct std::hash<Cumulator> {
+    size_t operator()(const Cumulator& x) const {
+        return x.Sum().GetCompact() ^ x.TimeSpan();
+    }
+};
 
 class Chain {
 public:
@@ -97,17 +128,25 @@ private:
     std::unordered_map<uint256, UTXOPtr> pendingUTXOs_;
 
     /**
-     * Stored verified blocks on this chain as cache
+     * Stores verified blocks on this chain as cache
      */
     std::unordered_map<uint256, RecordPtr> recordHistory_;
 
-    // store blocks being verified in a level set
+    /*
+     * Stores blocks being verified in a level set
+     */
     std::unordered_map<uint256, RecordPtr> verifying_;
 
     /**
      * Manages UTXO
      */
     ChainLedger ledger_;
+
+    /**
+     * Caches the sum of chainwork and timestamps in the sortition window
+     * to speed up calculation of transaction distance
+     */
+    std::unordered_map<uint256, Cumulator> cumulatorMap_;
 
     bool CheckMsPOW(const ConstBlockPtr&, const ChainStatePtr&);
 
@@ -134,5 +173,7 @@ private:
     // friend decleration for running a test
     friend class TestChainVerification;
 };
+
+typedef std::unique_ptr<Chain> ChainPtr;
 
 #endif // __SRC_CHAIN_H__
