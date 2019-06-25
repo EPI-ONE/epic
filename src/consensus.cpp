@@ -99,6 +99,12 @@ void NodeRecord::UpdateReward(const Coin& prevReward) {
     } else { // for normal valid transaction
         cumulativeReward = prevReward + fee;
     }
+
+    // update reward of miletone
+    if (isMilestone) {
+        cumulativeReward +=
+            GetParams().reward * ((snapshot->GetRecordHashes().size() - 1) / GetParams().msRewardCoefficient);
+    }
 }
 
 size_t NodeRecord::GetOptimalStorageSize() {

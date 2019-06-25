@@ -36,7 +36,7 @@ static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 // coefficient of taking additional reward for milestone
-static constexpr double REWARD_COEFFICIENT = 0.02;
+static constexpr uint32_t REWARD_COEFFICIENT = 50;
 
 enum ParamsType : uint8_t {
     MAINNET = 1,
@@ -66,7 +66,7 @@ public:
 
     Coin maxMoney;
     Coin reward;
-    double msRewardCoefficient;
+    uint32_t msRewardCoefficient;
 
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
