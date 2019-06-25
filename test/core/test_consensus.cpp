@@ -146,6 +146,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::string prefix = "test_consensus/";
     std::ostringstream os;
     os << time(nullptr);
+    file::SetDataDirPrefix(prefix + os.str());
     CAT = std::make_unique<Caterpillar>(prefix + os.str());
     DAG = std::make_unique<DAGManager>();
 

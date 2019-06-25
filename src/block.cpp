@@ -242,7 +242,7 @@ arith_uint256 Block::GetChainWork() const {
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
-    arith_uint256 target = arith_uint256().SetCompact(diffTarget_);
+    arith_uint256 target = arith_uint256{}.SetCompact(diffTarget_);
     if (target <= 0 || target > GetParams().maxTarget) {
         throw "Bad difficulty target: " + std::to_string(target);
     }

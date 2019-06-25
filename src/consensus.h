@@ -166,7 +166,7 @@ public:
         READWRITE(validity);
         READWRITE(isRedeemed);
 
-        if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+        if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION || (cblock && cblock->IsRegistration())) {
             READWRITE(prevRedemHash);
         }
 

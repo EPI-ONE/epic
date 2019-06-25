@@ -89,15 +89,13 @@ void NodeRecord::UpdateReward(const Coin& prevReward) {
     // cumulate reward without fee; default for blocks except first registration
     cumulativeReward = prevReward + GetParams().reward;
 
-    if (!cblock->HasTransaction() || validity == Validity::INVALID) {
-        return;
-    }
-
-    if (cblock->IsRegistration()) {
-        // remaining reward = last cumulative reward - redemption amount
-        cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
-    } else { // for normal valid transaction
-        cumulativeReward = prevReward + fee;
+    if (cblock->HasTransaction() && validity != Validity::INVALID) {
+        if (cblock->IsRegistration()) {
+            // remaining reward = last cumulative reward - redemption amount
+            cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
+        } else { // for normal valid transaction
+            cumulativeReward = prevReward + fee;
+        }
     }
 
     // update reward of miletone
@@ -117,7 +115,8 @@ size_t NodeRecord::GetOptimalStorageSize() {
     optimalStorageSize_ += 1; // Validity
     optimalStorageSize_ += 1; // RedemptionStatus
 
-    if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+    //if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
+    if (cblock->IsRegistration()) {
         optimalStorageSize_ += Hash::SIZE; // prevRedemHash size
     }
     optimalStorageSize_ += 1; // MilestoneStatus

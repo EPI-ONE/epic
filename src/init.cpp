@@ -76,7 +76,7 @@ void Init(int argc, char* argv[]) {
     try {
         SelectParams(parseType.at(config->GetNetworkType()));
     } catch (const std::out_of_range& err) {
-        std::cerr << "wrong format of network type in config.toml";
+        std::cerr << "wrong format of network type in config.toml" << std::endl;
     } catch (const std::invalid_argument& err) {
         std::cerr << "error choosing params: " << err.what() << std::endl;
     }

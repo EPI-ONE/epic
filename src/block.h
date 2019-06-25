@@ -10,7 +10,7 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
-static constexpr std::size_t HEADER_SIZE = 116;
+static constexpr std::size_t HEADER_SIZE = 112;
 
 namespace std {
 string to_string(const Block& b, bool showtx = true);
@@ -153,7 +153,7 @@ protected:
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
-    uint64_t time_;
+    uint32_t time_;
     uint32_t diffTarget_;
     uint32_t nonce_;
     std::optional<Transaction> transaction_;

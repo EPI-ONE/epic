@@ -116,7 +116,11 @@ public:
     }
 
     friend inline Coin operator*(const Coin& a, uint32_t multiple) {
-        if (a > IMPOSSIBLE_COIN / multiple) {
+        if (multiple == 0) {
+            return Coin{};
+        }
+
+        if (a.value_ > IMPOSSIBLE_COIN / multiple) {
             throw std::string("Coin number overflow");
         }
         return Coin(a.value_ * multiple);
