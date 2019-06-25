@@ -80,9 +80,9 @@ public:
     bool DeleteMsPos(const uint256&) const;
 
 private:
-    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap;
-    rocksdb::DB* db;
-    std::string DBPATH;
+    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
+    rocksdb::DB* db_;
+    std::string dbpath_;
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
     uint256 GetMsHashAt(const uint64_t& height) const;

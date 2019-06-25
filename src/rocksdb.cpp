@@ -6,15 +6,15 @@ using std::string;
 using std::tuple;
 using namespace rocksdb;
 
-#define MAKE_KEY_SLICE(angry) \
-    VStream keyStream{angry};    \
+#define MAKE_KEY_SLICE(obj)   \
+    VStream keyStream{(obj)}; \
     Slice keySlice(keyStream.data(), keyStream.size());
 
 RocksDBStore::RocksDBStore(string dbPath) {
-    this->DBPATH = dbPath;
+    this->dbpath_ = dbPath;
     // Make directory DBPATH if missing
-    if (!CheckDirExist(DBPATH)) {
-        Mkdir_recursive(DBPATH);
+    if (!CheckDirExist(dbpath_)) {
+        Mkdir_recursive(dbpath_);
     }
 
     // Create column families
@@ -30,7 +30,7 @@ RocksDBStore::RocksDBStore(string dbPath) {
 
     // Set options
     DBOptions dbOptions;
-    dbOptions.db_log_dir                     = DBPATH + "/log";
+    dbOptions.db_log_dir                     = dbpath_ + "/log";
     dbOptions.create_if_missing              = true;
     dbOptions.create_missing_column_families = true;
     dbOptions.IncreaseParallelism(2);
@@ -38,8 +38,8 @@ RocksDBStore::RocksDBStore(string dbPath) {
     std::vector<ColumnFamilyHandle*> handles;
 
     // Open DB
-    if (!DB::Open(dbOptions, DBPATH, descriptors, &handles, &db).ok()) {
-        throw "DB initialization failed";
+    if (!DB::Open(dbOptions, dbpath_, descriptors, &handles, &db_).ok()) {
+        throw std::string("DB initialization failed");
     }
 
     // Store handles into a map
@@ -50,25 +50,27 @@ RocksDBStore::RocksDBStore(string dbPath) {
 
 RocksDBStore::~RocksDBStore() {
     // delete column falimy handles
-    for (auto entry = handleMap.begin(); entry != handleMap.end(); ++entry) {
+    for (auto entry = handleMap_.begin(); entry != handleMap_.end(); ++entry) {
         delete entry->second;
+    //for (auto& entry : handleMap_) {
+        //delete entry.second;
     }
-    handleMap.clear();
+    handleMap_.clear();
 
-    delete db;
+    delete db_;
 }
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
-    MAKE_KEY_SLICE((uint64_t)GetHeight(blockHash));
+    MAKE_KEY_SLICE((uint64_t) GetHeight(blockHash));
     return !Get("ms", keySlice).empty();
 }
 
 size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash);
     PinnableSlice valueSlice;
-    Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
+    Status s = db_->Get(ReadOptions(), db_->DefaultColumnFamily(), keySlice, &valueSlice);
 
-    uint64_t height = -1;
+    uint64_t height = UINT_FAST64_MAX;
     if (s.ok()) {
         try {
             VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -93,7 +95,7 @@ bool RocksDBStore::IsMilestone(const uint256& blkHash) const {
 optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);
     PinnableSlice valueSlice;
-    Status s = db->Get(ReadOptions(), handleMap.at("ms"), keySlice, &valueSlice);
+    Status s = db_->Get(ReadOptions(), handleMap_.at("ms"), keySlice, &valueSlice);
 
     if (!s.ok()) {
         return {};
@@ -165,13 +167,13 @@ bool RocksDBStore::WriteRecPoses(const std::vector<uint256>& keys,
         valueStream << VARINT(heights[i]) << blkOffsets[i] << recOffsets[i];
         Slice valueSlice(valueStream.data(), valueStream.size());
 
-        wb.Put(db->DefaultColumnFamily(), keySlice, valueSlice);
+        wb.Put(db_->DefaultColumnFamily(), keySlice, valueSlice);
 
         keyStream.clear();
         valueStream.clear();
     }
 
-    return db->Write(WriteOptions(), &wb).ok();
+    return db_->Write(WriteOptions(), &wb).ok();
 }
 
 bool RocksDBStore::WriteMsPos(const uint64_t& key,
@@ -183,7 +185,7 @@ bool RocksDBStore::WriteMsPos(const uint64_t& key,
 
 string RocksDBStore::Get(const string& column, const Slice& key) const {
     string value;
-    Status s = db->Get(ReadOptions(), handleMap.at(column), key, &value);
+    Status s = db_->Get(ReadOptions(), handleMap_.at(column), key, &value);
     if (s.ok()) {
         return value;
     }
@@ -196,11 +198,11 @@ string RocksDBStore::Get(const string& column, const string& key) const {
 }
 
 bool RocksDBStore::DeleteRecPos(const uint256& h) const {
-    return db->Delete(WriteOptions(), db->DefaultColumnFamily(), VStream(h).str()).ok();
+    return db_->Delete(WriteOptions(), db_->DefaultColumnFamily(), VStream(h).str()).ok();
 }
 
 bool RocksDBStore::DeleteMsPos(const uint256& h) const {
-    bool status = db->Delete(WriteOptions(), handleMap.at("ms"), std::to_string(GetHeight(h))).ok();
+    bool status = db_->Delete(WriteOptions(), handleMap_.at("ms"), std::to_string(GetHeight(h))).ok();
     if (status && IsMilestone(h)) {
         return DeleteRecPos(h);
     }
@@ -208,23 +210,23 @@ bool RocksDBStore::DeleteMsPos(const uint256& h) const {
 }
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
-    handleMap.reserve(COLUMN_NAMES.size());
+    handleMap_.reserve(COLUMN_NAMES.size());
     auto keyIter = COLUMN_NAMES.begin();
     auto valIter = handles.begin();
     while (keyIter != COLUMN_NAMES.end() && valIter != handles.end()) {
-        handleMap[*keyIter] = *valIter;
+        handleMap_[*keyIter] = *valIter;
         ++keyIter;
         ++valIter;
     }
 
-    assert(!handleMap.empty());
+    assert(!handleMap_.empty());
 }
 
 uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);
     PinnableSlice valueSlice;
 
-    Status s = db->Get(ReadOptions(), handleMap.at("ms"), keySlice, &valueSlice);
+    Status s = db_->Get(ReadOptions(), handleMap_.at("ms"), keySlice, &valueSlice);
 
     if (!s.ok()) {
         return uint256();
@@ -242,7 +244,7 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
 optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash);
     PinnableSlice valueSlice;
-    Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
+    Status s = db_->Get(ReadOptions(), db_->DefaultColumnFamily(), keySlice, &valueSlice);
 
     if (!s.ok()) {
         return {};
@@ -269,7 +271,7 @@ bool RocksDBStore::WritePosImpl(const string& column, const K& key, const H& h, 
     value << h << b << r;
     Slice valueSlice(value.data(), value.size());
 
-    return db->Put(WriteOptions(), handleMap.at(column), keySlice, valueSlice).ok();
+    return db_->Put(WriteOptions(), handleMap_.at(column), keySlice, valueSlice).ok();
 }
 
 template bool RocksDBStore::WritePosImpl(

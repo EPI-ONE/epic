@@ -1,7 +1,6 @@
 #include "caterpillar.h"
 
-Caterpillar::Caterpillar(const std::string& dbPath)
-    : verifyThread_(1), obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
+Caterpillar::Caterpillar(std::string dbPath) : verifyThread_(1), obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     verifyThread_.Start();
     obcThread_.Start();
     file::SetDataDirPrefix(dbPath + "/");
@@ -177,6 +176,7 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
     FileReader blkReader{file::BLK, blkPos};
     Block blk{};
     blkReader >> blk;
+
 
     StoredRecord record = std::make_unique<NodeRecord>(std::move(blk));
 

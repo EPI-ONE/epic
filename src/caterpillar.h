@@ -19,7 +19,7 @@ typedef std::unique_ptr<Block> BlockCache;
 class Caterpillar {
 public:
     Caterpillar() = delete;
-    Caterpillar(const std::string& dbPath);
+    Caterpillar(std::string dbPath);
 
     /**
      * API for other modules for searching a block
@@ -35,12 +35,12 @@ public:
     // TODO: search for UTXO in db
     std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
 
-    /*
+    /**
      * Flush records to db. Called by DAGManager only.
      */
     bool StoreRecords(const std::vector<RecordPtr>&);
 
-    /*
+    /**
      * Returns true is the hash exists in one of DAG, DB, or OBC
      */
     bool Exists(const uint256&) const;
@@ -49,7 +49,7 @@ public:
 
     bool IsMilestone(const uint256&) const;
 
-    /*
+    /**
      * Submits tasks to a single thread in which it checks its syntax.
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
@@ -83,7 +83,7 @@ private:
     /**
      * params for file storage
      */
-    uint32_t fileCapacity_                     = 2 ^ 28;
+    uint32_t fileCapacity_                     = 1 << 28;
     uint16_t epochCapacity_                    = UINT_LEAST16_MAX;
     std::atomic_uint_fast32_t currentBlkEpoch_ = 0;
     std::atomic_uint_fast32_t currentRecEpoch_ = 0;

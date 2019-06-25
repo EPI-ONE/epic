@@ -23,7 +23,7 @@ bool OrphanBlocksContainer::IsOrphan(const uint256& hash) const {
 }
 
 void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block,
-    uint8_t missing_mask) { /* return if the block is actually not an orphan */
+                                     uint8_t missing_mask) { /* return if the block is actually not an orphan */
 
     /* construct new dependency
      * for the new block */
