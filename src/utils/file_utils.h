@@ -97,10 +97,7 @@ public:
     FileReader()                  = delete;
     FileReader(const FileReader&) = delete;
     FileReader& operator=(const FileReader&) = delete;
-
-    ~FileReader() {
-        ifbuf_.close();
-    }
+    ~FileReader()                            = default;
 
     template <typename Stream>
     FileReader& read(size_t size, Stream& s) {
@@ -153,7 +150,7 @@ public:
             Mkdir_recursive(dir);
         }
         std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        ofbuf_.open(filename_, std::ios::out | std::ios::app | std::ios::binary);
+        ofbuf_.open(filename_, std::ostream::out | std::ofstream::binary | std::ofstream::app);
         if (!ofbuf_.is_open()) {
             throw std::string("file stream is not opened");
         }
@@ -163,10 +160,14 @@ public:
     FileWriter()                  = delete;
     FileWriter(const FileWriter&) = delete;
     FileWriter& operator=(const FileWriter&) = delete;
+    ~FileWriter()                            = default;
 
-    ~FileWriter() {
+    void Flush() {
         ofbuf_.flush();
-        ofbuf_.close();
+    }
+
+    void Close() {
+        ofbuf_.close(); 
     }
 
     template <typename T>

@@ -178,7 +178,7 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
     Block blk{};
     blkReader >> blk;
 
-    StoredRecord record = std::make_unique<NodeRecord>(blk);
+    StoredRecord record = std::make_unique<NodeRecord>(std::move(blk));
 
     FileReader recReader{file::REC, recPos};
     recReader >> *record;
@@ -189,22 +189,22 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
 std::vector<ConstBlockPtr> Caterpillar::GetLevelSetAt(size_t height) const {
     auto vs = GetRawLevelSetAt(height);
     std::vector<ConstBlockPtr> blocks;
-    while (!vs.empty()) {
-        blocks.emplace_back(std::make_shared<const Block>(vs));
+    while (!vs->empty()) {
+        blocks.emplace_back(std::make_shared<const Block>(*vs));
     }
     return blocks;
 }
 
-VStream Caterpillar::GetRawLevelSetAt(size_t height) const {
+std::unique_ptr<VStream> Caterpillar::GetRawLevelSetAt(size_t height) const {
     return GetRawLevelSetBetween(height, height);
 }
 
-VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const {
+std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const {
     assert(height1 <= height2);
     auto leftPos  = dbStore_.GetMsBlockPos(height1);
     auto rightPos = dbStore_.GetMsBlockPos(height2 + 1);
 
-    VStream result;
+    auto result = std::make_unique<VStream>();
     if (!leftPos) {
         return result;
     }
@@ -214,13 +214,13 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const
     auto rightOffset = rightPos ? rightPos->nOffset : 0;
 
     if (rightPos && leftPos->SameFileAs(*rightPos)) {
-        reader.read(rightOffset - leftOffset, result);
+        reader.read(rightOffset - leftOffset, *result);
         return result;
     }
 
     // Read all of the first file
     auto size = reader.Size();
-    reader.read(size - leftOffset, result);
+    reader.read(size - leftOffset, *result);
     reader.Close();
 
     if (rightPos) {
@@ -229,14 +229,14 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const
         while (file < *rightPos && !file.SameFileAs(*rightPos)) {
             FileReader cursor(file::BLK, file);
             size =  cursor.Size();
-            cursor.read(size, result);
+            cursor.read(size, *result);
             NextFile(file);
             cursor.Close();
         }
 
         // Read the last file
         FileReader cursor(file::BLK, file);
-        reader.read(rightOffset, result);
+        reader.read(rightOffset, *result);
         return result;
     }
 
@@ -245,7 +245,7 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const
     while (CheckFileExist(file::GetFilePath(file::BLK, file))) {
         FileReader cursor(file::BLK, file);
         size = cursor.Size();
-        cursor.read(size, result);
+        cursor.read(size, *result);
         NextFile(file);
     }
     return result;
@@ -289,9 +289,11 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         for (const auto& rec : lvs) {
             // Write to file
             blkOffset = blkFs.GetOffset() - msBlkOffset;
-            blkFs << *(rec->cblock);
             recOffset = recFs.GetOffset() - msRecOffset;
+            blkFs << *(rec->cblock);
+            blkFs.Flush();
             recFs << *rec;
+            recFs.Flush();
 
             // Write positions to db
             if (rec->isMilestone) {
@@ -409,7 +411,7 @@ FilePos& Caterpillar::NextFile(FilePos& pos) const {
         pos.nName = 0;
         pos.nEpoch++;
     } else {
-       pos.nName++;
+        pos.nName++;
     }
     pos.nOffset = 0;
     return pos;

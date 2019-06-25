@@ -28,8 +28,8 @@ public:
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
     std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
-    VStream GetRawLevelSetAt(size_t height) const;
-    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
+    std::unique_ptr<VStream> GetRawLevelSetAt(size_t height) const;
+    std::unique_ptr<VStream> GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
     size_t GetHeight(const uint256&) const;
 
     // TODO: search for UTXO in db
@@ -92,6 +92,9 @@ private:
     std::atomic_uint_fast32_t currentBlkSize_  = 0;
     std::atomic_uint_fast32_t currentRecSize_  = 0;
 
+    /**
+     * obc and solidity check
+     */
     bool IsSolid(const ConstBlockPtr&) const;
     bool IsWeaklySolid(const ConstBlockPtr&) const;
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const;

@@ -53,47 +53,6 @@ TEST_F(TestFileStorage, basic_read_write) {
     EXPECT_EQ(rec, rec1);
 }
 
-// TEST_F(TestFileStorage, multiple_read_write) {
-// auto blk1 = fac.CreateBlock(true);
-// auto blk2 = fac.CreateBlock(2, 3, true);
-// blk1.Solve();
-// blk2.Solve();
-
-// FilePos pos1{0,1,0};
-// FilePos pos2{0,1,0};
-// pos2.nOffset = blk1.GetOptimalEncodingSize();
-
-//// multiple writing
-//{
-// FileWriter writer1(file::FileType::BLK, pos1);
-// FileWriter writer2(file::FileType::BLK, pos2);
-
-// EXPECT_EQ(writer1.GetFileName(), writer2.GetFileName());
-
-// writer2 << blk2;
-// writer1 << blk1;
-
-// EXPECT_EQ(writer1.GetOffset(), blk1.GetOptimalEncodingSize());
-// EXPECT_EQ(writer2.GetOffset(), blk1.GetOptimalEncodingSize() + blk2.GetOptimalEncodingSize());
-//}
-
-//// multiple reading
-// FileReader reader1{file::FileType::BLK, pos1};
-// FileReader reader2{file::FileType::BLK, pos2};
-
-// Block deser_blk1, deser_blk2;
-// reader2 >> deser_blk2;
-// reader1 >> deser_blk1;
-
-// std::cout << std::to_string(blk1) << std::endl;
-// std::cout << std::to_string(deser_blk1) << std::endl;
-// EXPECT_EQ(blk1, deser_blk1);
-
-// std::cout << std::to_string(blk2) << std::endl;
-// std::cout << std::to_string(deser_blk2) << std::endl;
-// EXPECT_EQ(blk2, deser_blk2);
-//}
-
 TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     std::ostringstream os;
     os << time(nullptr);
@@ -136,14 +95,15 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     // Inspect inserted records
     for (size_t i = 0; i < blocks.size(); ++i) {
         auto blk = CAT->GetRecord(blocks[i]->cblock->GetHash());
+        ASSERT_NE(blk->cblock, nullptr);
         ASSERT_EQ(*blocks[i], *blk);
     }
 
     // Recover level sets in batch
-    VStream vs = CAT->GetRawLevelSetBetween(0, nLvs - 1);
+    auto pvs = CAT->GetRawLevelSetBetween(0, nLvs - 1);
 
     for (size_t i = 0; i < blocks.size(); ++i) {
-        Block recovered(vs);
+        Block recovered(*pvs);
         ASSERT_EQ(*blocks[i]->cblock, recovered);
     }
 

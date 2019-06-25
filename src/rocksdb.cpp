@@ -6,6 +6,10 @@ using std::string;
 using std::tuple;
 using namespace rocksdb;
 
+#define MAKE_KEY_SLICE(angry, n) \
+    VStream keyStream{angry};    \
+    Slice keySlice(keyStream.data(), keyStream.size());
+
 RocksDBStore::RocksDBStore(string dbPath) {
     this->DBPATH = dbPath;
     // Make directory DBPATH if missing
@@ -53,12 +57,6 @@ RocksDBStore::~RocksDBStore() {
 
     delete db;
 }
-
-#define MAKE_KEY_SLICE(arg, n)     \
-    VStream keyStream;             \
-    keyStream.reserve((size_t) n); \
-    keyStream << arg;              \
-    Slice keySlice(keyStream.data(), keyStream.size());
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
     MAKE_KEY_SLICE(blockHash, Hash::SIZE);
