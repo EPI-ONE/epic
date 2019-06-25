@@ -296,11 +296,11 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
             recFs.Flush();
 
             // Write positions to db
-            if (rec->isMilestone) {
-                dbStore_.WriteMsPos(height, rec->cblock->GetHash(), msBlkPos, msRecPos);
-            }
             dbStore_.WriteRecPos(rec->cblock->GetHash(), height, blkOffset, recOffset);
         }
+
+        // Write ms position at last to enable search for all blocks in the lvs
+        dbStore_.WriteMsPos(height, lvs.front()->cblock->GetHash(), msBlkPos, msRecPos);
 
         AddCurrentSize(totalSize);
 

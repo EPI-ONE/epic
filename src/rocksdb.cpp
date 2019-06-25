@@ -59,8 +59,8 @@ RocksDBStore::~RocksDBStore() {
 }
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
-    MAKE_KEY_SLICE(blockHash, Hash::SIZE);
-    return !Get(kDefaultColumnFamilyName, keySlice).empty();
+    MAKE_KEY_SLICE((uint64_t)GetHeight(blockHash), 8);
+    return !Get("ms", keySlice).empty();
 }
 
 size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
