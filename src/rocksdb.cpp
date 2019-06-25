@@ -6,7 +6,7 @@ using std::string;
 using std::tuple;
 using namespace rocksdb;
 
-#define MAKE_KEY_SLICE(angry, n) \
+#define MAKE_KEY_SLICE(angry) \
     VStream keyStream{angry};    \
     Slice keySlice(keyStream.data(), keyStream.size());
 
@@ -59,12 +59,12 @@ RocksDBStore::~RocksDBStore() {
 }
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
-    MAKE_KEY_SLICE((uint64_t)GetHeight(blockHash), 8);
+    MAKE_KEY_SLICE((uint64_t)GetHeight(blockHash));
     return !Get("ms", keySlice).empty();
 }
 
 size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
-    MAKE_KEY_SLICE(blkHash, Hash::SIZE);
+    MAKE_KEY_SLICE(blkHash);
     PinnableSlice valueSlice;
     Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
 
@@ -91,7 +91,7 @@ bool RocksDBStore::IsMilestone(const uint256& blkHash) const {
 }
 
 optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) const {
-    MAKE_KEY_SLICE(height, 8);
+    MAKE_KEY_SLICE(height);
     PinnableSlice valueSlice;
     Status s = db->Get(ReadOptions(), handleMap.at("ms"), keySlice, &valueSlice);
 
@@ -221,7 +221,7 @@ void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
 }
 
 uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
-    MAKE_KEY_SLICE(height, 8);
+    MAKE_KEY_SLICE(height);
     PinnableSlice valueSlice;
 
     Status s = db->Get(ReadOptions(), handleMap.at("ms"), keySlice, &valueSlice);
@@ -240,7 +240,7 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
 }
 
 optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(const uint256& blkHash) const {
-    MAKE_KEY_SLICE(blkHash, Hash::SIZE);
+    MAKE_KEY_SLICE(blkHash);
     PinnableSlice valueSlice;
     Status s = db->Get(ReadOptions(), db->DefaultColumnFamily(), keySlice, &valueSlice);
 
@@ -262,7 +262,7 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(con
 
 template <typename K, typename H, typename P1, typename P2>
 bool RocksDBStore::WritePosImpl(const string& column, const K& key, const H& h, const P1& b, const P2& r) const {
-    MAKE_KEY_SLICE(key, sizeof(K));
+    MAKE_KEY_SLICE(key);
 
     VStream value;
     value.reserve(sizeof(H) + sizeof(P1) + sizeof(P2));
