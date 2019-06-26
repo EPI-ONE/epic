@@ -13,9 +13,9 @@ DAGManager::~DAGManager() {
     verifyThread_.Stop();
 }
 
-void DAGManager::RequestInv(const uint256&, const size_t&, std::shared_ptr<Peer>) {}
+void DAGManager::RequestInv(const uint256&, const size_t&, PeerPtr) {}
 
-void DAGManager::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> peer) {
+void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
     verifyThread_.Execute([blk, peer, this]() {
         if (*blk == GENESIS) {
             return;
@@ -38,9 +38,9 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pee
         const uint256& prevHash = blk->GetPrevHash();
         const uint256& tipHash  = blk->GetTipHash();
 
-        auto mask = [&msHash, &prevHash, &tipHash]() {
-            return (
-                (!CAT->DAGExists(msHash) << 0) | (!CAT->DAGExists(prevHash) << 2) | (!CAT->DAGExists(tipHash) << 1));
+        auto mask = [msHash, prevHash, tipHash]() {
+            return ((!CAT->DAGExists(msHash) << 0) | (!CAT->DAGExists(prevHash) << 2) |
+                    (!CAT->DAGExists(tipHash) << 1));
         };
 
         // First, check if we already received its preceding blocks
@@ -78,7 +78,7 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pee
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
             spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                blk->GetDifficultyTarget(), expectedTarget);
+                         blk->GetDifficultyTarget(), expectedTarget);
             return;
         }
 
@@ -93,7 +93,7 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> pee
 
         CAT->Cache(blk);
 
-        // TODO: call PeerManager::RelayBlock here
+        // TODO: Relay block
 
         AddBlockToPending(blk);
         CAT->ReleaseBlocks(blk->GetHash());
@@ -209,10 +209,6 @@ void DAGManager::Stop() {
     verifyThread_.Stop();
 }
 
-bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
-    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
-}
-
 bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) {
     if (ms == nullptr) {
         // Should not happen
@@ -232,4 +228,8 @@ bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) {
         return false;
     }
     return true;
+}
+
+bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }

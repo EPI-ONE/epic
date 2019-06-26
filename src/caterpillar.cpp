@@ -19,7 +19,7 @@ void Caterpillar::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
 }
 
 void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
-    obcThread_.Execute([&blkHash, this]() {
+    obcThread_.Execute([blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);
         if (releasedBlocks) {
             for (const auto& blk : *releasedBlocks) {
@@ -241,7 +241,7 @@ void Caterpillar::Cache(const ConstBlockPtr& blk) {
 }
 
 void Caterpillar::Stop() {
-    while (obcThread_.GetTaskSize() > 0) {
+    while (obc_.Size() > 0 || obcThread_.GetTaskSize() > 0) {
         std::this_thread::yield();
     }
     obcThread_.Stop();
