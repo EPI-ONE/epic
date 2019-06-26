@@ -15,7 +15,7 @@
 //#include <byteswap.h>
 //#endif
 
-#if defined(MAC_OSX)
+#if defined(__APPLE__)
 
 #if !defined(bswap_16)
 

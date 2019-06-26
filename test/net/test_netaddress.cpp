@@ -2,9 +2,9 @@
 #include <net_address.h>
 
 class TestNetAddress : public testing::Test {
-    public:
-        std::optional<NetAddress> netAddress;
-        std::optional<IPAddress> ipAddress;
+public:
+    std::optional<NetAddress> netAddress;
+    std::optional<IPAddress> ipAddress;
 };
 
 TEST_F(TestNetAddress, IPAddress) {
@@ -25,7 +25,6 @@ TEST_F(TestNetAddress, IPAddress) {
     EXPECT_EQ(ipAddress->ToString(), ip6_2);
 
 
-
     // some wrong ip string
     std::string iperr_1 = "256.1.1.1";
     std::string iperr_2 = "2.a.3.d";
@@ -40,7 +39,6 @@ TEST_F(TestNetAddress, IPAddress) {
     EXPECT_FALSE(IPAddress::GetByIP(iperr_4));
     EXPECT_FALSE(IPAddress::GetByIP(iperr_5));
     EXPECT_FALSE(IPAddress::GetByIP(iperr_6));
-
 }
 
 TEST_F(TestNetAddress, NetAddress) {
