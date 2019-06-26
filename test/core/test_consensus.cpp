@@ -4,7 +4,7 @@
 
 #include "caterpillar.h"
 #include "key.h"
-#include "test_factory.h"
+#include "test_env.h"
 
 class TestConsensus : public testing::Test {
 public:
@@ -73,12 +73,12 @@ TEST_F(TestConsensus, UTXO) {
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
-    std::array<std::shared_ptr<ChainState>, 100> arrayMs;
+    constexpr size_t HEIGHT = 100;
+    std::array<std::shared_ptr<ChainState>, HEIGHT> arrayMs;
     arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    constexpr size_t LOOPS = 100;
-    for (size_t i = 1; i < LOOPS; i++) {
+    for (size_t i = 1; i < HEIGHT; i++) {
         auto rec   = fac.CreateConsecutiveRecordPtr();
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
