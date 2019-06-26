@@ -239,7 +239,7 @@ std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size
         return result;
     }
 
-    // Read all the reset of files
+    // Read all the rest of files
     static const size_t nFilesMax = 20;
 
     auto file     = NextFile(*leftPos);
