@@ -228,25 +228,28 @@ std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size
         auto file = NextFile(*leftPos);
         while (file < *rightPos && !file.SameFileAs(*rightPos)) {
             FileReader cursor(file::BLK, file);
-            size =  cursor.Size();
+            size = cursor.Size();
             cursor.read(size, *result);
             NextFile(file);
-            cursor.Close();
         }
 
         // Read the last file
         FileReader cursor(file::BLK, file);
-        reader.read(rightOffset, *result);
+        cursor.read(rightOffset, *result);
         return result;
     }
 
     // Read all the reset of files
-    auto file = NextFile(*leftPos);
-    while (CheckFileExist(file::GetFilePath(file::BLK, file))) {
+    static const size_t nFilesMax = 20;
+
+    auto file     = NextFile(*leftPos);
+    size_t nFiles = 0;
+    while (CheckFileExist(file::GetFilePath(file::BLK, file)) && nFiles < nFilesMax) {
         FileReader cursor(file::BLK, file);
         size = cursor.Size();
         cursor.read(size, *result);
         NextFile(file);
+        nFiles++;
     }
     return result;
 }

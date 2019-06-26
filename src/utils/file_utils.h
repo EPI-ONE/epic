@@ -96,8 +96,11 @@ public:
 
     FileReader()                  = delete;
     FileReader(const FileReader&) = delete;
+    ~FileReader() {
+        Close();
+    }
+
     FileReader& operator=(const FileReader&) = delete;
-    ~FileReader()                            = default;
 
     template <typename Stream>
     FileReader& read(size_t size, Stream& s) {
@@ -157,8 +160,11 @@ public:
 
     FileWriter()                  = delete;
     FileWriter(const FileWriter&) = delete;
+    ~FileWriter() {
+        Close();
+    }
+
     FileWriter& operator=(const FileWriter&) = delete;
-    ~FileWriter()                            = default;
 
     void Flush() {
         ofbuf_.flush();
