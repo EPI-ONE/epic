@@ -103,9 +103,7 @@ public:
     FileReader& read(size_t size, Stream& s) {
         size_t nSize = s.size();
         s.resize(nSize + size);
-        for (size_t i = nSize; i < s.size(); ++i) {
-            ifbuf_.read(&s[i], 1);
-        }
+        ifbuf_.read(&s[nSize], size);
         return *this;
     }
 
@@ -167,7 +165,7 @@ public:
     }
 
     void Close() {
-        ofbuf_.close(); 
+        ofbuf_.close();
     }
 
     template <typename T>
