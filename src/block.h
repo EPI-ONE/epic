@@ -6,7 +6,6 @@
 #include <unordered_map>
 
 #include "arith_uint256.h"
-#include "file_utils.h"
 #include "pubkey.h"
 #include "transaction.h"
 #include "utilstrencodings.h"
