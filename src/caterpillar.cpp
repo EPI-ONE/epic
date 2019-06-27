@@ -151,8 +151,16 @@ size_t Caterpillar::GetHeight(const uint256& blkHash) const {
     return dbStore_.GetHeight(blkHash);
 }
 
-std::unique_ptr<UTXO> Caterpillar::GetTransactionOutput(const uint256&) {
-    return nullptr;
+std::unique_ptr<UTXO> Caterpillar::GetUTXO(const uint256& key) const {
+    return dbStore_.GetUTXO(key);
+}
+
+bool Caterpillar::AddUTXO(const uint256& key, const UTXOPtr& utxo) const {
+    return dbStore_.WriteUTXO(key, utxo);
+}
+
+bool Caterpillar::RemoveUTXO(const uint256& key) const {
+    return dbStore_.RemoveUTXO(key);
 }
 
 bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {

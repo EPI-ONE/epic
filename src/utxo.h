@@ -36,7 +36,7 @@ public:
     }
 
     bool operator==(const UTXO& another) const {
-        return index_ == another.index_ && output_ == another.output_;
+        return output_ == another.output_;
     }
 
     bool operator!=(const UTXO& another) const {

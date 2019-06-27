@@ -69,7 +69,7 @@ UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     if (query != comfirmed_.end()) {
         return query->second;
     }
-    return CAT->GetTransactionOutput(xorkey);
+    return CAT->GetUTXO(xorkey);
 }
 
 void ChainLedger::Update(const TXOC& txoc) {

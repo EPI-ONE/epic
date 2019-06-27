@@ -33,7 +33,9 @@ public:
     size_t GetHeight(const uint256&) const;
 
     // TODO: search for UTXO in db
-    std::unique_ptr<UTXO> GetTransactionOutput(const uint256&);
+    std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
+    bool AddUTXO(const uint256&, const UTXOPtr&) const;
+    bool RemoveUTXO(const uint256&) const;
 
     /**
      * Flush records to db. Called by DAGManager only.

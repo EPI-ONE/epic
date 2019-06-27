@@ -79,6 +79,10 @@ public:
     bool DeleteRecPos(const uint256&) const;
     bool DeleteMsPos(const uint256&) const;
 
+    std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
+    bool WriteUTXO(const uint256&, const UTXOPtr&) const;
+    bool RemoveUTXO(const uint256&) const;
+
 private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
     rocksdb::DB* db_;

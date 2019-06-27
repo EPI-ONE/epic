@@ -31,8 +31,8 @@ protected:
     }
 };
 
-std::string TestRocksDB::prefix    = "test_rocks/"; // temporary db folder prefix RocksDBStore* TestRocksDB::db = nullptr;
-RocksDBStore* TestRocksDB::db = nullptr;
+std::string TestRocksDB::prefix = "test_rocks/"; // temporary db folder prefix
+RocksDBStore* TestRocksDB::db   = nullptr;
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     // Consturct a milestone file position
@@ -116,4 +116,18 @@ TEST_F(TestRocksDB, batch_insertion) {
         ASSERT_EQ(blkPoses[i], pos.first);
         ASSERT_EQ(recPoses[i], pos.second);
     }
+}
+
+TEST_F(TestRocksDB, utxo) {
+    auto index   = fac.GetRand() % 100;
+    auto block   = fac.CreateBlock(0, 100);
+    UTXOPtr utxo = std::make_shared<UTXO>(block.GetTransaction()->GetOutputs()[index], index);
+    auto key     = utxo->GetKey();
+    ASSERT_TRUE(db->WriteUTXO(key, utxo));
+
+    auto utxo_fromdb = db->GetUTXO(key);
+    ASSERT_EQ(*utxo, *utxo_fromdb);
+
+    ASSERT_TRUE(db->RemoveUTXO(key));
+    ASSERT_EQ(nullptr, db->GetUTXO(key));
 }
