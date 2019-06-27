@@ -59,8 +59,6 @@ RocksDBStore::~RocksDBStore() {
     // delete column falimy handles
     for (auto entry = handleMap_.begin(); entry != handleMap_.end(); ++entry) {
         delete entry->second;
-        // for (auto& entry : handleMap_) {
-        // delete entry.second;
     }
     handleMap_.clear();
 
