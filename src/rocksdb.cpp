@@ -80,6 +80,8 @@ size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+
         value >> VARINT(height);
     } catch (const std::exception&) {
         // do nothing
@@ -103,6 +105,8 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+
         value.ignore(Hash::SIZE);
         FilePos blkPos(value);
         FilePos recPos(value);
@@ -223,6 +227,8 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+
         uint256 msHash(value);
         return msHash;
     } catch (const std::exception&) {
@@ -236,6 +242,8 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(con
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+
         uint64_t height;
         uint32_t blkOffset, recOffset;
         value >> VARINT(height) >> blkOffset >> recOffset;
