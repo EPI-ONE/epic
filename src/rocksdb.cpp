@@ -6,9 +6,16 @@ using std::string;
 using std::tuple;
 using namespace rocksdb;
 
-#define MAKE_KEY_SLICE(obj)   \
-    VStream keyStream{(obj)}; \
+#define MAKE_KEY_SLICE(obj) \
+    VStream keyStream{obj}; \
     Slice keySlice(keyStream.data(), keyStream.size());
+
+#define GET_VALUE(column_handle, null_return)                                 \
+    PinnableSlice valueSlice;                                                 \
+    Status s = db_->Get(ReadOptions(), column_handle, keySlice, &valueSlice); \
+    if (!s.ok()) {                                                            \
+        return null_return;                                                   \
+    }
 
 RocksDBStore::RocksDBStore(string dbPath) {
     this->dbpath_ = dbPath;
@@ -52,8 +59,8 @@ RocksDBStore::~RocksDBStore() {
     // delete column falimy handles
     for (auto entry = handleMap_.begin(); entry != handleMap_.end(); ++entry) {
         delete entry->second;
-    //for (auto& entry : handleMap_) {
-        //delete entry.second;
+        // for (auto& entry : handleMap_) {
+        // delete entry.second;
     }
     handleMap_.clear();
 
@@ -67,17 +74,15 @@ bool RocksDBStore::Exists(const uint256& blockHash) const {
 
 size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash);
-    PinnableSlice valueSlice;
-    Status s = db_->Get(ReadOptions(), db_->DefaultColumnFamily(), keySlice, &valueSlice);
 
     uint64_t height = UINT_FAST64_MAX;
-    if (s.ok()) {
-        try {
-            VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-            value >> VARINT(height);
-        } catch (const std::exception&) {
-            // do nothing
-        }
+    GET_VALUE(db_->DefaultColumnFamily(), height);
+
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        value >> VARINT(height);
+    } catch (const std::exception&) {
+        // do nothing
     }
 
     return height;
@@ -94,12 +99,7 @@ bool RocksDBStore::IsMilestone(const uint256& blkHash) const {
 
 optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);
-    PinnableSlice valueSlice;
-    Status s = db_->Get(ReadOptions(), handleMap_.at("ms"), keySlice, &valueSlice);
-
-    if (!s.ok()) {
-        return {};
-    }
+    GET_VALUE(handleMap_.at("ms"), {});
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -183,14 +183,9 @@ bool RocksDBStore::WriteMsPos(const uint64_t& key,
     return WritePosImpl("ms", key, msHash, blkPos, recPos);
 }
 
-string RocksDBStore::Get(const string& column, const Slice& key) const {
-    string value;
-    Status s = db_->Get(ReadOptions(), handleMap_.at(column), key, &value);
-    if (s.ok()) {
-        return value;
-    }
-
-    return "";
+string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
+    GET_VALUE(handleMap_.at(column), "");
+    return valueSlice.ToString();
 }
 
 string RocksDBStore::Get(const string& column, const string& key) const {
@@ -224,31 +219,20 @@ void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
 
 uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);
-    PinnableSlice valueSlice;
+    GET_VALUE(handleMap_.at("ms"), uint256());
 
-    Status s = db_->Get(ReadOptions(), handleMap_.at("ms"), keySlice, &valueSlice);
-
-    if (!s.ok()) {
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        uint256 msHash(value);
+        return msHash;
+    } catch (const std::exception&) {
         return uint256();
-    } else {
-        try {
-            VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-            uint256 msHash(value);
-            return msHash;
-        } catch (const std::exception&) {
-            return uint256();
-        }
     }
 }
 
 optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash);
-    PinnableSlice valueSlice;
-    Status s = db_->Get(ReadOptions(), db_->DefaultColumnFamily(), keySlice, &valueSlice);
-
-    if (!s.ok()) {
-        return {};
-    }
+    GET_VALUE(db_->DefaultColumnFamily(), {});
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
