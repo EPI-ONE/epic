@@ -6,6 +6,7 @@
 #include <queue>
 
 #include "chains.h"
+#include "concurrent_container.h"
 #include "consensus.h"
 #include "task.h"
 #include "threadpool.h"
@@ -76,13 +77,13 @@ private:
      * A list of hashes we've sent out in GetData requests.
      * Should be thread-safe.
      */
-    std::vector<uint256> downloading;
+    ConcurrentHashSet<uint256> downloading;
 
     /**
      * A list of tasks we've prepared to deliver to a Peer.
      * Should be thread-safe.
      */
-    std::vector<GetDataTask> preDownloading;
+    BlockingQueue<GetDataTask> preDownloading;
 
     /**
      * A list of milestone chains, with first element being
@@ -93,7 +94,7 @@ private:
     /**
      * Stores RecordPtr of all verified milestones on all branches as a cache
      */
-    std::unordered_map<uint256, RecordPtr> globalStates_;
+    ConcurrentHashMap<uint256, RecordPtr> globalStates_;
 
     /**
      * Start a new thread and create a list of GetData tasks that is either added

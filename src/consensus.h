@@ -34,12 +34,12 @@ public:
 
     /* simple constructor (now for test only) */
     ChainState(uint64_t height,
-        arith_uint256 chainwork,
-        uint32_t lastUpdateTime,
-        arith_uint256 milestoneTarget,
-        arith_uint256 blockTarget,
-        uint64_t hashRate,
-        std::vector<uint256>&& lvsHashes)
+               arith_uint256 chainwork,
+               uint32_t lastUpdateTime,
+               arith_uint256 milestoneTarget,
+               arith_uint256 blockTarget,
+               uint64_t hashRate,
+               std::vector<uint256>&& lvsHashes)
         : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
           blockTarget(blockTarget), hashRate(hashRate), lvsHashes_(std::move(lvsHashes)) {}
 
@@ -111,7 +111,7 @@ private:
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
 
 /*
  * A structure that contains a shared_ptr<const Block> that will
@@ -122,29 +122,30 @@ public:
     // transaction validity
     enum Validity : uint8_t {
         UNKNOWN = 0,
-        VALID,
-        INVALID,
+        VALID   = 1,
+        INVALID = 2,
     };
 
     enum RedemptionStatus : uint8_t {
         IS_NOT_REDEMPTION = 0, // double zero hash
-        NOT_YET_REDEEMED,      // hash of previous redemption block
-        IS_REDEEMED,           // null hash
+        NOT_YET_REDEEMED  = 1, // hash of previous redemption block
+        IS_REDEEMED       = 2, // null hash
     };
 
     ConstBlockPtr cblock;
 
+    uint64_t height;
     Coin cumulativeReward;
     Coin fee;
     uint64_t minerChainHeight = 0;
 
-    RedemptionStatus isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
-    uint256 prevRedemHash       = Hash::GetDoubleZeroHash();
+    uint8_t isRedeemed    = RedemptionStatus::IS_NOT_REDEMPTION;
+    uint256 prevRedemHash = Hash::GetDoubleZeroHash();
 
     bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
 
-    Validity validity = Validity::UNKNOWN;
+    uint8_t validity = Validity::UNKNOWN;
 
     NodeRecord();
     NodeRecord(const ConstBlockPtr&);
@@ -154,16 +155,16 @@ public:
 
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
-    void InvalidateMilestone();
     void UpdateReward(const Coin&);
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(VARINT(height));
         READWRITE(cumulativeReward);
         READWRITE(VARINT(minerChainHeight));
-        READWRITE(static_cast<uint8_t>(validity));
-        READWRITE(static_cast<uint8_t>(isRedeemed));
+        READWRITE(validity);
+        READWRITE(isRedeemed);
 
         if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
             READWRITE(prevRedemHash);
@@ -192,8 +193,9 @@ public:
     }
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(cumulativeReward, minerChainHeight) ==
-                   std::tie(another.cumulativeReward, another.minerChainHeight) &&
+        return std::tie(cumulativeReward, minerChainHeight, validity, isRedeemed, prevRedemHash, isMilestone) ==
+                   std::tie(another.cumulativeReward, another.minerChainHeight, another.validity, another.isRedeemed,
+                            another.prevRedemHash, another.isMilestone) &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
                ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));
     }

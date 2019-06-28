@@ -502,7 +502,7 @@ public:
         static_assert(std::is_unsigned<I>::value, "BigEndian type must be unsigned integer");
         static_assert(sizeof(I) == 2 && std::numeric_limits<I>::min() == 0 &&
                           std::numeric_limits<I>::max() == std::numeric_limits<uint16_t>::max(),
-            "Unsupported BigEndian size");
+                      "Unsupported BigEndian size");
     }
 
     template <typename Stream>

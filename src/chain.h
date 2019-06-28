@@ -4,7 +4,6 @@
 #include <deque>
 #include <optional>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "block.h"

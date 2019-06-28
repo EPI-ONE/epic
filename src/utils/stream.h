@@ -34,8 +34,6 @@ public:
 
     explicit VStream() : readPos_(0) {}
 
-    VStream(size_t size) : chars_(size), readPos_(0) {}
-
     VStream(const_iterator pbegin, const_iterator pend) : chars_(pbegin, pend), readPos_(0) {}
 
     VStream(const char* pbegin, const char* pend) : chars_(pbegin, pend), readPos_(0) {}

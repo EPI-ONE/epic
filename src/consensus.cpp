@@ -4,8 +4,8 @@
 // ChainState
 //
 ChainState::ChainState(std::shared_ptr<ChainState> previous,
-    const ConstBlockPtr& msBlock,
-    std::vector<uint256>&& lvsHash)
+                       const ConstBlockPtr& msBlock,
+                       std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
       milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(std::move(lvsHash)) {
     chainwork = previous->chainwork + (GetParams().maxTarget / UintToArith256(msBlock->GetHash()));
@@ -53,7 +53,7 @@ void ChainState::UpdateTXOC(TXOC&& txoc) {
     txoc_.Merge(std::move(txoc));
 }
 
-ChainStatePtr make_shared_ChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
     auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(hashes));
     record.LinkChainState(pcs);
     return pcs;
@@ -77,11 +77,6 @@ NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), op
 
 NodeRecord::NodeRecord(VStream& s) {
     s >> *this;
-}
-
-void NodeRecord::InvalidateMilestone() {
-    isMilestone = false;
-    snapshot.reset();
 }
 
 void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
@@ -110,7 +105,7 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize_ > 0) {
         return optimalStorageSize_;
     }
-
+    optimalStorageSize_ += GetSizeOfVarInt(height);
     optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
     optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
     optimalStorageSize_ += 1; // Validity
@@ -147,6 +142,7 @@ std::string std::to_string(const ChainState& cs) {
 
 std::string std::to_string(const NodeRecord& rec, bool showtx) {
     std::string s = "NodeRecord {\n";
+    s += strprintf("   is milestone: %s \n\n", rec.isMilestone);
     s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());

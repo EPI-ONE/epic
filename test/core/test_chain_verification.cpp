@@ -15,8 +15,7 @@ public:
     static void SetUpTestCase() {
         std::ostringstream os;
         os << time(nullptr);
-        std::string filename = prefix + os.str();
-        CAT                  = std::make_unique<Caterpillar>(filename);
+        CAT = std::make_unique<Caterpillar>(prefix + os.str());
     }
 
     static void TearDownTestCase() {
@@ -209,8 +208,13 @@ TEST_F(TestChainVerification, ValidDistance) {
     rec1.minerChainHeight = 1;
     AddToHistory(&c, std::make_shared<NodeRecord>(rec1));
 
-    Block b2{GetParams().version, ghash, b1.GetHash(), ghash, fac.NextTime(),
-        GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b2{GetParams().version,
+             ghash,
+             b1.GetHash(),
+             ghash,
+             fac.NextTime(),
+             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             0};
     Transaction tx = fac.CreateTx(1, 1);
     b2.AddTransaction(tx);
     NodeRecord rec2{b2};
@@ -219,8 +223,13 @@ TEST_F(TestChainVerification, ValidDistance) {
     EXPECT_FALSE(IsValidDistance(&c, rec2, GENESIS_RECORD.snapshot->hashRate));
 
     // Block with invalid distance
-    Block b3{GetParams().version, ghash, b2.GetHash(), ghash, fac.NextTime(),
-        GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b3{GetParams().version,
+             ghash,
+             b2.GetHash(),
+             ghash,
+             fac.NextTime(),
+             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             0};
     Transaction tx1 = fac.CreateTx(1, 1);
     b3.AddTransaction(tx1);
     NodeRecord rec3{b3};

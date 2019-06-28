@@ -8,7 +8,7 @@
 
 class TestConsensus : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
+    TestFactory fac;
 };
 
 TEST_F(TestConsensus, SyntaxChecking) {
@@ -16,8 +16,8 @@ TEST_F(TestConsensus, SyntaxChecking) {
     EXPECT_TRUE(b.Verify());
 
     // Create a random block with bad difficulty target
-    Block block =
-        Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(), time(nullptr), 1, 1);
+    Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
+                        time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 
@@ -63,7 +63,7 @@ TEST_F(TestConsensus, BlockOptimalEncodingSize) {
 }
 
 TEST_F(TestConsensus, UTXO) {
-    Block b  = fac.CreateBlock(1, 67);
+    Block b     = fac.CreateBlock(1, 67);
     UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
     uint256 key = utxo.GetKey();
 
@@ -79,17 +79,13 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec = fac.CreateConsecutiveRecordPtr();
-        ASSERT_NE(UintToArith256(rec->cblock->GetHash()), arith_uint256{0});
-
+        auto rec   = fac.CreateConsecutiveRecordPtr();
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (((i + 1) % GetParams().timeInterval) == 0) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-            ASSERT_NE(arrayMs[i - 1]->milestoneTarget, arrayMs[i]->milestoneTarget);
-            ASSERT_NE(arrayMs[i - 1]->blockTarget, arrayMs[i]->blockTarget);
-        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 0) {
+        } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
         ASSERT_NE(0, arrayMs[i - 1]->hashRate);
@@ -101,12 +97,12 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    std::size_t n = 100;
+    std::size_t n = 1000;
     std::vector<ConstBlockPtr> blocks;
     blocks.reserve(n);
 
     // Make the genesis first
-    auto genesisPtr = std::make_shared<Block>(GENESIS);
+    const auto genesisPtr = std::make_shared<const Block>(GENESIS);
     blocks.emplace_back(genesisPtr);
 
     // Construct a fully connected and syntatical valid random graph
@@ -154,7 +150,9 @@ TEST_F(TestConsensus, AddNewBlocks) {
     DAG = std::make_unique<DAGManager>();
 
     // Initialize DB with genesis block
-    CAT->StoreRecord(std::make_shared<NodeRecord>(GENESIS_RECORD));
+    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+    CAT->StoreRecords(genesisLvs);
+    CAT->EnableOBC();
 
     for (const auto& block : blocks) {
         CAT->AddNewBlock(block, nullptr);
@@ -163,16 +161,19 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->Stop();
     DAG->Stop();
 
-    /*for (const auto& blk : blocks) {
+    for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
-        EXPECT_TRUE(CAT->IsSolid(bhash));
+        EXPECT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
-        EXPECT_TRUE(blkCache);
-    }*/
+        if (!(*blk == *genesisPtr)) {
+            if (!blkCache) {
+                std::cout << std::to_string(bhash) << std::endl;
+            }
+            EXPECT_TRUE(blkCache);
+        }
+    }
 
     EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size() - 1);
-
-    CAT.reset();
 
     std::string cmd = "exec rm -r " + prefix;
     system(cmd.c_str());

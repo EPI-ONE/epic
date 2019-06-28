@@ -161,7 +161,7 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
         recs.emplace_back(std::make_shared<NodeRecord>(b));
         hashes.emplace_back(b->GetHash());
     }
-    auto state = make_shared_ChainState(GetChainHead(), *recs.back(), std::move(hashes));
+    auto state = CreateNextChainState(GetChainHead(), *recs.back(), std::move(hashes));
 
     // validate each block in order
     for (auto& rec : recs) {

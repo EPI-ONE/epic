@@ -1,5 +1,4 @@
 #include "file_utils.h"
-
 #include "tinyformat.h"
 
 bool CheckDirExist(const std::string& dirPath) {
@@ -15,7 +14,7 @@ bool CheckFileExist(const std::string& filePath) {
 }
 
 // used c like way to implement this
-bool Mkdir_recursive(const std::string &path) {
+bool Mkdir_recursive(const std::string& path) {
     if (path.empty()) {
         return true;
     }
@@ -50,12 +49,20 @@ void file::SetDataDirPrefix(std::string strprefix) {
     prefix = strprefix;
 }
 
-std::string file::GetPath(FileType type, uint32_t epoch) {
-    return std::string{prefix + typestr[type] + "/epoch" + std::to_string(epoch)};
+std::string file::GetEpochPath(FileType type, uint32_t epoch) {
+    return std::string{prefix + typestr[type] + "/E" + tfm::format("%06d", epoch)};
 }
 
 std::string file::GetFileName(FileType type, uint32_t name) {
-    return std::string{typestr[type] + std::to_string(name) + ".dat"};
+    return std::string{typestr[type] + tfm::format("%06d", name) + ".dat"};
+}
+
+std::string file::GetFilePath(FileType type, const FilePos& pos) {
+    return file::GetEpochPath(type, pos.nEpoch) + "/" + file::GetFileName(type, pos.nName);
+}
+
+std::string std::to_string(const FilePos& fpos) {
+    return strprintf("{ epoch %s, name %s, offset %s }", fpos.nEpoch, fpos.nName, fpos.nOffset);
 }
 
 std::string std::to_string(FileReader& freader) {

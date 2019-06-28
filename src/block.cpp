@@ -70,7 +70,7 @@ bool Block::Verify() const {
     // checks version
     if (version_ != GetParams().version) {
         spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
-            std::to_string(hash_));
+                     std::to_string(hash_));
         return false;
     }
 
@@ -83,7 +83,7 @@ bool Block::Verify() const {
     uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
         spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", ctime((time_t*) &time_),
-            time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
+                     time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
         return false;
     }
 
@@ -274,7 +274,7 @@ bool Block::CheckPOW() const {
 
 void Block::Solve() {
     arith_uint256 target = GetTargetAsInteger();
-    
+
     CalculateHash();
     while (UintToArith256(hash_) > target) {
         if (nonce_ == UINT_LEAST32_MAX) {
@@ -302,14 +302,14 @@ void Block::SetParents() {
 std::string std::to_string(const Block& block, bool showtx) {
     std::string s;
     s += " Block { \n";
-    s += strprintf("   hash: %s \n", std::to_string(block.GetHash()));
-    s += strprintf("   version: %s \n", block.version_);
-    s += strprintf("   milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
-    s += strprintf("   previous block: %s \n", std::to_string(block.prevBlockHash_));
-    s += strprintf("   tip block: %s \n", std::to_string(block.tipBlockHash_));
-    s += strprintf("   time: %d \n", std::to_string(block.time_));
-    s += strprintf("   difficulty target: %d \n", std::to_string(block.diffTarget_));
-    s += strprintf("   nonce: %d \n ", std::to_string(block.nonce_));
+    s += strprintf("      hash: %s \n", std::to_string(block.GetHash()));
+    s += strprintf("      version: %s \n", block.version_);
+    s += strprintf("      milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
+    s += strprintf("      previous block: %s \n", std::to_string(block.prevBlockHash_));
+    s += strprintf("      tip block: %s \n", std::to_string(block.tipBlockHash_));
+    s += strprintf("      time: %d \n", std::to_string(block.time_));
+    s += strprintf("      difficulty target: %d \n", std::to_string(block.diffTarget_));
+    s += strprintf("      nonce: %d \n ", std::to_string(block.nonce_));
 
     if (block.HasTransaction() && showtx) {
         s += strprintf("  with %s\n", std::to_string(*(block.transaction_)));

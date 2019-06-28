@@ -24,12 +24,12 @@ public:
     Block(VStream&);
 
     Block(uint32_t version,
-        uint256 milestoneHash,
-        uint256 prevBlockHash,
-        uint256 tipBlockHash,
-        uint32_t time,
-        uint32_t difficultyTarget,
-        uint32_t nonce)
+          uint256 milestoneHash,
+          uint256 prevBlockHash,
+          uint256 tipBlockHash,
+          uint32_t time,
+          uint32_t difficultyTarget,
+          uint32_t nonce)
         : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
           tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();

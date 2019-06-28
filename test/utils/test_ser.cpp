@@ -69,7 +69,8 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
     VStream soutput;
     soutput << outpointFromDeserialization;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
+    ASSERT_EQ(outpoint, outpointFromDeserialization);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeVStream) {
@@ -85,11 +86,12 @@ TEST_F(TestSer, SerializeEqDeserializeVStream) {
     VStream soutput;
     soutput << v2;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
 
     VStream soutput1;
     soutput1 << v2;
     ASSERT_EQ(soutput, soutput1);
+    ASSERT_EQ(v1, v2);
 }
 
 
@@ -108,7 +110,7 @@ TEST_F(TestSer, SerializeEqDeserializeListing) {
     VStream soutput;
     soutput << l2;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(l1, l2);
 }
 
@@ -127,7 +129,8 @@ TEST_F(TestSer, SerializeEqDeserializeTxInput) {
 
     soutput << inputFromDeserialization;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
+    ASSERT_EQ(input, inputFromDeserialization);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
@@ -140,7 +143,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
     ASSERT_EQ(coin, coin1);
     VStream vscoin1{coin1};
     ASSERT_EQ(strcoin, vscoin1.str());
-    
+
     // then test TxOutput
     TxOutput output = TxOutput(100, randomBytes);
     VStream sinput;
@@ -153,7 +156,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
     VStream soutput;
     soutput << outputFromDeserialization;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(output, outputFromDeserialization);
 }
 
@@ -174,7 +177,7 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     VStream soutput;
     soutput << txFromDeserialization;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
 
     Transaction txx(tx);
     std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
@@ -184,7 +187,7 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 
     ASSERT_TRUE(ot.has_value());
     ASSERT_TRUE(ots.has_value());
-    EXPECT_EQ(ot, ots);
+    ASSERT_EQ(ot, ots);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
@@ -197,6 +200,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     tx.AddInput(TxInput(outpoint, Listing(randomBytes)));
     tx.AddOutput(TxOutput(100, Listing(randomBytes)));
     block.AddTransaction(tx);
+    block.FinalizeHash();
 
     VStream sinput;
     sinput << block;
@@ -208,32 +212,33 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     VStream soutput;
     soutput << block1;
 
-    EXPECT_EQ(s, soutput.str());
+    ASSERT_EQ(s, soutput.str());
+    ASSERT_EQ(block, block1);
 
     // Check parent pointers
     const Transaction* ptrTx = &(*block1.GetTransaction());
-    EXPECT_EQ(&block1, ptrTx->GetParentBlock());
+    ASSERT_EQ(&block1, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
-        EXPECT_EQ(ptrTx, input.GetParentTx());
+        ASSERT_EQ(ptrTx, input.GetParentTx());
     }
     for (const TxOutput& output : ptrTx->GetOutputs()) {
-        EXPECT_EQ(ptrTx, output.GetParentTx());
+        ASSERT_EQ(ptrTx, output.GetParentTx());
     }
 
     Block block2(soutput);
 
     // check parent pointers
     ptrTx = &*block2.GetTransaction();
-    EXPECT_EQ(&block2, ptrTx->GetParentBlock());
+    ASSERT_EQ(&block2, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
-        EXPECT_EQ(ptrTx, input.GetParentTx());
+        ASSERT_EQ(ptrTx, input.GetParentTx());
     }
     for (const TxOutput& output : ptrTx->GetOutputs()) {
-        EXPECT_EQ(ptrTx, output.GetParentTx());
+        ASSERT_EQ(ptrTx, output.GetParentTx());
     }
 
     // Check encoding size
-    EXPECT_EQ(VStream(block2).size(), block2.GetOptimalEncodingSize());
+    ASSERT_EQ(VStream(block2).size(), block2.GetOptimalEncodingSize());
 }
 
 TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
@@ -258,7 +263,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.LinkChainState(pstate);
 
     // Make it a fake milestone
-    block.InvalidateMilestone();
+    block.isMilestone = false;
 
     VStream sinput;
     block.Serialize(sinput);
