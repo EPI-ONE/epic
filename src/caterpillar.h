@@ -19,7 +19,7 @@ typedef std::unique_ptr<Block> BlockCache;
 class Caterpillar {
 public:
     Caterpillar() = delete;
-    Caterpillar(std::string dbPath);
+    Caterpillar(const std::string& dbPath);
 
     /**
      * API for other modules for searching a block

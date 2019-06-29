@@ -101,7 +101,7 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
 }
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
-    static auto process = [&block, this](const ChainPtr& chain) {
+    auto process = [&block, this](const ChainPtr& chain) {
         isVerifying = true;
         chain->Verify(block);
         UpdateDownloadingQueue(block->GetHash());
