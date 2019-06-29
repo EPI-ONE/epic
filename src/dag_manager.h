@@ -107,7 +107,6 @@ private:
     void StartBatchSync(PeerPtr peer);
     void CompleteBatchSync();
 
-
     /**
      * TODO:
      * Removes a verified ms hash from the downloading queue, and start another
@@ -124,6 +123,8 @@ private:
      * that passes syntax checking .
      */
     void AddBlockToPending(const ConstBlockPtr& block);
+
+    void ProcessMilestone(const ChainPtr&, const ConstBlockPtr&);
 };
 
 bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);

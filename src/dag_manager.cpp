@@ -101,13 +101,6 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
 }
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
-    auto process = [&block, this](const ChainPtr& chain) {
-        isVerifying = true;
-        chain->Verify(block);
-        UpdateDownloadingQueue(block->GetHash());
-        isVerifying = false;
-    };
-
     // Extract utxos from outputs and pass their pointers to chains
     std::vector<UTXOPtr> utxos;
     if (block->HasTransaction()) {
@@ -136,12 +129,12 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         auto ms = msBlock->snapshot;
 
         if (*(ms) == *(mainchain->GetChainHead()) && CheckMsPOW(block, ms)) {
-            // new milestone
-            process(mainchain);
+            // new milestone on mainchain
+            ProcessMilestone(mainchain, block);
         } else if (CheckMsPOW(block, ms)) {
             // new fork
             auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
-            process(new_fork);
+            ProcessMilestone(new_fork, block);
             milestoneChains.emplace(std::move(new_fork));
         }
 
@@ -165,18 +158,25 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         ChainStatePtr ms = msBlock->snapshot;
 
         if (*(ms) == *(chain->GetChainHead()) && CheckMsPOW(block, ms)) {
-            // new milestone
-            process(*chainIt);
+            // new milestone on fork
+            ProcessMilestone(*chainIt, block);
             milestoneChains.update_best(chainIt);
             return;
         } else if (CheckMsPOW(block, ms)) {
             // new fork
             auto new_fork = std::make_unique<Chain>(*chain, block);
-            process(new_fork);
+            ProcessMilestone(new_fork, block);
             milestoneChains.emplace(std::move(new_fork));
             return;
         }
     }
+}
+
+void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& block) {
+    isVerifying = true;
+    chain->Verify(block);
+    UpdateDownloadingQueue(block->GetHash());
+    isVerifying = false;
 }
 
 RecordPtr DAGManager::GetState(const uint256& msHash) {
