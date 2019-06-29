@@ -82,6 +82,11 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
 std::vector<ConstBlockPtr> Caterpillar::GetLevelSetAt(size_t height) const {
     auto vs = GetRawLevelSetAt(height);
     std::vector<ConstBlockPtr> blocks;
+
+    if (!vs) {
+        return blocks;
+    }
+
     while (!vs->empty()) {
         blocks.emplace_back(std::make_shared<const Block>(*vs));
     }
