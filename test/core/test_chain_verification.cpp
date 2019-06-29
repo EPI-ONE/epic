@@ -234,5 +234,5 @@ TEST_F(TestChainVerification, ValidDistance) {
     b3.AddTransaction(tx1);
     NodeRecord rec3{b3};
     rec3.minerChainHeight = 3;
-    EXPECT_FALSE(IsValidDistance(&c, rec3, 10000000));
+    EXPECT_FALSE(IsValidDistance(&c, rec3, 1000000000));
 }
