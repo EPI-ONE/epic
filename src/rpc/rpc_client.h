@@ -25,15 +25,16 @@ class RPCClient {
 public:
     RPCClient(std::shared_ptr<grpc::Channel> channel);
 
-    rpc::Block GetBlock(const uint256&);
+    std::optional<rpc::Block> GetBlock(const uint256&);
 
-    int GetLevelSet();
+    std::optional<std::vector<rpc::Block>> GetLevelSet(const uint256&);
 
-    int GetLevelSetSize();
+    std::optional<size_t> GetLevelSetSize(const uint256&);
 
-    int GetNewMilestoneSince();
+    std::optional<rpc::Block> GetLatestMilestone();
 
-    int GetLatestMilestone();
+    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(const uint256&, size_t);
+
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> stub_;

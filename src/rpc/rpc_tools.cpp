@@ -1,5 +1,10 @@
 #include <rpc_tools.h>
 
+uint256 RPCHashToHash(const rpc::Hash& h) {
+    uint256 result = uint256S(h.hash());
+    return result;
+}
+
 rpc::Hash* HashToRPCHash(const uint256& h) {
     rpc::Hash* rpch = new rpc::Hash();
     rpch->set_hash(std::to_string(h));

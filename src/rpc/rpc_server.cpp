@@ -1,36 +1,59 @@
 #include <rpc_server.h>
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
-    const GetBlockRequest* request,
-    GetBlockResponse* reply) {
-    if (request->hash().hash() == std::to_string(GENESIS.GetHash())) {
-        rpc::Block* b = BlockToRPCBlock(GENESIS);
-        reply->set_allocated_block(b);
-    }
+                                                        const GetBlockRequest* request,
+                                                        GetBlockResponse* reply) {
+    auto record   = DAG->GetState(RPCHashToHash(request->hash()));
+    rpc::Block* b = BlockToRPCBlock(*(record->cblock));
+    reply->set_allocated_block(b);
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* context,
-    const GetLevelSetRequest* request,
-    GetLevelSetResponse* reply) {
+                                                           const GetLevelSetRequest* request,
+                                                           GetLevelSetResponse* reply) {
+    auto record = DAG->GetState(RPCHashToHash(request->hash()));
+    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    for (auto localBlock : ls) {
+        auto newBlock   = reply->add_blocks();
+        auto blockValue = BlockToRPCBlock(*localBlock);
+        *newBlock       = *blockValue;
+        delete blockValue;
+    }
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerContext* context,
-    const GetLevelSetSizeRequest* request,
-    GetLevelSetSizeResponse* reply) {
+                                                               const GetLevelSetSizeRequest* request,
+                                                               GetLevelSetSizeResponse* reply) {
+    auto record = DAG->GetState(RPCHashToHash(request->hash()));
+    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    reply->set_size(ls.size());
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
-    const GetNewMilestoneSinceRequest* request,
-    GetNewMilestoneSinceResponse* reply) {
+                                                                    const GetNewMilestoneSinceRequest* request,
+                                                                    GetNewMilestoneSinceResponse* reply) {
+    auto record = DAG->GetState(RPCHashToHash(request->hash()));
+    // Ignore the first milestone hash from traverse since it's the request's one
+    auto milestone_hashes = DAG->TraverseMilestoneForward(record, request->number() + 1);
+    for (size_t i = 1; i < milestone_hashes.size(); ++i) {
+        auto rec        = DAG->GetState(milestone_hashes[i]);
+        auto newBlock   = reply->add_blocks();
+        auto blockValue = BlockToRPCBlock(*(rec->cblock));
+        *newBlock       = *blockValue;
+        delete blockValue;
+    }
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerContext* context,
-    const GetLatestMilestoneRequest* request,
-    GetLatestMilestoneResponse* reply) {
+                                                                  const GetLatestMilestoneRequest* request,
+                                                                  GetLatestMilestoneResponse* reply) {
+    auto record   = DAG->GetMilestoneHead();
+    rpc::Block* b = BlockToRPCBlock(*(record->cblock));
+    reply->set_allocated_milestone(b);
     return grpc::Status::OK;
 }
 
