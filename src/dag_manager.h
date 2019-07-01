@@ -118,6 +118,8 @@ private:
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
 
+    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
+
     /**
      * Adds a newly received block to the corresponding chain
      * that passes syntax checking .
@@ -127,7 +129,6 @@ private:
     void ProcessMilestone(const ChainPtr&, const ConstBlockPtr&);
 };
 
-bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
 
 extern std::unique_ptr<DAGManager> DAG;

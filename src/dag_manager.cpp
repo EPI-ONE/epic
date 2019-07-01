@@ -100,6 +100,27 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
     });
 }
 
+bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) {
+    if (ms == nullptr) {
+        // Should not happen
+        return false;
+    }
+
+    if (blk->IsFirstRegistration()) {
+        return true;
+    }
+
+    if (blk->GetMilestoneHash() == GENESIS.GetHash()) {
+        return true;
+    }
+
+    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
+        spdlog::info("Block is too old [{}]", std::to_string(blk->GetHash()));
+        return false;
+    }
+    return true;
+}
+
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // Extract utxos from outputs and pass their pointers to chains
     std::vector<UTXOPtr> utxos;
@@ -207,27 +228,6 @@ void DAGManager::Stop() {
         std::this_thread::yield();
     }
     verifyThread_.Stop();
-}
-
-bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) {
-    if (ms == nullptr) {
-        // Should not happen
-        return false;
-    }
-
-    if (blk->IsFirstRegistration()) {
-        return true;
-    }
-
-    if (blk->GetMilestoneHash() == GENESIS.GetHash()) {
-        return true;
-    }
-
-    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
-        spdlog::info("Block is too old [{}]", std::to_string(blk->GetHash()));
-        return false;
-    }
-    return true;
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
