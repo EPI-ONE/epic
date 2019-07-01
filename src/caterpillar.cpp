@@ -1,119 +1,12 @@
 #include "caterpillar.h"
 
-Caterpillar::Caterpillar(std::string dbPath) : verifyThread_(1), obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
-    verifyThread_.Start();
+Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     obcThread_.Start();
     file::SetDataDirPrefix(dbPath + "/");
 }
 
 Caterpillar::~Caterpillar() {
-    verifyThread_.Stop();
     obcThread_.Stop();
-}
-
-bool Caterpillar::AddNewBlock(const ConstBlockPtr& blk, std::shared_ptr<Peer> peer) {
-    // clang-format off
-    return verifyThread_.Submit([&blk, peer, this]() {
-        if (*blk == GENESIS) {
-            return false;
-        }
-
-        if (Exists(blk->GetHash())) {
-            return false;
-        }
-
-        //////////////////////////////////////////////////
-        // Start of online verification
-
-        if (!blk->Verify()) {
-            return false;
-        }
-
-        // Check solidity ////////////////////////////////
-
-        const uint256& msHash   = blk->GetMilestoneHash();
-        const uint256& prevHash = blk->GetPrevHash();
-        const uint256& tipHash  = blk->GetTipHash();
-
-        static auto mask = [](bool m, bool p, bool t) -> uint8_t { return ((!m << 0) | (!p << 2) | (!t << 1)); };
-
-        // First, check if we already received its preceding blocks
-        if (IsWeaklySolid(blk)) {
-            if (AnyLinkIsOrphan(blk)) {
-                AddBlockToOBC(blk, mask(DAGExists(msHash), DAGExists(prevHash), DAGExists(tipHash)));
-                return false;
-            }
-        } else {
-            // We have not received at least one of its parents.
-
-            // Drop if the block is too old
-            RecordPtr ms = DAG->GetState(msHash);
-            if (ms && !CheckPuntuality(blk, ms)) {
-                return false;
-            }
-            AddBlockToOBC(blk, mask(DAGExists(msHash), DAGExists(prevHash), DAGExists(tipHash)));
-
-            // Abort and send GetInv requests.
-            if (peer) {
-                DAG->RequestInv(uint256(), 5, peer);
-            }
-
-            return false;
-        }
-
-        // Check difficulty target ///////////////////////
-
-        RecordPtr ms = DAG->GetState(msHash);
-        if (!ms) {
-            spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
-            return false;
-        }
-
-        uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
-        if (blk->GetDifficultyTarget() != expectedTarget) {
-            spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                         blk->GetDifficultyTarget(), expectedTarget);
-            return false;
-        }
-
-        // Check punctuality /////////////////////////////
-
-        if (!CheckPuntuality(blk, ms)) {
-            return false;
-        }
-
-        // End of online verification
-        //////////////////////////////////////////////////
-
-        Cache(blk);
-        DAG->AddBlockToPending(blk);
-        ReleaseBlocks(blk->GetHash());
-
-        return true;
-    }).get();
-    // clang-format on
-}
-
-
-bool Caterpillar::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const {
-    if (ms == nullptr) {
-        // Should not happen
-        return false;
-    }
-
-    if (blk->IsFirstRegistration()) {
-        return true;
-    }
-
-    if (blk->GetMilestoneHash() == GENESIS.GetHash()) {
-        return true;
-    }
-
-    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
-        spdlog::info("Block is too old [{}]", std::to_string(blk->GetHash()));
-        return false;
-    }
-    return true;
 }
 
 void Caterpillar::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
@@ -126,11 +19,11 @@ void Caterpillar::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
 }
 
 void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
-    obcThread_.Execute([&blkHash, this]() {
+    obcThread_.Execute([blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);
         if (releasedBlocks) {
             for (const auto& blk : *releasedBlocks) {
-                AddNewBlock(blk, nullptr);
+                DAG->AddNewBlock(blk, nullptr);
             }
         }
     });
@@ -348,11 +241,10 @@ void Caterpillar::Cache(const ConstBlockPtr& blk) {
 }
 
 void Caterpillar::Stop() {
-    while (verifyThread_.GetTaskSize() > 0 || obcThread_.GetTaskSize() > 0) {
+    while (obc_.Size() > 0 || obcThread_.GetTaskSize() > 0) {
         std::this_thread::yield();
     }
     obcThread_.Stop();
-    verifyThread_.Stop();
 }
 
 void Caterpillar::SetFileCapacities(uint32_t fileCapacity, uint16_t epochCapacity) {

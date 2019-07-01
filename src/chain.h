@@ -147,8 +147,6 @@ private:
      */
     std::unordered_map<uint256, Cumulator> cumulatorMap_;
 
-    bool CheckMsPOW(const ConstBlockPtr&, const ChainStatePtr&);
-
     /**
      * Checks whether the block contains a valide tx
      * and update its NR info

@@ -12,6 +12,8 @@
 #include "threadpool.h"
 
 class Peer;
+typedef std::shared_ptr<Peer> PeerPtr;
+
 class DAGManager {
 public:
     DAGManager();
@@ -22,22 +24,23 @@ public:
      * and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
      * sending queue according to the BlockLocator constructed by peer.
      */
-    void RequestInv(const uint256& fromHash, const size_t& len, std::shared_ptr<Peer> peer);
+    void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
 
     /** Called by Peer and sets a list of inventory as the callback to the task. */
     void AssembleInv(GetBlockTask& task);
 
     /** Called by batchSync to create a GetDataTask for a given hash. */
-    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, std::shared_ptr<Peer> peer);
+    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, PeerPtr peer);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void GetBundle(GetDataTask& task);
 
-    /**
-     * Adds a newly received block to the corresponding chain
-     * that passes syntax checking .
+    /*
+     * Submits tasks to a single thread in which it checks its syntax.
+     * If the block passes the checking, add them to pendings in dag_manager.
+     * Returns true only if the new block is successfully submitted to pendings.
      */
-    void AddBlockToPending(const ConstBlockPtr& block);
+    void AddNewBlock(const ConstBlockPtr& block, PeerPtr peer);
 
     const RecordPtr GetHead() const;
 
@@ -49,26 +52,19 @@ public:
     const Chain& GetBestChain() const;
 
     /**
-     * Methods are called when the synchronization status is changed:
-     * on to off and off to on. Modifies the atomic_flag isBatchSynching.
-     */
-    void StartBatchSync(std::shared_ptr<Peer> peer);
-    void CompleteBatchSync();
-
-    /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks
      */
     void Stop();
 
 private:
-    ThreadPool thread_;
+    ThreadPool verifyThread_;
 
     /** Indicator of whether we are synching with some peer. */
     std::atomic<bool> isBatchSynching;
 
     /** The peer we are synching with. Null if isBatchSynching is false. */
-    std::shared_ptr<Peer> syncingPeer;
+    PeerPtr syncingPeer;
 
     /** Indicator of whether the DAG manager is doing off-line verification */
     std::atomic<bool> isVerifying;
@@ -102,7 +98,14 @@ private:
      * is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
-    void BatchSync(std::list<uint256>& requests, std::shared_ptr<Peer> requestFrom);
+    void BatchSync(std::list<uint256>& requests, PeerPtr requestFrom);
+
+    /**
+     * Methods are called when the synchronization status is changed:
+     * on to off and off to on. Modifies the atomic_flag isBatchSynching.
+     */
+    void StartBatchSync(PeerPtr peer);
+    void CompleteBatchSync();
 
     /**
      * TODO:
@@ -114,6 +117,16 @@ private:
 
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
+
+    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
+
+    /**
+     * Adds a newly received block to the corresponding chain
+     * that passes syntax checking .
+     */
+    void AddBlockToPending(const ConstBlockPtr& block);
+
+    void ProcessMilestone(const ChainPtr&, const ConstBlockPtr&);
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);

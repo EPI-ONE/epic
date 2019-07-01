@@ -155,7 +155,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->EnableOBC();
 
     for (const auto& block : blocks) {
-        CAT->AddNewBlock(block, nullptr);
+        DAG->AddNewBlock(block, nullptr);
     }
 
     CAT->Stop();
@@ -163,13 +163,10 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     for (const auto& blk : blocks) {
         auto bhash = blk->GetHash();
-        EXPECT_TRUE(CAT->DAGExists(bhash));
+        ASSERT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
         if (!(*blk == *genesisPtr)) {
-            if (!blkCache) {
-                std::cout << std::to_string(bhash) << std::endl;
-            }
-            EXPECT_TRUE(blkCache);
+            ASSERT_TRUE(blkCache);
         }
     }
 

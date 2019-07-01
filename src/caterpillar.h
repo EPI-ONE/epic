@@ -19,7 +19,7 @@ typedef std::unique_ptr<Block> BlockCache;
 class Caterpillar {
 public:
     Caterpillar() = delete;
-    Caterpillar(std::string dbPath);
+    Caterpillar(const std::string& dbPath);
 
     /**
      * API for other modules for searching a block
@@ -50,12 +50,14 @@ public:
     bool IsMilestone(const uint256&) const;
 
     /**
-     * Submits tasks to a single thread in which it checks its syntax.
-     * If the block passes the checking, add them to pendings in dag_manager.
-     * Returns true only if the new block is successfully submitted to pendings.
+     * obc and solidity check
      */
-    bool AddNewBlock(const ConstBlockPtr& block, std::shared_ptr<Peer> peer);
-
+    bool IsSolid(const ConstBlockPtr&) const;
+    bool IsWeaklySolid(const ConstBlockPtr&) const;
+    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
+    void Cache(const ConstBlockPtr&);
+    void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
+    void ReleaseBlocks(const uint256&);
     void EnableOBC();
     void DisableOBC();
 
@@ -70,7 +72,6 @@ public:
     ~Caterpillar();
 
 private:
-    ThreadPool verifyThread_;
     ThreadPool obcThread_;
 
     RocksDBStore dbStore_;
@@ -91,17 +92,6 @@ private:
     std::atomic_uint_fast16_t currentRecName_  = 0;
     std::atomic_uint_fast32_t currentBlkSize_  = 0;
     std::atomic_uint_fast32_t currentRecSize_  = 0;
-
-    /**
-     * obc and solidity check
-     */
-    bool IsSolid(const ConstBlockPtr&) const;
-    bool IsWeaklySolid(const ConstBlockPtr&) const;
-    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
-    void Cache(const ConstBlockPtr&);
-    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
-    void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
-    void ReleaseBlocks(const uint256&);
 
     uint32_t loadCurrentBlkEpoch();
     uint32_t loadCurrentRecEpoch();
