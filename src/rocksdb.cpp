@@ -185,13 +185,34 @@ bool RocksDBStore::WriteMsPos(const uint64_t& key,
     return WritePosImpl("ms", key, msHash, blkPos, recPos);
 }
 
-string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
-    GET_VALUE(handleMap_.at(column), "");
-    return valueSlice.ToString();
+std::unique_ptr<UTXO> RocksDBStore::GetUTXO(const uint256& key) const {
+    MAKE_KEY_SLICE(key);
+    GET_VALUE(handleMap_.at("utxo"), nullptr);
+
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+
+        return std::make_unique<UTXO>(value);
+    } catch (const std::exception&) {
+        return nullptr;
+    }
 }
 
-string RocksDBStore::Get(const string& column, const string& key) const {
-    return Get(column, Slice(key));
+bool RocksDBStore::WriteUTXO(const uint256& key, const UTXOPtr & utxo) const {
+    MAKE_KEY_SLICE(key);
+
+    VStream value(utxo);
+    Slice valueSlice(value.data(), value.size());
+
+    return db_->Put(WriteOptions(), handleMap_.at("utxo"), keySlice, valueSlice).ok();
+}
+
+bool RocksDBStore::RemoveUTXO(const uint256& key) const {
+    VStream keyStream(key);
+    Slice keySlice(keyStream.data(), keyStream.size());
+
+    return db_->Delete(WriteOptions(), handleMap_.at("utxo"), keySlice).ok();
 }
 
 bool RocksDBStore::DeleteRecPos(const uint256& h) const {
@@ -204,6 +225,15 @@ bool RocksDBStore::DeleteMsPos(const uint256& h) const {
         return DeleteRecPos(h);
     }
     return status;
+}
+
+string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
+    GET_VALUE(handleMap_.at(column), "");
+    return valueSlice.ToString();
+}
+
+string RocksDBStore::Get(const string& column, const string& key) const {
+    return Get(column, Slice(key));
 }
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
