@@ -44,8 +44,6 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
      * MainNet: {version: 1, difficulty target: 0x1d00ffffL}
      * TestNet: {version:10, difficulty target: 0x1e00ffffL}
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
-     *
-     * Diff
      */
     Block genesisBlock{100};
     Transaction tx;

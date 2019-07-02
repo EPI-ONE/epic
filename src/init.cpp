@@ -180,7 +180,7 @@ void LoadConfigFile() {
     if (network_config) {
         auto ip   = network_config->get_as<std::string>("ip");
         auto port = network_config->get_as<uint16_t>("port");
-        auto type = network_config->get_as<std::string>("type");
+        auto networkType = network_config->get_as<std::string>("type");
         if (ip && config->GetBindAddress() == config->defaultIP) {
             config->SetBindAddress(*ip);
         } else {
@@ -192,7 +192,7 @@ void LoadConfigFile() {
         } else {
             spdlog::info("bind port has been specified in the command line, discard the port in the config file");
         }
-        config->SetNetType(*type);
+        config->SetNetworkType(*networkType);
     }
 
     // seeds

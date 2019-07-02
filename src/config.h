@@ -106,7 +106,7 @@ public:
         return networkType_;
     }
 
-    void SetNetType(const std::string& networkType) {
+    void SetNetworkType(const std::string& networkType) {
         networkType_ = networkType;
     }
 

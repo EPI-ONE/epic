@@ -114,11 +114,6 @@ size_t NodeRecord::GetOptimalStorageSize() {
     optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
     optimalStorageSize_ += 1; // Validity
     optimalStorageSize_ += 1; // RedemptionStatus
-
-    //if (isRedeemed != RedemptionStatus::IS_NOT_REDEMPTION) {
-    if (cblock->IsRegistration()) {
-        optimalStorageSize_ += Hash::SIZE; // prevRedemHash size
-    }
     optimalStorageSize_ += 1; // MilestoneStatus
 
     if (snapshot != nullptr) { // ChainState

@@ -120,6 +120,7 @@ public:
             return Coin{};
         }
 
+        // TODO: consider how to handle the exception
         if (a.value_ > IMPOSSIBLE_COIN / multiple) {
             throw std::string("Coin number overflow");
         }
