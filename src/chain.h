@@ -159,8 +159,8 @@ private:
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
     const Coin& GetPrevReward(const NodeRecord& rec) {
-        // TODO: may add more check
-        return recordHistory_[rec.cblock->GetPrevHash()]->cumulativeReward;
+        auto queryRec = GetRecord(rec.cblock->GetPrevHash());
+        return queryRec->cumulativeReward;
     }
 
     bool IsValidDistance(const NodeRecord&, const arith_uint256&);

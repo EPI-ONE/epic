@@ -10,20 +10,18 @@
 
 class TestFileStorage : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
-    static std::string prefix;
+    TestFactory fac    = EpicTestEnvironment::GetFactory();
+    std::string prefix = "test_file_store/";
 
-    static void SetUpTestCase() {
+    void SetUp() override {
         file::SetDataDirPrefix(prefix);
     }
 
-    static void TearDownTestCase() {
+    void TearDown() override {
         std::string cmd = "rm -r " + prefix;
         system(cmd.c_str());
     }
 };
-
-std::string TestFileStorage::prefix = "test_file_store/";
 
 TEST_F(TestFileStorage, basic_read_write) {
     auto blk = fac.CreateBlock();
@@ -31,14 +29,13 @@ TEST_F(TestFileStorage, basic_read_write) {
     NodeRecord rec{blk};
     FilePos fpos{0, 0, 0};
 
-    {
-        FileWriter writer{file::FileType::BLK, fpos};
-        EXPECT_EQ(writer.GetOffset(), 0);
-        writer << blk;
-        EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize());
-        writer << rec;
-        EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
-    }
+    FileWriter writer{file::FileType::BLK, fpos};
+    EXPECT_EQ(writer.GetOffset(), 0);
+    writer << blk;
+    EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize());
+    writer << rec;
+    EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
+    writer.Close();
 
     FileReader reader{file::FileType::BLK, fpos};
     Block blk1{};
@@ -61,7 +58,7 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
 
     std::vector<RecordPtr> blocks;
 
-    int nLvs = 20;
+    constexpr int nLvs = 20;
 
     // Consturct level sets
     for (int i = 0; i < nLvs; ++i) {

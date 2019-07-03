@@ -167,6 +167,7 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
             rec->prevRedemHash = rec->cblock->GetHash();
+            rec->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
         } else {
             if (auto update = Validate(*rec)) {
                 rec->validity = NodeRecord::VALID;
@@ -180,7 +181,8 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
         }
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
-    states_.emplace_back(state);
+
+    states_.emplace_back(std::move(state));
     recordHistory_.merge(std::move(verifying_));
 }
 
@@ -240,10 +242,11 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     }
 
     // update redemption status
+    // TODO: store the updated result of prevReg
     prevReg->isRedeemed  = NodeRecord::IS_REDEEMED;
     record.isRedeemed    = NodeRecord::NOT_YET_REDEEMED;
     record.prevRedemHash = record.cblock->GetHash();
-    return std::make_optional<TXOC>({{XOR(record.cblock->GetHash(), 0)}, {}});
+    return TXOC{{XOR(record.cblock->GetHash(), 0)}, {}};
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {

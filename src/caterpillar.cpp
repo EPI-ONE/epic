@@ -2,7 +2,6 @@
 
 Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     obcThread_.Start();
-    file::SetDataDirPrefix(dbPath + "/");
 }
 
 Caterpillar::~Caterpillar() {

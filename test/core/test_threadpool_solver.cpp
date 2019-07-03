@@ -40,6 +40,11 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
     // should only be uncommented when using this code
     // to mine a new genesis block.
 
+    /**
+     * MainNet: {version: 1, difficulty target: 0x1d00ffffL}
+     * TestNet: {version:10, difficulty target: 0x1e00ffffL}
+     * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
+     */
     Block genesisBlock{100};
     Transaction tx;
 
@@ -79,9 +84,9 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    genesisBlock.SetNonce(144412); // UnitTest
-    // genesisBlock.SetNonce(11433695); // TestNet
-    // genesisBlock.SetNonce(2217850746); // MainNet
+    genesisBlock.SetNonce(251319); // UnitTest
+                                   // genesisBlock.SetNonce(29897782); // TestNet
+                                   // genesisBlock.SetNonce(1701609359); // MainNet
     genesisBlock.FinalizeHash();
     EXPECT_TRUE(genesisBlock.Verify());
 }

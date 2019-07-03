@@ -67,39 +67,124 @@ TEST_F(TestChainVerification, chain_with_genesis) {
     ASSERT_EQ(*GetRecord(&c, GENESIS.GetHash()), GENESIS_RECORD);
 }
 
-TEST_F(TestChainVerification, VerifyRedemption) {
+TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     // prepare keys and signature
     auto keypair        = fac.CreateKeyPair();
     auto addr           = keypair.second.GetID();
     auto [hashMsg, sig] = fac.CreateSig(keypair.first);
 
+    // chain configuration
+    constexpr size_t HEIGHT = 30;
+    std::array<RecordPtr, HEIGHT> recs;
+    std::array<uint256, HEIGHT> hashes;
+    std::array<bool, HEIGHT> isRedemption;
+    std::array<bool, HEIGHT> isMilestone;
+    isRedemption.fill(false);
+    isMilestone.fill(false);
+
+    NumberGenerator numGen{fac.GetRand(), 1, 10};
+    uint32_t redeemRand{numGen.GetRand()}, redeemCnt{0};
+    uint32_t msRand{numGen.GetRand()}, msCnt{0};
+    for (size_t i = 0; i < HEIGHT; i++) {
+        if (redeemRand == redeemCnt) {
+            isRedemption[i] = true;
+            redeemCnt       = 0;
+            redeemRand      = numGen.GetRand();
+        } else {
+            redeemCnt++;
+        }
+        if (msRand == msCnt) {
+            isMilestone[i] = true;
+            msCnt          = 0;
+            msRand         = numGen.GetRand();
+        } else {
+            msCnt++;
+        }
+    }
+
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, GetParams().maxTarget.GetCompact(), fac.NextTime(), 0};
+    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(),  0};
     b1.AddTransaction(Transaction{addr});
-    b1.FinalizeHash();
+    b1.Solve();
+    ASSERT_TRUE(b1.IsFirstRegistration());
     auto b1hash             = b1.GetHash();
-    RecordPtr firstRecord   = std::make_shared<NodeRecord>(Block(std::move(b1)));
-    firstRecord->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
 
-    // construct redemption block
-    Transaction redeem{};
-    redeem.AddSignedInput(TxOutPoint{b1hash, 0}, keypair.second, hashMsg, sig).AddOutput(0, addr);
-    Block b2{1, ghash, b1hash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
-    b2.AddTransaction(redeem);
-    NodeRecord redemption{std::move(b2)};
-    redemption.prevRedemHash = b1hash;
-
-    // start testing
+    // construct a chain with only redemption blocks and blocks without transaction
     Chain c{};
-    AddToHistory(&c, firstRecord);
-    auto txoc = ValidateRedemption(&c, redemption);
-    ASSERT_TRUE(bool(txoc));
-    ASSERT_EQ(firstRecord->isRedeemed, NodeRecord::IS_REDEEMED);
-    ASSERT_EQ(redemption.isRedeemed, NodeRecord::NOT_YET_REDEEMED);
+    c.AddPendingBlock(std::make_shared<const Block>(std::move(b1)));
+    auto prevHash    = b1hash;
+    auto prevRedHash = b1hash;
+    auto prevMs      = GENESIS_RECORD.snapshot;
+    for (size_t i = 0; i < HEIGHT; i++) {
+        Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+        if (isRedemption[i]) {
+            Transaction redeem{};
+            redeem.AddSignedInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig)
+                .AddOutput(0, addr);
+            ASSERT_TRUE(redeem.IsRegistration());
+            blk.AddTransaction(redeem);
+        }
+
+        blk.Solve();
+        if (isMilestone[i]) {
+            if (UintToArith256(blk.GetHash()) > prevMs->milestoneTarget) {
+                blk.SetNonce(blk.GetNonce() + 1);
+                blk.Solve();
+            }
+        }
+        hashes[i] = blk.GetHash();
+
+        prevHash = blk.GetHash();
+        if (isRedemption[i]) {
+            prevRedHash = blk.GetHash();
+        }
+        auto blkptr = std::make_shared<const Block>(std::move(blk));
+        c.AddPendingBlock(blkptr);
+        if (isMilestone[i]) {
+            c.Verify(blkptr);
+            prevMs = c.GetChainHead();
+            ASSERT_EQ(c.GetPendingBlockCount(), 0);
+            ASSERT_EQ(prevMs->GetMilestoneHash(), prevHash);
+        }
+    }
+
+    // check testing results
+    uint32_t lastMs = HEIGHT - 1;
+    while (!isMilestone[lastMs]) {
+        lastMs--;
+    }
+    uint32_t lastRdm = lastMs;
+    while (!isRedemption[lastRdm]) {
+        lastRdm--;
+    }
+    for (size_t i = 0; i < lastMs; i++) {
+        recs[i] = GetRecord(&c, hashes[i]);
+        ASSERT_EQ(recs[i]->minerChainHeight, i + 1);
+        if (isRedemption[i]) {
+            if (i < lastRdm) {
+                ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::IS_REDEEMED);
+            } else {
+                ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::NOT_YET_REDEEMED);
+            }
+        } else {
+            if (i > 0 && !isMilestone[i]) {
+                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + 1);
+            } else if (i == 0) {
+                ASSERT_TRUE(recs[i]->cumulativeReward == 1);
+            } else {
+                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
+            }
+        }
+        if (isMilestone[i]) {
+            ASSERT_TRUE(recs[i]->isMilestone);
+        } else {
+            ASSERT_FALSE(recs[i]->isMilestone);
+        }
+    }
 }
 
-TEST_F(TestChainVerification, VerifyTx) {
+TEST_F(TestChainVerification, verify_tx_and_utxo) {
     DAG = std::make_unique<DAGManager>();
     Chain c{};
 

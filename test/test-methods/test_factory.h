@@ -11,7 +11,7 @@
 
 class NumberGenerator {
 public:
-    NumberGenerator(): generator(time(nullptr)), distribution(0, 65536) {}
+    NumberGenerator(): generator(time(nullptr)), distribution(0, UINT_LEAST32_MAX) {}
     NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd) : generator(seed), distribution(rangeStart, rangeEnd) {}
 
     uint32_t GetRand() {

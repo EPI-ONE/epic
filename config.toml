@@ -13,6 +13,7 @@ interval = 900
 [network]
 ip = "127.0.0.1"
 port = 7877
+type = "Testnet"
 
 [[dns_seeds]]
 hostname = "pascal.ieda.ust.hk"

@@ -35,6 +35,8 @@ static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
+// coefficient of taking additional reward for milestone
+static constexpr uint32_t REWARD_COEFFICIENT = 50;
 
 enum ParamsType : uint8_t {
     MAINNET = 1,
@@ -61,8 +63,10 @@ public:
     uint32_t targetTPS;
     uint32_t punctualityThred;
     arith_uint256 maxTarget;
+
     Coin maxMoney;
     Coin reward;
+    uint32_t msRewardCoefficient;
 
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
