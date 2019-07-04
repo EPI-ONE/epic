@@ -62,7 +62,8 @@ StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
 
 StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value) const {
     if (!value) {
-        return nullptr;
+        StoredRecord ret{nullptr, [](NodeRecord* ptr) {}};
+        return ret;
     }
 
     auto [blkPos, recPos] = *value;
@@ -71,7 +72,17 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
     Block blk{};
     blkReader >> blk;
 
-    StoredRecord record = std::make_unique<NodeRecord>(std::move(blk));
+    StoredRecord record = std::unique_ptr<NodeRecord, std::function<void(NodeRecord*)>>(
+        new NodeRecord{std::move(blk)}, [pos = recPos](NodeRecord* ptr) {
+            if (pos == FilePos{}) {
+                return;
+            }
+            if (ptr->isRedeemed == NodeRecord::IS_REDEEMED) {
+                FileModifier recmod{file::REC, pos};
+                recmod << *ptr;
+            }
+            delete ptr;
+        });
 
     FileReader recReader{file::REC, recPos};
     recReader >> *record;

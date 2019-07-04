@@ -24,30 +24,50 @@ public:
 };
 
 TEST_F(TestFileStorage, basic_read_write) {
+    // data preparation
     auto blk = fac.CreateBlock();
     blk.Solve();
     NodeRecord rec{blk};
+    uint32_t blksize = blk.GetOptimalEncodingSize(), recsize = rec.GetOptimalStorageSize();
     FilePos fpos{0, 0, 0};
+    FilePos fpos1{0, 0, blksize};
 
+    // writing
     FileWriter writer{file::FileType::BLK, fpos};
     EXPECT_EQ(writer.GetOffset(), 0);
     writer << blk;
-    EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize());
+    EXPECT_EQ(writer.GetOffset(), blksize);
     writer << rec;
-    EXPECT_EQ(writer.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
+    EXPECT_EQ(writer.GetOffset(), blksize + recsize);
     writer.Close();
 
+    // reading
     FileReader reader{file::FileType::BLK, fpos};
     Block blk1{};
     EXPECT_EQ(reader.GetOffset(), 0);
     reader >> blk1;
-    EXPECT_EQ(reader.GetOffset(), blk.GetOptimalEncodingSize());
+    EXPECT_EQ(reader.GetOffset(), blksize);
     EXPECT_EQ(blk, blk1);
 
     NodeRecord rec1{};
     reader >> rec1;
-    EXPECT_EQ(reader.GetOffset(), blk.GetOptimalEncodingSize() + rec.GetOptimalStorageSize());
+    EXPECT_EQ(reader.GetOffset(), blksize + recsize);
     EXPECT_EQ(rec, rec1);
+    reader.Close();
+
+    // modifying
+    FileModifier modifier{file::FileType::BLK, fpos1};
+    rec.isRedeemed = NodeRecord::IS_REDEEMED;
+    modifier << rec;
+    modifier.Close();
+
+    // checking modifying result
+    NodeRecord rec2{};
+    FileReader reader2{file::FileType::BLK, fpos1};
+    reader2 >> rec2;
+    EXPECT_EQ(reader2.GetOffset(), blksize + recsize);
+    EXPECT_EQ(rec, rec2);
+    reader2.Close();
 }
 
 TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
@@ -104,5 +124,14 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
         ASSERT_EQ(*blocks[i]->cblock, recovered);
     }
 
+    // update records
+    NodeRecord copyRec;
+    {
+        auto rec        = CAT->GetRecord(blocks[0]->cblock->GetHash());
+        rec->isRedeemed = NodeRecord::IS_REDEEMED;
+        copyRec         = *rec;
+    }
+    auto newout = CAT->GetRecord(blocks[0]->cblock->GetHash());
+    EXPECT_EQ(copyRec, *newout);
     CAT.reset();
 }

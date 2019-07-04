@@ -258,7 +258,6 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     }
 
     // update redemption status
-    // TODO: store the updated result of prevReg
     prevReg->isRedeemed  = NodeRecord::IS_REDEEMED;
     record.isRedeemed    = NodeRecord::NOT_YET_REDEEMED;
     record.prevRedemHash = record.cblock->GetHash();
