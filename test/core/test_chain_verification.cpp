@@ -80,8 +80,6 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     std::array<bool, HEIGHT> isRedemption;
     std::array<bool, HEIGHT> isMilestone;
     isRedemption.fill(false);
-    isRedemption[0] = true; // first reg
-
     isMilestone.fill(false);
 
     NumberGenerator numGen{fac.GetRand(), 1, 10};
@@ -110,8 +108,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
     ASSERT_TRUE(b1.IsFirstRegistration());
-    auto b1hash = b1.GetHash();
-    hashes[0] = b1.GetHash();
+    const auto b1hash = b1.GetHash();
 
     // construct a chain with only redemption blocks and blocks without transaction
     Chain c{};
@@ -119,7 +116,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     auto prevHash    = b1hash;
     auto prevRedHash = b1hash;
     auto prevMs      = GENESIS_RECORD.snapshot;
-    for (size_t i = 1; i < HEIGHT; i++) {
+    for (size_t i = 0; i < HEIGHT; i++) {
         Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
             Transaction redeem{};
@@ -153,6 +150,10 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
 
     // check testing results
+    auto firstRegRec = GetRecord(&c, b1hash);
+    ASSERT_EQ(firstRegRec->minerChainHeight, 1);
+    ASSERT_TRUE(firstRegRec->cumulativeReward == 0);
+    ASSERT_EQ(firstRegRec->isRedeemed, NodeRecord::IS_REDEEMED);
     uint32_t lastMs = HEIGHT - 1;
     while (!isMilestone[lastMs]) {
         lastMs--;
@@ -163,7 +164,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
     for (size_t i = 0; i < lastMs; i++) {
         recs[i] = GetRecord(&c, hashes[i]);
-        ASSERT_EQ(recs[i]->minerChainHeight, i + 1);
+        ASSERT_EQ(recs[i]->minerChainHeight, i + 2);
         if (isRedemption[i]) {
             if (i < lastRdm) {
                 ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::IS_REDEEMED);
