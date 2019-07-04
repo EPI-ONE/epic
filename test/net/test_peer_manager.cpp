@@ -9,7 +9,7 @@ public:
 
     static void SetUpTestCase() {
         config = std::make_unique<Config>();
-        DAG    = std::make_unique<DAGManager>();
+        DAG = std::make_unique<DAGManager>();
     }
     static void TearDownTestCase() {}
     void SetUp() {

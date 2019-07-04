@@ -161,7 +161,7 @@ TEST_F(TestSync, test_version_ack) {
     testPeer->sentMsgBox.Take(message_ms_ack);
     GetInv ms_ack(message_ms_ack.payload);
 
-    // tell node that he has downloaded enough blocks
+    // tell node that it has downloaded enough blocks
     Inv sync_complete_ack(ms_ack.nonce);
     NetMessage message_sync_complete_ack(peer_handle, INV, VStream(sync_complete_ack));
     testPeer->ProcessMessage(message_sync_complete_ack);
@@ -206,6 +206,7 @@ TEST_F(TestSync, test_version_ack) {
 
     // receive GetData
     testPeer->ProcessMessage(message_getData_Cmp);
+    DAG->Wait();
 
     // send Bundle
     ASSERT_EQ(testPeer->sentMsgBox.Size(), testChainHeight - 1);

@@ -159,16 +159,7 @@ TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height) {
 
         // Special transaction on the first registration block
         if (b.GetPrevHash() == GENESIS.GetHash()) {
-            Transaction tx;
-            tx.AddInput(TxInput(Hash::GetZeroHash(), UNCONNECTED));
-
-            CKey seckey = CKey();
-            seckey.MakeNewKey(true);
-            CPubKey pubkey     = seckey.GetPubKey();
-            uint160 pubkeyHash = Hash160<1>(pubkey.begin(), pubkey.end());
-            VStream v(pubkeyHash);
-            tx.AddOutput(TxOutput(ZERO_COIN, Tasm::Listing(v)));
-            b.AddTransaction(tx);
+            b.AddTransaction(Transaction{CreateKeyPair().second.GetID()});
         }
         b.Solve();
 

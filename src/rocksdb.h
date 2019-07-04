@@ -13,9 +13,6 @@
 #include "rocksdb/options.h"
 #include "rocksdb/slice.h"
 
-typedef std::unique_ptr<NodeRecord> StoredRecord;
-typedef std::unique_ptr<Block> BlockCache;
-
 static const std::vector<std::string> COLUMN_NAMES = {
     rocksdb::kDefaultColumnFamilyName, // (key) block hash
                                        // (value) {height, blk offset, ms offset}

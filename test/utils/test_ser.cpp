@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 #include <optional>
 
-#include "test_env.h"
 #include "consensus.h"
 #include "key.h"
-
+#include "test_env.h"
 
 typedef Tasm::Listing Listing;
 
 class TestSer : public testing::Test {
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
+
 protected:
     Listing randomBytes;
     uint256 rand1;
@@ -260,7 +260,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
 
     // Link the chain state
     auto pstate = std::make_shared<ChainState>(100, arith_uint256(0), fac.NextTime(), arith_uint256(0X3E8),
-        arith_uint256(0X3E8), 100000, std::vector<uint256>{});
+                                               arith_uint256(0X3E8), 100000, std::vector<uint256>{});
     block.LinkChainState(pstate);
 
     // Make it a fake milestone
@@ -280,4 +280,3 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
 }
-

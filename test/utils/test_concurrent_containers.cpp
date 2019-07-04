@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "blocking_queue.h"
 #include "concurrent_container.h"
 #include "threadpool.h"
 
@@ -9,6 +10,7 @@ protected:
     int testSize;
     ConcurrentHashMap<int, int> m;
     ConcurrentHashSet<int> s;
+    BlockingQueue<int> q;
 
     void SetUp() {
         testSize = 10000;
@@ -32,7 +34,7 @@ TEST_F(TestConcurrentContainers, HashMap) {
         threadPool.Execute([i, this]() { m.erase(i); });
     }
 
-    while (threadPool.GetTaskSize() > 0) {
+    while (!threadPool.IsIdle()) {
         std::this_thread::yield();
     }
 
@@ -53,7 +55,7 @@ TEST_F(TestConcurrentContainers, HashSet) {
         threadPool.Execute([i, this]() { s.erase(i); });
     }
 
-    while (threadPool.GetTaskSize() > 0) {
+    while (!threadPool.IsIdle()) {
         std::this_thread::yield();
     }
 

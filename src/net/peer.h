@@ -175,17 +175,17 @@ private:
     void ProcessBlock(ConstBlockPtr& block);
 
     /**
-     * process GetInv
+     * process GetInv, respond with an Inv message
      */
     void ProcessGetInv(GetInv& getBlock);
 
     /**
-     * process Inv
+     * process Inv, respond with a GetData message
      */
-    void ProcessInv(std::shared_ptr<Inv> inv);
+    void ProcessInv(std::unique_ptr<Inv> inv);
 
     /**
-     * processGetData
+     * processGetData, respond with bundles
      */
     void ProcessGetData(GetData& getData);
 
@@ -243,12 +243,12 @@ private:
      * Synchronization information
      */
 
-    mutable std::shared_mutex sync_slock;
+    mutable std::shared_mutex sync_lock;
 
     // Keep track of the last request we made to the peer in GetInv
     // so we can avoid redundant and harmful GetInv requests.
     uint256 lastGetInvBegin, lastGetInvEnd;
-    size_t lastGetInvLength;
+    std::atomic_size_t lastGetInvLength;
     uint256 lastSentBundleHash, lastSentInvHash;
 
     std::unordered_map<uint32_t, GetInvTask> getInvsTasks;
@@ -261,5 +261,7 @@ private:
     ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
 };
+
+typedef std::shared_ptr<Peer> PeerPtr;
 
 #endif // EPIC_PEER_H

@@ -94,6 +94,7 @@ public:
     }
 
 private:
+    size_t size_;
     BlockingQueue<CallableWrapper> task_queue_;
     std::vector<std::thread> workers_;
     std::vector<std::atomic_bool>* working_states{};

@@ -16,8 +16,6 @@
 #include "peer.h"
 #include "spdlog.h"
 
-typedef std::shared_ptr<Peer> PeerPtr;
-
 class PeerManager {
 public:
     PeerManager();

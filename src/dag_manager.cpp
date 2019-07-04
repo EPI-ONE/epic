@@ -22,7 +22,7 @@ DAGManager::~DAGManager() {
 #define SEND_MESSAGE(peer, type, msg) peer->SendMessage(NetMessage(peer->connection_handle, type, msg));
 
 void DAGManager::RequestInv(const uint256& fromHash, const size_t& length, PeerPtr peer) {
-    syncPool_.Execute([=]() {
+    syncPool_.Execute([peer = std::move(peer), &fromHash, length, this]() {
         if (peer->isSeed) {
             return;
         }
@@ -54,11 +54,11 @@ void DAGManager::RequestInv(const uint256& fromHash, const size_t& length, PeerP
     });
 }
 
-void DAGManager::CallbackRequestInv(std::shared_ptr<Inv> inv) {
-    syncPool_.Execute([=]() {
+void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv) {
+    syncPool_.Execute([inv = std::move(inv), this]() {
         auto& result = inv->hashes;
         if (result.empty()) {
-            spdlog::info("Received an empty inv, which means we have reached the same height with the peer.",
+            spdlog::info("Received an empty inv, which means we have reached the same height as the peer's.",
                          syncingPeer->address.ToString());
             GetDataTask task(GetDataTask::PENDING_SET);
             task.SetPeer(syncingPeer);
@@ -77,12 +77,15 @@ void DAGManager::CallbackRequestInv(std::shared_ptr<Inv> inv) {
     });
 }
 
-void DAGManager::RespondRequestInv(const std::vector<uint256>& locator, uint32_t nonce, PeerPtr peer) {
-    syncPool_.Execute([=]() {
+void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce, PeerPtr peer) {
+    syncPool_.Execute([peer = std::move(peer), locator = std::move(locator), nonce, this]() {
         std::vector<uint256> hashes;
         for (const uint256& start : locator) {
             if (start == GetMilestoneHead()->cblock->GetHash()) {
                 // The peer already reach our head. Send an empty inv.
+                spdlog::debug("The peer should already reach our head. Sending empty inv. "
+                              "Last bundle sent to this peer: {}",
+                              std::to_string(peer->GetLastSentBundleHash()));
                 std::vector<uint256> empty;
                 SEND_MESSAGE(peer, INV, Inv(empty, nonce));
                 return;
@@ -92,7 +95,7 @@ void DAGManager::RespondRequestInv(const std::vector<uint256>& locator, uint32_t
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
                 spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->snapshot->height);
-                TraverseMilestoneForward(startMs, Inv::kMaxInventorySize, hashes);
+                hashes = TraverseMilestoneForward(startMs, Inv::kMaxInventorySize);
                 break;
             }
         }
@@ -101,19 +104,33 @@ void DAGManager::RespondRequestInv(const std::vector<uint256>& locator, uint32_t
             // Cannot locate the peer's position. Send a genesis hash.
             hashes.push_back(GENESIS.GetHash());
         } else {
-            auto it = std::find(hashes.begin(), hashes.end(), peer->GetLastSentInvHash());
-            if (it != hashes.end()) {
-                it = std::find(hashes.begin(), hashes.end(), peer->GetLastSentBundleHash());
+            uint256 lih = peer->GetLastSentInvHash();
+            uint256 lbh = peer->GetLastSentBundleHash();
+
+            // First, find the if the hashes to be sent contain the most recent
+            // ms hash that we have sent to the peer via either Inv or Bundle,
+            // to avoid duplicated GetData requests.
+            auto it = std::find(hashes.begin(), hashes.end(), lih);
+            if (it == hashes.end()) {
+                lih.SetNull();
+                it = std::find(hashes.begin(), hashes.end(), lbh);
             }
+
+            // If found, remove all the hashes come before it,
+            // and only keep the sublist starting from its next
             if (it != hashes.end()) {
                 std::vector<uint256> sublist(it + 1, hashes.end());
                 hashes.swap(sublist);
                 sublist.clear();
             }
+
             if (hashes.empty()) {
-                spdlog::debug(
-                    "The peer should already reach our head. Sending empty inv. Last bundle sent to this peer: {}",
-                    std::to_string(peer->GetLastSentBundleHash()));
+                spdlog::debug("Sublist of inv is empty. Sending empty inv. "
+                              "Last {} sent to this peer: {}",
+                              lih.IsNull() ? "bundle" : "inv",
+                              lih.IsNull() ? std::to_string(lbh) : std::to_string(lih));
+            } else {
+                peer->SetLastSentInvHash(hashes.back());
             }
         }
 
@@ -121,7 +138,7 @@ void DAGManager::RespondRequestInv(const std::vector<uint256>& locator, uint32_t
     });
 }
 
-std::optional<GetDataTask> DAGManager::RequestData(const uint256& h, PeerPtr peer) {
+std::optional<GetDataTask> DAGManager::RequestData(const uint256& h, const PeerPtr& peer) {
     if (downloading.contains(h)) {
         spdlog::debug("Duplicated GetData request: {}", std::to_string(h));
         return {};
@@ -139,13 +156,13 @@ std::optional<GetDataTask> DAGManager::RequestData(const uint256& h, PeerPtr pee
 
 void DAGManager::CallbackRequestData(std::vector<ConstBlockPtr>& blocks) {
     spdlog::debug("Add {} blocks through CallbackRequestData.", blocks.size());
-    for (auto b : blocks) {
+    for (auto& b : blocks) {
         AddNewBlock(b, syncingPeer);
     }
     blocks.clear();
 }
 
-void DAGManager::RespondRequestPending(uint32_t nonce, PeerPtr peer) {
+void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) {
     SEND_MESSAGE(peer, BUNDLE, Bundle(GetBestChain().GetPendingBlocks(), nonce));
 }
 
@@ -153,40 +170,41 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
                                    const std::vector<uint32_t>& nonces,
                                    PeerPtr peer) {
     assert(hashes.size() == nonces.size());
-    auto hIter = hashes.begin();
-    auto nIter = nonces.begin();
-    while (hIter != hashes.end() && nIter != nonces.end()) {
-        Bundle bundle(*nIter);
-        auto recs = GetMainChainLevelSet(*hIter);
-        if (recs.empty()) {
-            SEND_MESSAGE(peer, NOT_FOUND, NotFound(*hIter, *nIter));
-            return;
-        }
+    auto hs_iter = hashes.begin();
+    auto nc_iter = nonces.begin();
+    while (hs_iter != hashes.end() && nc_iter != nonces.end()) {
+        syncPool_.Execute([n = *nc_iter, h = std::move(*hs_iter), peer, this]() {
+            Bundle bundle(n);
+            auto recs = GetMainChainLevelSet(h);
+            if (recs.empty()) {
+                SEND_MESSAGE(peer, NOT_FOUND, NotFound(h, n));
+                return;
+            }
 
-        for (auto& b : recs) {
-            bundle.AddBlock(b);
-        }
-        SEND_MESSAGE(peer, BUNDLE, bundle);
-        hIter++;
-        nIter++;
+            for (auto& b : recs) {
+                bundle.AddBlock(b);
+            }
+            SEND_MESSAGE(peer, BUNDLE, bundle);
+        });
+        hs_iter++;
+        nc_iter++;
     }
 }
 
-void DAGManager::BatchSync(std::vector<uint256>& requests, PeerPtr requestFrom) {
-    static const uint8_t maxGetDataSize = 5;
-
+void DAGManager::BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
     std::vector<uint256> finalHashes;
     std::vector<GetDataTask> finalTasks;
     finalHashes.reserve(requests.size());
+    finalTasks.reserve(requests.size());
 
     if (!preDownloading.Empty()) {
-        uint8_t counter = 0;
-        while (counter < maxGetDataSize) {
-            finalHashes.resize(finalHashes.size() + 1);
-            preDownloading.Take(finalHashes.back());
-            finalTasks.push_back(*RequestData(finalHashes.back(), requestFrom));
+        // We will continue to send out the remaning hashes in preDownloading,
+        // which are left last time this method is called, because the GetData
+        // size exceeds the limit
+        DrainTo(preDownloading, finalHashes, maxGetDataSize);
+        for (const auto& h : finalHashes) {
+            finalTasks.push_back(*RequestData(h, requestFrom));
             spdlog::debug("Sending another round of getDataTasks. preDownloading size = {}", preDownloading.Size());
-            counter++;
         }
     } else {
         for (auto& h : requests) {
@@ -231,7 +249,7 @@ void DAGManager::BatchSync(std::vector<uint256>& requests, PeerPtr requestFrom) 
     SEND_MESSAGE(requestFrom, GET_DATA, message);
 }
 
-std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, PeerPtr peer) {
+std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr& peer) {
     std::vector<uint256> locator;
     const RecordPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetState(fromHash);
     uint256 startMilestoneHash     = startMilestone->cblock->GetHash();
@@ -247,7 +265,7 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
                       std::to_string(startMilestoneHash));
     }
 
-    TraverseMilestoneBackward(startMilestone, length, locator);
+    locator = TraverseMilestoneBackward(startMilestone, length);
 
     peer->SetLastGetInvBegin(locator.front());
     peer->SetLastGetInvLength(length);
@@ -258,7 +276,8 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
     return locator;
 }
 
-void DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length, std::vector<uint256>& result) {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) {
+    std::vector<uint256> result;
     const auto& bestChain    = milestoneChains.best()->GetStates();
     size_t leastHeightCached = bestChain.front()->height;
 
@@ -281,9 +300,12 @@ void DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length, std:
         result.push_back(CAT->GetMilestoneAt(cursorHeight)->cblock->GetHash());
         --cursorHeight;
     }
+
+    return result;
 }
 
-void DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length, std::vector<uint256>& result) {
+std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length) {
+    std::vector<uint256> result;
     const auto& bestChain    = milestoneChains.best()->GetStates();
     size_t leastHeightCached = bestChain.front()->height;
 
@@ -302,11 +324,11 @@ void DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length, std::
         result.push_back(bestChain[cursorHeight - leastHeightCached]->GetMilestoneHash());
         ++cursorHeight;
     }
+
+    return result;
 }
 
 bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
-    static const time_t obcEnableThreshold = 300;
-
     auto size     = downloading.size();
     bool contains = downloading.erase(hash);
     if (contains) {
@@ -349,8 +371,8 @@ bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
     return contains;
 }
 
-void DAGManager::StartBatchSync(PeerPtr peer) {
-    static bool flag = false;
+void DAGManager::StartBatchSync(const PeerPtr& peer) {
+    bool flag = false;
     if (isBatchSynching.compare_exchange_strong(flag, true)) {
         spdlog::info("We are behind our peers... start batch sync with peer {}.", peer->address.ToString());
         syncingPeer = peer;
@@ -358,14 +380,14 @@ void DAGManager::StartBatchSync(PeerPtr peer) {
 }
 
 void DAGManager::CompleteBatchSync() {
-    static bool flag = true;
+    bool flag = true;
     if (isBatchSynching.compare_exchange_strong(flag, false)) {
         spdlog::info("Batch sync with {} completed.", syncingPeer->address.ToString());
         syncingPeer = nullptr;
     }
 }
 
-void DAGManager::DisconnectPeerSync(PeerPtr peer) {
+void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
     if (peer == syncingPeer) {
         CompleteBatchSync();
     }
@@ -375,8 +397,8 @@ void DAGManager::DisconnectPeerSync(PeerPtr peer) {
 // End of synchronization methods
 //
 
-void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
-    verifyThread_.Execute([blk, peer, this]() {
+void DAGManager::AddNewBlock(ConstBlockPtr& blk, PeerPtr peer) {
+    verifyThread_.Execute([blk = std::move(blk), peer, this] {
         if (*blk == GENESIS) {
             return;
         }
@@ -420,7 +442,7 @@ void DAGManager::AddNewBlock(const ConstBlockPtr& blk, PeerPtr peer) {
             CAT->AddBlockToOBC(blk, mask());
 
             if (peer) {
-                RequestInv(Hash::GetZeroHash(), 5, peer);
+                RequestInv(Hash::GetZeroHash(), 5, std::move(peer));
             }
 
             return;

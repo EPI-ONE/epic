@@ -27,11 +27,12 @@ void ThreadPool::WorkerThread(uint32_t id) {
 }
 
 void ThreadPool::SetThreadSize(size_t size) {
-    workers_.reserve(size);
+    size_ = size;
+    workers_.reserve(size_);
 }
 
 void ThreadPool::Start() {
-    for (size_t i = 0; i < workers_.capacity(); i++) {
+    for (size_t i = 0; i < size_; i++) {
         workers_.emplace_back(&ThreadPool::WorkerThread, this, i);
     }
     working_states = new std::vector<std::atomic_bool>(workers_.size());
@@ -44,10 +45,15 @@ void ThreadPool::Stop() {
             worker.join();
         }
     }
+
+    if (working_states) {
+        delete working_states;
+        working_states = nullptr;
+    }
 }
 
 std::size_t ThreadPool::GetThreadSize() const {
-    return workers_.size();
+    return size_;
 }
 
 size_t ThreadPool::GetTaskSize() const {
@@ -59,14 +65,19 @@ bool ThreadPool::IsIdle() const {
         return false;
     }
 
-    for (int i = 0; i < working_states->size(); i++) {
-        if (working_states->at(i)) {
-            return false;
+    if (working_states) {
+        for (int i = 0; i < working_states->size(); i++) {
+            if (working_states->at(i)) {
+                return false;
+            }
         }
     }
+
     return true;
 }
 
 ThreadPool::~ThreadPool() {
-    delete working_states;
+    if (working_states) {
+        delete working_states;
+    }
 }

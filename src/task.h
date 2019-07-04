@@ -38,7 +38,7 @@ public:
 
 class GetDataTask : public Task {
 public:
-    enum GetDataType { LEVEL_SET = 1, VALID_SET, PENDING_SET };
+    enum GetDataType { LEVEL_SET = 1, PENDING_SET };
 
     GetDataTask(GetDataType type_) : Task(), type(type_) {}
 

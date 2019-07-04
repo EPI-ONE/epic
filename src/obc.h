@@ -15,7 +15,6 @@ enum OBC_DEP_STATUS : uint8_t {
     P_MISSING = 1 << 2,
 };
 
-/*!! NOT THREAD SAFE !!*/
 class OrphanBlocksContainer {
 public:
     /*

@@ -291,7 +291,9 @@ void ShutDown() {
     peerManager->Stop();
     DAG->Stop();
     CAT->Stop();
+
     CAT.reset();
+
     spdlog::info("shutdown finish");
     spdlog::shutdown();
 }
@@ -300,5 +302,4 @@ void WaitShutdown() {
     while (!b_shutdown) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    peerManager.reset();
 }

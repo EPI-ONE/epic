@@ -127,7 +127,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     CAT->EnableOBC();
 
     for (const auto& block : blocks) {
-        DAG->AddNewBlock(block.cblock, nullptr);
+        auto p = block.cblock;
+        DAG->AddNewBlock(p, nullptr);
     }
 
     usleep(50000);

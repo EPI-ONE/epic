@@ -7,6 +7,7 @@
 #include "chains.h"
 #include "concurrent_container.h"
 #include "consensus.h"
+#include "message_type.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
@@ -25,25 +26,25 @@ public:
      * sending queue according to the BlockLocator constructed by peer.
      */
     void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
-    void CallbackRequestInv(std::shared_ptr<Inv> inv);
+    void CallbackRequestInv(std::unique_ptr<Inv> inv);
 
     /** Called by batchSync to create a GetDataTask for a given hash. */
-    std::optional<GetDataTask> RequestData(const uint256& hash, PeerPtr peer);
+    std::optional<GetDataTask> RequestData(const uint256& hash, const PeerPtr& peer);
     void CallbackRequestData(std::vector<ConstBlockPtr>&);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
-    void RespondRequestInv(const std::vector<uint256>&, uint32_t, PeerPtr);
+    void RespondRequestInv(std::vector<uint256>&, uint32_t, PeerPtr);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
-    void RespondRequestPending(uint32_t, PeerPtr);
+    void RespondRequestPending(uint32_t, const PeerPtr&);
 
     /*
      * Submits tasks to a single thread in which it checks its syntax.
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
      */
-    void AddNewBlock(const ConstBlockPtr& block, PeerPtr peer);
+    void AddNewBlock(ConstBlockPtr& block, PeerPtr peer);
 
     // Checkout states either in different chain or in db
     const RecordPtr GetState(const uint256&) const;
@@ -62,6 +63,9 @@ public:
     void Wait();
 
 private:
+    const uint8_t maxGetDataSize    = 5;
+    const time_t obcEnableThreshold = 300;
+
     ThreadPool verifyThread_;
     ThreadPool syncPool_;
     ThreadPool storagePool_;
@@ -98,22 +102,22 @@ private:
      */
     ConcurrentHashMap<uint256, RecordPtr> globalStates_;
 
-    std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, PeerPtr);
+    std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 
     /**
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    void TraverseMilestoneBackward(RecordPtr, size_t, std::vector<uint256>& result);
-    void TraverseMilestoneForward(RecordPtr, size_t, std::vector<uint256>& result);
+    std::vector<uint256> TraverseMilestoneBackward(RecordPtr, size_t);
+    std::vector<uint256> TraverseMilestoneForward(RecordPtr, size_t);
 
     /**
      * Methods are called when the synchronization status is changed:
      * on to off and off to on.
      */
-    void StartBatchSync(PeerPtr);
+    void StartBatchSync(const PeerPtr&);
     void CompleteBatchSync();
-    void DisconnectPeerSync(PeerPtr);
+    void DisconnectPeerSync(const PeerPtr&);
 
     /**
      * Start a new thread and create a list of GetData tasks that is either added
@@ -121,7 +125,7 @@ private:
      * is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
-    void BatchSync(std::vector<uint256>& requests, PeerPtr requestFrom);
+    void BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom);
 
     /**
      * TODO:

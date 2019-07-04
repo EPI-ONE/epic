@@ -93,12 +93,12 @@ TestNetParams::TestNetParams() {
         "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
     CreateGenesis(genesisHexStr);
-    }
+}
 
 UnitTestParams::UnitTestParams() {
     version              = 100;
     targetTimespan       = 9;
-    timeInterval         = 3;
+    timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;
     punctualityThred     = PUNTUALITY_THRESHOLD;

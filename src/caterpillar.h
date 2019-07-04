@@ -13,6 +13,8 @@
 #include "rocksdb.h"
 #include "threadpool.h"
 
+typedef std::unique_ptr<NodeRecord> StoredRecord;
+
 class Caterpillar {
 public:
     Caterpillar() = delete;
@@ -38,18 +40,33 @@ public:
      */
     bool StoreRecords(const std::vector<RecordPtr>&);
 
+    /**
+     * Returns true if the hash exists in one of cache, DB, or OBC
+     */
     bool Exists(const uint256&) const;
+
+    /**
+     * Returns true if the hash exists in DB
+     */
     bool DBExists(const uint256&) const;
+
+    /**
+     * Returns true if the hash exists in cache or DB
+     */
     bool DAGExists(const uint256&) const;
 
+    /**
+     * Returns true if the hash is of a milestone in DB
+     * (i.e., confirmed main chain)
+     */
     bool IsMilestone(const uint256&) const;
 
     /**
      * obc and solidity check
      */
-    bool IsSolid(const ConstBlockPtr&) const;
-    bool IsWeaklySolid(const ConstBlockPtr&) const;
-    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
+    bool IsSolid(const ConstBlockPtr&) const;         // if ancestors are all in DAG (cache + DB)
+    bool IsWeaklySolid(const ConstBlockPtr&) const;   // if ancestors are all in either DAG or OBC
+    bool AnyLinkIsOrphan(const ConstBlockPtr&) const; // if any ancestor is in OBC
     void Cache(const ConstBlockPtr&);
     void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
     void ReleaseBlocks(const uint256&);

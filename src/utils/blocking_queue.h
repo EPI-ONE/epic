@@ -2,6 +2,7 @@
 #define EPIC_BLOCKING_QUEUE_H
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <queue>
 #include <vector>
@@ -64,10 +65,12 @@ public:
         std::lock_guard<std::mutex> lock(mtx_);
         std::queue<T> empty;
         std::swap(queue_, empty);
+        full_.notify_all();
     }
 
 private:
     mutable std::mutex mtx_;
+    mutable std::mutex drainMtx_;
     std::condition_variable full_;
     std::condition_variable empty_;
     std::queue<T> queue_;
@@ -75,5 +78,20 @@ private:
     std::atomic_bool quit_ = false;
 };
 
+/**
+ * Moves the first n elements from a BlockingQueue to a vector.
+ * Not thread safe.
+ */
+template<typename T>
+bool DrainTo(BlockingQueue<T>& src, std::vector<T>& dest, size_t n) {
+    for (auto i = 0; i < n; ++i) {
+        dest.emplace_back();
+        if (!src.Take(dest.back())) {
+            dest.pop_back();
+            return false;
+        }
+    }
+    return true;
+}
 
 #endif // EPIC_BLOCKING_QUEUE_H

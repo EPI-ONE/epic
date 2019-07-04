@@ -41,7 +41,7 @@ TEST_F(TestNetMsg, Pong) {
 
 TEST_F(TestNetMsg, AddressMessage) {
     std::vector<NetAddress> lists{a1, a2};
-    AddressMessage addressMessage(lists);
+    AddressMessage addressMessage(std::move(lists));
     std::stringstream os;
     addressMessage.Serialize(os);
 

@@ -31,6 +31,13 @@ public:
 
     explicit base_blob(const std::vector<unsigned char>& vch);
 
+    // Defined to be used with std::atomic
+    base_blob(const base_blob<BITS>&) = default;
+    base_blob(base_blob<BITS>&&)      = default;
+    base_blob<BITS>& operator=(const base_blob<BITS>&) = default;
+    base_blob<BITS>& operator=(base_blob<BITS>&&) = default;
+    ~base_blob() = default;
+
     bool IsNull() const {
         for (int i = 0; i < WIDTH; i++)
             if (data[i] != 0)

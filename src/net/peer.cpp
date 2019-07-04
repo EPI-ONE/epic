@@ -54,8 +54,8 @@ void Peer::ProcessMessage(NetMessage& msg) {
                 break;
             }
             case INV: {
-                auto inv = std::make_shared<Inv>(msg.payload);
-                ProcessInv(inv);
+                auto inv = std::make_unique<Inv>(msg.payload);
+                ProcessInv(std::move(inv));
                 break;
             }
             case GET_DATA: {
@@ -69,7 +69,7 @@ void Peer::ProcessMessage(NetMessage& msg) {
                 break;
             }
             case BLOCK: {
-                ConstBlockPtr block = std::make_shared<Block>(msg.payload);
+                ConstBlockPtr block = std::make_shared<const Block>(msg.payload);
                 ProcessBlock(block);
                 break;
             }
@@ -194,8 +194,7 @@ void Peer::ProcessGetAddrMessage() {
     if (!isInbound || haveReplyGetAddr) {
         return;
     }
-    std::vector<NetAddress> addresses = addressManager_->GetAddresses();
-    AddressMessage msg(addresses);
+    AddressMessage msg(addressManager_->GetAddresses());
     SendMessage(NetMessage(connection_handle, ADDR, VStream(msg)));
     haveReplyGetAddr = true;
 }
@@ -294,10 +293,10 @@ void Peer::ProcessGetInv(GetInv& getInv) {
     if (!peer) {
         return;
     }
-    DAG->RespondRequestInv(getInv.locator, getInv.nonce, peer);
+    DAG->RespondRequestInv(getInv.locator, getInv.nonce, std::move(peer));
 }
 
-void Peer::ProcessInv(std::shared_ptr<Inv> inv) {
+void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
     spdlog::debug("received inventory message, size = {}, from {} ", inv->hashes.size(), address.ToString());
     auto task = RemovePendingGetInvTask(inv->nonce);
     if (!task) {
@@ -305,7 +304,7 @@ void Peer::ProcessInv(std::shared_ptr<Inv> inv) {
     } else {
         spdlog::debug("Size of getInvsTasks = {}, removed successfully", GetInvTaskSize());
     }
-    DAG->CallbackRequestInv(inv);
+    DAG->CallbackRequestInv(std::move(inv));
 }
 
 void Peer::ProcessGetData(GetData& getData) {
@@ -324,11 +323,7 @@ void Peer::ProcessGetData(GetData& getData) {
             break;
         }
         case GetDataTask::LEVEL_SET: {
-            DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, peer);
-            break;
-        }
-        case GetDataTask::VALID_SET: {
-            spdlog::error("unused valid set, msg from {}", address.ToString());
+            DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, std::move(peer));
             break;
         }
         default: {
@@ -356,7 +351,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
                              "lvsPool size = {}, MSHash = {}",
                              task->type, orphanLvsPool.size(), std::to_string(bundle->blocks[0]->GetHash()));
 
-                for (const auto& block : bundle->blocks) {
+                for (auto& block : bundle->blocks) {
                     DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
                 }
 
@@ -380,13 +375,9 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
         }
         case GetDataTask::PENDING_SET: {
             spdlog::info("The Bundle answers a GetDataTask of type {}, add it to dag", task->type);
-            for (const auto& block : bundle->blocks) {
+            for (auto& block : bundle->blocks) {
                 DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
             }
-            break;
-        }
-        case GetDataTask::VALID_SET: {
-            spdlog::error("unused bundle of valid set, msg from {}", address.ToString());
             break;
         }
     }
@@ -401,13 +392,13 @@ uint32_t Peer::GetFirstGetDataNonce() {
 }
 
 void Peer::AddPendingGetInvTask(const GetInvTask& task) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     getInvsTasks.insert_or_assign(task.id, task);
 }
 
 std::optional<GetInvTask> Peer::RemovePendingGetInvTask(uint32_t task_id) {
     std::optional<GetInvTask> result;
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     auto it = getInvsTasks.find(task_id);
 
     if (it != getInvsTasks.end()) {
@@ -419,18 +410,18 @@ std::optional<GetInvTask> Peer::RemovePendingGetInvTask(uint32_t task_id) {
 }
 
 size_t Peer::GetInvTaskSize() {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return getInvsTasks.size();
 }
 
 void Peer::AddPendingGetDataTask(const GetDataTask& task) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     getDataTasks.insert_or_assign(task.id, task);
 }
 
 std::optional<GetDataTask> Peer::RemovePendingGetDataTask(uint32_t task_id) {
     std::optional<GetDataTask> result;
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     auto it = getDataTasks.find(task_id);
 
     if (it != getDataTasks.end()) {
@@ -441,56 +432,54 @@ std::optional<GetDataTask> Peer::RemovePendingGetDataTask(uint32_t task_id) {
 }
 
 size_t Peer::GetDataTaskSize() {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return getDataTasks.size();
 }
 
 uint256 Peer::GetLastSentBundleHash() const {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return lastSentBundleHash;
 }
 
 void Peer::SetLastSentBundleHash(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     lastSentBundleHash = h;
 }
 
 uint256 Peer::GetLastSentInvHash() const {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return lastSentInvHash;
 }
 
 void Peer::SetLastSentInvHash(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     lastSentInvHash = h;
 }
 
 uint256 Peer::GetLastGetInvBegin() const {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return lastGetInvBegin;
 }
 
 void Peer::SetLastGetInvBegin(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     lastGetInvBegin = h;
 }
 
 uint256 Peer::GetLastGetInvEnd() const {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
+    std::shared_lock<std::shared_mutex> reader(sync_lock);
     return lastGetInvEnd;
 }
 
 void Peer::SetLastGetInvEnd(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
     lastGetInvEnd = h;
 }
 
 size_t Peer::GetLastGetInvLength() const {
-    std::shared_lock<std::shared_mutex> reader(sync_slock);
-    return lastGetInvLength;
+    return lastGetInvLength.load();
 }
 
 void Peer::SetLastGetInvLength(const size_t& l) {
-    std::unique_lock<std::shared_mutex> writer(sync_slock);
     lastGetInvLength = l;
 }

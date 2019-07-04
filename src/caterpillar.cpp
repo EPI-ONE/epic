@@ -23,7 +23,7 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
     obcThread_.Execute([blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);
         if (releasedBlocks) {
-            for (const auto& blk : *releasedBlocks) {
+            for (auto& blk : *releasedBlocks) {
                 DAG->AddNewBlock(blk, nullptr);
             }
         }
