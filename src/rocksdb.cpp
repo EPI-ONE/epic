@@ -227,6 +227,35 @@ bool RocksDBStore::DeleteMsPos(const uint256& h) const {
     return status;
 }
 
+uint256 RocksDBStore::GetLastReg(const uint256& key) const {
+    MAKE_KEY_SLICE(key);
+    GET_VALUE(handleMap_.at("reg"), uint256{});
+
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+        return uint256(value);
+    } catch (const std::exception&) {
+        return uint256{};
+    }
+}
+
+bool RocksDBStore::UpdateReg(const RegChange& change) const {
+    if (!DeleteRegSet(change.GetRemoved())) {
+        return false;
+    }
+
+    return WriteRegSet(change.GetCreated());
+}
+
+bool RocksDBStore::RollBackReg(const RegChange& change) const {
+    if (!DeleteRegSet(change.GetCreated())) {
+        return false;
+    }
+
+    return WriteRegSet(change.GetRemoved());
+}
+
 string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
     GET_VALUE(handleMap_.at(column), "");
     return valueSlice.ToString();
@@ -234,6 +263,10 @@ string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
 
 string RocksDBStore::Get(const string& column, const string& key) const {
     return Get(column, Slice(key));
+}
+
+bool RocksDBStore::Delete(const std::string& column, std::string&& key) const {
+    return db_->Delete(WriteOptions(), handleMap_.at(column), key).ok();
 }
 
 void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
@@ -280,6 +313,38 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(con
     } catch (const std::exception&) {
         return {};
     }
+}
+
+bool RocksDBStore::WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
+    class WriteBatch wb;
+    VStream keyStream;
+    keyStream.reserve(Hash::SIZE);
+    VStream valueStream;
+    valueStream.reserve(Hash::SIZE);
+
+    for (const auto& e : s) {
+        keyStream << e.first;
+        Slice keySlice(keyStream.data(), keyStream.size());
+
+        valueStream << e.second;
+        Slice valueSlice(valueStream.data(), valueStream.size());
+
+        wb.Put(handleMap_.at("reg"), keySlice, valueSlice);
+
+        keyStream.clear();
+        valueStream.clear();
+    }
+
+    return !db_->Write(WriteOptions(), &wb).ok();
+}
+
+bool RocksDBStore::DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
+    for (const auto& e : s) {
+        if (!Delete("reg", VStream(e.first).str())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 template <typename K, typename H, typename P1, typename P2>
