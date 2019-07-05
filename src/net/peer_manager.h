@@ -222,7 +222,7 @@ protected:
      */
 
     // peers' lock
-    std::recursive_mutex peerLock_;
+    std::shared_mutex peerLock_;
 
     // a map to save all peers
     std::unordered_map<const void*, PeerPtr> peerMap_;

@@ -15,7 +15,7 @@ public:
     explicit Task() : id(GetNewNonce()), timeout(0), peer_() {}
 
     // explict requires copy constructor of peer to increase the ref of shared_prt<Peer>
-    void SetPeer(std::shared_ptr<Peer> peer) {
+    void SetPeer(const std::shared_ptr<Peer>& peer) {
         peer_ = peer;
     }
 
@@ -40,7 +40,7 @@ class GetDataTask : public Task {
 public:
     enum GetDataType { LEVEL_SET = 1, PENDING_SET };
 
-    GetDataTask(GetDataType type_) : Task(), type(type_) {}
+    explicit GetDataTask(GetDataType type_) : Task(), type(type_) {}
 
     GetDataType type;
 };

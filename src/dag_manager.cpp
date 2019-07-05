@@ -22,7 +22,7 @@ DAGManager::~DAGManager() {
 #define SEND_MESSAGE(peer, type, msg) peer->SendMessage(NetMessage(peer->connection_handle, type, msg));
 
 void DAGManager::RequestInv(const uint256& fromHash, const size_t& length, PeerPtr peer) {
-    syncPool_.Execute([peer = std::move(peer), &fromHash, length, this]() {
+    syncPool_.Execute([peer = std::move(peer), fromHash = std::move(fromHash), length, this]() {
         if (peer->isSeed) {
             return;
         }
@@ -201,7 +201,7 @@ void DAGManager::BatchSync(std::vector<uint256>& requests, const PeerPtr& reques
         // We will continue to send out the remaning hashes in preDownloading,
         // which are left last time this method is called, because the GetData
         // size exceeds the limit
-        DrainTo(preDownloading, finalHashes, maxGetDataSize);
+        preDownloading.DrainTo(finalHashes, maxGetDataSize);
         for (const auto& h : finalHashes) {
             finalTasks.push_back(*RequestData(h, requestFrom));
             spdlog::debug("Sending another round of getDataTasks. preDownloading size = {}", preDownloading.Size());

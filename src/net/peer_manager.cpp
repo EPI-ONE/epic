@@ -91,11 +91,10 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
 
 void PeerManager::OnConnectionClosed(const void* connection_handle) {
     {
-        std::unique_lock<std::recursive_mutex> lk(peerLock_);
         auto peer = GetPeer(connection_handle);
         if (peer) {
             RemoveAddr(peer->address);
-            peerMap_.erase(connection_handle);
+            RemovePeer(connection_handle);
         }
     }
 }
@@ -107,11 +106,11 @@ void PeerManager::DisconnectPeer(std::shared_ptr<Peer>& peer) {
 
 std::shared_ptr<Peer> PeerManager::CreatePeer(void* connection_handle, NetAddress& address, bool inbound) {
     return std::make_shared<Peer>(address, connection_handle, inbound, addressManager_->IsSeedAddress(address),
-        connectionManager_, addressManager_);
+                                  connectionManager_, addressManager_);
 }
 
 void PeerManager::RemovePeer(const void* connection_handle) {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.erase(connection_handle);
 }
 
@@ -143,12 +142,12 @@ bool PeerManager::ConnectTo(const std::string& connectTo) {
 }
 
 size_t PeerManager::GetConnectedPeerSize() {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     return peerMap_.size();
 }
 
 size_t PeerManager::GetFullyConnectedPeerSize() {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     size_t count = 0;
     for (auto& it : peerMap_) {
         if (it.second->isFullyConnected) {
@@ -225,7 +224,7 @@ void PeerManager::OpenConnection() {
 }
 
 void PeerManager::CheckTimeout() {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     std::vector<const void*> remove_handles;
     for (auto& it : peerMap_) {
         std::shared_ptr<Peer> peer = it.second;
@@ -241,7 +240,7 @@ void PeerManager::CheckTimeout() {
             // check version timeout
             if (peer->connected_time + kConnectionSetupTimeout < (uint64_t) time(nullptr)) {
                 spdlog::info("[NET:disconnect]: non-fully connected peer {} version handshake timeout",
-                    peer->address.ToString());
+                             peer->address.ToString());
                 DisconnectPeer(peer);
                 remove_handles.push_back(peer->connection_handle);
             }
@@ -255,7 +254,7 @@ void PeerManager::CheckTimeout() {
 }
 
 void PeerManager::BroadcastMessage() {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     for (auto& it : peerMap_) {
         it.second->SendMessages();
     }
@@ -271,7 +270,7 @@ void PeerManager::ScheduleTask() {
 }
 
 PeerPtr PeerManager::GetPeer(const void* connection_handle) {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     auto it = peerMap_.find(connection_handle);
     if (it == peerMap_.end()) {
         return nullptr;
@@ -280,7 +279,7 @@ PeerPtr PeerManager::GetPeer(const void* connection_handle) {
 }
 
 void PeerManager::AddPeer(const void* handle, const std::shared_ptr<Peer>& peer) {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.insert(std::make_pair(handle, peer));
 }
 
@@ -317,7 +316,7 @@ void PeerManager::SendLocalAddresses() {
 }
 
 void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from) {
-    std::unique_lock<std::recursive_mutex> lk(peerLock_);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
     for (auto& it : peerMap_) {
         if (it.second->connection_handle != msg_from->connection_handle) {
             NetMessage msg(it.second->connection_handle, BLOCK, VStream(block));

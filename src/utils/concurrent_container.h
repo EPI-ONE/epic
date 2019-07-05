@@ -141,7 +141,7 @@ public:
 
     iterator erase(const_iterator first, const_iterator last) {
         WRITER_LOCK(mutex_);
-        return erase(first, last);
+        return c.erase(first, last);
     }
 
     void clear() {

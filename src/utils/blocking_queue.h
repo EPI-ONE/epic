@@ -40,6 +40,24 @@ public:
         return true;
     }
 
+    bool DrainTo(std::vector<T>& dest, size_t n) {
+        std::unique_lock<std::mutex> lock(mtx_);
+        empty_.wait(lock, [this] { return !queue_.empty() || quit_; });
+        if (quit_) {
+            return false;
+        }
+
+        n = std::min(n, queue_.size());
+
+        for (auto i = 0; i < n; ++i) {
+            dest.emplace_back();
+            dest.back() = std::move(queue_.front());
+            queue_.pop();
+        }
+        full_.notify_all();
+        return true;
+    }
+
     size_t Size() const {
         std::lock_guard<std::mutex> lock(mtx_);
         return queue_.size();
@@ -70,28 +88,11 @@ public:
 
 private:
     mutable std::mutex mtx_;
-    mutable std::mutex drainMtx_;
     std::condition_variable full_;
     std::condition_variable empty_;
     std::queue<T> queue_;
     size_t capacity_;
     std::atomic_bool quit_ = false;
 };
-
-/**
- * Moves the first n elements from a BlockingQueue to a vector.
- * Not thread safe.
- */
-template<typename T>
-bool DrainTo(BlockingQueue<T>& src, std::vector<T>& dest, size_t n) {
-    for (auto i = 0; i < n; ++i) {
-        dest.emplace_back();
-        if (!src.Take(dest.back())) {
-            dest.pop_back();
-            return false;
-        }
-    }
-    return true;
-}
 
 #endif // EPIC_BLOCKING_QUEUE_H
