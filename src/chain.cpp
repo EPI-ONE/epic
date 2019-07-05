@@ -205,12 +205,15 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     const auto& pblock = record.cblock;
     std::optional<TXOC> result;
 
-    // first check whether it is a fork of its peer chain
+    // first update the prev redemption hashes
     auto prevRec = GetRecord(pblock->GetPrevHash());
 
-    record.prevRedemHash = prevRec->prevRedemHash;
-    regChange.Create(record.cblock->GetHash(), record.prevRedemHash);
-    regChange.Remove(record.cblock->GetPrevHash(), prevRec->prevRedemHash);
+    const auto& oldRedemHash = prevRec->prevRedemHash;
+    assert(!oldRedemHash.IsNull());
+
+    record.prevRedemHash = oldRedemHash;
+    regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
+    regChange.Create(record.cblock->GetHash(), oldRedemHash);
 
     record.minerChainHeight = prevRec->minerChainHeight + 1;
 
@@ -340,7 +343,12 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
     if (result == verifying_.end()) {
         result = recordHistory_.find(blkHash);
         if (result == recordHistory_.end()) {
-            return CAT->GetRecord(blkHash);
+            auto rec = CAT->GetRecord(blkHash);
+            if (rec) {
+                rec->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
+            }
+
+            return std::move(rec);
         }
     }
     return result->second;
@@ -361,8 +369,6 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
     }
     return nullptr;
 }
-
-void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
 
 bool Chain::IsMilestone(const uint256& blkHash) const {
     auto result = recordHistory_.find(blkHash);

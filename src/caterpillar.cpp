@@ -179,6 +179,17 @@ bool Caterpillar::RemoveUTXO(const uint256& key) const {
     return dbStore_.RemoveUTXO(key);
 }
 
+uint256 Caterpillar::GetPrevRedemHash(const uint256& peerChainHeadHash) const {
+    return dbStore_.GetLastReg(peerChainHeadHash);
+}
+
+bool Caterpillar::UpdatePrevRedemHashes(const RegChange& change) const {
+    return dbStore_.UpdateReg(change);
+}
+bool Caterpillar::RollBackPrevRedemHashes(const RegChange& change) const {
+    return dbStore_.RollBackReg(change);
+}
+
 bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
     try {
         // Function to sum up storage sizes for blk and rec in this lvs

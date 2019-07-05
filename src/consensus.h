@@ -92,9 +92,9 @@ public:
 
     bool operator==(const ChainState& rhs) const {
         // clang-format off
-        return lastUpdateTime               == rhs.lastUpdateTime               &&
-               chainwork.GetCompact()       == rhs.chainwork.GetCompact()       &&
-               hashRate                     == rhs.hashRate                     &&
+        return lastUpdateTime               == rhs.lastUpdateTime &&
+               chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
+               hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
         // clang-format on

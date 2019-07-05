@@ -101,12 +101,6 @@ public:
      */
     RecordPtr Verify(const ConstBlockPtr&);
 
-    /**
-     * TODO:
-     * Take snapshots and increases the height of the chain by 1
-     */
-    void UpdateChainState(const std::vector<RecordPtr>&);
-
     static bool IsValidDistance(const RecordPtr&, const arith_uint256&);
 
     bool IsMilestone(const uint256&) const;
