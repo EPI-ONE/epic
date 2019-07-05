@@ -22,6 +22,11 @@ public:
     arith_uint256 blockTarget;
     uint64_t hashRate;
 
+    // Incremental change of the last registration block on each peer chain,
+    // whose elements are pairs consisting of:
+    //   <peer chain head, hash of the last registration block on this peer chain>
+    RegChange regChange;
+
     // constructor of a chain state of genesis.
     ChainState() = default;
     // constructor of a chain state with all data fields
@@ -87,9 +92,9 @@ public:
 
     bool operator==(const ChainState& rhs) const {
         // clang-format off
-        return lastUpdateTime               == rhs.lastUpdateTime &&
-               chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
-               hashRate                     == rhs.hashRate &&
+        return lastUpdateTime               == rhs.lastUpdateTime               &&
+               chainwork.GetCompact()       == rhs.chainwork.GetCompact()       &&
+               hashRate                     == rhs.hashRate                     &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
         // clang-format on

@@ -3,6 +3,8 @@
 
 #include <unordered_set>
 
+#include "uint256.h"
+
 template <typename T>
 class Increment {
 public:
@@ -12,14 +14,34 @@ public:
     virtual ~Increment() = default;
 
     void Create(const T& v) {
-        created_.emplace(v);
+        if (!removed_.erase(v)) {
+            created_.insert(v);
+        }
+    }
+
+    template <typename... Args>
+    void Create(Args&&... args) {
+        auto p = T(std::forward<Args>(args)...);
+        if (!removed_.erase(p)) {
+            created_.emplace(std::forward<Args>(args)...);
+        }
     }
 
     void Remove(const T& v) {
-        removed_.emplace(v);
+        if (!created_.erase(v)) {
+            removed_.insert(v);
+        }
     }
 
-    virtual void Merge(Increment&& a) {
+    template <typename... Args>
+    void Remove(Args&&... args) {
+        auto p = T(std::forward<Args>(args)...);
+        if (!created_.erase(p)) {
+            removed_.emplace(std::move(p));
+        }
+    }
+
+    void Merge(Increment&& a) {
         created_.merge(std::move(a.created_));
         for (auto& v : a.removed_) {
             if (!created_.erase(v)) {
@@ -40,5 +62,15 @@ protected:
     std::unordered_set<T> created_;
     std::unordered_set<T> removed_;
 };
+
+// Key hasher for std::pair<uint256, uint256>
+template <>
+struct std::hash<std::pair<uint256, uint256>> {
+    size_t operator()(const std::pair<uint256, uint256>& x) const {
+        return std::hash<uint256>()(x.first);
+    }
+};
+
+typedef Increment<std::pair<uint256, uint256>> RegChange;
 
 #endif /* ifndef __SRC_UTILS_INCREMENTAL_CONTAINER__ */

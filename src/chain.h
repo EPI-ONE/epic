@@ -3,9 +3,9 @@
 
 #include <deque>
 #include <optional>
-#include <utility>
 #include <vector>
 
+#include "block.h"
 #include "concurrent_container.h"
 #include "consensus.h"
 
@@ -158,10 +158,10 @@ private:
      * and update its NR info
      * Returns TXOC of the single block
      */
-    std::optional<TXOC> Validate(NodeRecord& record);
+    std::optional<TXOC> Validate(NodeRecord& record, RegChange&);
 
     // offline verification for transactions
-    std::optional<TXOC> ValidateRedemption(NodeRecord& record);
+    std::optional<TXOC> ValidateRedemption(NodeRecord& record, RegChange&);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
     const Coin& GetPrevReward(const NodeRecord& rec) {

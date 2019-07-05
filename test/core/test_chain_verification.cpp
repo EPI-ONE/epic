@@ -42,8 +42,8 @@ public:
         return chain;
     }
 
-    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record) {
-        return c->ValidateRedemption(record);
+    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record, RegChange& regChange) {
+        return c->ValidateRedemption(record, regChange);
     }
 
     std::optional<TXOC> ValidateTx(Chain* c, NodeRecord& record) {
