@@ -13,7 +13,6 @@ enum MilestoneStatus : uint8_t {
 class NodeRecord;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
 
-class NodeRecord;
 class ChainState {
 public:
     uint64_t height;

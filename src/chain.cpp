@@ -207,7 +207,7 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     // first check whether it is a fork of its peer chain
     auto prevRec = GetRecord(pblock->GetPrevHash());
     if (!prevRec->prevRedemHash.IsNull()) {
-        // then its previous block is valid in the sense of reward
+        // then its previous block is valid in terms of reward
         record.prevRedemHash = prevRec->prevRedemHash;
         prevRec->prevRedemHash.SetNull();
     } else {
