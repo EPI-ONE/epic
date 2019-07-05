@@ -215,6 +215,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
+    ASSERT_EQ(VStream(block1).size(), block1.GetOptimalEncodingSize());
 
     // Check parent pointers
     const Transaction* ptrTx = &(*block1.GetTransaction());
@@ -277,6 +278,8 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     VStream soutput;
     block1.Serialize(soutput);
 
+    ASSERT_EQ(soutput.size(), block1.GetOptimalStorageSize());
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
+
 }

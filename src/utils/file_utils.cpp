@@ -46,7 +46,7 @@ bool Mkdir_recursive(const std::string& path) {
 }
 
 void file::SetDataDirPrefix(std::string strprefix) {
-    prefix = strprefix;
+    prefix = strprefix + "/";
 }
 
 std::string file::GetEpochPath(FileType type, uint32_t epoch) {

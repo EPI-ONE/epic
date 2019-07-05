@@ -10,12 +10,12 @@
 
 #include <random>
 
-using LevelSet  = std::vector<NodeRecord>;
+using LevelSet  = std::vector<ConstBlockPtr>;
 using TestChain = std::vector<LevelSet>;
 
 class NumberGenerator {
 public:
-    NumberGenerator() : generator(time(nullptr)), distribution(0, UINT_LEAST32_MAX) {}
+    NumberGenerator() : generator(GENESIS.GetTime()), distribution(0, UINT_LEAST32_MAX) {}
     NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd)
         : generator(seed), distribution(rangeStart, rangeEnd) {}
 

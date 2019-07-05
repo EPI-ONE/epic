@@ -1,6 +1,7 @@
 #ifndef __SRC_UTILS_CONCURRENT_HASHMAP_H__
 #define __SRC_UTILS_CONCURRENT_HASHMAP_H__
 
+#include <queue>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,7 +29,6 @@ public:
     typedef value_type& reference;
     typedef const value_type& const_reference;
 
-
     ConcurrentContainer() : mutex_(), c() {}
     ConcurrentContainer(const ConcurrentContainer& m) : mutex_(), c(m.c) {}
     ConcurrentContainer(ConcurrentContainer&& m) : mutex_(), c(std::move(m.c)) {}
@@ -48,16 +48,6 @@ public:
     size_type size() const {
         READER_LOCK(mutex_);
         return c.size();
-    }
-
-    iterator begin() {
-        READER_LOCK(mutex_);
-        return c.begin();
-    }
-
-    iterator end() {
-        READER_LOCK(mutex_);
-        return c.end();
     }
 
     const_iterator begin() const {
@@ -242,6 +232,157 @@ template <typename K>
 class ConcurrentHashSet : public ConcurrentContainer<std::unordered_set<K>> {
 public:
     using ConcurrentContainer<std::unordered_set<K>>::ConcurrentContainer;
+};
+
+template <typename T>
+class ConcurrentQueue {
+public:
+    using value_type             = T;
+    using size_type              = std::size_t;
+    using reference              = value_type&;
+    using const_reference        = const value_type&;
+    using iterator               = typename std::deque<T>::iterator;
+    using const_iterator         = typename std::deque<T>::const_iterator;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    // ctor and dtor
+    ConcurrentQueue() = default;
+    ConcurrentQueue(const ConcurrentQueue& q) : queue_(q.queue_) {}
+    ConcurrentQueue(ConcurrentQueue&& q) noexcept : queue_(std::move(q.queue_)) {}
+    ConcurrentQueue(std::initializer_list<T> l) : queue_(l) {}
+    ConcurrentQueue& operator=(const ConcurrentQueue& q) {
+        WRITER_LOCK(mtx_);
+        queue_ = q.queue_;
+        return *this;
+    }
+    ConcurrentQueue& operator=(ConcurrentQueue&& q) noexcept {
+        WRITER_LOCK(mtx_);
+        queue_ = std::move(q.queue_);
+        return *this;
+    }
+    ~ConcurrentQueue() = default;
+
+    // element access
+    reference front() {
+        READER_LOCK(mtx_);
+        return queue_.front();
+    }
+    const_reference front() const {
+        READER_LOCK(mtx_);
+        return queue_.front();
+    }
+    reference back() {
+        READER_LOCK(mtx_);
+        return queue_.back();
+    }
+    const_reference back() const {
+        READER_LOCK(mtx_);
+        return queue_.back();
+    }
+
+    const_reference operator[](size_type pos) const {
+        READER_LOCK(mtx_);
+        return queue_[pos];
+    }
+
+    // iterators
+    const_iterator begin() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.cbegin();
+    }
+    const_iterator cbegin() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.cbegin();
+    }
+    const_iterator end() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.cend();
+    }
+    const_iterator cend() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.cend();
+    }
+
+    reverse_iterator rbegin() noexcept {
+        READER_LOCK(mtx_);
+        return queue_.rbegin();
+    }
+    const_reverse_iterator rbegin() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.crbegin();
+    }
+    const_reverse_iterator crbegin() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.crbegin();
+    }
+    reverse_iterator rend() noexcept {
+        READER_LOCK(mtx_);
+        return queue_.rend();
+    }
+    const_reverse_iterator rend() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.crend();
+    }
+    const_reverse_iterator crend() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.crend();
+    }
+
+    // capacity
+    bool empty() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.empty();
+    }
+    size_type size() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.size();
+    }
+    size_type max_size() const noexcept {
+        READER_LOCK(mtx_);
+        return queue_.max_size();
+    }
+    void shrink_to_fit() {
+        WRITER_LOCK(mtx_);
+        queue_.shrink_to_fit();
+    } // TODO: check what lock should I use
+
+    // modifiers
+    void clear() noexcept {
+        WRITER_LOCK(mtx_);
+        return queue_.clear();
+    }
+    iterator erase(const_iterator pos) {
+        WRITER_LOCK(mtx_);
+        return queue_.erase(pos);
+    }
+    iterator erase(const_iterator first, const_iterator last) {
+        WRITER_LOCK(mtx_);
+        return queue_.erase(first, last);
+    }
+    void push_back(const T& t) {
+        WRITER_LOCK(mtx_);
+        queue_.push_back(t);
+    }
+    void push_back(T&& t) {
+        WRITER_LOCK(mtx_);
+        queue_.push_back(std::move(t));
+    }
+    template <class... Args>
+    reference emplace_back(Args&&... args) {
+        WRITER_LOCK(mtx_);
+        return queue_.emplace_back(std::forward<Args>(args)...);
+    }
+    void pop_front() {
+        WRITER_LOCK(mtx_);
+        queue_.pop_front();
+    }
+
+
+private:
+    mutable std::shared_mutex mtx_;
+    std::deque<T> queue_;
+    std::condition_variable cond_;
 };
 
 #endif // __SRC_UTILS_CONCURRENT_HASHMAP_H__

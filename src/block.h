@@ -10,7 +10,12 @@
 #include "transaction.h"
 #include "utilstrencodings.h"
 
+// maximum allowed block size in optimal encoding format
+static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
+// exact number of size of a block without counting transaction
 static constexpr std::size_t HEADER_SIZE = 112;
+// maximum time in a block header allowed to be in advanced to the current time (sec)
+static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 
 namespace std {
 string to_string(const Block& b, bool showtx = true);

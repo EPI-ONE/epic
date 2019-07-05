@@ -49,34 +49,25 @@ public:
     Chain(const Chain&);
 
     /**
-     * Create a forked chain from $chain which has the new fork in $pfork;
-     * In other words, the last common chain state is the previous one of the last record of $forkedRecord.
-     * Moreover, it does not contain the corresponding chain state of this $pfork.
+     * Create a forked chain from $chain which has the new fork in $fork;
+     * In other words, the last common chain state is the record of the previous milestone of $fork.
+     * Moreover, it does not contain the corresponding chain state of this $fork.
      * We have to further verify it to update chain state.
      */
     Chain(const Chain&, ConstBlockPtr fork);
-
-    /** Now for test only */
-    Chain(const std::deque<ChainStatePtr>& states, bool ismain = false) : ismainchain_(ismain), states_(states) {}
 
     ChainStatePtr GetChainHead() const;
 
     /** Adds the block to pending and returns its milestone status */
     void AddPendingBlock(ConstBlockPtr);
-
     void AddPendingUTXOs(const std::vector<UTXOPtr>&);
+    bool IsBlockPending(const uint256&) const;
+    std::vector<ConstBlockPtr> GetPendingBlocks() const;
+    std::size_t GetPendingBlockCount() const;
 
     RecordPtr GetMsRecordCache(const uint256&);
-
     RecordPtr GetRecordCache(const uint256&);
-
-    void RemovePendingBlock(const uint256&);
-
-    bool IsBlockPending(const uint256&) const;
-
-    std::vector<ConstBlockPtr> GetPendingBlocks() const;
-
-    std::size_t GetPendingBlockCount() const;
+    RecordPtr GetRecord(const uint256&) const;
 
     /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
@@ -89,7 +80,7 @@ public:
         return ismainchain_;
     }
 
-    const std::deque<ChainStatePtr>& GetStates() const {
+    const ConcurrentQueue<ChainStatePtr>& GetStates() const {
         return states_;
     }
 
@@ -100,24 +91,32 @@ public:
      */
     RecordPtr Verify(const ConstBlockPtr&);
 
-    static bool IsValidDistance(const RecordPtr&, const arith_uint256&);
+    /**
+     * TODO:
+     * Take snapshots and increases the height of the chain by 1
+     */
+    void UpdateChainState(const std::vector<RecordPtr>&);
+
+    /**
+     * Removes oldest chain state as well as corresponding data
+     */
+    void PopOldest(const std::vector<uint256>&, const TXOC&, size_t);
+    std::tuple<std::vector<std::vector<RecordPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+        GetDataToCAT(size_t);
 
     bool IsMilestone(const uint256&) const;
-
-    RecordPtr GetRecord(const uint256&) const;
 
     friend class Chains;
 
 private:
-    // 1 if this chain is main chain, 0 otherwise;
+    // true if this chain is the main chain, false otherwise;
     bool ismainchain_;
 
     /**
      * Stores a (probabily recent) list of milestones
      * TODO: thinking of a lifetime mechanism for it
      */
-    // std::deque<ChainStatePtr> states_;
-    std::deque<ChainStatePtr> states_;
+    ConcurrentQueue<ChainStatePtr> states_;
 
     /**
      * Stores data not yet verified in this chain
@@ -156,12 +155,11 @@ private:
     // offline verification for transactions
     std::optional<TXOC> ValidateRedemption(NodeRecord& record, RegChange&);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
+    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
 
     const Coin& GetPrevReward(const NodeRecord& rec) {
         return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
-
-    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
 
     // friend decleration for running a test
     friend class TestChainVerification;

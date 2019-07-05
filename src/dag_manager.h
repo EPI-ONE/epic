@@ -44,7 +44,7 @@ public:
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
      */
-    void AddNewBlock(ConstBlockPtr& block, PeerPtr peer);
+    void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
 
     // Checkout states either in different chain or in db
     RecordPtr GetState(const uint256&) const;
@@ -169,6 +169,17 @@ private:
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
     bool ExistsNode(const uint256&) const;
+
+    /**
+     * Methods that flushing oldest blocks with corresponding node records and in memory to hybrid db system
+     */
+
+    /**
+     * Returns the number of chain states that can be flushed into db
+     * zero if no chain states need to be flushed
+     */
+    size_t FlushTrigger();
+    void FlushToCAT(size_t); // flush the oldest chain states
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);

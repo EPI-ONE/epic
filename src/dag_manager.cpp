@@ -397,8 +397,8 @@ void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
 // End of synchronization methods
 //
 
-void DAGManager::AddNewBlock(ConstBlockPtr& blk, PeerPtr peer) {
-    verifyThread_.Execute([blk = std::move(blk), peer, this] {
+void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
+    verifyThread_.Execute([blk = std::move(blk), peer = std::move(peer), this] {
         if (*blk == GENESIS) {
             return;
         }
@@ -535,6 +535,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (*(ms) == *(mainchain->GetChainHead()) && CheckMsPOW(block, ms)) {
             // new milestone on mainchain
             ProcessMilestone(mainchain, block);
+            if (size_t level = FlushTrigger()) {
+                FlushToCAT(level);
+            }
         } else if (CheckMsPOW(block, ms)) {
             // new fork
             auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
@@ -615,6 +618,76 @@ void DAGManager::Wait() {
     }
 }
 
+size_t DAGManager::FlushTrigger() {
+    const auto& bestChain = milestoneChains.best();
+    if (bestChain->GetStates().size() < GetParams().cacheStatesSize) {
+        return 0;
+    }
+    std::vector<ConcurrentQueue<ChainStatePtr>::const_iterator> forks;
+    forks.reserve(milestoneChains.size());
+    for (auto& chain : milestoneChains) {
+        if (chain == bestChain) {
+            continue;
+        }
+        forks.emplace_back(chain->GetStates().begin());
+    }
+
+    auto cursor   = bestChain->GetStates().begin();
+    size_t dupcnt = 0;
+    for (bool flag = true; flag && dupcnt <= GetParams().cacheStatesToDelete; dupcnt++) {
+        for (auto& fork_it : forks) {
+            if (*cursor != *fork_it) {
+                flag = false;
+                break;
+            }
+            fork_it++;
+        }
+    }
+
+    return dupcnt;
+}
+
+void DAGManager::FlushToCAT(size_t level) {
+    // first store data to CAT
+    auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(level);
+
+    for (auto& lvsRec : recToStore) {
+        std::swap(lvsRec.front(), lvsRec.back());
+        CAT->StoreRecords(lvsRec);
+    }
+    for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
+        CAT->AddUTXO(utxoKey, utxoPtr);
+    }
+    for (const auto& utxoKey : utxoToRemove) {
+        CAT->RemoveUTXO(utxoKey);
+    }
+
+    const auto oldestCs = milestoneChains.best()->GetStates().front();
+
+    // then remove chain states from chains
+    size_t totalRecNum = 0;
+    std::for_each(recToStore.begin(), recToStore.end(), [&totalRecNum](const auto& lvs) { totalRecNum += lvs.size(); });
+    std::vector<uint256> recHashes{};
+    recHashes.reserve(totalRecNum);
+    std::unordered_set<uint256> utxoCreated{};
+    utxoCreated.reserve(utxoToStore.size());
+
+    for (auto& lvsRec : recToStore) {
+        for (auto& rec : lvsRec) {
+            recHashes.emplace_back(rec->cblock->GetHash());
+        }
+    }
+
+    for (const auto& [key, value] : utxoToStore) {
+        utxoCreated.emplace(key);
+    }
+    TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
+
+    for (auto& chain : milestoneChains) {
+        chain->PopOldest(recHashes, txocToRemove, level);
+    }
+}
+
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
     return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }
@@ -624,7 +697,7 @@ RecordPtr DAGManager::GetMilestoneHead() const {
 }
 
 size_t DAGManager::GetBestMilestoneHeight() const {
-    return GetMilestoneHead()->height;
+    return GetBestChain().GetChainHead()->height;
 }
 
 bool DAGManager::IsMainChainMS(const uint256& blkHash) const {

@@ -32,7 +32,7 @@ public:
         c->ledger_ = ledger;
     }
 
-    Chain make_chain(const std::deque<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain = false) {
+    Chain make_chain(const ConcurrentQueue<ChainStatePtr>& states, const std::vector<RecordPtr>& recs, bool ismain = false) {
         Chain chain{};
         chain.ismainchain_ = ismain;
         chain.states_      = states;
@@ -65,6 +65,16 @@ TEST_F(TestChainVerification, chain_with_genesis) {
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes().size(), 1);
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes()[0], GENESIS.GetHash());
     ASSERT_EQ(*GetRecord(&c, GENESIS.GetHash()), GENESIS_RECORD);
+}
+
+TEST_F(TestChainVerification, UTXO) {
+    Block b     = fac.CreateBlock(1, 67);
+    UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
+    uint256 key = utxo.GetKey();
+
+    arith_uint256 bHash = UintToArith256(b.GetHash());
+    arith_uint256 index = arith_uint256("0x4200000000000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(ArithToUint256(bHash ^ index), key);
 }
 
 TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
@@ -261,17 +271,17 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
-    std::deque<ChainStatePtr> dqcs{std::make_shared<ChainState>()};
+    ConcurrentQueue<ChainStatePtr> dqcs{std::make_shared<ChainState>()};
     std::vector<RecordPtr> recs{};
     ConstBlockPtr forkblk;
     ChainStatePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
         recs.emplace_back(fac.CreateConsecutiveRecordPtr());
-        dqcs.push_back(fac.CreateChainStatePtr(dqcs[i - 1], recs[i - 1]));
+        dqcs.push_back(fac.CreateChainStatePtr(dqcs.back(), recs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5
             auto blk = fac.CreateBlock();
-            split    = dqcs[i];
+            split    = dqcs.back();
             blk.SetMilestoneHash(split->GetMilestoneHash());
             blk.Solve();
             forkblk = std::make_shared<const Block>(blk);

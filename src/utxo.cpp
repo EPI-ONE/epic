@@ -60,11 +60,23 @@ UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     if (query != removed_.end()) {
         return nullptr; // nullptr as it is found in map of removed utxos
     }
-    query = comfirmed_.find(xorkey);
-    if (query != comfirmed_.end()) {
+    query = confirmed_.find(xorkey);
+    if (query != confirmed_.end()) {
         return query->second;
     }
     return CAT->GetUTXO(xorkey);
+}
+
+UTXOPtr ChainLedger::GetConfirmed(const uint256& xorkey) {
+    auto query = confirmed_.find(xorkey);
+    if (query != confirmed_.end()) {
+        return query->second;
+    }
+    query = removed_.find(xorkey);
+    if (query != removed_.end()) {
+        return query->second;
+    }
+    return nullptr; // should not happen
 }
 
 void ChainLedger::Update(const TXOC& txoc) {
@@ -73,15 +85,26 @@ void ChainLedger::Update(const TXOC& txoc) {
     }
     for (const auto& utxokey : txoc.GetSpent()) {
         removed_.insert(comfirmed_.extract(utxokey));
+}
+
+void ChainLedger::Remove(const TXOC& txoc) {
+    for (const auto& utxokey : txoc.GetCreated()) {
+        auto size = confirmed_.erase(utxokey);
+        if (size == 0) {
+            removed_.erase(utxokey);
+        }
+    }
+    for (const auto& utxokey : txoc.GetSpent()) {
+        removed_.erase(utxokey);
     }
 }
 
 void ChainLedger::Rollback(const TXOC& txoc) {
     for (const auto& utxokey : txoc.GetCreated()) {
-        pending_.insert(comfirmed_.extract(utxokey));
+        pending_.insert(confirmed_.extract(utxokey));
     }
     for (const auto& utxokey : txoc.GetSpent()) {
-        comfirmed_.insert(removed_.extract(utxokey));
+        confirmed_.insert(removed_.extract(utxokey));
     }
 }
 

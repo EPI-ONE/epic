@@ -20,7 +20,7 @@ TEST_F(TestThreadPoolSolver, simple_test) {
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     block.AddTransaction(tx);
-    block.SetDifficultyTarget(EASIEST_COMP_DIFF_TARGET);
+    block.SetDifficultyTarget(GetParams().maxTarget.GetCompact());
 
     /*
      * test the solver

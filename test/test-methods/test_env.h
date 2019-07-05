@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 
+#include "caterpillar.h"
 #include "params.h"
 #include "test_factory.h"
 
@@ -22,6 +23,21 @@ public:
     void TearDown() override {
         ECC_Stop();
         handle.~ECCVerifyHandle();
+    }
+
+    static void SetUpDAG(std::string dirPath) {
+        std::ostringstream os;
+        os << time(nullptr);
+        file::SetDataDirPrefix(dirPath + os.str());
+        CAT = std::make_unique<Caterpillar>(dirPath + os.str());
+        DAG = std::make_unique<DAGManager>();
+    }
+
+    static void TearDownDAG(std::string dirPath) {
+        std::string cmd = "exec rm -r " + dirPath;
+        system(cmd.c_str());
+        CAT.reset();
+        DAG.reset();
     }
 
 private:

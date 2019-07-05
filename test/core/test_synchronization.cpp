@@ -94,12 +94,10 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     long testChainHeight = 5;
     auto chain           = fac.CreateChain(GENESIS_RECORD, testChainHeight);
 
-    fac.PrintChain(chain);
-
     // receive Inv
     Inv inv(getInv.nonce);
     for (auto& levelSet : chain) {
-        inv.AddItem(levelSet[levelSet.size() - 1].cblock->GetHash());
+        inv.AddItem(levelSet[levelSet.size() - 1]->GetHash());
     }
     NetMessage inventory(peer_handle, INV, VStream(inv));
     testPeer->ProcessMessage(inventory);
@@ -116,8 +114,8 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     // check GetData message
     ASSERT_EQ(getData.hashes.size(), testChainHeight - 1);
-    for (int i = 1; i < testChainHeight; i++) {
-        ASSERT_EQ(getData.hashes[i - 1], chain[i][chain[i].size() - 1].cblock->GetHash());
+    for (int i = 0; i < testChainHeight - 1; i++) {
+        ASSERT_EQ(getData.hashes[i], chain[i][chain[i].size() - 1]->GetHash());
     }
 
     // checkout GetData task size before receiving Bundle
@@ -135,8 +133,8 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     for (auto& i : bundle_order) {
         Bundle bundle(getData.bundleNonce[i]);
-        for (auto& block : chain[i + 1]) {
-            bundle.AddBlock(block.cblock);
+        for (auto& block : chain[i ]) {
+            bundle.AddBlock(block);
         }
         NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));
         testPeer->ProcessMessage(bundle_message);
@@ -207,12 +205,12 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     // send Bundle
     ASSERT_EQ(testPeer->sentMsgBox.Size(), testChainHeight - 1);
-    for (int i = 1; i < testChainHeight; i++) {
+    for (int i = 0; i < testChainHeight - 1; i++) {
         NetMessage msg;
         testPeer->sentMsgBox.Take(msg);
         Bundle bundle(msg.payload);
         ASSERT_EQ(bundle.blocks.size(), chain[i].size());
-        ASSERT_EQ(bundle.blocks[bundle.blocks.size() - 1]->GetHash(), chain[i][chain[i].size() - 1].cblock->GetHash());
+        ASSERT_EQ(bundle.blocks[bundle.blocks.size() - 1]->GetHash(), chain[i][chain[i].size() - 1]->GetHash());
     }
 
     /**Finish the synchronization as the block provider*/

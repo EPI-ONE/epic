@@ -140,43 +140,41 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
 }
 
 TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
-    NodeRecord lastMs    = startMs;
-    NodeRecord prevBlock = startMs;
+    NodeRecord lastMs       = startMs;
+    ConstBlockPtr prevBlock = startMs.cblock;
 
-    TestChain testChain;
-    testChain.push_back(LevelSet{startMs});
-    testChain.push_back(LevelSet());
+    TestChain testChain{{}};
 
     size_t count       = 1;
     uint32_t timestamp = startMs.cblock->GetTime();
     while (count < height) {
-        int nIns, nOuts;
+        Block b{GetParams().version};
         if (tx) {
-            nIns  = GetRand() % 10 + 1;
-            nOuts = GetRand() % 10 + 1;
-        } else {
-            nIns = nOuts = 0;
+            b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1)); 
         }
-        Block b = CreateBlock(nIns, nOuts);
-        b.SetTime(timestamp++);
         b.SetMilestoneHash(lastMs.cblock->GetHash());
-        b.SetPrevHash(prevBlock.cblock->GetHash());
-        b.SetTipHash(testChain[rand() % (testChain.size() - 1)][0].cblock->GetHash());
+        b.SetPrevHash(prevBlock->GetHash());
+        if (testChain.size() == 1) {
+            b.SetTipHash(GENESIS.GetHash());
+        } else {
+            b.SetTipHash(testChain[rand() % (testChain.size() - 1)][0]->GetHash());
+        }
+        b.SetTime(timestamp++);
         b.SetDifficultyTarget(lastMs.snapshot->blockTarget.GetCompact());
 
         // Special transaction on the first registration block
         if (b.GetPrevHash() == GENESIS.GetHash()) {
             b.AddTransaction(Transaction{CreateKeyPair().second.GetID()});
         }
+        b.CalculateOptimalEncodingSize();
         b.Solve();
 
-        NodeRecord node(std::make_shared<const Block>(b));
-
+        ConstBlockPtr blkptr   = std::make_shared<const Block>(std::move(b));
         bool make_new_levelset = false;
 
-        if (CheckMsPOW(node.cblock, lastMs.snapshot)) {
-            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<uint256>());
-            node.LinkChainState(cs);
+        if (CheckMsPOW(blkptr, lastMs.snapshot)) {
+            NodeRecord node{blkptr};
+            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<uint256>{});
             lastMs = node;
             count++;
             if (count < height) {
@@ -184,11 +182,10 @@ TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, boo
             }
         }
 
-        testChain[testChain.size() - 1].push_back(node);
-        prevBlock = node;
-
+        prevBlock = blkptr;
+        testChain.back().emplace_back(std::move(blkptr));
         if (make_new_levelset) {
-            testChain.push_back(LevelSet());
+            testChain.emplace_back();
         }
     }
     return testChain;
