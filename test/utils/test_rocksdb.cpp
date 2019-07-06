@@ -131,3 +131,44 @@ TEST_F(TestRocksDB, utxo) {
     ASSERT_TRUE(db->RemoveUTXO(key));
     ASSERT_EQ(nullptr, db->GetUTXO(key));
 }
+
+TEST_F(TestRocksDB, reg) {
+    int size = 10;
+
+    RegChange addition;
+    for (int i = 0; i < size; ++i) {
+        auto h1 = fac.CreateRandomHash();
+        auto h2 = fac.CreateRandomHash();
+        addition.Create(h1, h2);
+    }
+
+    RegChange subtraction;
+    for (const auto& e : addition.GetCreated()) {
+        subtraction.Remove(e);
+    }
+
+    ASSERT_EQ(addition.GetCreated(), subtraction.GetRemoved());
+    ASSERT_TRUE(db->UpdateReg(addition));
+
+    for (const auto& e : addition.GetCreated()) {
+        ASSERT_EQ(e.second, db->GetLastReg(e.first));
+    }
+
+    ASSERT_TRUE(db->UpdateReg(subtraction));
+
+    for (const auto& e : subtraction.GetRemoved()) {
+        ASSERT_TRUE(db->GetLastReg(e.first).IsNull());
+    }
+
+    ASSERT_TRUE(db->RollBackReg(subtraction));
+
+    for (const auto& e: subtraction.GetRemoved()) {
+        ASSERT_EQ(e.second, db->GetLastReg(e.first));
+    }
+
+    for (const auto& e: subtraction.GetRemoved()) {
+        addition.Remove(e);
+    }
+
+    ASSERT_EQ(0, addition.GetCreated().size());
+}

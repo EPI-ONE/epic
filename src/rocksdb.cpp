@@ -317,25 +317,13 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(con
 
 bool RocksDBStore::WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
     class WriteBatch wb;
-    VStream keyStream;
-    keyStream.reserve(Hash::SIZE);
-    VStream valueStream;
-    valueStream.reserve(Hash::SIZE);
-
     for (const auto& e : s) {
-        keyStream << e.first;
-        Slice keySlice(keyStream.data(), keyStream.size());
-
-        valueStream << e.second;
-        Slice valueSlice(valueStream.data(), valueStream.size());
-
+        Slice keySlice((char*) e.first.begin(), Hash::SIZE);
+        Slice valueSlice((char*) e.second.begin(), Hash::SIZE);
         wb.Put(handleMap_.at("reg"), keySlice, valueSlice);
-
-        keyStream.clear();
-        valueStream.clear();
     }
 
-    return !db_->Write(WriteOptions(), &wb).ok();
+    return db_->Write(WriteOptions(), &wb).ok();
 }
 
 bool RocksDBStore::DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
