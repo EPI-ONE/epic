@@ -170,5 +170,5 @@ TEST_F(TestRocksDB, reg) {
         addition.Remove(e);
     }
 
-    ASSERT_EQ(0, addition.GetCreated().size());
+    ASSERT_TRUE(addition.GetCreated().empty());
 }

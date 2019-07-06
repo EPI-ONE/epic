@@ -6,9 +6,10 @@ using std::string;
 using std::tuple;
 using namespace rocksdb;
 
-#define MAKE_KEY_SLICE(obj) \
-    VStream keyStream{obj}; \
-    Slice keySlice(keyStream.data(), keyStream.size());
+#define MAKE_KEY_SLICE(obj)                             \
+    VStream keyStream{obj};                             \
+    Slice keySlice(keyStream.data(), keyStream.size()); \
+    keyStream.clear();
 
 #define GET_VALUE(column_handle, null_return)                                 \
     PinnableSlice valueSlice;                                                 \
