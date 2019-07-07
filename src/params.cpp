@@ -26,7 +26,7 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
     static auto genesisState = std::make_shared<ChainState>(0, chainwork, genesisBlock.GetTime(), msTarget, blockTarget,
-        hashRate, std::vector<uint256>{genesisBlock.GetHash()});
+                                                            hashRate, std::vector<uint256>{genesisBlock.GetHash()});
 
     genesisRecord_->LinkChainState(genesisState);
 }
@@ -57,7 +57,7 @@ MainNetParams::MainNetParams() {
 
     const std::string genesisHexStr{
         "01000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001d8f7f"
+        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855a2471a5dffff001d8f7f"
         "6c650101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffff00484704ffff001d01044549742069"
         "73206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b"
         "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
@@ -93,11 +93,11 @@ TestNetParams::TestNetParams() {
         "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
     CreateGenesis(genesisHexStr);
-    }
+}
 
 UnitTestParams::UnitTestParams() {
     version              = 100;
-    targetTimespan       = 10;
+    targetTimespan       = 9;
     timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;

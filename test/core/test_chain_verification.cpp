@@ -104,11 +104,11 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(),  0};
+    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
     ASSERT_TRUE(b1.IsFirstRegistration());
-    auto b1hash             = b1.GetHash();
+    const auto b1hash = b1.GetHash();
 
     // construct a chain with only redemption blocks and blocks without transaction
     Chain c{};
@@ -150,6 +150,10 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
 
     // check testing results
+    auto firstRegRec = GetRecord(&c, b1hash);
+    ASSERT_EQ(firstRegRec->minerChainHeight, 1);
+    ASSERT_TRUE(firstRegRec->cumulativeReward == 0);
+    ASSERT_EQ(firstRegRec->isRedeemed, NodeRecord::IS_REDEEMED);
     uint32_t lastMs = HEIGHT - 1;
     while (!isMilestone[lastMs]) {
         lastMs--;
@@ -160,7 +164,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
     for (size_t i = 0; i < lastMs; i++) {
         recs[i] = GetRecord(&c, hashes[i]);
-        ASSERT_EQ(recs[i]->minerChainHeight, i + 1);
+        ASSERT_EQ(recs[i]->minerChainHeight, i + 2);
         if (isRedemption[i]) {
             if (i < lastRdm) {
                 ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::IS_REDEEMED);
@@ -173,7 +177,8 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             } else if (i == 0) {
                 ASSERT_TRUE(recs[i]->cumulativeReward == 1);
             } else {
-                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
+                ASSERT_TRUE(recs[i]->cumulativeReward ==
+                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
             }
         }
         if (isMilestone[i]) {

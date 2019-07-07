@@ -1,4 +1,4 @@
-#include "init.h"
+#include "dag_manager.h"
 #include "peer_manager.h"
 #include <gtest/gtest.h>
 
@@ -9,6 +9,7 @@ public:
 
     static void SetUpTestCase() {
         config = std::make_unique<Config>();
+        DAG = std::make_unique<DAGManager>();
     }
     static void TearDownTestCase() {}
     void SetUp() {

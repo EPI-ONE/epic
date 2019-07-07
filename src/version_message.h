@@ -19,7 +19,10 @@ public:
         NetAddress& address_you,
         uint64_t current_height)
         : client_version(client_version), local_service(local_service), nTime(nTime),
-          address_you(std::move(address_you)), current_height(current_height) {
+          address_you(std::move(address_you)), current_height(current_height) {}
+
+    explicit VersionMessage(VStream& stream) {
+        Deserialize(stream);
     }
 
     ADD_SERIALIZE_METHODS;

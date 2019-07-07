@@ -68,6 +68,7 @@ void Block::UnCache() {
 
 bool Block::Verify() const {
     // checks version
+    spdlog::trace("Block::Verify version {}", hash_.to_substr());
     if (version_ != GetParams().version) {
         spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
                      std::to_string(hash_));
@@ -75,19 +76,23 @@ bool Block::Verify() const {
     }
 
     // checks pow
+    spdlog::trace("Block::Verify pow {}", hash_.to_substr());
     if (!CheckPOW()) {
         return false;
     }
 
     // checks if the time of block is too far in the future
-    uint64_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
+    spdlog::trace("Block::Verify allowed time {}", hash_.to_substr());
+    time_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (time_ > allowedTime) {
-        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", ctime((time_t*) &time_),
-                     time_, ctime((time_t*) &allowedTime), allowedTime, std::to_string(hash_));
+        time_t t = time_;
+        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", std::string(ctime(&t)),
+                     time_, std::string(ctime(&allowedTime)), allowedTime, std::to_string(hash_));
         return false;
     }
 
     // verify content of the block
+    spdlog::trace("Block::Verify content {}", hash_.to_substr());
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         spdlog::info("Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
         return false;
@@ -100,6 +105,7 @@ bool Block::Verify() const {
         }
 
         // Make sure no duplicated TxInput
+        spdlog::trace("Block::Verify duplicated input {}", hash_.to_substr());
         std::unordered_set<TxOutPoint> outpoints = {};
         for (const TxInput& input : transaction_->GetInputs()) {
             if (outpoints.find(input.outpoint) != outpoints.end()) {
@@ -112,6 +118,7 @@ bool Block::Verify() const {
     }
 
     // check the conditions of the first registration block
+    spdlog::trace("Block::Verify first reg {}", hash_.to_substr());
     if (prevBlockHash_ == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
@@ -201,7 +208,7 @@ const uint256& Block::GetTxHash() const {
 }
 
 size_t Block::CalculateOptimalEncodingSize() {
-    optimalEncodingSize_ = HEADER_SIZE + 1;
+    optimalEncodingSize_ = HEADER_SIZE + 1; // 1 is the flag for whether there is a transaction
     if (!HasTransaction())
         return optimalEncodingSize_;
 
@@ -209,16 +216,19 @@ size_t Block::CalculateOptimalEncodingSize() {
     for (const TxInput& input : transaction_->GetInputs()) {
         size_t listingDataSize    = input.listingContent.data.size();
         size_t listingProgramSize = input.listingContent.program.size();
-        optimalEncodingSize_ += (Hash::SIZE + 4 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize +
-                                 ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (Hash::SIZE + 4                                                    // outpoint
+                                 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize       // listing data
+                                 + ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize // listing program
+        );
     }
 
     optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetOutputs().size());
     for (const TxOutput& output : transaction_->GetOutputs()) {
         size_t listingDataSize    = output.listingContent.data.size();
         size_t listingProgramSize = output.listingContent.program.size();
-        optimalEncodingSize_ += (GetSizeOfVarInt(output.value.GetValue()) + ::GetSizeOfCompactSize(listingDataSize) +
-                                 listingDataSize + ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize);
+        optimalEncodingSize_ += (GetSizeOfVarInt(output.value.GetValue())                            // output value
+                                 + ::GetSizeOfCompactSize(listingDataSize) + listingDataSize         // listing data
+                                 + ::GetSizeOfCompactSize(listingProgramSize) + listingProgramSize); // listing program
     }
 
     return optimalEncodingSize_;

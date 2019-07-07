@@ -51,17 +51,20 @@ class ThreadPool {
 public:
     explicit ThreadPool(size_t worker_size);
 
-    ThreadPool() = default;
-
     void SetThreadSize(size_t size);
+
+    ThreadPool() = default;
+    ~ThreadPool();
 
     void Start();
 
     void Stop();
 
-    std::size_t size() const;
+    std::size_t GetThreadSize() const;
 
     size_t GetTaskSize() const;
+
+    bool IsIdle() const;
 
     /**
      * execute a callable which has the operator () without return value, if you want to pass the arguments,
@@ -91,10 +94,12 @@ public:
     }
 
 private:
+    size_t size_;
     BlockingQueue<CallableWrapper> task_queue_;
     std::vector<std::thread> workers_;
+    std::vector<std::atomic_bool>* working_states{};
 
-    void WorkerThread();
+    void WorkerThread(uint32_t id);
 };
 
 #endif // EPIC_THREADPOOL_H

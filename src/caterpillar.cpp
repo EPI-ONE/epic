@@ -1,4 +1,5 @@
 #include "caterpillar.h"
+#include "peer_manager.h"
 
 Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     obcThread_.Start();
@@ -10,6 +11,7 @@ Caterpillar::~Caterpillar() {
 
 void Caterpillar::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
     obcThread_.Execute([blk, mask, this]() {
+        spdlog::trace("AddBlockToOBC {}", blk->GetHash().to_substr());
         if (!obcEnabled_.load()) {
             return;
         }
@@ -21,7 +23,7 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
     obcThread_.Execute([blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);
         if (releasedBlocks) {
-            for (const auto& blk : *releasedBlocks) {
+            for (auto& blk : *releasedBlocks) {
                 DAG->AddNewBlock(blk, nullptr);
             }
         }
@@ -68,7 +70,6 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
     FileReader blkReader{file::BLK, blkPos};
     Block blk{};
     blkReader >> blk;
-
 
     StoredRecord record = std::make_unique<NodeRecord>(std::move(blk));
 
@@ -220,7 +221,7 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 }
 
 bool Caterpillar::Exists(const uint256& blkHash) const {
-    return blockCache_.contains(blkHash) || obc_.IsOrphan(blkHash) || dbStore_.Exists(blkHash);
+    return blockCache_.contains(blkHash) || obc_.Contains(blkHash) || dbStore_.Exists(blkHash);
 }
 
 bool Caterpillar::DAGExists(const uint256& blkHash) const {
@@ -244,18 +245,22 @@ bool Caterpillar::IsSolid(const ConstBlockPtr& blk) const {
 }
 
 bool Caterpillar::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
-    return obc_.IsOrphan(blk->GetMilestoneHash()) || obc_.IsOrphan(blk->GetPrevHash()) ||
-           obc_.IsOrphan(blk->GetTipHash());
+    return obc_.Contains(blk->GetMilestoneHash()) || obc_.Contains(blk->GetPrevHash()) ||
+           obc_.Contains(blk->GetTipHash());
 }
 
 void Caterpillar::Cache(const ConstBlockPtr& blk) {
     blockCache_.emplace(blk->GetHash(), blk);
 }
 
-void Caterpillar::Stop() {
-    while (obc_.Size() > 0 || obcThread_.GetTaskSize() > 0) {
+void Caterpillar::Wait() {
+    while (obc_.Size() > 0 || !obcThread_.IsIdle()) {
         std::this_thread::yield();
     }
+}
+
+void Caterpillar::Stop() {
+    Wait();
     obcThread_.Stop();
 }
 

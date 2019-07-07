@@ -1,10 +1,11 @@
 #ifndef __SRC_ADDRESS_MESSAGE_H__
 #define __SRC_ADDRESS_MESSAGE_H__
 
-#include <net_address.h>
 #include <vector>
 
+#include "net_address.h"
 #include "serialize.h"
+#include "stream.h"
 
 class AddressMessage {
 public:
@@ -14,11 +15,11 @@ public:
 
     AddressMessage() = default;
 
-    explicit AddressMessage(std::vector<NetAddress>& address_list) : addressList(std::move(address_list)) {}
-
-    ~AddressMessage() {
-        addressList.clear();
+    explicit AddressMessage(VStream& stream) {
+        Deserialize(stream);
     }
+
+    explicit AddressMessage(std::vector<NetAddress>&& address_list) : addressList(address_list) {}
 
     void AddAddress(NetAddress& addr) {
         addressList.push_back(addr);
@@ -33,6 +34,15 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(addressList);
     }
+};
+
+class GetAddrMessage {
+public:
+    GetAddrMessage() = default;
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream&, Operation) {}
 };
 
 #endif // __SRC_ADDRESS_MESSAGE_H__

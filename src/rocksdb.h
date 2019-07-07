@@ -89,12 +89,12 @@ private:
     std::string dbpath_;
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
+
     uint256 GetMsHashAt(const uint64_t& height) const;
     std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
 
     std::string Get(const std::string& column, const rocksdb::Slice& key) const;
     std::string Get(const std::string& column, const std::string& key) const;
-    bool Delete(const std::string& column, const std::string& key) const;
 
     template <typename K, typename H, typename P1, typename P2>
     bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;

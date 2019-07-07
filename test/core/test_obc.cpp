@@ -99,10 +99,7 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     obc.AddBlock(std::make_shared<const Block>(blocks[0]), P_MISSING);
     obc.AddBlock(std::make_shared<const Block>(blocks[9]), T_MISSING | P_MISSING);
 
-    /* we have two lose end 7 & 9
-     * therefore the obc.Size should
-     * be equal to two */
-    EXPECT_EQ(obc.Size(), 2);
+    EXPECT_EQ(obc.Size(), 4);
 
     /* submit missing hash */
     std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
@@ -116,8 +113,8 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     EXPECT_EQ(result.value().size(), 3);
 
     /* check if the OBC has one element left */
-    EXPECT_EQ(obc.DependencySize(), 1);
+    EXPECT_EQ(obc.Size(), 1);
 
     /* check if that remaining block is 9*/
-    EXPECT_TRUE(obc.IsOrphan(rem_hash));
+    EXPECT_TRUE(obc.Contains(rem_hash));
 }

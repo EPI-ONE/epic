@@ -3,17 +3,20 @@
 #include <vector>
 
 #include "address_message.h"
-#include "getaddr_message.h"
 #include "net_message.h"
 #include "ping.h"
 #include "pong.h"
+#include "sync_messages.h"
+#include "test_factory.h"
 #include "version_ack.h"
 #include "version_message.h"
 
+
 class TestNetMsg : public testing::Test {
 public:
-    NetAddress a1 = *NetAddress::GetByIP("127.0.0.1:7877");
-    NetAddress a2 = *NetAddress::GetByIP("127.0.0.1:8245");
+    NetAddress a1       = *NetAddress::GetByIP("127.0.0.1:7877");
+    NetAddress a2       = *NetAddress::GetByIP("127.0.0.1:8245");
+    TestFactory factory = TestFactory();
 };
 
 TEST_F(TestNetMsg, Ping) {
@@ -38,7 +41,7 @@ TEST_F(TestNetMsg, Pong) {
 
 TEST_F(TestNetMsg, AddressMessage) {
     std::vector<NetAddress> lists{a1, a2};
-    AddressMessage addressMessage(lists);
+    AddressMessage addressMessage(std::move(lists));
     std::stringstream os;
     addressMessage.Serialize(os);
 
@@ -62,4 +65,61 @@ TEST_F(TestNetMsg, VersionMessage) {
     EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);
     EXPECT_EQ(versionMessage.local_service, versionMessage1.local_service);
     EXPECT_EQ(versionMessage.client_version, versionMessage1.client_version);
+}
+
+TEST_F(TestNetMsg, Bundle) {
+    Bundle bundle(1);
+    bundle.AddBlock(factory.CreateBlockPtr(1, 1, true));
+    bundle.AddBlock(factory.CreateBlockPtr(1, 2, true));
+    bundle.AddBlock(factory.CreateBlockPtr(1, 3, true));
+
+    VStream stream(bundle);
+
+    Bundle bundle1(stream);
+
+    for (int i = 0; i < 3; i++) {
+        EXPECT_EQ(*bundle.blocks[i], *bundle1.blocks[i]);
+    }
+}
+
+TEST_F(TestNetMsg, Inv) {
+    Inv inv(1);
+    for (int i = 0; i < 100; i++) {
+        inv.AddItem(factory.CreateRandomHash());
+    }
+    VStream stream(inv);
+
+    Inv inv1(stream);
+    for (int i = 0; i < 100; i++) {
+        EXPECT_EQ(inv.hashes[i], inv1.hashes[i]);
+    }
+}
+
+TEST_F(TestNetMsg, GetInv) {
+    std::vector<uint256> locator = {Hash::GetZeroHash()};
+    GetInv getInv(locator, 1);
+    for (int i = 0; i < 100; i++) {
+        getInv.AddBlockHash(factory.CreateRandomHash());
+    }
+    VStream stream(getInv);
+
+    GetInv getBlock1(stream);
+    for (int i = 0; i < 100; i++) {
+        EXPECT_EQ(getInv.locator[i], getBlock1.locator[i]);
+    }
+}
+
+TEST_F(TestNetMsg, GetData) {
+    GetData getData(GetDataTask::LEVEL_SET);
+    for (int i = 0; i < 100; i++) {
+        getData.AddItem(factory.CreateRandomHash(), i);
+    }
+
+    VStream stream(getData);
+
+    GetData getData1(stream);
+    for (int i = 0; i < 100; i++) {
+        EXPECT_EQ(getData.hashes[i], getData1.hashes[i]);
+        EXPECT_EQ(getData.bundleNonce[i], getData1.bundleNonce[i]);
+    }
 }

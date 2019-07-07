@@ -134,7 +134,8 @@ public:
 
     ConstBlockPtr cblock;
 
-    uint64_t height;
+    uint64_t height = 0;
+
     Coin cumulativeReward;
     Coin fee;
     uint64_t minerChainHeight = 0;
@@ -152,6 +153,7 @@ public:
     NodeRecord(const Block&);
     NodeRecord(Block&&);
     NodeRecord(VStream&);
+    NodeRecord(const NodeRecord&) = default;
 
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();

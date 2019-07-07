@@ -249,6 +249,7 @@ template <typename Stream>
 inline void Serialize(Stream& s, double a) {
     ser_writedata64(s, ser_double_to_uint64(a));
 }
+
 template <typename Stream, int N>
 inline void Serialize(Stream& s, const char (&a)[N]) {
     s.write(a, N);
@@ -304,6 +305,7 @@ template <typename Stream>
 inline void Deserialize(Stream& s, double& a) {
     a = ser_uint64_to_double(ser_readdata64(s));
 }
+
 template <typename Stream, int N>
 inline void Deserialize(Stream& s, char (&a)[N]) {
     s.read(a, N);
@@ -358,7 +360,6 @@ void WriteCompactSize(Stream& os, uint64_t nSize) {
         ser_writedata8(os, 255);
         ser_writedata64(os, nSize);
     }
-    return;
 }
 
 template <typename Stream>
@@ -807,7 +808,7 @@ void Serialize(Stream& os, const std::unique_ptr<const T>& p) {
 
 template <typename Stream, typename T>
 void Deserialize(Stream& is, std::unique_ptr<const T>& p) {
-    p.reset(new T(deserialize, is));
+    p.reset(new T(is));
 }
 
 /**
@@ -820,7 +821,7 @@ void Serialize(Stream& os, const std::shared_ptr<const T>& p) {
 
 template <typename Stream, typename T>
 void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
-    p = std::make_shared<const T>(deserialize, is);
+    p = std::make_shared<const T>(is);
 }
 
 /**

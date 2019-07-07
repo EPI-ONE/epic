@@ -3,11 +3,12 @@
 
 #include <atomic>
 #include <list>
-#include <queue>
 
 #include "chains.h"
 #include "concurrent_container.h"
 #include "consensus.h"
+#include "message_type.h"
+#include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
 
@@ -25,40 +26,49 @@ public:
      * sending queue according to the BlockLocator constructed by peer.
      */
     void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
-
-    /** Called by Peer and sets a list of inventory as the callback to the task. */
-    void AssembleInv(GetBlockTask& task);
+    void CallbackRequestInv(std::unique_ptr<Inv> inv);
 
     /** Called by batchSync to create a GetDataTask for a given hash. */
-    GetDataTask RequestData(const uint256& hash, GetDataTask::Type& type, PeerPtr peer);
+    std::optional<GetDataTask> RequestData(const uint256& hash, const PeerPtr& peer);
+    void CallbackRequestData(std::vector<ConstBlockPtr>&);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
-    void GetBundle(GetDataTask& task);
+    void RespondRequestInv(std::vector<uint256>&, uint32_t, PeerPtr);
+
+    /** Called by Peer and sets a Bundle as the callback to the task. */
+    void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
+    void RespondRequestPending(uint32_t, const PeerPtr&);
 
     /*
      * Submits tasks to a single thread in which it checks its syntax.
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
      */
-    void AddNewBlock(const ConstBlockPtr& block, PeerPtr peer);
-
-    const RecordPtr GetHead() const;
-
-    size_t GetBestMilestoneHeight();
+    void AddNewBlock(ConstBlockPtr& block, PeerPtr peer);
 
     // Checkout states either in different chain or in db
-    RecordPtr GetState(const uint256&);
+    const RecordPtr GetState(const uint256&) const;
 
     const Chain& GetBestChain() const;
+
+    size_t GetBestMilestoneHeight() const;
+
+    const RecordPtr GetMilestoneHead() const;
 
     /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks
      */
     void Stop();
+    void Wait();
 
 private:
+    const uint8_t maxGetDataSize    = 5;
+    const time_t obcEnableThreshold = 300;
+
     ThreadPool verifyThread_;
+    ThreadPool syncPool_;
+    ThreadPool storagePool_;
 
     /** Indicator of whether we are synching with some peer. */
     std::atomic<bool> isBatchSynching;
@@ -79,7 +89,7 @@ private:
      * A list of tasks we've prepared to deliver to a Peer.
      * Should be thread-safe.
      */
-    BlockingQueue<GetDataTask> preDownloading;
+    BlockingQueue<uint256> preDownloading;
 
     /**
      * A list of milestone chains, with first element being
@@ -92,20 +102,30 @@ private:
      */
     ConcurrentHashMap<uint256, RecordPtr> globalStates_;
 
+    std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
+
+    /**
+     * Starting from the given hash, traverses the main milestone chain
+     * backward/forward by the given length
+     */
+    std::vector<uint256> TraverseMilestoneBackward(RecordPtr, size_t);
+    std::vector<uint256> TraverseMilestoneForward(RecordPtr, size_t);
+
+    /**
+     * Methods are called when the synchronization status is changed:
+     * on to off and off to on.
+     */
+    void StartBatchSync(const PeerPtr&);
+    void CompleteBatchSync();
+    void DisconnectPeerSync(const PeerPtr&);
+
     /**
      * Start a new thread and create a list of GetData tasks that is either added
      * to preDownloading (if it's not empty) or a peer's task queue. If preDownloading
      * is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
-    void BatchSync(std::list<uint256>& requests, PeerPtr requestFrom);
-
-    /**
-     * Methods are called when the synchronization status is changed:
-     * on to off and off to on. Modifies the atomic_flag isBatchSynching.
-     */
-    void StartBatchSync(PeerPtr peer);
-    void CompleteBatchSync();
+    void BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom);
 
     /**
      * TODO:
@@ -114,6 +134,12 @@ private:
      * Returns whether the hash is removed successfully.
      */
     bool UpdateDownloadingQueue(const uint256&);
+
+    void AddToDownloadingQueue(const uint256&);
+
+    bool IsDownloading(const uint256&);
+
+    void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
     void DeleteChain(ChainPtr);
@@ -127,6 +153,18 @@ private:
     void AddBlockToPending(const ConstBlockPtr& block);
 
     void ProcessMilestone(const ChainPtr&, const ConstBlockPtr&);
+
+    bool IsMainChainMS(const uint256&) const;
+
+    size_t GetHeight(const uint256&) const;
+
+    RecordPtr GetMainChainRecord(const uint256&) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+
+    bool ExistsNode(const uint256&) const;
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);

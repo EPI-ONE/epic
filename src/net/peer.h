@@ -2,27 +2,27 @@
 #define EPIC_PEER_H
 
 #include <atomic>
+#include <shared_mutex>
 
 #include "address_manager.h"
 #include "address_message.h"
 #include "block.h"
 #include "blocking_queue.h"
-#include "bundle.h"
+#include "concurrent_container.h"
 #include "connection_manager.h"
-#include "getaddr_message.h"
 #include "message_type.h"
 #include "net_address.h"
 #include "ping.h"
 #include "pong.h"
 #include "protocol_exception.h"
 #include "spdlog/spdlog.h"
+#include "sync_messages.h"
 #include "version_ack.h"
 #include "version_message.h"
 
 class Peer {
 public:
-    /*
-     *
+    /**
      * @param netAddress
      * @param handle ,the libevent socket handle
      * @param inbound
@@ -31,19 +31,19 @@ public:
      * @param addressManager
      */
     Peer(NetAddress& netAddress,
-        const void* handle,
-        bool inbound,
-        bool isSeedPeer,
-        ConnectionManager* connectionManager,
-        AddressManager* addressManager);
+         const void* handle,
+         bool inbound,
+         bool isSeedPeer,
+         ConnectionManager* connectionManager,
+         AddressManager* addressManager);
 
-    ~Peer();
+    virtual ~Peer();
 
     void ProcessMessage(NetMessage& message);
 
-    void SendMessage(NetMessage& message);
+    virtual void SendMessage(NetMessage& message);
 
-    void SendMessage(NetMessage&& message);
+    virtual void SendMessage(NetMessage&& message);
 
     /**
      * send scheduled messages(ping, address) to the peer
@@ -71,6 +71,38 @@ public:
     size_t GetNPingFailed() const;
 
     void SetNPingFailed(size_t nPingFailed_);
+
+    void AddPendingGetInvTask(const GetInvTask&);
+
+    std::optional<GetInvTask> RemovePendingGetInvTask(uint32_t task_id);
+
+    size_t GetInvTaskSize();
+
+    void AddPendingGetDataTask(const GetDataTask&);
+
+    std::optional<GetDataTask> RemovePendingGetDataTask(uint32_t task_id);
+
+    size_t GetDataTaskSize();
+
+    uint256 GetLastSentBundleHash() const;
+
+    void SetLastSentBundleHash(const uint256&);
+
+    uint256 GetLastSentInvHash() const;
+
+    void SetLastSentInvHash(const uint256&);
+
+    uint256 GetLastGetInvBegin() const;
+
+    void SetLastGetInvBegin(const uint256&);
+
+    uint256 GetLastGetInvEnd() const;
+
+    void SetLastGetInvEnd(const uint256&);
+
+    size_t GetLastGetInvLength() const;
+
+    void SetLastGetInvLength(const size_t&);
 
     /*
      * basic information of peer
@@ -131,15 +163,46 @@ private:
      */
     void ProcessAddressMessage(AddressMessage& addressMessage);
 
-    /*
+    /**
      * send addresses to the peer
      */
     void ProcessGetAddrMessage();
 
-    /*
+    /**
+     * process block, add to dag and relay
+     * @param block
+     */
+    void ProcessBlock(ConstBlockPtr& block);
+
+    /**
+     * process GetInv, respond with an Inv message
+     */
+    void ProcessGetInv(GetInv& getBlock);
+
+    /**
+     * process Inv, respond with a GetData message
+     */
+    void ProcessInv(std::unique_ptr<Inv> inv);
+
+    /**
+     * processGetData, respond with bundles
+     */
+    void ProcessGetData(GetData& getData);
+
+    /**
+     * process bundle, add to dag
+     * @param bundle
+     */
+    void ProcessBundle(const std::shared_ptr<Bundle>& bundle);
+
+    /**
+     * get the first nonce of GetData tasks
+     */
+    uint32_t GetFirstGetDataNonce();
+
+    /**
      * Parameters of network setting
      */
-
     // interval of sending ping
     const static uint64_t kPingSendInterval = 2 * 60;
 
@@ -153,7 +216,6 @@ private:
     // result in an immediate disconnect
     // TODO to be set
     const int kMinProtocolVersion = 0;
-
 
     /*
      * statistic of peer status
@@ -177,10 +239,21 @@ private:
     // the address queue to send
     BlockingQueue<NetAddress> addrSendQueue;
 
-
     /*
-     * TODO: Synchronization information
+     * Synchronization information
      */
+
+    mutable std::shared_mutex sync_lock;
+
+    // Keep track of the last request we made to the peer in GetInv
+    // so we can avoid redundant and harmful GetInv requests.
+    uint256 lastGetInvBegin, lastGetInvEnd;
+    std::atomic_size_t lastGetInvLength;
+    uint256 lastSentBundleHash, lastSentInvHash;
+
+    std::unordered_map<uint32_t, GetInvTask> getInvsTasks;
+    std::map<uint32_t, GetDataTask> getDataTasks;
+    std::unordered_map<uint32_t, std::shared_ptr<Bundle>> orphanLvsPool;
 
     /*
      * pointer from outside
@@ -188,5 +261,7 @@ private:
     ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
 };
+
+typedef std::shared_ptr<Peer> PeerPtr;
 
 #endif // EPIC_PEER_H

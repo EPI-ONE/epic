@@ -12,7 +12,7 @@ public:
 
     void Solve(Block& b, ThreadPool& solverPool) {
         arith_uint256 target = b.GetTargetAsInteger();
-        std::size_t nthreads = solverPool.size();
+        std::size_t nthreads = solverPool.GetThreadSize();
         uint64_t final_time  = b.GetTime();
         final_nonce          = default_nonce;
 

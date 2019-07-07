@@ -13,6 +13,10 @@ public:
 
     explicit Ping(uint64_t nonce) : nonce(nonce) {}
 
+    explicit Ping(VStream& stream) {
+        Deserialize(stream);
+    }
+
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {

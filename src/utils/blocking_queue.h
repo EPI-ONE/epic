@@ -2,6 +2,7 @@
 #define EPIC_BLOCKING_QUEUE_H
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <queue>
 #include <vector>
@@ -39,12 +40,30 @@ public:
         return true;
     }
 
+    bool DrainTo(std::vector<T>& dest, size_t n) {
+        std::unique_lock<std::mutex> lock(mtx_);
+        empty_.wait(lock, [this] { return !queue_.empty() || quit_; });
+        if (quit_) {
+            return false;
+        }
+
+        n = std::min(n, queue_.size());
+
+        for (auto i = 0; i < n; ++i) {
+            dest.emplace_back();
+            dest.back() = std::move(queue_.front());
+            queue_.pop();
+        }
+        full_.notify_all();
+        return true;
+    }
+
     size_t Size() const {
         std::lock_guard<std::mutex> lock(mtx_);
         return queue_.size();
     }
 
-    bool Empty() {
+    bool Empty() const {
         std::lock_guard<std::mutex> lock(mtx_);
         return queue_.empty();
     }
@@ -60,6 +79,13 @@ public:
         empty_.notify_all();
     }
 
+    void Clear() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        std::queue<T> empty;
+        std::swap(queue_, empty);
+        full_.notify_all();
+    }
+
 private:
     mutable std::mutex mtx_;
     std::condition_variable full_;
@@ -68,6 +94,5 @@ private:
     size_t capacity_;
     std::atomic_bool quit_ = false;
 };
-
 
 #endif // EPIC_BLOCKING_QUEUE_H

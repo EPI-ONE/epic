@@ -14,7 +14,6 @@
 #include "threadpool.h"
 
 typedef std::unique_ptr<NodeRecord> StoredRecord;
-typedef std::unique_ptr<Block> BlockCache;
 
 class Caterpillar {
 public:
@@ -42,20 +41,32 @@ public:
     bool StoreRecords(const std::vector<RecordPtr>&);
 
     /**
-     * Returns true is the hash exists in one of DAG, DB, or OBC
+     * Returns true if the hash exists in one of cache, DB, or OBC
      */
     bool Exists(const uint256&) const;
+
+    /**
+     * Returns true if the hash exists in DB
+     */
     bool DBExists(const uint256&) const;
+
+    /**
+     * Returns true if the hash exists in cache or DB
+     */
     bool DAGExists(const uint256&) const;
 
+    /**
+     * Returns true if the hash is of a milestone in DB
+     * (i.e., confirmed main chain)
+     */
     bool IsMilestone(const uint256&) const;
 
     /**
      * obc and solidity check
      */
-    bool IsSolid(const ConstBlockPtr&) const;
-    bool IsWeaklySolid(const ConstBlockPtr&) const;
-    bool AnyLinkIsOrphan(const ConstBlockPtr&) const;
+    bool IsSolid(const ConstBlockPtr&) const;         // if ancestors are all in DAG (cache + DB)
+    bool IsWeaklySolid(const ConstBlockPtr&) const;   // if ancestors are all in either DAG or OBC
+    bool AnyLinkIsOrphan(const ConstBlockPtr&) const; // if any ancestor is in OBC
     void Cache(const ConstBlockPtr&);
     void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
     void ReleaseBlocks(const uint256&);
@@ -68,6 +79,7 @@ public:
      * Blocks the main thread from going forward
      * until CAT completes all the tasks
      */
+    void Wait();
     void Stop();
 
     ~Caterpillar();
@@ -106,8 +118,6 @@ private:
 
     StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;
     FilePos& NextFile(FilePos&) const;
-
-    friend class TestFileStorage;
 };
 
 extern std::unique_ptr<Caterpillar> CAT;

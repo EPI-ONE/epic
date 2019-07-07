@@ -109,20 +109,23 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (optimalStorageSize_ > 0) {
         return optimalStorageSize_;
     }
-    optimalStorageSize_ += GetSizeOfVarInt(height);
-    optimalStorageSize_ += GetSizeOfVarInt(cumulativeReward.GetValue());
-    optimalStorageSize_ += GetSizeOfVarInt(minerChainHeight);
-    optimalStorageSize_ += 1; // Validity
-    optimalStorageSize_ += 1; // RedemptionStatus
-    optimalStorageSize_ += 1; // MilestoneStatus
 
-    if (snapshot != nullptr) { // ChainState
-        optimalStorageSize_ += GetSizeOfVarInt(snapshot->height);
-        optimalStorageSize_ += 4;
-        optimalStorageSize_ += 4;
-        optimalStorageSize_ += 4;
-        optimalStorageSize_ += 4;
-        optimalStorageSize_ += GetSizeOfVarInt(snapshot->hashRate);
+    optimalStorageSize_ += GetSizeOfVarInt(height)                        // block height
+                           + GetSizeOfVarInt(cumulativeReward.GetValue()) // reward
+                           + GetSizeOfVarInt(minerChainHeight)            // miner chain height
+                           + 1                                            // validity
+                           + 1                                            // RedemptionStatus
+                           + 1;                                           // MilestoneStatus
+
+    // ChainState
+    if (snapshot != nullptr) {
+        optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height)     // ms height
+                                + GetSizeOfVarInt(snapshot->hashRate) // hash rate
+                                + 4                                   // last update time
+                                + 4                                   // chain work
+                                + 4                                   // ms target
+                                + 4                                   // block target
+        );
     }
 
     return optimalStorageSize_;

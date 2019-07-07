@@ -23,7 +23,7 @@ Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
 
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
         for (const auto& h : (*it)->GetRecordHashes()) {
-            pendingBlocks_.insert({h, recordHistory_[h]->cblock});
+            pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
             recordHistory_.erase(h);
             ledger_.Rollback((*it)->GetTXOC());
         }
@@ -37,7 +37,7 @@ ChainStatePtr Chain::GetChainHead() const {
 }
 
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
-    pendingBlocks_.insert_or_assign(pblock->GetHash(), pblock);
+    pendingBlocks_.insert_or_assign(pblock->GetHash(), std::move(pblock));
 }
 
 void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
@@ -55,6 +55,13 @@ void Chain::RemovePendingBlock(const uint256& hash) {
 
 bool Chain::IsBlockPending(const uint256& hash) const {
     return pendingBlocks_.find(hash) != pendingBlocks_.end();
+}
+
+std::vector<ConstBlockPtr> Chain::GetPendingBlocks() const {
+    std::vector<ConstBlockPtr> values;
+    std::transform(pendingBlocks_.begin(), pendingBlocks_.end(), values.begin(),
+                   [](const auto& entry) { return entry.second; });
+    return values;
 }
 
 std::size_t Chain::GetPendingBlockCount() const {
@@ -137,7 +144,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 
     // Allowed distance
     auto allowed =
-        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / ms_hashrate);
+        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / (ms_hashrate + 1));
 
     // Update key for the cumulator
     cum.Add(b.cblock, true);
@@ -147,7 +154,9 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     return dist <= allowed;
 }
 
-void Chain::Verify(const ConstBlockPtr& pblock) {
+RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
+    spdlog::trace("Verifying block {}", pblock->GetHash().to_substr());
+
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
@@ -168,6 +177,7 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
         if (rec->cblock->IsFirstRegistration()) {
             rec->prevRedemHash = rec->cblock->GetHash();
             rec->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
+            rec->minerChainHeight = 1;
         } else {
             if (auto update = Validate(*rec)) {
                 rec->validity = NodeRecord::VALID;
@@ -175,19 +185,22 @@ void Chain::Verify(const ConstBlockPtr& pblock) {
                 state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
-                spdlog::info("Transaction in block {} is invalid!", std::to_string(rec->cblock->GetHash()));
             }
             rec->UpdateReward(GetPrevReward(*rec));
         }
+        rec->height = state->height;
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
 
     states_.emplace_back(std::move(state));
     recordHistory_.merge(std::move(verifying_));
+    return recs.back();
 }
 
 std::optional<TXOC> Chain::Validate(NodeRecord& record) {
-    const auto& pblock = record.cblock;
+    spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
+
+    auto& pblock = record.cblock;
     std::optional<TXOC> result;
 
     // first check whether it is a fork of its peer chain
@@ -212,10 +225,13 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
         // regarded as a valid transaction but not updating ledger
         result = std::make_optional<TXOC>();
     }
+
     return result;
 }
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
+    spdlog::trace("Validating redemption {}", record.cblock->GetHash().to_substr());
+
     // this transaction is a redemption of reward
     const auto& redem   = record.cblock->GetTransaction();
     const auto& vin     = redem->GetInputs().at(0);
@@ -231,8 +247,8 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info(
-            "Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash), hashstr);
+        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash),
+                     hashstr);
         return {};
     }
 
@@ -250,6 +266,8 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
+    spdlog::trace("Validating tx {}", record.cblock->GetHash().to_substr());
+
     const auto& tx      = record.cblock->GetTransaction();
     const auto& hashstr = std::to_string(record.cblock->GetHash());
 
@@ -257,7 +275,8 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
     assert(prevMs);
     if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
-        spdlog::info("Transaction distance exceeds its allowed distance!");
+        spdlog::info("Transaction distance exceeds its allowed distance! [{}]",
+                     std::to_string(record.cblock->GetHash()));
         return {};
     }
 
@@ -275,8 +294,8 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
         auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
-            spdlog::info(
-                "Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint), hashstr);
+            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint),
+                         hashstr);
             return {};
         }
         valueIn += prevOut->GetOutput().value;
@@ -339,6 +358,14 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
 }
 
 void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
+
+bool Chain::IsMilestone(const uint256& blkHash) const {
+    auto result = recordHistory_.find(blkHash);
+    if (result == recordHistory_.end()) {
+        return CAT->IsMilestone(blkHash);
+    }
+    return result->second->isMilestone;
+}
 
 ////////////////////
 // Cumulator

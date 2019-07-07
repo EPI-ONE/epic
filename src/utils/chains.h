@@ -87,6 +87,14 @@ public:
         return c.end();
     }
 
+    const_iterator begin() const {
+        return c.cbegin();
+    }
+
+    const_iterator end() const {
+        return c.cend();
+    }
+
     void reserve(size_type n) {
         c.reserve(n);
     }

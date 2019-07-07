@@ -3,16 +3,21 @@
 
 #include "block.h"
 #include "consensus.h"
+#include "dag_manager.h"
 #include "key.h"
 #include "pubkey.h"
 #include "tasm.h"
 
 #include <random>
 
+using LevelSet  = std::vector<NodeRecord>;
+using TestChain = std::vector<LevelSet>;
+
 class NumberGenerator {
 public:
-    NumberGenerator(): generator(time(nullptr)), distribution(0, UINT_LEAST32_MAX) {}
-    NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd) : generator(seed), distribution(rangeStart, rangeEnd) {}
+    NumberGenerator() : generator(time(nullptr)), distribution(0, UINT_LEAST32_MAX) {}
+    NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd)
+        : generator(seed), distribution(rangeStart, rangeEnd) {}
 
     uint32_t GetRand() {
         return distribution(generator);
@@ -59,6 +64,8 @@ public:
     RecordPtr CreateConsecutiveRecordPtr();
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
+    TestChain CreateChain(const NodeRecord& startMs, size_t height);
+
 
     uint32_t GetRand() {
         return numGenerator.GetRand();
