@@ -67,17 +67,15 @@ bool ThreadPool::IsIdle() const {
 
     if (working_states) {
         for (int i = 0; i < working_states->size(); i++) {
-            if (working_states->at(i)) {
+            if (working_states->at(i).load()) {
                 return false;
             }
         }
     }
 
-    return true;
+    return task_queue_.Empty();
 }
 
 ThreadPool::~ThreadPool() {
-    if (working_states) {
-        delete working_states;
-    }
+    delete working_states;
 }

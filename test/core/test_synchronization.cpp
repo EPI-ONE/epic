@@ -73,7 +73,7 @@ TEST_F(TestSync, test_basic_network) {
     ASSERT_TRUE(testPeer->sentMsgBox.Empty());
 }
 
-TEST_F(TestSync, test_version_ack) {
+TEST_F(TestSync, test_basic_sync_workflow) {
     TestPM* testPeerManager = (TestPM*) peerManager.get();
 
     const void* peer_handle = (const void*) 1;
@@ -149,6 +149,7 @@ TEST_F(TestSync, test_version_ack) {
         testPeer->ProcessMessage(bundle_message);
     }
 
+    usleep(50000);
     CAT->Wait();
     DAG->Wait();
 
@@ -166,7 +167,7 @@ TEST_F(TestSync, test_version_ack) {
     NetMessage message_sync_complete_ack(peer_handle, INV, VStream(sync_complete_ack));
     testPeer->ProcessMessage(message_sync_complete_ack);
 
-    CAT->Wait();
+    usleep(50000);
     DAG->Wait();
 
     ASSERT_EQ(testPeer->GetInvTaskSize(), 0);
@@ -181,7 +182,7 @@ TEST_F(TestSync, test_version_ack) {
     NetMessage message_pendingSet_bundle(peer_handle, BUNDLE, VStream(pending_set));
     testPeer->ProcessMessage(message_pendingSet_bundle);
 
-    CAT->Wait();
+    usleep(50000);
     DAG->Wait();
 
     ASSERT_EQ(testPeer->GetInvTaskSize(), 0);
@@ -206,6 +207,8 @@ TEST_F(TestSync, test_version_ack) {
 
     // receive GetData
     testPeer->ProcessMessage(message_getData_Cmp);
+
+    usleep(50000);
     DAG->Wait();
 
     // send Bundle
