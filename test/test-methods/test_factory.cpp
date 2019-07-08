@@ -139,7 +139,7 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
     return CreateNextChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
 
-TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height) {
+TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
     NodeRecord lastMs    = startMs;
     NodeRecord prevBlock = startMs;
 
@@ -148,9 +148,16 @@ TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height) {
     testChain.push_back(LevelSet());
 
     size_t count       = 1;
-    uint32_t timestamp = GENESIS.GetTime();
+    uint32_t timestamp = startMs.cblock->GetTime();
     while (count < height) {
-        Block b = CreateBlock(GetRand() % 11 + 1, GetRand() % 11 + 1);
+        int nIns, nOuts;
+        if (tx) {
+            nIns  = GetRand() % 10 + 1;
+            nOuts = GetRand() % 10 + 1;
+        } else {
+            nIns = nOuts = 0;
+        }
+        Block b = CreateBlock(nIns, nOuts);
         b.SetTime(timestamp++);
         b.SetMilestoneHash(lastMs.cblock->GetHash());
         b.SetPrevHash(prevBlock.cblock->GetHash());

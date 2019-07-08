@@ -47,13 +47,17 @@ public:
     void AddNewBlock(ConstBlockPtr& block, PeerPtr peer);
 
     // Checkout states either in different chain or in db
-    const RecordPtr GetState(const uint256&) const;
+    RecordPtr GetState(const uint256&) const;
 
     const Chain& GetBestChain() const;
 
     size_t GetBestMilestoneHeight() const;
 
-    const RecordPtr GetMilestoneHead() const;
+    RecordPtr GetMilestoneHead() const;
+
+    const Chains& GetChains() const {
+        return milestoneChains;
+    }
 
     /**
      * Blocks the main thread from going forward

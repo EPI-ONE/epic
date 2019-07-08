@@ -9,7 +9,38 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
+    static std::string prefix;
+
+    static void SetUpTestCase() {
+        prefix = "test_consensus/";
+    }
+
+    void SetUp() {
+        std::ostringstream os;
+        os << time(nullptr) + fac.GetRand() % 100;
+        file::SetDataDirPrefix(prefix + os.str());
+        CAT = std::make_unique<Caterpillar>(prefix + os.str());
+        DAG = std::make_unique<DAGManager>();
+
+        // Initialize DB with genesis block
+        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        CAT->StoreRecords(genesisLvs);
+        CAT->EnableOBC();
+    }
+
+    void TearDown() {
+        DAG.reset();
+        CAT.reset();
+    }
+
+    static void TearDownTestCase() {
+        // Delete the temporary test data folder
+        std::string cmd = "rm -r " + prefix;
+        system(cmd.c_str());
+    }
 };
+
+std::string TestConsensus::prefix = "";
 
 TEST_F(TestConsensus, SyntaxChecking) {
     Block b = GENESIS;
@@ -94,15 +125,11 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
 }
 
 TEST_F(TestConsensus, AddNewBlocks) {
-    ///////////////////////////
-    // Prepare for test data
-    //
-    // Construct a fully connected and syntatical valid random graph
-
+    // Construct a fully connected and syntatical valid level set without a ms
     std::vector<NodeRecord> blocks;
     while (blocks.size() <= 2) {
         blocks = fac.CreateChain(GENESIS_RECORD, 2).back();
-        blocks.pop_back();
+        blocks.pop_back(); // remove milestone such that all blocks will stay in pending
     }
 
     spdlog::info("Number of blocks to be added: {}", blocks.size());
@@ -114,18 +141,6 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Test starts here
     //
-    std::string prefix = "test_consensus/";
-    std::ostringstream os;
-    os << time(nullptr);
-    file::SetDataDirPrefix(prefix + os.str());
-    CAT = std::make_unique<Caterpillar>(prefix + os.str());
-    DAG = std::make_unique<DAGManager>();
-
-    // Initialize DB with genesis block
-    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-    CAT->StoreRecords(genesisLvs);
-    CAT->EnableOBC();
-
     for (const auto& block : blocks) {
         auto p = block.cblock;
         DAG->AddNewBlock(p, nullptr);
@@ -143,11 +158,42 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size());
+}
 
-    // Delete the temporary test data folder
-    std::string cmd = "exec rm -r " + prefix;
-    system(cmd.c_str());
+TEST_F(TestConsensus, AddForks) {
+    // Construct a fully connected graph with main chain and forks
+    int chain_length = 20;
+    int n_branches  = 10;
 
-    CAT.reset();
-    DAG.reset();
+    std::vector<TestChain> branches;
+    branches.reserve(n_branches);
+
+    // branches[0] is the main chain
+    branches.emplace_back(fac.CreateChain(GENESIS_RECORD, chain_length));
+
+    for (int i = 0; i < n_branches - 1; ++i) {
+        // randomly pick a branch and fork it at random height
+        auto chain_id         = fac.GetRand() % branches.size();
+        auto& picked_chain    = branches[chain_id];
+        auto& new_split_point = picked_chain[fac.GetRand() % (picked_chain.size() - 2) + 1].back();
+        branches.emplace_back(fac.CreateChain(new_split_point, chain_length));
+    }
+
+    ///////////////////////////
+    // Test starts here
+    //
+    for (const auto& chain : branches) {
+        for (const auto& lvs : chain) {
+            for (const auto& blk : lvs) {
+                auto p = blk.cblock;
+                DAG->AddNewBlock(p, nullptr);
+            }
+        }
+    }
+
+    usleep(50000);
+    CAT->Stop();
+    DAG->Stop();
+
+    ASSERT_EQ(DAG->GetChains().size(), n_branches);
 }

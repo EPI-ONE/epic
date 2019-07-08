@@ -7,9 +7,6 @@
 #include "test_env.h"
 #include "test_network.h"
 
-using LevelSet  = std::vector<NodeRecord>;
-using TestChain = std::vector<LevelSet>;
-
 class TestSync : public testing::Test {
 public:
     static void SetUpTestCase() {
@@ -39,20 +36,6 @@ public:
     }
 
     TestFactory fac;
-
-    void PrintChain(const TestChain& chain) {
-        for (size_t i = 0; i < chain.size(); i++) {
-            std::cout << "Height " << i << std::endl;
-            for (auto& block : chain[i]) {
-                std::cout << "hash = " << block.cblock->GetHash().to_substr();
-                std::cout << ", prev = " << block.cblock->GetPrevHash().to_substr();
-                std::cout << ", milestone = " << block.cblock->GetMilestoneHash().to_substr();
-                std::cout << ", tip = " << block.cblock->GetTipHash().to_substr();
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-    }
 };
 
 TEST_F(TestSync, test_basic_network) {
@@ -85,7 +68,6 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     auto testPeer            = (TestPeer*) p.get();
     testPeer->versionMessage = new VersionMessage(0, 0, 0, TestPeer::GetFakeAddr(), 10);
 
-
     /**Start the synchronization as the block requester*/
 
     // receive version ack
@@ -110,7 +92,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     long testChainHeight = 5;
     auto chain           = fac.CreateChain(GENESIS_RECORD, testChainHeight);
 
-    PrintChain(chain);
+    fac.PrintChain(chain);
 
     // receive Inv
     Inv inv(getInv.nonce);

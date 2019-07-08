@@ -495,7 +495,8 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) 
     }
 
     if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
-        spdlog::info("Block is too old [{}]", std::to_string(blk->GetHash()));
+        spdlog::info("Block is too old: {} vs. {} [{}]", blk->GetTime(), ms->cblock->GetTime(),
+                     std::to_string(blk->GetHash()));
         return false;
     }
     return true;
@@ -582,7 +583,7 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
     isVerifying = false;
 }
 
-const RecordPtr DAGManager::GetState(const uint256& msHash) const {
+RecordPtr DAGManager::GetState(const uint256& msHash) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
         return search->second;
@@ -618,7 +619,7 @@ bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
     return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }
 
-const RecordPtr DAGManager::GetMilestoneHead() const {
+RecordPtr DAGManager::GetMilestoneHead() const {
     return GetState(GetBestChain().GetChainHead()->GetMilestoneHash());
 }
 

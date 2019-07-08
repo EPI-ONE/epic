@@ -64,7 +64,22 @@ public:
     RecordPtr CreateConsecutiveRecordPtr();
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
-    TestChain CreateChain(const NodeRecord& startMs, size_t height);
+    TestChain CreateChain(const NodeRecord& startMs, size_t height, bool tx = false);
+
+    void PrintChain(const TestChain& chain) {
+        std::cout << "{ " << std::endl;
+        for (size_t i = 0; i < chain.size(); i++) {
+            std::cout << "   Height " << i << std::endl;
+            for (auto& block : chain[i]) {
+                std::cout << "   hash = " << block.cblock->GetHash().to_substr();
+                std::cout << ", prev = " << block.cblock->GetPrevHash().to_substr();
+                std::cout << ", milestone = " << block.cblock->GetMilestoneHash().to_substr();
+                std::cout << ", tip = " << block.cblock->GetTipHash().to_substr();
+                std::cout << std::endl;
+            }
+        }
+        std::cout << "}" << std::endl;
+    }
 
 
     uint32_t GetRand() {
