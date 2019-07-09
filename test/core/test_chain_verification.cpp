@@ -152,7 +152,9 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
         auto blkptr = std::make_shared<const Block>(std::move(blk));
         c.AddPendingBlock(blkptr);
         if (isMilestone[i]) {
-            c.Verify(blkptr);
+            auto ms = c.Verify(blkptr);
+            c.AddNewState(*ms);
+
             prevMs = c.GetChainHead();
             ASSERT_EQ(c.GetPendingBlockCount(), 0);
             ASSERT_EQ(prevMs->GetMilestoneHash(), prevHash);
@@ -218,7 +220,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
     TxOutput output{valueIn, outputListing};
 
-    uint32_t t = 1561117638;
+    uint32_t t = time(nullptr);
     Block b1{GetParams().version, ghash, ghash, ghash, t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     Transaction tx1{};
     b1.AddTransaction(tx1.AddOutput(std::move(output)));
@@ -235,7 +237,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     AddToHistory(&c, rec1);
 
     // construct an empty block
-    Block b2{GetParams().version, ghash, b1hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b2{GetParams().version, ghash, b1hash, ghash, t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b2.Solve();
     NodeRecord rec2{std::move(b2)};
     rec2.minerChainHeight = 2;
@@ -247,7 +249,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     tx.AddSignedInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig)
         .AddOutput(valueOut1, addr)
         .AddOutput(valueOut2, addr);
-    Block b3{GetParams().version, ghash, b2hash, ghash, t + 2, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b3{GetParams().version, ghash, b2hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b3.AddTransaction(tx);
     b3.Solve();
     NodeRecord rec3{std::move(b3)};
@@ -271,7 +273,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
-    ConcurrentQueue<ChainStatePtr> dqcs{std::make_shared<ChainState>()};
+    ConcurrentQueue<ChainStatePtr> dqcs{{std::make_shared<ChainState>()}};
     std::vector<RecordPtr> recs{};
     ConstBlockPtr forkblk;
     ChainStatePtr split;

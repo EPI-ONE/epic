@@ -59,6 +59,7 @@ public:
     void SetNonce(uint32_t);
 
     void AddTransaction(const Transaction&);
+    void AddTransaction(ConstTxPtr&&);
     bool HasTransaction() const;
     const std::optional<Transaction>& GetTransaction() const;
 
@@ -164,6 +165,10 @@ protected:
     std::optional<Transaction> transaction_;
 
     size_t optimalEncodingSize_ = 0;
+
+public:
+    enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
+    Source source = UNKNOWN;
 };
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;

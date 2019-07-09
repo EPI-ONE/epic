@@ -76,6 +76,16 @@ bool ThreadPool::IsIdle() const {
     return task_queue_.Empty();
 }
 
+void ThreadPool::Abort() {
+    if (!task_queue_.Empty()) {
+        task_queue_.Clear();
+    }
+
+    while (!IsIdle()) {
+        std::this_thread::yield();
+    }
+}
+
 ThreadPool::~ThreadPool() {
     delete working_states;
 }

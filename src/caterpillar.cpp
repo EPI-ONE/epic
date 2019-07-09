@@ -31,14 +31,14 @@ void Caterpillar::ReleaseBlocks(const uint256& blkHash) {
 }
 
 void Caterpillar::EnableOBC() {
-    static bool flag = false;
+    bool flag = false;
     if (obcEnabled_.compare_exchange_strong(flag, true)) {
         spdlog::info("OBC enabled.");
     }
 }
 
 void Caterpillar::DisableOBC() {
-    static bool flag = true;
+    bool flag = true;
     if (obcEnabled_.compare_exchange_strong(flag, false)) {
         spdlog::info("OBC disabled.");
     }
@@ -242,16 +242,16 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
     return true;
 }
 
-bool Caterpillar::Exists(const uint256& blkHash) const {
-    return blockCache_.contains(blkHash) || obc_.Contains(blkHash) || dbStore_.Exists(blkHash);
+bool Caterpillar::DBExists(const uint256& blkHash) const {
+    return dbStore_.Exists(blkHash) || blkHash == GENESIS.GetHash();
 }
 
 bool Caterpillar::DAGExists(const uint256& blkHash) const {
-    return blockCache_.contains(blkHash) || dbStore_.Exists(blkHash);
+    return blockCache_.contains(blkHash) || DBExists(blkHash);
 }
 
-bool Caterpillar::DBExists(const uint256& blkHash) const {
-    return dbStore_.Exists(blkHash) || blkHash == GENESIS.GetHash();
+bool Caterpillar::Exists(const uint256& blkHash) const {
+    return obc_.Contains(blkHash) || DAGExists(blkHash);
 }
 
 bool Caterpillar::IsMilestone(const uint256& blkHash) const {

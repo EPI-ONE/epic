@@ -478,6 +478,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             peerManager->RelayBlock(blk, peer);
         }
 
+        // TODO: erase transaction from mempool
+
         AddBlockToPending(blk);
         CAT->ReleaseBlocks(blk->GetHash());
     });
@@ -588,9 +590,14 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
 void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& block) {
     isVerifying = true;
-    globalStates_.emplace(block->GetHash(), chain->Verify(block));
-    UpdateDownloadingQueue(block->GetHash());
+
+    auto newMs  = chain->Verify(block);
+    globalStates_.emplace(block->GetHash(), newMs);
+    chain->AddNewState(*newMs);
+
     isVerifying = false;
+
+    UpdateDownloadingQueue(block->GetHash());
 }
 
 RecordPtr DAGManager::GetState(const uint256& msHash) const {

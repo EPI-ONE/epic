@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "pow.h"
+#include "miner.h"
 #include "utilstrencodings.h"
 
-class TestThreadPoolSolver : public testing::Test {};
+class TestMiner : public testing::Test {};
 
-TEST_F(TestThreadPoolSolver, simple_test) {
+TEST_F(TestMiner, Solve) {
     /*
      * Create a basic block to solve
      */
@@ -25,17 +25,47 @@ TEST_F(TestThreadPoolSolver, simple_test) {
     /*
      * test the solver
      */
-    ThreadPool solverPool(4);
-
-    solverPool.Start();
-    Miner m;
-    m.Solve(block, solverPool);
-    solverPool.Stop();
+    Miner m(4);
+    m.Start();
+    m.Solve(block);
+    m.Stop();
 
     EXPECT_TRUE(block.Verify());
 }
 
-TEST_F(TestThreadPoolSolver, mine_genesis) {
+TEST_F(TestMiner, Run) {
+    DAG         = std::make_unique<DAGManager>();
+    CAT         = std::make_unique<Caterpillar>("temp");
+    peerManager = std::make_unique<PeerManager>();
+    MEMPOOL     = std::make_unique<MemPool>();
+
+    Miner m(2);
+    std::thread t(std::bind(&Miner::Run, &m)); // m.Run()
+    sleep(1);
+    m.Stop();
+    t.join();
+
+    usleep(50000);
+    DAG->Stop();
+
+    ASSERT_TRUE(m.GetSelfChainHead());
+    ASSERT_TRUE(m.GetFirstKey().IsValid());
+
+    if (DAG->GetBestChain().GetPendingBlocks().empty()) {
+        ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
+    }
+
+    DAG.reset();
+    CAT.reset();
+    peerManager.reset();
+    MEMPOOL.reset();
+
+    // Delete the temporary test data folder
+    std::string cmd = "exec rm -r temp";
+    system(cmd.c_str());
+}
+
+TEST_F(TestMiner, MineGenesis) {
     /**
      * MainNet: {version: 1, difficulty target: 0x1d00ffffL}
      * TestNet: {version:10, difficulty target: 0x1e00ffffL}
@@ -70,11 +100,10 @@ TEST_F(TestThreadPoolSolver, mine_genesis) {
     // Uncomment the following lines to mine
     /////////////////////////////////////////////////////////////////////
     // int numThreads = 44;
-    // ThreadPool solverPool(numThreads);
-    // solverPool.Start();
-    // Miner m;
+    // Miner m(numThreads);
+    // m.Start();
     // m.Solve(genesisBlock, solverPool);
-    // solverPool.Stop();
+    // m.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
     // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
