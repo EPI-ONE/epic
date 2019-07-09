@@ -143,8 +143,9 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     Cumulator& cum   = nodeHandler.mapped();
 
     // Allowed distance
-    auto allowed = (cum.Sum() / (cum.TimeSpan() + 1)) / GetParams().sortitionCoefficient *
-                   (GetParams().maxTarget / (ms_hashrate + 1));
+    auto allowed =
+        // TODO: division by zero error
+        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / (ms_hashrate + 1));
 
     // Update key for the cumulator
     cum.Add(b.cblock, true);
