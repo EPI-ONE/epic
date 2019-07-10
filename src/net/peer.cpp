@@ -366,6 +366,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
                 }
             } else {
                 orphanLvsPool[bundle->nonce] = bundle;
+                AddPendingGetDataTask(*task);
                 spdlog::info("The Bundle answers a GetDataTask of type {}, wait for prev level set to be solidified, "
                              "lvsPool size = {}",
                              task->type, orphanLvsPool.size());

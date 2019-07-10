@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <vector>
 
 #include "caterpillar.h"
 #include "consensus.h"
@@ -121,8 +123,17 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // checkout GetData task size before receiving Bundle
     ASSERT_EQ(testPeer->GetDataTaskSize(), testChainHeight - 1);
 
-    // receive bundle
-    for (size_t i = 0; i < getData.hashes.size(); i++) {
+
+    // receive bundle in a random order
+    std::vector<int> bundle_order(getData.hashes.size());
+    for (int i = 0; i < getData.hashes.size(); i++) {
+        bundle_order[i] = i;
+    }
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(bundle_order.begin(), bundle_order.end(), g);
+
+    for (auto& i : bundle_order) {
         Bundle bundle(getData.bundleNonce[i]);
         for (auto& block : chain[i + 1]) {
             bundle.AddBlock(block.cblock);
@@ -130,6 +141,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
         NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));
         testPeer->ProcessMessage(bundle_message);
     }
+
 
     usleep(50000);
     CAT->Wait();
