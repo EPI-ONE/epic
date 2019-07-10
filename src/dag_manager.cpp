@@ -5,7 +5,7 @@
 DAGManager::DAGManager()
     : verifyThread_(1), syncPool_(1), storagePool_(2), isBatchSynching(false), syncingPeer(nullptr),
       isVerifying(false) {
-    milestoneChains.push(std::make_unique<Chain>());
+    milestoneChains.push(std::make_unique<Chain>(false));
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
     verifyThread_.Start();
     syncPool_.Start();
@@ -14,6 +14,11 @@ DAGManager::DAGManager()
 
 DAGManager::~DAGManager() {
     Stop();
+}
+
+bool DAGManager::Init() {
+    // dag should have only one chain when calling Init()
+    return milestoneChains.size() == 1;
 }
 
 /////////////////////////////////////
@@ -279,7 +284,7 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
 std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) {
     std::vector<uint256> result;
     const auto& bestChain    = milestoneChains.best()->GetStates();
-    size_t leastHeightCached = bestChain.front()->height;
+    size_t leastHeightCached = bestChain.empty() ? CAT->GetHeadHeight() : bestChain.front()->height;
 
     size_t cursorHeight = cursor->snapshot->height;
     assert(result.empty());
@@ -287,10 +292,11 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, siz
     // If the cursor height is within the cache range,
     // traverse the best chain cache.
     while (cursorHeight >= leastHeightCached && result.size() < length) {
-        result.push_back(bestChain[cursorHeight - leastHeightCached]->GetMilestoneHash());
         if (cursorHeight == 0) {
+            result.push_back(GENESIS.GetHash());
             break;
         }
+        result.push_back(bestChain[cursorHeight - leastHeightCached]->GetMilestoneHash());
         --cursorHeight;
     }
 
@@ -542,22 +548,22 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
     if (msBlock) {
         auto ms = msBlock->snapshot;
+        if (CheckMsPOW(block, ms)) {
+            if (*(ms) == *(GetMilestoneHead()->snapshot)) {
+                // new milestone on mainchain
+                ProcessMilestone(mainchain, block);
+                if (size_t level = FlushTrigger()) {
+                    DeleteFork();
+                    FlushToCAT(level);
+                }
+            } else {
+                // new fork
 
-        if (*(ms) == *(mainchain->GetChainHead()) && CheckMsPOW(block, ms)) {
-            // new milestone on mainchain
-            ProcessMilestone(mainchain, block);
-            if (size_t level = FlushTrigger()) {
-                // check if we can delete forked chain first to reduce flushing time
-                DeleteFork();
-                FlushToCAT(level);
+                auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
+                ProcessMilestone(new_fork, block);
+                milestoneChains.emplace(std::move(new_fork));
             }
-        } else if (CheckMsPOW(block, ms)) {
-            // new fork
-            auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
-            ProcessMilestone(new_fork, block);
-            milestoneChains.emplace(std::move(new_fork));
         }
-
         return;
     }
 
@@ -595,7 +601,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& block) {
     isVerifying = true;
 
-    auto newMs  = chain->Verify(block);
+    auto newMs = chain->Verify(block);
     globalStates_.emplace(block->GetHash(), newMs);
     chain->AddNewState(*newMs);
 
@@ -636,7 +642,7 @@ RecordPtr DAGManager::GetState(const uint256& msHash) const {
     }
 }
 
-const Chain& DAGManager::GetBestChain() const {
+Chain& DAGManager::GetBestChain() const {
     return *milestoneChains.best();
 }
 
@@ -733,6 +739,9 @@ RecordPtr DAGManager::GetMilestoneHead() const {
 }
 
 size_t DAGManager::GetBestMilestoneHeight() const {
+    if (GetBestChain().GetStates().empty()) {
+        return CAT->GetHeadHeight();
+    }
     return GetBestChain().GetChainHead()->height;
 }
 

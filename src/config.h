@@ -156,9 +156,24 @@ public:
         return rpcPort_;
     }
 
+    bool IsDaemon() const {
+        return daemon_;
+    }
+
+    void SetDaemon(bool daemon) {
+        daemon_ = daemon;
+    }
+
+    bool IsStartWithNewDB() const {
+        return startWithNewDB;
+    }
+    void SetStartWithNewDB(bool startWithNewDb) {
+        startWithNewDB = startWithNewDb;
+    }
+
     void ShowConfig() {
         std::stringstream ss;
-        ss << "current config: " << std::endl;
+        ss << std::endl << "current config: " << std::endl;
         ss << "config file path = " << GetConfigFilePath() << std::endl;
         ss << "use logger file = " << useFileLogger_ << std::endl;
         ss << "logger file path = " << GetLoggerPath() << loggerFilename_ << std::endl;
@@ -211,12 +226,16 @@ private:
     std::vector<NetAddress> seeds_;
 
     // db
+    bool startWithNewDB = false;
     std::string dbPath_ = "db/";
     std::string connect_;
 
     // rpc
     bool disableRPC_;
     uint16_t rpcPort_ = defaultRPCPort;
+
+    // daemon
+    bool daemon_;
 };
 
 extern std::unique_ptr<Config> config;

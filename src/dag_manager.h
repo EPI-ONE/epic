@@ -21,6 +21,11 @@ public:
     ~DAGManager();
 
     /**
+     * Delete the genesis state in the chains if last head height >0, maybe reload some blocks as cache later
+     */
+    bool Init();
+
+    /**
      * Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
      * and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
      * sending queue according to the BlockLocator constructed by peer.
@@ -49,7 +54,7 @@ public:
     // Checkout states either in different chain or in db
     RecordPtr GetState(const uint256&) const;
 
-    const Chain& GetBestChain() const;
+    Chain& GetBestChain() const;
 
     size_t GetBestMilestoneHeight() const;
 
@@ -179,6 +184,7 @@ private:
      * zero if no chain states need to be flushed
      */
     size_t FlushTrigger();
+
     void FlushToCAT(size_t); // flush the oldest chain states
 };
 

@@ -1,5 +1,6 @@
-#include "dag_manager.h"
+
 #include "peer_manager.h"
+#include "test_env.h"
 #include <gtest/gtest.h>
 
 class TestPeerManager : public testing::Test {
@@ -9,9 +10,11 @@ public:
 
     static void SetUpTestCase() {
         config = std::make_unique<Config>();
-        DAG = std::make_unique<DAGManager>();
+        EpicTestEnvironment::SetUpDAG("test_peer_manager/");
     }
-    static void TearDownTestCase() {}
+    static void TearDownTestCase() {
+        EpicTestEnvironment::TearDownDAG("test_peer_manager/");
+    }
     void SetUp() {
         server.Start();
         client.Start();

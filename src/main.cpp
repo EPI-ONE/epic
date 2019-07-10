@@ -1,14 +1,20 @@
 #include "init.h"
 
 int main(int argc, char** argv) {
-    int ret = 0;
-    Init(argc, argv);
+    int init_result = Init(argc, argv);
+    if (!init_result) {
+        CreateDaemon();
+    } else {
+        return init_result;
+    }
+
     if (Start()) {
+        // start some applications, such as miner, visualization...
+        // TODO
         WaitShutdown();
     } else {
         std::cout << "Failed to start epic" << std::endl;
-        ret = -1;
     }
     ShutDown();
-    return ret;
+    return NORMAL_EXIT;
 }

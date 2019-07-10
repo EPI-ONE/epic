@@ -53,7 +53,9 @@ ConstBlockPtr Caterpillar::GetBlockCache(const uint256& blkHash) const {
 }
 
 StoredRecord Caterpillar::GetMilestoneAt(size_t height) const {
-    return ConstructNRFromFile(dbStore_.GetMsPos(height));
+    auto rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
+    rec->snapshot->PushHash(rec->cblock->GetHash());
+    return rec;
 }
 
 StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
@@ -167,6 +169,14 @@ size_t Caterpillar::GetHeight(const uint256& blkHash) const {
     return dbStore_.GetHeight(blkHash);
 }
 
+uint64_t Caterpillar::GetHeadHeight() const {
+    return dbStore_.GetHeadHeight();
+}
+
+bool Caterpillar::SaveHeadHeight(uint64_t height) const {
+    return dbStore_.WriteHeadHeight(height);
+}
+
 std::unique_ptr<UTXO> Caterpillar::GetUTXO(const uint256& key) const {
     return dbStore_.GetUTXO(key);
 }
@@ -235,6 +245,7 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
         AddCurrentSize(totalSize);
 
+        CAT->SaveHeadHeight(height);
     } catch (const std::exception&) {
         return false;
     }

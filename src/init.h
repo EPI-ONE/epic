@@ -9,11 +9,14 @@
 #include "spdlog/sinks/basic_file_sink.h"
 
 enum : uint8_t {
-    COMMANDLINE_INIT_FAILURE = 1,
+    NORMAL_EXIT = 0,
+    COMMANDLINE_INIT_FAILURE,
     LOG_INIT_FAILURE,
+    PARAMS_INIT_FAILURE,
+    DAG_INIT_FAILURE,
 };
 
-void Init(int argc, char* argv[]);
+int Init(int argc, char* argv[]);
 
 bool Start();
 void ShutDown();
@@ -27,4 +30,5 @@ void ParseCommandLine(int argc, char* argv[], cxxopts::Options& options);
 void UseFileLogger(const std::string& path, const std::string& filename);
 void InitLogger();
 
+void CreateDaemon();
 #endif // __SRC_INIT_H__

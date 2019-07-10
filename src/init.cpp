@@ -3,6 +3,7 @@
 #include <atomic>
 #include <csignal>
 #include <net/peer_manager.h>
+#include <spawn.h>
 
 #include "dag_manager.h"
 #include "mempool.h"
@@ -13,6 +14,8 @@ Block GENESIS;
 NodeRecord GENESIS_RECORD;
 std::unique_ptr<Config> config;
 std::unique_ptr<PeerManager> peerManager;
+std::unique_ptr<MemPool> memPool;
+
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> rpc_server;
@@ -52,9 +55,17 @@ void CreateRoot(const std::string& path) {
     }
 }
 
-void Init(int argc, char* argv[]) {
+int Init(int argc, char* argv[]) {
+    std::cout << "Start initializing...\n" << std::endl;
+
+    /*
+     *  Create config instance
+     */
     config = std::make_unique<Config>();
-    // setup and parse the command line
+
+    /*
+     *  Setup and parse the command line
+     */
     cxxopts::Options options("epic", "welcome to epic, enjoy your time!");
 
     try {
@@ -63,51 +74,99 @@ void Init(int argc, char* argv[]) {
     } catch (const cxxopts::OptionException& e) {
         std::cout << options.help() << std::endl;
         std::cerr << "error parsing options: " << e.what() << std::endl;
-        exit(COMMANDLINE_INIT_FAILURE);
+        return COMMANDLINE_INIT_FAILURE;
     }
 
-    // load config file
+    /*
+     *  Load config file
+     */
     LoadConfigFile();
 
-    // init logger
+    /*
+     * Init logger
+     */
     InitLogger();
-
-    InitSignal();
 
     config->ShowConfig();
 
-    // set global variables
+    /*
+     * Init signal and register handle functions
+     */
+    InitSignal();
+
+    /*
+     * Set global variables
+     */
     const std::map<std::string, ParamsType> parseType = {
         {"Mainnet", ParamsType::MAINNET}, {"Testnet", ParamsType::TESTNET}, {"Unittest", ParamsType::UNITTEST}};
     try {
         SelectParams(parseType.at(config->GetNetworkType()));
     } catch (const std::out_of_range& err) {
         std::cerr << "wrong format of network type in config.toml" << std::endl;
+        return PARAMS_INIT_FAILURE;
     } catch (const std::invalid_argument& err) {
         std::cerr << "error choosing params: " << err.what() << std::endl;
+        return PARAMS_INIT_FAILURE;
     }
 
     file::SetDataDirPrefix(config->GetRoot());
-    CAT         = std::make_unique<Caterpillar>(config->GetDBPath());
-    DAG         = std::make_unique<DAGManager>();
+
+    /*
+     * Load caterpillar, dag and memory pool
+     */
+    if (config->IsStartWithNewDB()) {
+        // delete old block data
+        DeleteDir(config->GetDBPath());
+        DeleteDir(config->GetRoot() + file::typestr[file::FileType::BLK]);
+        DeleteDir(config->GetRoot() + file::typestr[file::FileType::REC]);
+    }
+
+    CAT = std::make_unique<Caterpillar>(config->GetDBPath());
+
+    // put genesis block into cat
+    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+    CAT->StoreRecords(genesisLvs);
+
+    DAG = std::make_unique<DAGManager>();
+    if (!DAG->Init()) {
+        return DAG_INIT_FAILURE;
+    }
+
+    MEMPOOL = std::make_unique<MemPool>();
+
+    /*
+     * Create network instance
+     */
     peerManager = std::make_unique<PeerManager>();
 
+    /*
+     * Load wallet TODO
+     */
+
+    /*
+     * Create rpc instance
+     */
     if (!(config->GetDisableRPC())) {
         std::string rpc_addr_str = "0.0.0.0:" + std::to_string(config->GetRPCPort());
         auto rpcAddress          = NetAddress::GetByIP(rpc_addr_str);
         rpc_server               = std::make_unique<RPCServer>(*rpcAddress);
     }
+
+    std::cout << "Finish initializing...\n" << std::endl;
+    return NORMAL_EXIT;
 }
 
 void SetupCommandline(cxxopts::Options& options) {
     // clang-format off
     options.add_options()
     ("h,help", "print this message", cxxopts::value<bool>())
-    ("c,configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
+    ("configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
     ("b,bindip", "bind ip address",cxxopts::value<std::string>())
     ("p,bindport", "bind port", cxxopts::value<uint16_t>())
-    ("connect", "connect", cxxopts::value<std::string>())
+    ("connect","connect", cxxopts::value<std::string>())
     ("disable-rpc", "disable rpc server", cxxopts::value<bool>())
+    ("D,daemon","make the program running in a daemon process",cxxopts::value<bool>())
+    ("N,newdb","start with the new db",cxxopts::value<bool>())
     ;
     // clang-format on
 }
@@ -130,6 +189,12 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     }
     if (result.count("connect") > 0) {
         config->SetConnect(result["connect"].as<std::string>());
+    }
+    if (result.count("daemon") > 0) {
+        config->SetDaemon(result["daemon"].as<bool>());
+    }
+    if (result.count("newdb") > 0) {
+        config->SetStartWithNewDB(true);
     }
     config->SetDisableRPC(result["disable-rpc"].as<bool>());
 }
@@ -275,10 +340,13 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 }
 
 bool Start() {
+    // start p2p network
     if (!peerManager->Init(config)) {
         return false;
     }
     peerManager->Start();
+
+    // start rpc server
     if (!(config->GetDisableRPC())) {
         rpc_server->Start();
     }
@@ -297,6 +365,9 @@ void ShutDown() {
     CAT->Stop();
 
     CAT.reset();
+    DAG.reset();
+    memPool.reset();
+    peerManager.reset();
 
     spdlog::info("shutdown finish");
     spdlog::shutdown();
@@ -305,5 +376,12 @@ void ShutDown() {
 void WaitShutdown() {
     while (!b_shutdown) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void CreateDaemon() {
+    if (config->IsDaemon()) {
+        std::cout << "Create daemon process, parent process exit" << std::endl;
+        daemon(1, 0);
     }
 }

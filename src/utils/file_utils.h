@@ -17,6 +17,7 @@
 bool CheckDirExist(const std::string& dirPath);
 bool CheckFileExist(const std::string& filePath);
 bool Mkdir_recursive(const std::string& path);
+void DeleteDir(const std::string& dirpath);
 
 struct FilePos;
 class FileReader;
@@ -83,10 +84,10 @@ struct FilePos {
 
 class FileBase {
 public:
-    FileBase() = default;
+    FileBase()                = default;
     FileBase(const FileBase&) = delete;
     FileBase& operator=(const FileBase&) = delete;
-    virtual ~FileBase() = default;
+    virtual ~FileBase()                  = default;
 
     std::string GetFileName() const {
         return filename_;

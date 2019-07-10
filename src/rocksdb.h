@@ -36,7 +36,7 @@ class RocksDBStore {
 public:
     RocksDBStore()                    = delete;
     RocksDBStore(const RocksDBStore&) = delete;
-    RocksDBStore(std::string dbPath);
+    explicit RocksDBStore(std::string dbPath);
 
     ~RocksDBStore();
 
@@ -90,10 +90,16 @@ public:
     bool UpdateReg(const RegChange&) const;
     bool RollBackReg(const RegChange&) const;
 
+    bool WriteHeadHeight(uint64_t height) const;
+    uint64_t GetHeadHeight() const;
+
 private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
     rocksdb::DB* db_;
     std::string dbpath_;
+
+    // keys in the "info" column
+    const std::string kHeadHeight = "HeadHeight";
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 

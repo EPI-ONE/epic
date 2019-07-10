@@ -66,7 +66,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     std::vector<ConstBlockPtr> blocks;
     while (blocks.size() <= 2) {
         auto [chain, placeholder] = fac.CreateChain(GENESIS_RECORD, 2);
-        blocks = std::move(chain.back());
+        blocks                    = std::move(chain.back());
         blocks.pop_back(); // remove milestone such that all blocks will stay in pending
     }
 
@@ -108,7 +108,7 @@ TEST_F(TestConsensus, AddForks) {
     branches.reserve(n_branches);
 
     auto [chain, vMsRec] = fac.CreateChain(GENESIS_RECORD, chain_length);
-    //fac.PrintChain(chain);
+    // fac.PrintChain(chain);
     branches.emplace_back(std::move(chain));
     branches_rec.emplace_back(std::move(vMsRec));
 
@@ -120,7 +120,7 @@ TEST_F(TestConsensus, AddForks) {
         auto& new_split_point = picked_chain[lucky_draw > 5 ? 5 : lucky_draw];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
-        //fac.PrintChain(chain);
+        // fac.PrintChain(chain);
 
         branches.emplace_back(std::move(chain));
         branches_rec.emplace_back(std::move(vMsRec));
@@ -129,7 +129,7 @@ TEST_F(TestConsensus, AddForks) {
     ///////////////////////////
     // Test starts here
     //
-    //spdlog::set_level(spdlog::level::trace);
+    // spdlog::set_level(spdlog::level::trace);
     for (const auto& chain : branches) {
         for (const auto& lvs : chain) {
             for (const auto& blkptr : lvs) {

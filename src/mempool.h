@@ -55,5 +55,4 @@ private:
 };
 
 extern std::unique_ptr<MemPool> MEMPOOL;
-
 #endif

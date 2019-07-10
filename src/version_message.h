@@ -6,18 +6,19 @@
 
 class VersionMessage {
 public:
-    int client_version;
-    uint64_t local_service;
+    int client_version     = 0;
+    uint64_t local_service = 0;
     uint64_t nTime;
     NetAddress address_you;
     uint64_t current_height;
 
     VersionMessage() = default;
-    VersionMessage(int client_version,
-        uint64_t local_service,
-        uint64_t nTime,
-        NetAddress& address_you,
-        uint64_t current_height)
+
+    VersionMessage(NetAddress address_you,
+                   uint64_t current_height,
+                   int client_version     = 0,
+                   uint64_t local_service = 0,
+                   uint64_t nTime         = time(nullptr))
         : client_version(client_version), local_service(local_service), nTime(nTime),
           address_you(std::move(address_you)), current_height(current_height) {}
 

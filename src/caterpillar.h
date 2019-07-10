@@ -30,7 +30,9 @@ public:
     std::unique_ptr<VStream> GetRawLevelSetAt(size_t height) const;
     std::unique_ptr<VStream> GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
     size_t GetHeight(const uint256&) const;
-
+    uint64_t GetHeadHeight() const;
+    bool SaveHeadHeight(uint64_t height) const;
+    
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;

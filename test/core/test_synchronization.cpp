@@ -16,7 +16,7 @@ public:
         config->SetDBPath("testSync/");
         spdlog::set_level(spdlog::level::debug);
 
-        DAG = std::make_unique<DAGManager>();
+
         file::SetDataDirPrefix(config->GetDBPath());
         CAT = std::make_unique<Caterpillar>(config->GetDBPath());
 
@@ -25,6 +25,7 @@ public:
         CAT->StoreRecords(genesisLvs);
         CAT->EnableOBC();
 
+        DAG         = std::make_unique<DAGManager>();
         peerManager = std::make_unique<TestPM>();
     }
 
@@ -59,7 +60,7 @@ TEST_F(TestSync, test_basic_network) {
 }
 
 TEST_F(TestSync, test_basic_sync_workflow) {
-    TestPM* testPeerManager = (TestPM*) peerManager.get();
+    auto testPeerManager = (TestPM*) peerManager.get();
 
     const void* peer_handle = (const void*) 1;
 
@@ -67,8 +68,13 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     auto p = testPeerManager->GetPeer(peer_handle);
     ASSERT_TRUE(p);
 
+    // create a new chain
+    constexpr long testChainHeight = 5;
+    TestChain chain;
+    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, testChainHeight);
+
     auto testPeer            = (TestPeer*) p.get();
-    testPeer->versionMessage = new VersionMessage(0, 0, 0, TestPeer::GetFakeAddr(), 10);
+    testPeer->versionMessage = new VersionMessage(TestPeer::GetFakeAddr(), testChainHeight);
 
     /**Start the synchronization as the block requester*/
 
@@ -89,11 +95,6 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     // check getInv task size before receiving Inv
     ASSERT_EQ(testPeer->GetInvTaskSize(), 1);
-
-    // create a new chain
-    constexpr long testChainHeight = 5;
-    TestChain chain;
-    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, testChainHeight);
 
     // receive Inv
     Inv inv(getInv.nonce);
@@ -134,7 +135,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     for (auto& i : bundle_order) {
         Bundle bundle(getData.bundleNonce[i]);
-        for (auto& block : chain[i ]) {
+        for (auto& block : chain[i]) {
             bundle.AddBlock(block);
         }
         NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));

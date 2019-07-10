@@ -1,4 +1,5 @@
 #include "peer_manager.h"
+#include <dag_manager.h>
 
 PeerManager::PeerManager() {
     connectionManager_ = new ConnectionManager();
@@ -80,22 +81,19 @@ void PeerManager::OnConnectionCreated(void* connection_handle, const std::string
 
     // send version message
     if (!peer->isInbound) {
-        VersionMessage ver = VersionMessage::GetFakeVersionMessage();
-        ver.address_you    = peer->address;
-        VStream stream(ver);
-        NetMessage msg(peer->connection_handle, VERSION_MSG, stream);
+        VersionMessage ver(peer->address, DAG->GetBestMilestoneHeight());
+        NetMessage msg(peer->connection_handle, VERSION_MSG, VStream(ver));
         SendMessage(msg);
         spdlog::info("send version message to {}", peer->address.ToString());
     }
 }
 
 void PeerManager::OnConnectionClosed(const void* connection_handle) {
-    {
-        auto peer = GetPeer(connection_handle);
-        if (peer) {
-            RemoveAddr(peer->address);
-            RemovePeer(connection_handle);
-        }
+    auto peer = GetPeer(connection_handle);
+    if (peer) {
+        RemoveAddr(peer->address);
+        RemovePeer(connection_handle);
+        spdlog::info("{} {}   ({} connected)", "Disconnected ", peer->address.ToString(), GetConnectedPeerSize());
     }
 }
 

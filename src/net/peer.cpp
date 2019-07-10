@@ -141,11 +141,8 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
 
     // send version message if peer is inbound
     if (isInbound) {
-        VersionMessage vmsg = VersionMessage::GetFakeVersionMessage();
-        vmsg.address_you    = address;
-        VStream stream;
-        stream << vmsg;
-        SendMessage(NetMessage(connection_handle, VERSION_MSG, stream));
+        VersionMessage vmsg(address, DAG->GetBestMilestoneHeight());
+        SendMessage(NetMessage(connection_handle, VERSION_MSG, VStream(vmsg)));
         spdlog::info("send version message to {}", address.ToString());
     }
 

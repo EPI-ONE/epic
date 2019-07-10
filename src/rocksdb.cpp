@@ -348,6 +348,27 @@ bool RocksDBStore::WritePosImpl(const string& column, const K& key, const H& h, 
     return db_->Put(WriteOptions(), handleMap_.at(column), keySlice, valueSlice).ok();
 }
 
+bool RocksDBStore::WriteHeadHeight(uint64_t height) const {
+    MAKE_KEY_SLICE(kHeadHeight);
+    VStream value(height);
+    Slice valueSlice(value.data(), value.size());
+    return db_->Put(WriteOptions(), handleMap_.at("info"), keySlice, valueSlice).ok();
+}
+
+uint64_t RocksDBStore::GetHeadHeight() const {
+    MAKE_KEY_SLICE(kHeadHeight);
+    GET_VALUE(handleMap_.at("info"), 0);
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+        uint64_t height;
+        value >> height;
+        return height;
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+
 template bool RocksDBStore::WritePosImpl(
     const string& column, const uint256&, const uint64_t&, const uint32_t&, const uint32_t&) const;
 

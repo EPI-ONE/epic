@@ -9,7 +9,7 @@ public:
 };
 
 TEST_F(DFSTest, empty_pending_blocks_map) {
-    Chain chain;
+    Chain chain(false);
     ConstBlockPtr block_0 = fac.CreateBlockPtr();
 
     chain.AddPendingBlock(block_0);
@@ -19,7 +19,7 @@ TEST_F(DFSTest, empty_pending_blocks_map) {
 }
 
 TEST_F(DFSTest, complex_test) {
-    Chain chain;
+    Chain chain(false);
     std::size_t N = 10;
     std::vector<Block> blocks;
     blocks.reserve(N);

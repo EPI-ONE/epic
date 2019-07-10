@@ -63,6 +63,10 @@ public:
         return lvsHashes_;
     }
 
+    void PushHash(const uint256& hash) {
+        lvsHashes_.emplace_back(hash);
+    }
+
     const uint256& GetMilestoneHash() const {
         return lvsHashes_.back();
     }
