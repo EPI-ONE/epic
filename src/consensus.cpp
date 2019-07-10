@@ -145,17 +145,25 @@ std::string std::to_string(const ChainState& cs) {
 
 std::string std::to_string(const NodeRecord& rec, bool showtx) {
     std::string s = "NodeRecord {\n";
+    s += strprintf("   at height : %i \n", rec.height);
     s += strprintf("   is milestone: %s \n\n", rec.isMilestone);
-    s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
-    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
-    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
     if (rec.snapshot) {
         s += "   with snapshot of ";
         s += to_string(*(rec.snapshot));
     }
 
+    if (rec.cblock) {
+        s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
+    }
+
+    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
+    s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
+
+    static const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
+    s += strprintf("   redemption status: %s \n", enumRedeemption[rec.isRedeemed]);
+
     static const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
-    s += strprintf("   status: %s \n }", enumName[rec.validity]);
+    s += strprintf("   transaction status: %s \n }", enumName[rec.validity]);
     return s;
 }

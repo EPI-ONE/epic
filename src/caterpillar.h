@@ -13,7 +13,7 @@
 #include "rocksdb.h"
 #include "threadpool.h"
 
-typedef std::unique_ptr<NodeRecord> StoredRecord;
+typedef std::unique_ptr<NodeRecord, std::function<void(NodeRecord*)>> StoredRecord;
 
 class Caterpillar {
 public:
