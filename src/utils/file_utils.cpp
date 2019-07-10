@@ -45,6 +45,13 @@ bool Mkdir_recursive(const std::string& path) {
     return true;
 }
 
+void DeleteDir(const std::string& dirpath) {
+    if (CheckDirExist(dirpath)) {
+        std::string cmd = "rm -r " + dirpath;
+        system(cmd.c_str());
+    }
+}
+
 void file::SetDataDirPrefix(std::string strprefix) {
     prefix = strprefix + "/";
 }

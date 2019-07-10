@@ -54,7 +54,7 @@ TEST_F(TestNetMsg, AddressMessage) {
 }
 
 TEST_F(TestNetMsg, VersionMessage) {
-    VersionMessage versionMessage(1, 0, time(0), a1, 0);
+    VersionMessage versionMessage(a1, 0);
     std::stringstream os;
     versionMessage.Serialize(os);
 

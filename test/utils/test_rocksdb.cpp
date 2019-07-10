@@ -162,13 +162,21 @@ TEST_F(TestRocksDB, reg) {
 
     ASSERT_TRUE(db->RollBackReg(subtraction));
 
-    for (const auto& e: subtraction.GetRemoved()) {
+    for (const auto& e : subtraction.GetRemoved()) {
         ASSERT_EQ(e.second, db->GetLastReg(e.first));
     }
 
-    for (const auto& e: subtraction.GetRemoved()) {
+    for (const auto& e : subtraction.GetRemoved()) {
         addition.Remove(e);
     }
 
     ASSERT_TRUE(addition.GetCreated().empty());
+}
+
+TEST_F(TestRocksDB, headheight) {
+    for (int i = 0; i < 100; i++) {
+        db->WriteHeadHeight(i);
+        uint64_t read_height = db->GetHeadHeight();
+        ASSERT_EQ(i, read_height);
+    }
 }

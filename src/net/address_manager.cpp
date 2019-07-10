@@ -177,8 +177,8 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastTry     = table->get_as<uint64_t>("lastTry");
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
-                newAddr_.insert(std::make_pair(
-                    *IPAddress::GetByIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                newAddr_.insert(std::make_pair(*IPAddress::GetByIP(*ip),
+                                               NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
             }
         }
         auto old_table = all_address->get_table_array("old");
@@ -189,8 +189,8 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastTry     = table->get_as<uint64_t>("lastTry");
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
-                oldAddr_.insert(std::make_pair(
-                    *IPAddress::GetByIP(*ip), NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                oldAddr_.insert(std::make_pair(*IPAddress::GetByIP(*ip),
+                                               NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
             }
         }
     }

@@ -45,8 +45,10 @@ struct std::hash<Cumulator> {
 class Chain {
 public:
     /** Init a chain with genesis */
-    Chain();
-    Chain(const Chain&);
+    explicit Chain(bool WithGenesis);
+
+    Chain(const Chain&) = delete;
+    Chain()             = delete;
 
     /**
      * Create a forked chain from $chain which has the new fork in $fork;
@@ -76,7 +78,9 @@ public:
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
-        return (a.GetChainHead()->chainwork < b.GetChainHead()->chainwork);
+        auto a_chainwork = a.GetStates().empty() ? 0 : a.GetChainHead()->chainwork;
+        auto b_chainwork = b.GetStates().empty() ? 0 : b.GetChainHead()->chainwork;
+        return a_chainwork < b_chainwork;
     }
 
     inline bool IsMainChain() const {
