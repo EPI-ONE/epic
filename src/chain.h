@@ -5,7 +5,6 @@
 #include <optional>
 #include <vector>
 
-#include "block.h"
 #include "concurrent_container.h"
 #include "consensus.h"
 

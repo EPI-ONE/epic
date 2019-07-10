@@ -133,7 +133,7 @@ TEST_F(TestRocksDB, utxo) {
 }
 
 TEST_F(TestRocksDB, reg) {
-    int size = 10;
+    constexpr int size = 10;
 
     RegChange addition;
     for (int i = 0; i < size; ++i) {

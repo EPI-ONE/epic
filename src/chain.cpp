@@ -348,7 +348,7 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
                 rec->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
             }
 
-            return std::move(rec);
+            return rec;
         }
     }
     return result->second;
