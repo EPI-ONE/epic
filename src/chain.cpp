@@ -144,6 +144,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 
     // Allowed distance
     auto allowed =
+        // TODO: division by zero error
         (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / (ms_hashrate + 1));
 
     // Update key for the cumulator
@@ -175,8 +176,8 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     // validate each block in order
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
-            rec->prevRedemHash = rec->cblock->GetHash();
-            rec->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
+            rec->prevRedemHash    = rec->cblock->GetHash();
+            rec->isRedeemed       = NodeRecord::NOT_YET_REDEEMED;
             rec->minerChainHeight = 1;
         } else {
             if (auto update = Validate(*rec)) {

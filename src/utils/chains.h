@@ -11,9 +11,8 @@
 class Chains {
 private:
     typedef std::vector<ChainPtr> container_type;
-    typedef std::function<bool(const ChainPtr& a, const ChainPtr& b)> value_compare;
+    typedef std::function<bool(const ChainPtr&, const ChainPtr&)> value_compare;
     typedef container_type::size_type size_type;
-    typedef container_type::difference_type difference_type;
     typedef container_type::reference reference;
     typedef container_type::const_reference const_reference;
     typedef container_type::value_type value_type;
@@ -101,14 +100,18 @@ public:
 
     void update_best(const_iterator pos) {
         if (comp(best(), *pos)) {
+            c[m]->ismainchain_ = false;
             m = std::distance(c.cbegin(), pos);
+            c[m]->ismainchain_ = true;
         }
     }
 
 private:
     void update_best(const value_type& v, size_type i) {
         if (comp(best(), v)) {
+            c[m]->ismainchain_ = false;
             m = i;
+            c[m]->ismainchain_ = true;
         }
     }
 };

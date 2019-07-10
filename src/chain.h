@@ -113,6 +113,8 @@ public:
 
     RecordPtr GetRecord(const uint256&) const;
 
+    friend class Chains;
+
 private:
     // 1 if this chain is main chain, 0 otherwise;
     bool ismainchain_;
