@@ -246,7 +246,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     auto txoc{ValidateTx(&c, rec3)};
     ASSERT_TRUE(bool(txoc));
 
-    auto& spent   = txoc->GetRemoved();
+    auto& spent   = txoc->GetSpent();
     auto spentKey = XOR(b1hash, 0);
     ASSERT_EQ(spent.size(), 1);
     ASSERT_EQ(spent.count(spentKey), 1);

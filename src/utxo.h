@@ -80,15 +80,32 @@ typedef std::shared_ptr<const UTXO> UTXOPtr;
  * containing vectors representing keys of created and spent
  * UTXO of encoding by the special XOR function respectively
  */
-class TXOC : public Increment<uint256> {
+class TXOC {
 public:
-    using Increment::Increment;
+    TXOC() = default;
+    TXOC(const TXOC&) = default;
+    TXOC(TXOC&&)      = default;
+    TXOC& operator=(const TXOC& other) = default;
+    TXOC& operator=(TXOC&& other) = default;
+
+    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent) : increment_(created, spent) {}
 
     void AddToCreated(const UTXOPtr&);
     void AddToCreated(const uint256&, uint32_t);
     void AddToSpent(const TxInput&);
+    void Merge(TXOC&& txoc);
+
+    const std::unordered_set<uint256>& GetSpent() const {
+        return increment_.GetRemoved();
+    }
+    const std::unordered_set<uint256>& GetCreated() const {
+        return increment_.GetCreated();
+    }
 
     friend std::string std::to_string(const TXOC&);
+
+private:
+    Increment<uint256> increment_;
 };
 
 class ChainLedger {

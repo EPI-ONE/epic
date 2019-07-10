@@ -8,7 +8,14 @@
 template <typename T>
 class Increment {
 public:
-    Increment() = default;
+    Increment()                 = default;
+    Increment(const Increment&) = default;
+    Increment(Increment&&)      = default;
+    Increment& operator=(const Increment&) = default;
+    Increment& operator=(Increment&&) = default;
+
+    Increment(const std::unordered_set<T>& created, const std::unordered_set<T>& removed)
+        : created_(created), removed_(removed) {}
     Increment(std::unordered_set<T>&& created, std::unordered_set<T>&& removed)
         : created_(std::move(created)), removed_(std::move(removed)) {}
     virtual ~Increment() = default;
@@ -23,7 +30,7 @@ public:
     void Create(Args&&... args) {
         auto p = T(std::forward<Args>(args)...);
         if (!removed_.erase(p)) {
-            created_.emplace(std::forward<Args>(args)...);
+            created_.emplace(std::move(p));
         }
     }
 
