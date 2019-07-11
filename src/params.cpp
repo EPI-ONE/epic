@@ -155,7 +155,7 @@ UnitTestParams::UnitTestParams() {
 
     CreateGenesis(genesisHexStr);
 
-    genesisRecord_->snapshot->hashRate    = 2;
+    genesisRecord_->snapshot->hashRate    = 1;
     genesisRecord_->snapshot->blockTarget = maxTarget;
     genesisRecord_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
 }

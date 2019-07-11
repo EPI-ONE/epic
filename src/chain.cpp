@@ -202,7 +202,6 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
 
-    // states_.emplace_back(std::move(state));
     recordHistory_.merge(std::move(verifying_));
     return recs.back();
 }

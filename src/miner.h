@@ -93,7 +93,8 @@ public:
                 prevHash = selfChainHead->GetHash();
                 if (distanceCal.Full()) {
                     auto timeInterval = distanceCal.TimeSpan();
-                    double percentage = distanceCal.Sum().getdouble() / (timeInterval + 1) / head->snapshot->hashRate;
+                    double percentage =
+                        distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
                     if (counter % 128 == 0) {
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }

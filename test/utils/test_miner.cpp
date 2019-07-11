@@ -102,7 +102,7 @@ TEST_F(TestMiner, MineGenesis) {
     // int numThreads = 44;
     // Miner m(numThreads);
     // m.Start();
-    // m.Solve(genesisBlock, solverPool);
+    // m.Solve(genesisBlock);
     // m.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
