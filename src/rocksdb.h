@@ -25,6 +25,9 @@ static const std::vector<std::string> COLUMN_NAMES = {
     "utxo", // (key) outpoint hash ^ outpoint index
             // (value) utxo
 
+    "reg", // (key) hash of peer chain head
+           // (value) hash of the last registration block on this peer chain
+
     "info" // Stores necessary info to recover the system,
            // e.g., lastest ms head in db
 };
@@ -83,6 +86,10 @@ public:
     bool WriteUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;
 
+    uint256 GetLastReg(const uint256&) const;
+    bool UpdateReg(const RegChange&) const;
+    bool RollBackReg(const RegChange&) const;
+
 private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
     rocksdb::DB* db_;
@@ -93,8 +100,12 @@ private:
     uint256 GetMsHashAt(const uint64_t& height) const;
     std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
 
+    bool WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
+    bool DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
+
     std::string Get(const std::string& column, const rocksdb::Slice& key) const;
     std::string Get(const std::string& column, const std::string& key) const;
+    bool Delete(const std::string& column, std::string&& key) const;
 
     template <typename K, typename H, typename P1, typename P2>
     bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;

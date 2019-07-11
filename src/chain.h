@@ -3,7 +3,6 @@
 
 #include <deque>
 #include <optional>
-#include <utility>
 #include <vector>
 
 #include "concurrent_container.h"
@@ -101,12 +100,6 @@ public:
      */
     RecordPtr Verify(const ConstBlockPtr&);
 
-    /**
-     * TODO:
-     * Take snapshots and increases the height of the chain by 1
-     */
-    void UpdateChainState(const std::vector<RecordPtr>&);
-
     static bool IsValidDistance(const RecordPtr&, const arith_uint256&);
 
     bool IsMilestone(const uint256&) const;
@@ -158,10 +151,10 @@ private:
      * and update its NR info
      * Returns TXOC of the single block
      */
-    std::optional<TXOC> Validate(NodeRecord& record);
+    std::optional<TXOC> Validate(NodeRecord& record, RegChange&);
 
     // offline verification for transactions
-    std::optional<TXOC> ValidateRedemption(NodeRecord& record);
+    std::optional<TXOC> ValidateRedemption(NodeRecord& record, RegChange&);
     std::optional<TXOC> ValidateTx(NodeRecord& record);
 
     const Coin& GetPrevReward(const NodeRecord& rec) {

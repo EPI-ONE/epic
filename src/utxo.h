@@ -2,6 +2,7 @@
 #define __SRC_UTXO_H__
 
 #include "block.h"
+#include "increment.h"
 
 #include <unordered_set>
 
@@ -75,32 +76,36 @@ struct std::hash<UTXO> {
 typedef std::shared_ptr<const UTXO> UTXOPtr;
 
 /**
- * TXOC stands for a delta of transaction output changes
+ * TXOC stands for a delta of transaction output changes,
+ * containing vectors representing keys of created and spent
+ * UTXO of encoding by the special XOR function respectively
  */
 class TXOC {
 public:
     TXOC() = default;
-    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent)
-        : created_(std::move(created)), spent_(std::move(spent)) {}
+    TXOC(const TXOC&) = default;
+    TXOC(TXOC&&)      = default;
+    TXOC& operator=(const TXOC& other) = default;
+    TXOC& operator=(TXOC&& other) = default;
+
+    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent) : increment_(created, spent) {}
 
     void AddToCreated(const UTXOPtr&);
     void AddToCreated(const uint256&, uint32_t);
     void AddToSpent(const TxInput&);
-    void Merge(TXOC&&);
+    void Merge(TXOC&& txoc);
 
-    const std::unordered_set<uint256>& GetTxOutsCreated() const {
-        return created_;
+    const std::unordered_set<uint256>& GetSpent() const {
+        return increment_.GetRemoved();
     }
-    const std::unordered_set<uint256>& GetTxOutsSpent() const {
-        return spent_;
+    const std::unordered_set<uint256>& GetCreated() const {
+        return increment_.GetCreated();
     }
 
     friend std::string std::to_string(const TXOC&);
 
 private:
-    // vectors representing keys of created and spent UTXO of encoding by the special XOR function respectively
-    std::unordered_set<uint256> created_;
-    std::unordered_set<uint256> spent_;
+    Increment<uint256> increment_;
 };
 
 class ChainLedger {
@@ -109,8 +114,8 @@ public:
     ChainLedger(const ChainLedger&) = default;
 
     ChainLedger(std::unordered_map<uint256, UTXOPtr>&& pending,
-        std::unordered_map<uint256, UTXOPtr>&& comfirmed,
-        std::unordered_map<uint256, UTXOPtr>&& removed)
+                std::unordered_map<uint256, UTXOPtr>&& comfirmed,
+                std::unordered_map<uint256, UTXOPtr>&& removed)
         : pending_(std::move(pending)), comfirmed_(std::move(comfirmed)), removed_(std::move(removed)) {}
 
     void AddToPending(UTXOPtr);

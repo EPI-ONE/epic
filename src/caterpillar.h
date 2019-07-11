@@ -21,7 +21,7 @@ public:
     Caterpillar(const std::string& dbPath);
 
     /**
-     * API for other modules for searching a block
+     * DB API for other modules
      */
     StoredRecord GetMilestoneAt(size_t height) const;
     StoredRecord GetRecord(const uint256&) const;
@@ -34,6 +34,10 @@ public:
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;
+
+    uint256 GetPrevRedemHash(const uint256&) const;
+    bool UpdatePrevRedemHashes(const RegChange&) const;
+    bool RollBackPrevRedemHashes(const RegChange&) const;
 
     /**
      * Flush records to db. Called by DAGManager only.

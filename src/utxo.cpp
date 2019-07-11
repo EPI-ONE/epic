@@ -24,25 +24,20 @@ uint64_t UTXO::HashCode() const {
 // TXOC
 //
 void TXOC::AddToCreated(const UTXOPtr& putxo) {
-    created_.emplace(putxo->GetKey());
+    increment_.Create(putxo->GetKey());
 }
 
 void TXOC::AddToCreated(const uint256& blkHash, uint32_t index) {
-    created_.emplace(XOR(blkHash, index));
+    increment_.Create(XOR(blkHash, index));
 }
 
 void TXOC::AddToSpent(const TxInput& input) {
     auto& outpoint = input.outpoint;
-    spent_.emplace(XOR(outpoint.bHash, outpoint.index));
+    increment_.Remove(XOR(outpoint.bHash, outpoint.index));
 }
 
-void TXOC::Merge(TXOC&& another) {
-    created_.merge(std::move(another.created_));
-    for (const auto& utxokey : another.spent_) {
-        if (created_.erase(utxokey) == 0) {
-            spent_.emplace(utxokey);
-        }
-    }
+void TXOC::Merge(TXOC&& txoc) {
+    increment_.Merge(std::move(txoc.increment_));
 }
 
 //////////////////////
@@ -73,19 +68,19 @@ UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
 }
 
 void ChainLedger::Update(const TXOC& txoc) {
-    for (const auto& utxokey : txoc.GetTxOutsCreated()) {
+    for (const auto& utxokey : txoc.GetCreated()) {
         comfirmed_.insert(pending_.extract(utxokey));
     }
-    for (const auto& utxokey : txoc.GetTxOutsSpent()) {
+    for (const auto& utxokey : txoc.GetSpent()) {
         removed_.insert(comfirmed_.extract(utxokey));
     }
 }
 
 void ChainLedger::Rollback(const TXOC& txoc) {
-    for (const auto& utxokey : txoc.GetTxOutsCreated()) {
+    for (const auto& utxokey : txoc.GetCreated()) {
         pending_.insert(comfirmed_.extract(utxokey));
     }
-    for (const auto& utxokey : txoc.GetTxOutsSpent()) {
+    for (const auto& utxokey : txoc.GetSpent()) {
         comfirmed_.insert(removed_.extract(utxokey));
     }
 }
@@ -105,10 +100,10 @@ std::string std::to_string(const UTXO& utxo) {
 std::string std::to_string(const TXOC& txoc) {
     std::string s;
     s += "TXOC { \n";
-    for (const auto& utxo : txoc.created_) {
+    for (const auto& utxo : txoc.GetCreated()) {
         s += std::to_string(utxo);
     }
-    for (const auto& utxo : txoc.spent_) {
+    for (const auto& utxo : txoc.GetSpent()) {
         s += std::to_string(utxo) + "\n";
     }
     s += "   }";

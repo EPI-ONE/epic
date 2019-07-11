@@ -13,7 +13,6 @@ enum MilestoneStatus : uint8_t {
 class NodeRecord;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
 
-class NodeRecord;
 class ChainState {
 public:
     uint64_t height;
@@ -22,6 +21,11 @@ public:
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
     uint64_t hashRate;
+
+    // Incremental change of the last registration block on each peer chain,
+    // whose elements are pairs consisting of:
+    //   <peer chain head, hash of the last registration block on this peer chain>
+    RegChange regChange;
 
     // constructor of a chain state of genesis.
     ChainState() = default;

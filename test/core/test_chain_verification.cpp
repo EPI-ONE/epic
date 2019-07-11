@@ -42,8 +42,8 @@ public:
         return chain;
     }
 
-    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record) {
-        return c->ValidateRedemption(record);
+    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record, RegChange& regChange) {
+        return c->ValidateRedemption(record, regChange);
     }
 
     std::optional<TXOC> ValidateTx(Chain* c, NodeRecord& record) {
@@ -246,12 +246,12 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     auto txoc{ValidateTx(&c, rec3)};
     ASSERT_TRUE(bool(txoc));
 
-    auto& spent   = txoc->GetTxOutsSpent();
+    auto& spent   = txoc->GetSpent();
     auto spentKey = XOR(b1hash, 0);
     ASSERT_EQ(spent.size(), 1);
     ASSERT_EQ(spent.count(spentKey), 1);
 
-    auto& created = txoc->GetTxOutsCreated();
+    auto& created = txoc->GetCreated();
     ASSERT_EQ(created.size(), 2);
     ASSERT_EQ(rec3.fee, valueIn - valueOut1 - valueOut2);
 }

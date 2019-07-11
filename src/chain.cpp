@@ -176,11 +176,13 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     // validate each block in order
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
-            rec->prevRedemHash    = rec->cblock->GetHash();
-            rec->isRedeemed       = NodeRecord::NOT_YET_REDEEMED;
+            const auto& blkHash = rec->cblock->GetHash();
+            rec->prevRedemHash  = blkHash;
+            rec->isRedeemed     = NodeRecord::NOT_YET_REDEEMED;
+            state->regChange.Create(blkHash, blkHash);
             rec->minerChainHeight = 1;
         } else {
-            if (auto update = Validate(*rec)) {
+            if (auto update = Validate(*rec, state->regChange)) {
                 rec->validity = NodeRecord::VALID;
                 ledger_.Update(*update);
                 state->UpdateTXOC(std::move(*update));
@@ -198,27 +200,27 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     return recs.back();
 }
 
-std::optional<TXOC> Chain::Validate(NodeRecord& record) {
+std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
-
-    auto& pblock = record.cblock;
+    const auto& pblock = record.cblock;
     std::optional<TXOC> result;
 
-    // first check whether it is a fork of its peer chain
+    // first update the prev redemption hashes
     auto prevRec = GetRecord(pblock->GetPrevHash());
-    if (!prevRec->prevRedemHash.IsNull()) {
-        // then its previous block is valid in the sense of reward
-        record.prevRedemHash = prevRec->prevRedemHash;
-        prevRec->prevRedemHash.SetNull();
-    } else {
-        record.prevRedemHash.SetNull();
-    }
+
+    const auto& oldRedemHash = prevRec->prevRedemHash;
+    assert(!oldRedemHash.IsNull());
+
+    record.prevRedemHash = oldRedemHash;
+    regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
+    regChange.Create(record.cblock->GetHash(), oldRedemHash);
+
     record.minerChainHeight = prevRec->minerChainHeight + 1;
 
     // then verify its transaction and return the updating UTXO
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
-            result = ValidateRedemption(record);
+            result = ValidateRedemption(record, regChange);
         } else {
             result = ValidateTx(record);
         }
@@ -230,26 +232,27 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record) {
     return result;
 }
 
-std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
+std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& regChange) {
     spdlog::trace("Validating redemption {}", record.cblock->GetHash().to_substr());
-
     // this transaction is a redemption of reward
-    const auto& redem   = record.cblock->GetTransaction();
-    const auto& vin     = redem->GetInputs().at(0);
-    const auto& vout    = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
-    const auto& hashstr = std::to_string(record.cblock->GetHash());
-
-    // value of the output should be less or equal to the previous counter
-    if (!(vout.value <= GetPrevReward(record))) {
-        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
-        return {};
-    }
-
     auto prevReg = GetRecord(record.prevRedemHash);
     assert(prevReg);
+
+    const auto& hashstr = std::to_string(record.cblock->GetHash());
+
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
         spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash),
                      hashstr);
+        return {};
+    }
+
+    const auto& redem = record.cblock->GetTransaction();
+    const auto& vin   = redem->GetInputs().at(0);
+    const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
+
+    // value of the output should be less or equal to the previous counter
+    if (!(vout.value <= prevReg->cumulativeReward)) {
+        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
         return {};
     }
 
@@ -261,7 +264,12 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record) {
     // update redemption status
     prevReg->isRedeemed  = NodeRecord::IS_REDEEMED;
     record.isRedeemed    = NodeRecord::NOT_YET_REDEEMED;
-    record.prevRedemHash = record.cblock->GetHash();
+    const auto& oldRH    = record.prevRedemHash;
+    const auto& blkHash  = record.cblock->GetHash();
+    record.prevRedemHash = blkHash;
+    regChange.Remove(blkHash, oldRH);
+    regChange.Create(blkHash, blkHash);
+
     return TXOC{{XOR(record.cblock->GetHash(), 0)}, {}};
 }
 
@@ -335,7 +343,12 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
     if (result == verifying_.end()) {
         result = recordHistory_.find(blkHash);
         if (result == recordHistory_.end()) {
-            return CAT->GetRecord(blkHash);
+            auto rec = CAT->GetRecord(blkHash);
+            if (rec) {
+                rec->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
+            }
+
+            return rec;
         }
     }
     return result->second;
@@ -356,8 +369,6 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
     }
     return nullptr;
 }
-
-void Chain::UpdateChainState(const std::vector<RecordPtr>&) {}
 
 bool Chain::IsMilestone(const uint256& blkHash) const {
     auto result = recordHistory_.find(blkHash);
