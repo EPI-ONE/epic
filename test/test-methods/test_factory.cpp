@@ -139,11 +139,15 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
     return CreateNextChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
 }
 
-TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
+std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const NodeRecord& startMs,
+                                                                        size_t height,
+                                                                        bool tx) {
     NodeRecord lastMs       = startMs;
     ConstBlockPtr prevBlock = startMs.cblock;
 
     TestChain testChain{{}};
+    std::vector<NodeRecord> vMs;
+    vMs.reserve(height);
 
     size_t count       = 1;
     uint32_t timestamp = startMs.cblock->GetTime();
@@ -175,7 +179,8 @@ TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, boo
         if (CheckMsPOW(blkptr, lastMs.snapshot)) {
             NodeRecord node{blkptr};
             ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<uint256>{});
-            lastMs = node;
+            vMs.emplace_back(std::move(node));
+            lastMs = vMs.back();
             count++;
             if (count < height) {
                 make_new_levelset = true;
@@ -188,5 +193,5 @@ TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, boo
             testChain.emplace_back();
         }
     }
-    return testChain;
+    return {testChain, vMs};
 }

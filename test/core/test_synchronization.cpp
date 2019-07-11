@@ -91,8 +91,9 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     ASSERT_EQ(testPeer->GetInvTaskSize(), 1);
 
     // create a new chain
-    long testChainHeight = 5;
-    auto chain           = fac.CreateChain(GENESIS_RECORD, testChainHeight);
+    constexpr long testChainHeight = 5;
+    TestChain chain;
+    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, testChainHeight);
 
     // receive Inv
     Inv inv(getInv.nonce);

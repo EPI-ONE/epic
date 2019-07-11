@@ -15,9 +15,9 @@ public:
         EpicTestEnvironment::SetUpDAG(prefix);
 
         // Initialize DB with genesis block
-        //std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        //CAT->StoreRecords(genesisLvs);
-        //CAT->EnableOBC();
+        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        CAT->StoreRecords(genesisLvs);
+        CAT->EnableOBC();
     }
 
     void TearDown() {
@@ -65,7 +65,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
     std::vector<ConstBlockPtr> blocks;
     while (blocks.size() <= 2) {
-        blocks = fac.CreateChain(GENESIS_RECORD, 2).back();
+        auto [chain, placeholder] = fac.CreateChain(GENESIS_RECORD, 2);
+        blocks = std::move(chain.back());
         blocks.pop_back(); // remove milestone such that all blocks will stay in pending
     }
 
@@ -98,26 +99,37 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
 TEST_F(TestConsensus, AddForks) {
     // Construct a fully connected graph with main chain and forks
-    int chain_length = 20;
-    int n_branches  = 10;
+    constexpr int chain_length = 11;
+    constexpr int n_branches  = 10;
 
     std::vector<TestChain> branches;
+    std::vector<std::vector<NodeRecord>> branches_rec;
+    branches.reserve(n_branches);
     branches.reserve(n_branches);
 
-    // branches[0] is the main chain
-    branches.emplace_back(fac.CreateChain(GENESIS_RECORD, chain_length));
+    auto [chain, vMsRec] = fac.CreateChain(GENESIS_RECORD, chain_length);
+    //fac.PrintChain(chain);
+    branches.emplace_back(std::move(chain));
+    branches_rec.emplace_back(std::move(vMsRec));
 
-    for (int i = 0; i < n_branches - 1; ++i) {
+    for (int i = 1; i < n_branches; ++i) {
         // randomly pick a branch and fork it at random height
-        auto chain_id         = fac.GetRand() % branches.size();
-        auto& picked_chain    = branches[chain_id];
-        auto& new_split_point = picked_chain[fac.GetRand() % (picked_chain.size() - 2) + 1].back();
-        branches.emplace_back(fac.CreateChain(new_split_point, chain_length));
+        auto chain_id         = fac.GetRand() % branches_rec.size();
+        auto& picked_chain    = branches_rec[chain_id];
+        int luck_draw = fac.GetRand() % (picked_chain.size() - 2) + 1;
+        auto& new_split_point = picked_chain[luck_draw > 5 ? 5 : luck_draw];
+
+        auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
+        //fac.PrintChain(chain);
+
+        branches.emplace_back(std::move(chain));
+        branches_rec.emplace_back(std::move(vMsRec));
     }
 
     ///////////////////////////
     // Test starts here
     //
+    //spdlog::set_level(spdlog::level::trace);
     for (const auto& chain : branches) {
         for (const auto& lvs : chain) {
             for (const auto& blkptr : lvs) {
@@ -134,12 +146,10 @@ TEST_F(TestConsensus, AddForks) {
 }
 
 TEST_F(TestConsensus, flush_to_cat) {
-    constexpr size_t HEIGHT = 13;
-    auto chain    = fac.CreateChain(GENESIS_RECORD, HEIGHT);
-
-    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-    CAT->StoreRecords(genesisLvs);
-    CAT->EnableOBC();
+    constexpr size_t FLUSHED = 10;
+    const size_t HEIGHT      = GetParams().cacheStatesSize + FLUSHED;
+    TestChain chain;
+    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, HEIGHT);
 
     for (auto& levelSet : chain) {
         for (auto& blkptr : levelSet) {
@@ -151,9 +161,8 @@ TEST_F(TestConsensus, flush_to_cat) {
     CAT->Wait();
     DAG->Wait();
 
-    const size_t FLUSHED = HEIGHT - GetParams().cacheStatesSize;
     auto chain_it = chain.cbegin();
-    auto blk_it = chain_it->begin();
+    auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < FLUSHED; height++) {
         auto lvs = CAT->GetLevelSetAt(height);
         ASSERT_GT(lvs.size(), 0);

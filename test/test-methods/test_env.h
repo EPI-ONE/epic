@@ -34,10 +34,10 @@ public:
     }
 
     static void TearDownDAG(std::string dirPath) {
-        std::string cmd = "exec rm -r " + dirPath;
-        system(cmd.c_str());
         CAT.reset();
         DAG.reset();
+        std::string cmd = "exec rm -r " + dirPath;
+        system(cmd.c_str());
     }
 
 private:

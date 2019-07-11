@@ -138,8 +138,8 @@ UnitTestParams::UnitTestParams() {
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;
-    cacheStatesSize      = 10;
-    cacheStatesToDelete  = 2;
+    cacheStatesSize      = 25;
+    cacheStatesToDelete  = 5;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
