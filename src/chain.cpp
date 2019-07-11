@@ -389,7 +389,7 @@ Chain::GetDataToCAT(size_t level) {
     result_rec.reserve(level);
     TXOC result_txoc{};
 
-    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level; cs_it++) {
+    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it < states_.end(); cs_it++) {
         std::vector<RecordPtr> lvsRec{};
         lvsRec.reserve((*cs_it)->GetRecordHashes().size());
         for (const auto& h : (*cs_it)->GetRecordHashes()) {
@@ -402,7 +402,7 @@ Chain::GetDataToCAT(size_t level) {
 
     std::unordered_map<uint256, UTXOPtr> result_created{};
     for (const auto& key_created : result_txoc.GetCreated()) {
-        result_created.emplace(key_created, ledger_.GetConfirmed(key_created)); 
+        result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
 
     return {result_rec, result_created, result_txoc.GetSpent()};

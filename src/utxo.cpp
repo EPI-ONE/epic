@@ -67,7 +67,7 @@ UTXOPtr ChainLedger::FindSpendable(const uint256& xorkey) {
     return CAT->GetUTXO(xorkey);
 }
 
-UTXOPtr ChainLedger::GetConfirmed(const uint256& xorkey) {
+UTXOPtr ChainLedger::FindFromLedger(const uint256& xorkey) {
     auto query = confirmed_.find(xorkey);
     if (query != confirmed_.end()) {
         return query->second;

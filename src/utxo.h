@@ -120,7 +120,7 @@ public:
 
     void AddToPending(UTXOPtr);
     UTXOPtr GetFromPending(const uint256&);
-    UTXOPtr GetConfirmed(const uint256&); // might be already spent
+    UTXOPtr FindFromLedger(const uint256&); // might be already spent
     UTXOPtr FindSpendable(const uint256&);
     void Update(const TXOC&);
     void Remove(const TXOC&);
