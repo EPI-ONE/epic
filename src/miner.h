@@ -30,23 +30,22 @@ public:
     }
 
     void Solve(Block& b) {
-        arith_uint256 target             = b.GetTargetAsInteger();
-        size_t nthreads                  = solverPool_.GetThreadSize();
-        std::atomic<uint64_t> final_time = b.GetTime();
-        final_nonce                      = default_nonce;
+        arith_uint256 target = b.GetTargetAsInteger();
+        size_t nthreads      = solverPool_.GetThreadSize();
+
+        std::atomic<uint64_t> final_time  = b.GetTime();
+        std::atomic<uint32_t> final_nonce = 0;
 
         for (std::size_t i = 1; i <= nthreads; ++i) {
-            solverPool_.Execute([=, &final_time]() {
+            solverPool_.Execute([=, &final_time, &final_nonce]() {
                 Block blk(b);
                 blk.SetNonce(i);
                 blk.FinalizeHash();
 
                 while (final_nonce.load() == 0) {
                     if (UintToArith256(blk.GetHash()) <= target) {
-                        if (final_nonce.compare_exchange_strong(default_nonce, blk.GetNonce())) {
-                            final_time = blk.GetTime();
-                        }
-
+                        final_nonce = blk.GetNonce();
+                        final_time  = blk.GetTime();
                         break;
                     }
 
@@ -71,7 +70,7 @@ public:
 
         b.SetNonce(final_nonce.load());
         b.SetTime(final_time.load());
-        b.FinalizeHash();
+        b.CalculateHash();
     }
 
     void Run() {
@@ -99,7 +98,7 @@ public:
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }
 
-                    b.AddTransaction(MEMPOOL->ExtractTransaction(
+                    b.AddTransaction(MEMPOOL->GetTransaction(
                         prevHash, (uint64_t)((GetParams().maxTarget / GetParams().sortitionCoefficient).getdouble() *
                                              percentage)));
                 }
@@ -111,6 +110,7 @@ public:
             b.SetDifficultyTarget(head->snapshot->blockTarget.GetCompact());
 
             Solve(b);
+            assert(b.Verify());
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);
@@ -131,9 +131,6 @@ public:
     }
 
 private:
-    uint32_t default_nonce = 0;
-    std::atomic<uint32_t> final_nonce;
-
     ThreadPool solverPool_;
     std::atomic<bool> enabled_ = false;
 
