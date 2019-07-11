@@ -382,7 +382,6 @@ public:
 private:
     mutable std::shared_mutex mtx_;
     std::deque<T> queue_;
-    std::condition_variable cond_;
 };
 
 #endif // __SRC_UTILS_CONCURRENT_HASHMAP_H__

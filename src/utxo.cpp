@@ -81,10 +81,11 @@ UTXOPtr ChainLedger::FindFromLedger(const uint256& xorkey) {
 
 void ChainLedger::Update(const TXOC& txoc) {
     for (const auto& utxokey : txoc.GetCreated()) {
-        comfirmed_.insert(pending_.extract(utxokey));
+        confirmed_.insert(pending_.extract(utxokey));
     }
     for (const auto& utxokey : txoc.GetSpent()) {
-        removed_.insert(comfirmed_.extract(utxokey));
+        removed_.insert(confirmed_.extract(utxokey));
+    }
 }
 
 void ChainLedger::Remove(const TXOC& txoc) {
