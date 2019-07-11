@@ -99,7 +99,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
 TEST_F(TestConsensus, AddForks) {
     // Construct a fully connected graph with main chain and forks
-    constexpr int chain_length = 11;
+    constexpr int chain_length = 10;
     constexpr int n_branches  = 10;
 
     std::vector<TestChain> branches;
@@ -116,8 +116,8 @@ TEST_F(TestConsensus, AddForks) {
         // randomly pick a branch and fork it at random height
         auto chain_id         = fac.GetRand() % branches_rec.size();
         auto& picked_chain    = branches_rec[chain_id];
-        int luck_draw = fac.GetRand() % (picked_chain.size() - 2) + 1;
-        auto& new_split_point = picked_chain[luck_draw > 5 ? 5 : luck_draw];
+        int lucky_draw = fac.GetRand() % (picked_chain.size() - 2) + 1;
+        auto& new_split_point = picked_chain[lucky_draw > 5 ? 5 : lucky_draw];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
         //fac.PrintChain(chain);
@@ -145,7 +145,7 @@ TEST_F(TestConsensus, AddForks) {
     ASSERT_EQ(DAG->GetChains().size(), n_branches);
 }
 
-TEST_F(TestConsensus, flush_to_cat) {
+TEST_F(TestConsensus, flush_single_chain_to_cat) {
     constexpr size_t FLUSHED = 10;
     const size_t HEIGHT      = GetParams().cacheStatesSize + FLUSHED;
     TestChain chain;
@@ -164,6 +164,51 @@ TEST_F(TestConsensus, flush_to_cat) {
     auto chain_it = chain.cbegin();
     auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < FLUSHED; height++) {
+        auto lvs = CAT->GetLevelSetAt(height);
+        ASSERT_GT(lvs.size(), 0);
+
+        std::swap(lvs.front(), lvs.back());
+        for (auto& blkptr : lvs) {
+            ASSERT_EQ(**blk_it, *blkptr);
+            blk_it++;
+            if (blk_it == chain_it->end()) {
+                chain_it++;
+                blk_it = chain_it->begin();
+            }
+        }
+    }
+}
+
+TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
+    const size_t HEIGHT    = GetParams().cacheStatesSize - 1;
+    constexpr size_t hfork = 15;
+    auto [chain1, vMsRec]  = fac.CreateChain(GENESIS_RECORD, HEIGHT);
+
+    std::array<TestChain, 4> chains;
+    chains[0]                        = std::move(chain1);
+    std::tie(chains[1], std::ignore) = fac.CreateChain(vMsRec[1], 1);
+    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 2);
+    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 4);
+
+    // add blocks in a carefully assigned sequence
+    for (int i : {0,1,2,3}){
+        for (auto& levelset : chains[i]) {
+            for (auto& blkptr : levelset) {
+                DAG->AddNewBlock(blkptr, nullptr);
+            }
+        }
+    }
+    usleep(50000);
+
+    CAT->Wait();
+    DAG->Wait();
+
+    // here we set less or equal as $chain[2] might be deleted with a small probability
+    ASSERT_LE(DAG->GetChains().size(), 2);
+
+    auto chain_it = chains[0].cbegin();
+    auto blk_it   = chain_it->begin();
+    for (uint64_t height = 1; height < GetParams().cacheStatesToDelete; height++) {
         auto lvs = CAT->GetLevelSetAt(height);
         ASSERT_GT(lvs.size(), 0);
 

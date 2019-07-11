@@ -146,7 +146,7 @@ private:
     void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
-    void DeleteChain(ChainPtr);
+    void DeleteFork();
 
     bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
 
