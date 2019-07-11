@@ -199,7 +199,7 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
                                   prevSum.second + rec->GetOptimalStorageSize());
         };
 
-        // std::pair<total block size, total record size>
+        // pair of (total block size, total record size)
         std::pair<uint32_t, uint32_t> totalSize =
             std::accumulate(lvs.begin(), lvs.end(), std::make_pair(0, 0), sumSize);
 

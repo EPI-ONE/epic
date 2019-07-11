@@ -114,19 +114,21 @@ public:
     ChainLedger(const ChainLedger&) = default;
 
     ChainLedger(std::unordered_map<uint256, UTXOPtr>&& pending,
-                std::unordered_map<uint256, UTXOPtr>&& comfirmed,
+                std::unordered_map<uint256, UTXOPtr>&& confirmed,
                 std::unordered_map<uint256, UTXOPtr>&& removed)
-        : pending_(std::move(pending)), comfirmed_(std::move(comfirmed)), removed_(std::move(removed)) {}
+        : pending_(std::move(pending)), confirmed_(std::move(confirmed)), removed_(std::move(removed)) {}
 
     void AddToPending(UTXOPtr);
     UTXOPtr GetFromPending(const uint256&);
+    UTXOPtr FindFromLedger(const uint256&); // might be already spent
     UTXOPtr FindSpendable(const uint256&);
     void Update(const TXOC&);
+    void Remove(const TXOC&);
     void Rollback(const TXOC&);
 
 private:
     std::unordered_map<uint256, UTXOPtr> pending_;
-    std::unordered_map<uint256, UTXOPtr> comfirmed_;
+    std::unordered_map<uint256, UTXOPtr> confirmed_;
     std::unordered_map<uint256, UTXOPtr> removed_;
 };
 

@@ -11,32 +11,6 @@
 
 class Block;
 class NodeRecord;
-// 1 day per diffculty cycle on average
-static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
-// 10 seconds per milestone block
-static constexpr uint32_t TIME_INTERVAL = 10;
-// number of milestones between two difficulty adjustment
-static constexpr uint32_t INTERVAL = TARGET_TIMESPAN / static_cast<double>(TIME_INTERVAL);
-// transaction per second
-static constexpr uint32_t TPS = 1000;
-// threshold for rejecting an old block
-static constexpr uint32_t PUNTUALITY_THRESHOLD = 2 * 60 * 60;
-// maximum time in a block header allowed to be in advanced to the current time (sec)
-static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
-// max amount of money allowed in one output
-static constexpr uint64_t MAX_MONEY = 9999999999L;
-// version of genesis block
-static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
-// maximum allowed block size in optimal encoding format
-static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
-// an easy enough difficulty target
-static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
-// transaction sortition: coefficient for computing allowed distance
-static constexpr size_t SORTITION_COEFFICIENT = 100;
-// transaction sortition: number of block to go back
-static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
-// coefficient of taking additional reward for milestone
-static constexpr uint32_t REWARD_COEFFICIENT = 50;
 
 enum ParamsType : uint8_t {
     MAINNET = 1,
@@ -73,6 +47,9 @@ public:
 
     uint64_t initialDifficulty;
     arith_uint256 initialMsTarget;
+
+    size_t cacheStatesSize;
+    size_t cacheStatesToDelete;
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     const Block& GetGenesis() const;

@@ -49,10 +49,6 @@ void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
     }
 }
 
-void Chain::RemovePendingBlock(const uint256& hash) {
-    pendingBlocks_.erase(hash);
-}
-
 bool Chain::IsBlockPending(const uint256& hash) const {
     return pendingBlocks_.find(hash) != pendingBlocks_.end();
 }
@@ -184,7 +180,9 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
         } else {
             if (auto update = Validate(*rec, state->regChange)) {
                 rec->validity = NodeRecord::VALID;
+                // update ledger in chain for future reference
                 ledger_.Update(*update);
+                // take notes in chain state; will be used when flushing this state from memory to CAT
                 state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
@@ -368,6 +366,46 @@ RecordPtr Chain::GetRecordCache(const uint256& h) {
         return entry->second;
     }
     return nullptr;
+}
+
+void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove, size_t level) {
+    // remove records
+    for (const auto& lvsh : recToRemove) {
+        recordHistory_.erase(lvsh);
+    }
+
+    // remove utxos
+    ledger_.Remove(txocToRemove);
+
+    // remove states
+    for (size_t i = 0; i < level; i++) {
+        states_.pop_front();
+    }
+}
+
+std::tuple<std::vector<std::vector<RecordPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+Chain::GetDataToCAT(size_t level) {
+    std::vector<std::vector<RecordPtr>> result_rec{};
+    result_rec.reserve(level);
+    TXOC result_txoc{};
+
+    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it < states_.end(); cs_it++) {
+        std::vector<RecordPtr> lvsRec{};
+        lvsRec.reserve((*cs_it)->GetRecordHashes().size());
+        for (const auto& h : (*cs_it)->GetRecordHashes()) {
+            lvsRec.emplace_back(recordHistory_.at(h));
+        }
+        result_rec.emplace_back(std::move(lvsRec));
+        // TODO: optimize it after merging increament
+        result_txoc.Merge(std::move(const_cast<TXOC&>((*cs_it)->GetTXOC())));
+    }
+
+    std::unordered_map<uint256, UTXOPtr> result_created{};
+    for (const auto& key_created : result_txoc.GetCreated()) {
+        result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
+    }
+
+    return {result_rec, result_created, result_txoc.GetSpent()};
 }
 
 bool Chain::IsMilestone(const uint256& blkHash) const {

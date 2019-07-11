@@ -2,6 +2,31 @@
 #include "block.h"
 #include "consensus.h"
 
+// 1 day per diffculty cycle on average
+static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
+// 10 seconds per milestone block
+static constexpr uint32_t TIME_INTERVAL = 10;
+// number of milestones between two difficulty adjustment
+static constexpr uint32_t INTERVAL = TARGET_TIMESPAN / static_cast<double>(TIME_INTERVAL);
+// transaction per second
+static constexpr uint32_t TPS = 1000;
+// threshold for rejecting an old block
+static constexpr uint32_t PUNTUALITY_THRESHOLD = 2 * 60 * 60;
+// max amount of money allowed in one output
+static constexpr uint64_t MAX_MONEY = 9999999999L;
+// version of genesis block
+static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
+// an easy enough difficulty target
+static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
+// transaction sortition: coefficient for computing allowed distance
+static constexpr size_t SORTITION_COEFFICIENT = 100;
+// transaction sortition: number of block to go back
+static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
+// coefficient of taking additional reward for milestone
+static constexpr uint32_t REWARD_COEFFICIENT = 50;
+static constexpr size_t CACHE_STATES = 100;
+static constexpr size_t CACHE_STATES_TO_DELETE = 20;
+
 const Block& Params::GetGenesis() const {
     return *genesis_;
 }
@@ -49,6 +74,8 @@ MainNetParams::MainNetParams() {
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
+    cacheStatesSize      = CACHE_STATES;
+    cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -79,6 +106,8 @@ TestNetParams::TestNetParams() {
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
+    cacheStatesSize      = CACHE_STATES;
+    cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -109,6 +138,8 @@ UnitTestParams::UnitTestParams() {
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;
+    cacheStatesSize      = 25;
+    cacheStatesToDelete  = 5;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
