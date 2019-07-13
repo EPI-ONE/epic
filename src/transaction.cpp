@@ -78,6 +78,13 @@ Transaction::Transaction(const Transaction& tx) {
     SetParents();
 }
 
+Transaction::Transaction(Transaction&& tx)
+    : inputs_(std::move(tx.inputs_)), outputs_(std::move(tx.outputs_)), parentBlock_(std::move(tx.parentBlock_)) {
+    hash_.SetNull();
+    FinalizeHash();
+    SetParents();
+}
+
 Transaction::Transaction(const CKeyID& addr) {
     AddInput(TxInput{Listing{}});
     Coin zero{};

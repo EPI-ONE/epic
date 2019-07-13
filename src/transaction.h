@@ -127,13 +127,17 @@ public:
      */
     Transaction() = default;
     /**
-     * copy constructor with computing hash and setting parent block
+     * copy and move constructor with computing hash and setting parent block
      */
     Transaction(const Transaction& tx);
+    Transaction(Transaction&&);
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */
     explicit Transaction(const CKeyID& addr);
+
+    Transaction& operator=(const Transaction&) = default;
+    Transaction& operator=(Transaction&&) = default;
 
     inline bool IsNull() const {
         return inputs_.empty() && outputs_.empty();
