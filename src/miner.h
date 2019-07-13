@@ -11,7 +11,7 @@
 class Miner {
 public:
     Miner() : solverPool_(1) {}
-    Miner(size_t nThreads) : solverPool_(nThreads) {}
+    explicit Miner(size_t nThreads) : solverPool_(nThreads) {}
 
     void Start() {
         bool flag = false;

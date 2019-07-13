@@ -127,7 +127,7 @@ public:
      */
     Transaction() = default;
     /**
-     * copy and move constructor with computing hash and setting parent block
+     * copy constructor with computing hash and setting parent block
      */
     Transaction(const Transaction& tx);
     /**

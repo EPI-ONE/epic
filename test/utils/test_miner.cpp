@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "miner.h"
+#include "test_env.h"
 #include "utilstrencodings.h"
 
 class TestMiner : public testing::Test {};
@@ -34,8 +35,7 @@ TEST_F(TestMiner, Solve) {
 }
 
 TEST_F(TestMiner, Run) {
-    DAG         = std::make_unique<DAGManager>();
-    CAT         = std::make_unique<Caterpillar>("temp");
+    EpicTestEnvironment::SetUpDAG("temp");
     peerManager = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 
@@ -55,14 +55,7 @@ TEST_F(TestMiner, Run) {
         ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     }
 
-    DAG.reset();
-    CAT.reset();
-    peerManager.reset();
-    MEMPOOL.reset();
-
-    // Delete the temporary test data folder
-    std::string cmd = "exec rm -r temp";
-    system(cmd.c_str());
+    EpicTestEnvironment::TearDownDAG("temp");
 }
 
 TEST_F(TestMiner, MineGenesis) {
