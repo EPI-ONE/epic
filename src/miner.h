@@ -25,6 +25,9 @@ public:
         bool flag = true;
         if (enabled_.compare_exchange_strong(flag, false)) {
             solverPool_.Stop();
+            if (runner_.joinable()) {
+                runner_.join();
+            }
             spdlog::info("Miner stopped.");
         }
     }
@@ -76,51 +79,54 @@ public:
     void Run() {
         Start();
 
-        uint256 prevHash;
-        Cumulator distanceCal;
-        uint32_t counter = 0;
+        runner_ = std::thread([&]() {
+            uint256 prevHash;
+            Cumulator distanceCal;
+            uint32_t counter = 0;
 
-        while (enabled_.load()) {
-            Block b(GetParams().version);
-            auto head = DAG->GetMilestoneHead();
-            assert(head);
+            while (enabled_.load()) {
+                Block b(GetParams().version);
+                auto head = DAG->GetMilestoneHead();
+                assert(head);
 
-            if (!selfChainHead) {
-                prevHash = GENESIS.GetHash();
-                firstRegKey.MakeNewKey(true);
-                b.AddTransaction(Transaction(firstRegKey.GetPubKey().GetID()));
-            } else {
-                prevHash = selfChainHead->GetHash();
-                if (distanceCal.Full()) {
-                    auto timeInterval = distanceCal.TimeSpan();
-                    double percentage =
-                        distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
-                    if (counter % 128 == 0) {
-                        std::cout << "Hashing power percentage " << percentage << std::endl;
+                if (!selfChainHead) {
+                    prevHash = GENESIS.GetHash();
+                    firstRegKey.MakeNewKey(true);
+                    b.AddTransaction(Transaction(firstRegKey.GetPubKey().GetID()));
+                } else {
+                    prevHash = selfChainHead->GetHash();
+                    if (distanceCal.Full()) {
+                        auto timeInterval = distanceCal.TimeSpan();
+                        double percentage =
+                            distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
+                        if (counter % 128 == 0) {
+                            std::cout << "Hashing power percentage " << percentage << std::endl;
+                        }
+
+                        b.AddTransaction(MEMPOOL->GetTransaction(
+                            prevHash,
+                            (uint64_t)((GetParams().maxTarget / GetParams().sortitionCoefficient).getdouble() *
+                                       percentage)));
                     }
-
-                    b.AddTransaction(MEMPOOL->GetTransaction(
-                        prevHash, (uint64_t)((GetParams().maxTarget / GetParams().sortitionCoefficient).getdouble() *
-                                             percentage)));
                 }
+
+                b.SetMilestoneHash(head->cblock->GetHash());
+                b.SetPrevHash(prevHash);
+                b.SetTipHash(SelectTip());
+                b.SetDifficultyTarget(head->snapshot->blockTarget.GetCompact());
+
+                Solve(b);
+                assert(b.Verify());
+                b.source = Block::MINER;
+
+                auto bPtr = std::make_shared<const Block>(b);
+                peerManager->RelayBlock(bPtr, nullptr);
+                distanceCal.Add(bPtr, true);
+                selfChainHead = bPtr;
+                DAG->AddNewBlock(bPtr, nullptr);
+                counter++;
             }
-
-            b.SetMilestoneHash(head->cblock->GetHash());
-            b.SetPrevHash(prevHash);
-            b.SetTipHash(SelectTip());
-            b.SetDifficultyTarget(head->snapshot->blockTarget.GetCompact());
-
-            Solve(b);
-            assert(b.Verify());
-            b.source = Block::MINER;
-
-            auto bPtr = std::make_shared<const Block>(b);
-            peerManager->RelayBlock(bPtr, nullptr);
-            distanceCal.Add(bPtr, true);
-            selfChainHead = bPtr;
-            DAG->AddNewBlock(bPtr, nullptr);
-            counter++;
-        }
+        });
     }
 
     ConstBlockPtr GetSelfChainHead() const {
@@ -132,6 +138,7 @@ public:
     }
 
 private:
+    std::thread runner_;
     ThreadPool solverPool_;
     std::atomic<bool> enabled_ = false;
 

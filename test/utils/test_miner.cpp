@@ -40,10 +40,9 @@ TEST_F(TestMiner, Run) {
     MEMPOOL     = std::make_unique<MemPool>();
 
     Miner m(2);
-    std::thread t(std::bind(&Miner::Run, &m)); // m.Run()
+    m.Run();
     sleep(1);
     m.Stop();
-    t.join();
 
     usleep(50000);
     DAG->Stop();

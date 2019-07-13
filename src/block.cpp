@@ -11,6 +11,14 @@ Block::Block(const Block& b)
     SetParents();
 }
 
+Block::Block(Block&& b)
+    : hash_(std::move(b.hash_)), version_(std::move(b.version_)), milestoneBlockHash_(std::move(b.milestoneBlockHash_)),
+      prevBlockHash_(std::move(b.prevBlockHash_)), tipBlockHash_(std::move(b.tipBlockHash_)), time_(std::move(b.time_)),
+      diffTarget_(std::move(b.diffTarget_)), nonce_(std::move(b.nonce_)), transaction_(std::move(b.transaction_)),
+      optimalEncodingSize_(std::move(b.optimalEncodingSize_)) {
+    SetParents();
+}
+
 Block::Block(uint32_t versionNum) : Block() {
     version_            = versionNum;
     milestoneBlockHash_ = Hash::GetZeroHash();

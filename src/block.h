@@ -25,6 +25,7 @@ class Block {
 public:
     Block();
     Block(const Block&);
+    Block(Block&&);
     Block(uint32_t versionNum);
     Block(VStream&);
 
@@ -39,6 +40,8 @@ public:
           tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
+
+    Block& operator=(const Block&) = default;
 
     void SetNull();
     bool IsNull() const;
