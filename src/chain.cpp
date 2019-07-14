@@ -54,14 +54,24 @@ bool Chain::IsBlockPending(const uint256& hash) const {
 }
 
 std::vector<ConstBlockPtr> Chain::GetPendingBlocks() const {
-    std::vector<ConstBlockPtr> values;
-    std::transform(pendingBlocks_.begin(), pendingBlocks_.end(), values.begin(),
-                   [](const auto& entry) { return entry.second; });
-    return values;
+    return pendingBlocks_.value_set();
+}
+
+std::vector<uint256> Chain::GetPendingHashes() const {
+    return pendingBlocks_.key_set();
 }
 
 std::size_t Chain::GetPendingBlockCount() const {
     return pendingBlocks_.size();
+}
+
+ConstBlockPtr Chain::GetRandomTip() const {
+    auto tip = pendingBlocks_.random_value();
+    if (tip) {
+        return *tip;
+    }
+
+    return nullptr;
 }
 
 std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock) {
@@ -139,9 +149,8 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     Cumulator& cum   = nodeHandler.mapped();
 
     // Allowed distance
-    auto allowed =
-        // TODO: division by zero error
-        (cum.Sum() / cum.TimeSpan()) / GetParams().sortitionCoefficient * (GetParams().maxTarget / (ms_hashrate + 1));
+    auto allowed = (cum.Sum() / (cum.TimeSpan() + 1)) / GetParams().sortitionCoefficient *
+                   (GetParams().maxTarget / (ms_hashrate + 1));
 
     // Update key for the cumulator
     cum.Add(b.cblock, true);
@@ -193,7 +202,6 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
 
-    states_.emplace_back(std::move(state));
     recordHistory_.merge(std::move(verifying_));
     return recs.back();
 }

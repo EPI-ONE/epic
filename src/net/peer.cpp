@@ -69,7 +69,9 @@ void Peer::ProcessMessage(NetMessage& msg) {
                 break;
             }
             case BLOCK: {
-                ConstBlockPtr block = std::make_shared<const Block>(msg.payload);
+                Block b(msg.payload);
+                b.source            = Block::NETWORK;
+                ConstBlockPtr block = std::make_shared<const Block>(std::move(b));
                 ProcessBlock(block);
                 break;
             }

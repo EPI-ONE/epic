@@ -69,32 +69,35 @@ const Transaction* TxOutput::GetParentTx() const {
  * transaction class START
  */
 
-Transaction::Transaction() {
-    inputs_  = std::vector<TxInput>();
-    outputs_ = std::vector<TxOutput>();
-}
-
 Transaction::Transaction(const Transaction& tx) {
     hash_.SetNull();
     inputs_      = tx.inputs_;
     outputs_     = tx.outputs_;
     parentBlock_ = tx.parentBlock_;
     FinalizeHash();
+    SetParents();
+}
 
-    // Set parents for the copied inputs and outputs
-    for (TxInput& input : inputs_) {
-        input.SetParent(this);
-    }
-
-    for (TxOutput& output : outputs_) {
-        output.SetParent(this);
-    }
+Transaction::Transaction(Transaction&& tx)
+    : inputs_(std::move(tx.inputs_)), outputs_(std::move(tx.outputs_)), parentBlock_(std::move(tx.parentBlock_)) {
+    hash_.SetNull();
+    FinalizeHash();
+    SetParents();
 }
 
 Transaction::Transaction(const CKeyID& addr) {
     AddInput(TxInput{Listing{}});
     Coin zero{};
     AddOutput(zero, addr);
+}
+
+void Transaction::SetParents() {
+    for (TxInput& input : inputs_) {
+        input.SetParent(this);
+    }
+    for (TxOutput& output : outputs_) {
+        output.SetParent(this);
+    }
 }
 
 Transaction& Transaction::AddInput(TxInput&& txin) {
@@ -105,10 +108,9 @@ Transaction& Transaction::AddInput(TxInput&& txin) {
 }
 
 Transaction& Transaction::AddSignedInput(const TxOutPoint& outpoint,
-    const CPubKey& pubkey,
-    const uint256& hashMsg,
-    const std::vector<unsigned char>& sig) {
-
+                                         const CPubKey& pubkey,
+                                         const uint256& hashMsg,
+                                         const std::vector<unsigned char>& sig) {
     VStream indata{pubkey, sig, hashMsg};
     AddInput(TxInput{outpoint, Tasm::Listing{indata}});
     return *this;
@@ -174,6 +176,7 @@ const Block* Transaction::GetParentBlock() const {
 }
 
 uint64_t Transaction::HashCode() const {
+    assert(!hash_.IsNull());
     return hash_.GetCheapHash();
 }
 
@@ -202,7 +205,7 @@ std::string std::to_string(const TxInput& input) {
         str += strprintf("listing content = %s", std::to_string(input.listingContent));
     } else {
         str += strprintf("outpoint = %s, listing content = %s", std::to_string(input.outpoint),
-            std::to_string(input.listingContent));
+                         std::to_string(input.listingContent));
     }
 
     return str + " }";

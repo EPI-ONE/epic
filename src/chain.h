@@ -61,9 +61,12 @@ public:
     /** Adds the block to pending and returns its milestone status */
     void AddPendingBlock(ConstBlockPtr);
     void AddPendingUTXOs(const std::vector<UTXOPtr>&);
+
     bool IsBlockPending(const uint256&) const;
     std::vector<ConstBlockPtr> GetPendingBlocks() const;
     std::size_t GetPendingBlockCount() const;
+    std::vector<uint256> GetPendingHashes() const;
+    ConstBlockPtr GetRandomTip() const;
 
     RecordPtr GetMsRecordCache(const uint256&);
     RecordPtr GetRecordCache(const uint256&);
@@ -82,6 +85,10 @@ public:
 
     const ConcurrentQueue<ChainStatePtr>& GetStates() const {
         return states_;
+    }
+
+    void AddNewState(const NodeRecord& ms) {
+        states_.emplace_back(ms.snapshot);
     }
 
     /**

@@ -11,11 +11,20 @@ Block::Block(const Block& b)
     SetParents();
 }
 
+Block::Block(Block&& b)
+    : hash_(std::move(b.hash_)), version_(std::move(b.version_)), milestoneBlockHash_(std::move(b.milestoneBlockHash_)),
+      prevBlockHash_(std::move(b.prevBlockHash_)), tipBlockHash_(std::move(b.tipBlockHash_)), time_(std::move(b.time_)),
+      diffTarget_(std::move(b.diffTarget_)), nonce_(std::move(b.nonce_)), transaction_(std::move(b.transaction_)),
+      optimalEncodingSize_(std::move(b.optimalEncodingSize_)) {
+    SetParents();
+}
+
 Block::Block(uint32_t versionNum) : Block() {
     version_            = versionNum;
     milestoneBlockHash_ = Hash::GetZeroHash();
     prevBlockHash_      = Hash::GetZeroHash();
     tipBlockHash_       = Hash::GetZeroHash();
+    time_               = time(nullptr);
 }
 
 Block::Block(VStream& payload) {
@@ -145,6 +154,19 @@ void Block::AddTransaction(const Transaction& tx) {
     CalculateOptimalEncodingSize();
 }
 
+void Block::AddTransaction(ConstTxPtr&& tx) {
+    if (!tx) {
+        return;
+    }
+
+    UnCache();
+    transaction_.reset();
+    transaction_ = *tx;
+    transaction_->SetParent(this);
+    transaction_->SetParents();
+    CalculateOptimalEncodingSize();
+}
+
 bool Block::HasTransaction() const {
     return transaction_.has_value();
 }
@@ -252,7 +274,9 @@ arith_uint256 Block::GetChainWork() const {
 }
 
 arith_uint256 Block::GetTargetAsInteger() const {
-    arith_uint256 target = arith_uint256{}.SetCompact(diffTarget_);
+    arith_uint256 target{};
+    target.SetCompact(diffTarget_);
+
     if (target <= 0 || target > GetParams().maxTarget) {
         throw "Bad difficulty target: " + std::to_string(target);
     }
@@ -300,13 +324,7 @@ void Block::SetParents() {
         return;
     }
     transaction_->SetParent(this);
-    for (TxInput& input : transaction_->GetInputs()) {
-        input.SetParent(&*transaction_);
-    }
-
-    for (TxOutput& output : transaction_->GetOutputs()) {
-        output.SetParent(&*transaction_);
-    }
+    transaction_->SetParents();
 }
 
 std::string std::to_string(const Block& block, bool showtx) {

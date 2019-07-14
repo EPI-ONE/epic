@@ -317,6 +317,10 @@ void PeerManager::SendLocalAddresses() {
 
 void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
+    if (peerMap_.empty()) {
+        return;
+    }
+
     for (auto& it : peerMap_) {
         if (it.second->connection_handle != msg_from->connection_handle) {
             NetMessage msg(it.second->connection_handle, BLOCK, VStream(block));

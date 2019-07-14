@@ -25,6 +25,7 @@ class Block {
 public:
     Block();
     Block(const Block&);
+    Block(Block&&);
     Block(uint32_t versionNum);
     Block(VStream&);
 
@@ -39,6 +40,8 @@ public:
           tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
+
+    Block& operator=(const Block&) = default;
 
     void SetNull();
     bool IsNull() const;
@@ -59,6 +62,7 @@ public:
     void SetNonce(uint32_t);
 
     void AddTransaction(const Transaction&);
+    void AddTransaction(ConstTxPtr&&);
     bool HasTransaction() const;
     const std::optional<Transaction>& GetTransaction() const;
 
@@ -164,6 +168,10 @@ protected:
     std::optional<Transaction> transaction_;
 
     size_t optimalEncodingSize_ = 0;
+
+public:
+    enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
+    Source source = UNKNOWN;
 };
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;

@@ -3,7 +3,7 @@
 #include "mempool.h"
 #include "test_factory.h"
 
-class MemPoolTest : public testing::Test {
+class TestMemPool : public testing::Test {
 public:
     std::vector<ConstTxPtr> transactions;
     TestFactory fac;
@@ -21,7 +21,7 @@ public:
 /* this test basically tests
  * the get and set methods of
  * mempool */
-TEST_F(MemPoolTest, simple_test) {
+TEST_F(TestMemPool, simple_test) {
     MemPool pool;
 
     ASSERT_TRUE(pool.Insert(transactions[0]));
@@ -58,11 +58,11 @@ TEST_F(MemPoolTest, simple_test) {
     EXPECT_EQ(pool.Size(), 2);
 }
 
-TEST_F(MemPoolTest, get_transaction_test) {
+TEST_F(TestMemPool, get_transaction_test) {
     MemPool pool;
 
     /* hash used to simulate block */
-    uint256 hash = fac.CreateRandomHash();
+    uint256 blkHash = fac.CreateRandomHash();
 
     /* this transaction is used to
      * simulate three cases:
@@ -72,14 +72,17 @@ TEST_F(MemPoolTest, get_transaction_test) {
     pool.Insert(transactions[0]);
 
     /* = */
-    arith_uint256 threshold = UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(hash);
-    EXPECT_TRUE(pool.GetTransaction(hash, threshold).has_value());
+    arith_uint256 threshold = UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(blkHash);
+    EXPECT_TRUE(pool.GetTransaction(blkHash, threshold));
 
     /* > */
-    threshold += 1;
-    EXPECT_TRUE(pool.GetTransaction(hash, threshold).has_value());
+    threshold--;
+    EXPECT_FALSE(pool.GetTransaction(blkHash, threshold));
 
     /* < */
-    threshold -= 2;
-    EXPECT_FALSE(pool.GetTransaction(hash, threshold).has_value());
+    threshold += 2;
+    EXPECT_TRUE(pool.GetTransaction(blkHash, threshold));
+
+    EXPECT_TRUE(pool.ExtractTransaction(blkHash, threshold));
+    EXPECT_TRUE(pool.IsEmpty());
 }

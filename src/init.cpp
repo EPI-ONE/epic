@@ -5,6 +5,7 @@
 #include <net/peer_manager.h>
 
 #include "dag_manager.h"
+#include "mempool.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
 
@@ -15,6 +16,9 @@ std::unique_ptr<PeerManager> peerManager;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> rpc_server;
+
+// TODO: init mempool
+std::unique_ptr<MemPool> MEMPOOL;
 
 static std::atomic_bool b_shutdown = false;
 typedef void (*signal_handler_t)(int);

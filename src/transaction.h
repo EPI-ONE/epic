@@ -125,21 +125,31 @@ public:
     /**
      * constructor of an empty transcation
      */
-    Transaction();
+    Transaction() = default;
     /**
-     * copy constructor with computing hash and setting parent block
+     * copy and move constructor with computing hash and setting parent block
      */
     Transaction(const Transaction& tx);
+    Transaction(Transaction&&);
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */
     explicit Transaction(const CKeyID& addr);
 
+    Transaction& operator=(const Transaction&) = default;
+    Transaction& operator=(Transaction&&) = default;
+
+    inline bool IsNull() const {
+        return inputs_.empty() && outputs_.empty();
+    }
+
+    void SetParents();
+
     Transaction& AddInput(TxInput&& input);
     Transaction& AddSignedInput(const TxOutPoint& outpoint,
-        const CPubKey& pubkey,
-        const uint256& hashMsg,
-        const std::vector<unsigned char>& sig);
+                                const CPubKey& pubkey,
+                                const uint256& hashMsg,
+                                const std::vector<unsigned char>& sig);
     Transaction& AddOutput(TxOutput&& output);
     Transaction& AddOutput(uint64_t, const CKeyID&);
     Transaction& AddOutput(const Coin&, const CKeyID&);
@@ -181,18 +191,11 @@ private:
 
 typedef std::shared_ptr<const Transaction> ConstTxPtr;
 
+// Key hashers for unordered_set
 template <>
-struct std::hash<std::shared_ptr<const Transaction>> {
-    size_t operator()(const std::shared_ptr<const Transaction>& value) const {
-        return value->GetHash().GetCheapHash();
-    }
-};
-
-template <>
-struct std::equal_to<std::shared_ptr<const Transaction>> {
-    bool operator()(const std::shared_ptr<const Transaction>& lhs,
-        const std::shared_ptr<const Transaction>& rhs) const {
-        return lhs->GetHash() == rhs->GetHash();
+struct std::hash<Transaction> {
+    size_t operator()(const Transaction& x) const {
+        return x.HashCode();
     }
 };
 

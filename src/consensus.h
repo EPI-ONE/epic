@@ -195,9 +195,9 @@ public:
     }
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(cumulativeReward, minerChainHeight, validity, isRedeemed, prevRedemHash, isMilestone) ==
-                   std::tie(another.cumulativeReward, another.minerChainHeight, another.validity, another.isRedeemed,
-                            another.prevRedemHash, another.isMilestone) &&
+        return std::tie(height, cumulativeReward, minerChainHeight, validity, isRedeemed, prevRedemHash, isMilestone) ==
+                   std::tie(another.height, another.cumulativeReward, another.minerChainHeight, another.validity,
+                            another.isRedeemed, another.prevRedemHash, another.isMilestone) &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
                ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));
     }

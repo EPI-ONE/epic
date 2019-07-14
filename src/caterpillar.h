@@ -45,11 +45,6 @@ public:
     bool StoreRecords(const std::vector<RecordPtr>&);
 
     /**
-     * Returns true if the hash exists in one of cache, DB, or OBC
-     */
-    bool Exists(const uint256&) const;
-
-    /**
      * Returns true if the hash exists in DB
      */
     bool DBExists(const uint256&) const;
@@ -58,6 +53,11 @@ public:
      * Returns true if the hash exists in cache or DB
      */
     bool DAGExists(const uint256&) const;
+
+    /**
+     * Returns true if the hash exists in one of OBC or DAG
+     */
+    bool Exists(const uint256&) const;
 
     /**
      * Returns true if the hash is of a milestone in DB
