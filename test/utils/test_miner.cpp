@@ -36,15 +36,13 @@ TEST_F(TestMiner, Solve) {
 
 TEST_F(TestMiner, Run) {
     EpicTestEnvironment::SetUpDAG("test_miner/");
-    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-    CAT->StoreRecords(genesisLvs);
 
     peerManager = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 
     Miner m(2);
     m.Run();
-    sleep(1);
+    usleep(500000);
     m.Stop();
 
     usleep(50000);
@@ -58,6 +56,8 @@ TEST_F(TestMiner, Run) {
     }
 
     EpicTestEnvironment::TearDownDAG("test_miner/");
+    peerManager.reset();
+    MEMPOOL.reset();
 }
 
 TEST_F(TestMiner, MineGenesis) {

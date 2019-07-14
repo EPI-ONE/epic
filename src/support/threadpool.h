@@ -76,7 +76,9 @@ public:
      */
     template <typename FunctionType>
     void Execute(FunctionType&& f) {
-        task_queue_.Put(std::move(f));
+        if (task_queue_enabled_.load()) {
+            task_queue_.Put(std::move(f));
+        }
     }
 
     /**
@@ -88,6 +90,10 @@ public:
      */
     template <typename FunctionType>
     std::future<typename std::result_of<FunctionType()>::type> Submit(FunctionType&& f) {
+        if (!task_queue_enabled_.load()) {
+            throw std::runtime_error("Task queue disabled! Cannot add new task.");
+        }
+
         typedef typename std::result_of<FunctionType()>::type result_type;
         std::packaged_task<result_type()> packagedTask(std::move(f));
         std::future<result_type> result(packagedTask.get_future());
@@ -100,6 +106,7 @@ private:
     BlockingQueue<CallableWrapper> task_queue_;
     std::vector<std::thread> workers_;
     std::vector<std::atomic_bool>* working_states{};
+    std::atomic_bool task_queue_enabled_ = true;
 
     void WorkerThread(uint32_t id);
 };

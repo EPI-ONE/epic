@@ -24,6 +24,7 @@ public:
     void Stop() {
         bool flag = true;
         if (enabled_.compare_exchange_strong(flag, false)) {
+            spdlog::info("Miner stopping...");
             solverPool_.Stop();
             if (runner_.joinable()) {
                 runner_.join();
@@ -36,16 +37,16 @@ public:
         arith_uint256 target = b.GetTargetAsInteger();
         size_t nthreads      = solverPool_.GetThreadSize();
 
-        std::atomic<uint64_t> final_time  = b.GetTime();
-        std::atomic<uint32_t> final_nonce = 0;
+        std::atomic<uint64_t> final_time = b.GetTime();
+        final_nonce                      = 0;
 
         for (std::size_t i = 1; i <= nthreads; ++i) {
-            solverPool_.Execute([=, &final_time, &final_nonce]() {
+            solverPool_.Execute([&, i]() {
                 Block blk(b);
                 blk.SetNonce(i);
                 blk.FinalizeHash();
 
-                while (final_nonce.load() == 0) {
+                while (final_nonce.load() == 0 && enabled_.load()) {
                     if (UintToArith256(blk.GetHash()) <= target) {
                         final_nonce = blk.GetNonce();
                         final_time  = blk.GetTime();
@@ -65,7 +66,7 @@ public:
         }
 
         // Block the main thread until a nonce is solved
-        while (final_nonce.load() == 0) {
+        while (final_nonce.load() == 0 && enabled_.load()) {
             std::this_thread::yield();
         }
 
@@ -116,7 +117,14 @@ public:
                 b.SetDifficultyTarget(head->snapshot->blockTarget.GetCompact());
 
                 Solve(b);
-                assert(b.Verify());
+
+                if (!enabled_.load()) {
+                    // To prevent continuing with a block having a false nonce,
+                    // which may happen when Solve is aborted by calling Miner::Stop
+                    return;
+                }
+
+                assert(b.CheckPOW());
                 b.source = Block::MINER;
 
                 auto bPtr = std::make_shared<const Block>(b);
@@ -141,6 +149,7 @@ private:
     std::thread runner_;
     ThreadPool solverPool_;
     std::atomic<bool> enabled_ = false;
+    std::atomic<uint32_t> final_nonce;
 
     ConstBlockPtr selfChainHead = nullptr;
 

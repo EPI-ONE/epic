@@ -31,6 +31,10 @@ public:
         file::SetDataDirPrefix(dirPath + os.str());
         CAT = std::make_unique<Caterpillar>(dirPath + os.str());
         DAG = std::make_unique<DAGManager>();
+
+        // Initialize DB with genesis
+        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        CAT->StoreRecords(genesisLvs);
     }
 
     static void TearDownDAG(std::string dirPath) {

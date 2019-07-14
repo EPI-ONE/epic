@@ -123,9 +123,11 @@ int Init(int argc, char* argv[]) {
 
     CAT = std::make_unique<Caterpillar>(config->GetDBPath());
 
-    // put genesis block into cat
-    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-    CAT->StoreRecords(genesisLvs);
+    if (config->IsStartWithNewDB()) {
+        // put genesis block into cat
+        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        CAT->StoreRecords(genesisLvs);
+    }
 
     DAG = std::make_unique<DAGManager>();
     if (!DAG->Init()) {
