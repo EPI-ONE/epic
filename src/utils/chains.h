@@ -58,9 +58,7 @@ public:
     iterator erase(const_iterator pos) {
         if (std::distance(c.cbegin(), pos) == (long) m) {
             // Erasing the current best is not allowed
-            auto it = c.begin();
-            std::advance(it, std::distance(c.cbegin(), pos));
-            return it;
+            return c.erase(pos, pos);
         }
         if (m > std::distance(c.cbegin(), pos)) {
             m--;
