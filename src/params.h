@@ -37,6 +37,7 @@ public:
     uint32_t targetTPS;
     uint32_t punctualityThred;
     arith_uint256 maxTarget;
+    uint32_t deleteForkThreshold;
 
     Coin maxMoney;
     Coin reward;

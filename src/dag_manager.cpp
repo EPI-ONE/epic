@@ -502,6 +502,8 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) 
         return false;
     }
 
+    assert(milestoneChains.size() > 0);
+    assert(milestoneChains.best());
     if (GetBestMilestoneHeight() > ms->height &&
         (GetBestMilestoneHeight() - ms->height) > GetParams().cacheStatesSize) {
         spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height,
@@ -545,6 +547,8 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             // new milestone on mainchain
             ProcessMilestone(mainchain, block);
             if (size_t level = FlushTrigger()) {
+                // check if we can delete forked chain first to reduce flushing time
+                DeleteFork();
                 FlushToCAT(level);
             }
         } else if (CheckMsPOW(block, ms)) {
@@ -600,6 +604,23 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
     UpdateDownloadingQueue(block->GetHash());
 }
 
+void DAGManager::DeleteFork() {
+    const auto& states   = GetBestChain().GetStates();
+    auto targetChainWork = (*(states.end() - GetParams().deleteForkThreshold))->chainwork;
+    for (auto chain_it = milestoneChains.begin(); chain_it != milestoneChains.end();) {
+        if (*chain_it == milestoneChains.best()) {
+            chain_it++;
+            continue;
+        }
+        // try delete
+        if ((*chain_it)->GetChainHead()->chainwork < targetChainWork) {
+            chain_it = milestoneChains.erase(chain_it);
+        } else {
+            chain_it++;
+        }
+    }
+}
+
 RecordPtr DAGManager::GetState(const uint256& msHash) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
@@ -638,7 +659,7 @@ size_t DAGManager::FlushTrigger() {
         return 0;
     }
     std::vector<ConcurrentQueue<ChainStatePtr>::const_iterator> forks;
-    forks.reserve(milestoneChains.size());
+    forks.reserve(milestoneChains.size() - 1);
     for (auto& chain : milestoneChains) {
         if (chain == bestChain) {
             continue;
@@ -648,7 +669,7 @@ size_t DAGManager::FlushTrigger() {
 
     auto cursor   = bestChain->GetStates().begin();
     size_t dupcnt = 0;
-    for (bool flag = true; flag && dupcnt <= GetParams().cacheStatesToDelete; dupcnt++) {
+    for (bool flag = true; flag && dupcnt < GetParams().cacheStatesToDelete; dupcnt++) {
         for (auto& fork_it : forks) {
             if (*cursor != *fork_it) {
                 flag = false;
@@ -656,6 +677,7 @@ size_t DAGManager::FlushTrigger() {
             }
             fork_it++;
         }
+        cursor++;
     }
 
     return dupcnt;

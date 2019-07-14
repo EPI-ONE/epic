@@ -35,7 +35,7 @@ TEST_F(TestMiner, Solve) {
 }
 
 TEST_F(TestMiner, Run) {
-    EpicTestEnvironment::SetUpDAG("temp");
+    EpicTestEnvironment::SetUpDAG("temp/");
     peerManager = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 
@@ -54,7 +54,7 @@ TEST_F(TestMiner, Run) {
         ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     }
 
-    EpicTestEnvironment::TearDownDAG("temp");
+    EpicTestEnvironment::TearDownDAG("temp/");
 }
 
 TEST_F(TestMiner, MineGenesis) {

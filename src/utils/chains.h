@@ -55,18 +55,13 @@ public:
         update_best(c.back(), size() - 1);
     }
 
-    iterator erase(iterator pos) {
-        if (std::distance(c.begin(), pos) == (long) m) {
-            // Erasing the current best is not allowed
-            return pos;
-        }
-        return c.erase(pos);
-    }
-
-    const_iterator erase(const_iterator pos) {
+    iterator erase(const_iterator pos) {
         if (std::distance(c.cbegin(), pos) == (long) m) {
-            // Erasing the current best is NOT allowed
-            return pos;
+            // Erasing the current best is not allowed
+            return c.erase(pos, pos);
+        }
+        if (m > std::distance(c.cbegin(), pos)) {
+            m--;
         }
         return c.erase(pos);
     }

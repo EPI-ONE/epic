@@ -82,11 +82,12 @@ typedef std::shared_ptr<const UTXO> UTXOPtr;
  */
 class TXOC {
 public:
-    TXOC() = default;
+    TXOC()            = default;
     TXOC(const TXOC&) = default;
     TXOC(TXOC&&)      = default;
     TXOC& operator=(const TXOC& other) = default;
     TXOC& operator=(TXOC&& other) = default;
+    ~TXOC()                       = default;
 
     TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent) : increment_(created, spent) {}
 
@@ -112,6 +113,7 @@ class ChainLedger {
 public:
     ChainLedger()                   = default;
     ChainLedger(const ChainLedger&) = default;
+    ~ChainLedger()                  = default;
 
     ChainLedger(std::unordered_map<uint256, UTXOPtr>&& pending,
                 std::unordered_map<uint256, UTXOPtr>&& confirmed,

@@ -76,6 +76,7 @@ MainNetParams::MainNetParams() {
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
+    deleteForkThreshold = 5;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -108,6 +109,7 @@ TestNetParams::TestNetParams() {
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
+    deleteForkThreshold  = 5;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -140,6 +142,7 @@ UnitTestParams::UnitTestParams() {
     sortitionThreshold   = 2;
     cacheStatesSize      = 25;
     cacheStatesToDelete  = 5;
+    deleteForkThreshold  = 10;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
