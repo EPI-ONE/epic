@@ -29,33 +29,40 @@ public:
         : c(std::move(q.c)), m(q.m), comp([](const ChainPtr& a, const ChainPtr& b) { return *a < *b; }) {}
 
     bool empty() const {
+        READER_LOCK(mutex_)
         return c.empty();
     }
 
     size_t size() const {
+        READER_LOCK(mutex_)
         return c.size();
     }
 
     const_reference best() const {
+        READER_LOCK(mutex_)
         return c[m];
     }
 
     reference best() {
+        READER_LOCK(mutex_)
         return c[m];
     }
 
     void push(value_type&& v) {
+        WRITER_LOCK(mutex_)
         c.push_back(std::move(v));
-        update_best(c.back(), size() - 1);
+        update_best(c.back(), c.size() - 1);
     }
 
     template <typename... Args>
     void emplace(Args&&... args) {
+        WRITER_LOCK(mutex_)
         c.emplace_back(std::forward<Args>(args)...);
-        update_best(c.back(), size() - 1);
+        update_best(c.back(), c.size() - 1);
     }
 
     iterator erase(const_iterator pos) {
+        WRITER_LOCK(mutex_)
         if (std::distance(c.cbegin(), pos) == (long) m) {
             // Erasing the current best is not allowed
             return c.erase(pos, pos);
@@ -67,6 +74,7 @@ public:
     }
 
     void pop() {
+        WRITER_LOCK(mutex_)
         // Pop the best element
         c.erase(c.begin() + m);
         // Re-calculate the best
@@ -74,38 +82,45 @@ public:
     }
 
     iterator begin() {
+        READER_LOCK(mutex_)
         return c.begin();
     }
 
     iterator end() {
+        READER_LOCK(mutex_)
         return c.end();
     }
 
     const_iterator begin() const {
+        READER_LOCK(mutex_)
         return c.cbegin();
     }
 
     const_iterator end() const {
+        READER_LOCK(mutex_)
         return c.cend();
     }
 
     void reserve(size_type n) {
+        WRITER_LOCK(mutex_)
         c.reserve(n);
     }
 
     void update_best(const_iterator pos) {
-        if (comp(best(), *pos)) {
+        WRITER_LOCK(mutex_)
+        if (comp(c[m], *pos)) {
             c[m]->ismainchain_ = false;
-            m = std::distance(c.cbegin(), pos);
+            m                  = std::distance(c.cbegin(), pos);
             c[m]->ismainchain_ = true;
         }
     }
 
 private:
+    mutable std::shared_mutex mutex_;
     void update_best(const value_type& v, size_type i) {
-        if (comp(best(), v)) {
+        if (comp(c[m], v)) {
             c[m]->ismainchain_ = false;
-            m = i;
+            m                  = i;
             c[m]->ismainchain_ = true;
         }
     }

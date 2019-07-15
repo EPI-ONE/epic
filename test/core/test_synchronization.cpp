@@ -16,26 +16,13 @@ public:
         config->SetDBPath("testSync/");
         spdlog::set_level(spdlog::level::debug);
 
-
-        file::SetDataDirPrefix(config->GetDBPath());
-        CAT = std::make_unique<Caterpillar>(config->GetDBPath());
-
-        // Initialize CAT with genesis block
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreRecords(genesisLvs);
-        CAT->EnableOBC();
-
-        DAG         = std::make_unique<DAGManager>();
+        EpicTestEnvironment::SetUpDAG(config->GetDBPath());
         peerManager = std::make_unique<TestPM>();
     }
 
     static void TearDownTestCase() {
-        std::string cmd = "rm -r " + config->GetDBPath();
-        system(cmd.c_str());
-
+        EpicTestEnvironment::TearDownDAG(config->GetDBPath());
         config.reset();
-        DAG.reset();
-        CAT.reset();
     }
 
     TestFactory fac;

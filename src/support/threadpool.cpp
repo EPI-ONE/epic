@@ -17,9 +17,11 @@ void ThreadPool::WorkerThread(uint32_t id) {
     try {
         CallableWrapper task;
         while (task_queue_.Take(task)) {
-            working_states->at(id) = true;
-            task();
-            working_states->at(id) = false;
+            if (task_queue_enabled_.load()) {
+                working_states->at(id) = true;
+                task();
+                working_states->at(id) = false;
+            }
         }
     } catch (std::exception& e) {
         spdlog::error(e.what());
@@ -66,8 +68,8 @@ bool ThreadPool::IsIdle() const {
     }
 
     if (working_states) {
-        for (int i = 0; i < working_states->size(); i++) {
-            if (working_states->at(i).load()) {
+        for (const auto& s : *working_states) {
+            if (s.load()) {
                 return false;
             }
         }
@@ -77,6 +79,7 @@ bool ThreadPool::IsIdle() const {
 }
 
 void ThreadPool::Abort() {
+    task_queue_enabled_ = false;
     if (!task_queue_.Empty()) {
         task_queue_.Clear();
     }
@@ -84,6 +87,7 @@ void ThreadPool::Abort() {
     while (!IsIdle()) {
         std::this_thread::yield();
     }
+    task_queue_enabled_ = true;
 }
 
 ThreadPool::~ThreadPool() {
