@@ -92,9 +92,9 @@ void NodeRecord::UpdateReward(const Coin& prevReward) {
     if (cblock->HasTransaction() && validity != Validity::INVALID) {
         if (cblock->IsRegistration()) {
             // remaining reward = last cumulative reward - redemption amount
-            cumulativeReward = prevReward - cblock->GetTransaction()->GetOutputs()[0].value;
+            cumulativeReward -= cblock->GetTransaction()->GetOutputs()[0].value;
         } else { // for normal valid transaction
-            cumulativeReward = prevReward + fee;
+            cumulativeReward += fee;
         }
     }
 

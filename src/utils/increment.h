@@ -14,9 +14,7 @@ public:
     Increment& operator=(const Increment&) = default;
     Increment& operator=(Increment&&) = default;
 
-    Increment(const std::unordered_set<T>& created, const std::unordered_set<T>& removed)
-        : created_(created), removed_(removed) {}
-    Increment(std::unordered_set<T>&& created, std::unordered_set<T>&& removed)
+    Increment(std::unordered_set<T> created, std::unordered_set<T> removed)
         : created_(std::move(created)), removed_(std::move(removed)) {}
     virtual ~Increment() = default;
 
@@ -48,7 +46,7 @@ public:
         }
     }
 
-    void Merge(Increment&& a) {
+    void Merge(Increment a) {
         created_.merge(std::move(a.created_));
         for (auto& v : a.removed_) {
             if (!created_.erase(v)) {

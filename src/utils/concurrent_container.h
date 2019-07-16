@@ -365,7 +365,9 @@ public:
     }
     void pop_front() {
         WRITER_LOCK(base::mutex_)
-        base::c.pop_front();
+        if (!base::c.empty()) {
+            base::c.pop_front();
+        }
     }
 
     // Hide invalid functions from base class

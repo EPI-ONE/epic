@@ -9,13 +9,13 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
-    std::string prefix = "test_consensus/";
+    const std::string prefix = "test_consensus/";
 
-    void SetUp() {
+    void SetUp() override {
         EpicTestEnvironment::SetUpDAG(prefix);
     }
 
-    void TearDown() {
+    void TearDown() override {
         EpicTestEnvironment::TearDownDAG(prefix);
     }
 };
@@ -148,13 +148,17 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     TestChain chain;
     std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, HEIGHT);
 
-    for (auto& levelSet : chain) {
-        for (auto& blkptr : levelSet) {
+    for (size_t i = 0; i < chain.size(); i++) {
+        if (i > GetParams().cacheStatesSize) {
+            usleep(50000);
+        }
+        for (auto& blkptr : chain[i]) {
             DAG->AddNewBlock(blkptr, nullptr);
         }
     }
 
     usleep(50000);
+
     CAT->Wait();
     DAG->Wait();
 
@@ -166,7 +170,8 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 
         std::swap(lvs.front(), lvs.back());
         for (auto& blkptr : lvs) {
-            ASSERT_EQ(**blk_it, *blkptr);
+            //ASSERT_EQ(**blk_it, *blkptr);
+            EXPECT_EQ(**blk_it, *blkptr);
             blk_it++;
             if (blk_it == chain_it->end()) {
                 chain_it++;
@@ -184,15 +189,21 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     std::array<TestChain, 4> chains;
     chains[0]                        = std::move(chain1);
     std::tie(chains[1], std::ignore) = fac.CreateChain(vMsRec[1], 1);
-    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 2);
-    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 4);
+    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 5);
+    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 5);
 
     // add blocks in a carefully assigned sequence
     for (int i : {0, 1, 2, 3}) {
-        for (auto& levelset : chains[i]) {
-            for (auto& blkptr : levelset) {
+        for (size_t j = 0; j < chains[i].size(); j++) {
+            /*if (i > 1) {
+                usleep(50000);
+            }*/
+            for (auto& blkptr : chains[i][j]) {
                 DAG->AddNewBlock(blkptr, nullptr);
             }
+        }
+        if (i == 2) {
+            usleep(100000);
         }
     }
     usleep(50000);
@@ -202,6 +213,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
 
     // here we set less or equal as $chain[2] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
+    ASSERT_EQ(CAT->GetHeadHeight(), GetParams().cacheStatesToDelete);
 
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();

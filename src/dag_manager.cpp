@@ -3,7 +3,7 @@
 #include "peer_manager.h"
 
 DAGManager::DAGManager()
-    : verifyThread_(1), syncPool_(1), storagePool_(2), isBatchSynching(false), syncingPeer(nullptr),
+    : verifyThread_(1), syncPool_(1), storagePool_(1), isBatchSynching(false), syncingPeer(nullptr),
       isVerifying(false) {
     milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
@@ -556,12 +556,15 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 // new milestone on mainchain
                 ProcessMilestone(mainchain, block);
                 if (size_t level = FlushTrigger()) {
-                    DeleteFork();
-                    FlushToCAT(level);
+                    if (storagePool_.IsIdle()) {
+                        storagePool_.Execute([=]() {
+                            DeleteFork();
+                            FlushToCAT(level);
+                        });
+                    }
                 }
             } else {
                 // new fork
-
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -706,8 +709,6 @@ void DAGManager::FlushToCAT(size_t level) {
     for (const auto& utxoKey : utxoToRemove) {
         CAT->RemoveUTXO(utxoKey);
     }
-
-    const auto oldestCs = milestoneChains.best()->GetStates().front();
 
     // then remove chain states from chains
     size_t totalRecNum = 0;

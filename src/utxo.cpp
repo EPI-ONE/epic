@@ -36,8 +36,19 @@ void TXOC::AddToSpent(const TxInput& input) {
     increment_.Remove(XOR(outpoint.bHash, outpoint.index));
 }
 
-void TXOC::Merge(TXOC&& txoc) {
+void TXOC::Merge(TXOC txoc) {
     increment_.Merge(std::move(txoc.increment_));
+}
+
+TXOC CreateTXOCFromInvalid(const Block& invalid) {
+    const size_t nOuts = invalid.GetTransaction()->GetOutputs().size();
+    std::unordered_set<uint256> invalidUTXO;
+    invalidUTXO.reserve(nOuts);
+
+    for (size_t i = 0; i < nOuts; i++) {
+        invalidUTXO.emplace(XOR(invalid.GetHash(), i));
+    }
+    return TXOC{{}, std::move(invalidUTXO)};
 }
 
 //////////////////////
@@ -77,6 +88,12 @@ UTXOPtr ChainLedger::FindFromLedger(const uint256& xorkey) {
         return query->second;
     }
     return nullptr; // should not happen
+}
+
+void ChainLedger::Invalidate(const TXOC& txoc) {
+    for (const auto& utxokey : txoc.GetSpent()) {
+        removed_.insert(pending_.extract(utxokey));
+    }
 }
 
 void ChainLedger::Update(const TXOC& txoc) {

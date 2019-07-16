@@ -196,6 +196,11 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
                 state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
+                TXOC invalid  = CreateTXOCFromInvalid(*(rec->cblock));
+                // remove utxo of the block from pending to removed
+                ledger_.Invalidate(invalid);
+                // still take notes in chain state
+                state->UpdateTXOC(std::move(invalid));
             }
             rec->UpdateReward(GetPrevReward(*rec));
         }
@@ -216,8 +221,12 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     auto prevRec = GetRecord(pblock->GetPrevHash());
 
     const auto& oldRedemHash = prevRec->prevRedemHash;
+    // debug
+    if (oldRedemHash.IsNull()) {
+        std::cout << "chain height: " << GetChainHead()->height << '\n';
+        std::cout << std::to_string(*prevRec) << std::endl;
+    }
     assert(!oldRedemHash.IsNull());
-
     record.prevRedemHash = oldRedemHash;
     regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
     regChange.Create(record.cblock->GetHash(), oldRedemHash);
@@ -398,9 +407,11 @@ Chain::GetDataToCAT(size_t level) {
     result_rec.reserve(level);
     TXOC result_txoc{};
 
-    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it < states_.end(); cs_it++) {
-        std::vector<RecordPtr> lvsRec{};
+    // traverse from the oldest chain state in memory 
+    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
+        std::vector<RecordPtr> lvsRec;
         lvsRec.reserve((*cs_it)->GetRecordHashes().size());
+
         for (const auto& h : (*cs_it)->GetRecordHashes()) {
             lvsRec.emplace_back(recordHistory_.at(h));
         }

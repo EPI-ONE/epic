@@ -343,7 +343,7 @@ std::string std::to_string(const Block& block, bool showtx) {
         s += strprintf("  with %s\n", std::to_string(*(block.transaction_)));
     }
 
-    s += " }";
+    s += "  }";
 
     return s;
 }
