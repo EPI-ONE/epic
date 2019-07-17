@@ -349,14 +349,13 @@ bool RocksDBStore::WritePosImpl(const string& column, const K& key, const H& h, 
 }
 
 bool RocksDBStore::WriteHeadHeight(uint64_t height) const {
-    MAKE_KEY_SLICE(kHeadHeight);
     VStream value(height);
     Slice valueSlice(value.data(), value.size());
-    return db_->Put(WriteOptions(), handleMap_.at("info"), keySlice, valueSlice).ok();
+    return db_->Put(WriteOptions(), handleMap_.at("info"), kHeadHeight, valueSlice).ok();
 }
 
 uint64_t RocksDBStore::GetHeadHeight() const {
-    MAKE_KEY_SLICE(kHeadHeight);
+    Slice keySlice(kHeadHeight);
     GET_VALUE(handleMap_.at("info"), 0);
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());

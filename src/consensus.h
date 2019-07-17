@@ -148,8 +148,8 @@ public:
     Coin fee;
     uint64_t minerChainHeight = 0;
 
-    uint8_t isRedeemed    = RedemptionStatus::IS_NOT_REDEMPTION;
-    uint256 prevRedemHash = Hash::GetDoubleZeroHash();
+    uint8_t isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
+    uint256 prevRedemHash;
 
     bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
@@ -199,11 +199,17 @@ public:
     }
 
     bool operator==(const NodeRecord& another) const {
-        return std::tie(height, cumulativeReward, minerChainHeight, validity, isRedeemed, prevRedemHash, isMilestone) ==
-                   std::tie(another.height, another.cumulativeReward, another.minerChainHeight, another.validity,
-                            another.isRedeemed, another.prevRedemHash, another.isMilestone) &&
+        // clang-format off
+        return height           == another.height &&
+               cumulativeReward == another.cumulativeReward &&
+               minerChainHeight == another.minerChainHeight &&
+               validity         == another.validity &&
+               isRedeemed       == another.isRedeemed &&
+               prevRedemHash    == another.prevRedemHash &&
+               isMilestone      == another.isMilestone &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
                ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));
+        // clang-format on
     }
 
     bool operator!=(const NodeRecord& another) const {

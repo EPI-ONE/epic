@@ -5,8 +5,10 @@
 DAGManager::DAGManager()
     : verifyThread_(1), syncPool_(1), storagePool_(2), isBatchSynching(false), syncingPeer(nullptr),
       isVerifying(false) {
-    milestoneChains.push(std::make_unique<Chain>(false));
+    milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
+
+    // Start threadpools
     verifyThread_.Start();
     syncPool_.Start();
     storagePool_.Start();
@@ -283,8 +285,8 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
 
 std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) const {
     std::vector<uint256> result;
-    const auto& bestChain    = milestoneChains.best()->GetStates();
-    size_t leastHeightCached = bestChain.empty() ? CAT->GetHeadHeight() : bestChain.front()->height;
+    const auto& bestChain    = milestoneChains.best();
+    size_t leastHeightCached = bestChain->GetLeastHeightCached();
 
     size_t cursorHeight = cursor->snapshot->height;
     assert(result.empty());
@@ -292,17 +294,17 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, siz
     // If the cursor height is within the cache range,
     // traverse the best chain cache.
     while (cursorHeight >= leastHeightCached && result.size() < length) {
-        if (cursorHeight == 0) {
-            result.push_back(GENESIS.GetHash());
-            break;
-        }
-        result.push_back(bestChain[cursorHeight - leastHeightCached]->GetMilestoneHash());
+        result.push_back(bestChain->GetStates()[cursorHeight - leastHeightCached]->GetMilestoneHash());
         --cursorHeight;
     }
 
     // If we have reached the least height in cache and still don't get enough hashes,
     // continue to traverse DB until we reach the capacity.
-    while (result.size() < length && cursorHeight > 0) {
+    while (result.size() < length) {
+        if (cursorHeight == 0) {
+            result.push_back(GENESIS.GetHash());
+            break;
+        }
         result.push_back(CAT->GetMilestoneAt(cursorHeight)->cblock->GetHash());
         --cursorHeight;
     }
@@ -312,22 +314,23 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, siz
 
 std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length) const {
     std::vector<uint256> result;
-    const auto& bestChain    = milestoneChains.best()->GetStates();
-    size_t leastHeightCached = CAT->GetHeadHeight() + 1;
+    const auto& bestChain    = milestoneChains.best();
+    size_t leastHeightCached = bestChain->GetLeastHeightCached();
 
     size_t cursorHeight = cursor->snapshot->height;
     assert(result.empty());
 
     // If the cursor height is less than the least height in cache, traverse DB.
-    while (cursorHeight < leastHeightCached && result.size() < length) {
+    while (cursorHeight <= CAT->GetHeadHeight() && result.size() < length) {
         result.push_back(CAT->GetMilestoneAt(cursorHeight)->cblock->GetHash());
         ++cursorHeight;
     }
 
     // If we have reached the hightest milestone in DB and still don't get enough hashes,
     // continue to traverse the best chain cache until we reach the head or the capacity.
-    while (result.size() < length && cursorHeight < leastHeightCached + bestChain.size()) {
-        result.push_back(bestChain[cursorHeight - leastHeightCached]->GetMilestoneHash());
+    while (result.size() < length && leastHeightCached != UINT64_MAX &&
+           cursorHeight < leastHeightCached + bestChain->GetStates().size()) {
+        result.push_back(bestChain->GetStates()[cursorHeight - leastHeightCached]->GetMilestoneHash());
         ++cursorHeight;
     }
 
@@ -768,7 +771,7 @@ size_t DAGManager::GetHeight(const uint256& blockHash) const {
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const {
     std::vector<ConstBlockPtr> lvs;
     const auto& bestChain    = GetBestChain();
-    size_t leastHeightCached = CAT->GetHeadHeight() + 1;
+    size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
         for (auto& b : CAT->GetLevelSetAt(height)) {

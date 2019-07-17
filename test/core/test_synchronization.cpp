@@ -17,6 +17,7 @@ public:
         spdlog::set_level(spdlog::level::debug);
 
         EpicTestEnvironment::SetUpDAG(config->GetDBPath());
+        CAT->EnableOBC();
         peerManager = std::make_unique<TestPM>();
     }
 

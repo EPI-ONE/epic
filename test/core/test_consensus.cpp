@@ -13,11 +13,6 @@ public:
 
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
-
-        // Initialize DB with genesis block
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreRecords(genesisLvs);
-        CAT->EnableOBC();
     }
 
     void TearDown() {
@@ -79,6 +74,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Test starts here
     //
+    CAT->EnableOBC();
+
     for (auto& blockptr : blocks) {
         DAG->AddNewBlock(blockptr, nullptr);
     }
@@ -100,7 +97,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
 TEST_F(TestConsensus, AddForks) {
     // Construct a fully connected graph with main chain and forks
     constexpr int chain_length = 10;
-    constexpr int n_branches  = 10;
+    constexpr int n_branches   = 10;
 
     std::vector<TestChain> branches;
     std::vector<std::vector<NodeRecord>> branches_rec;
@@ -116,7 +113,7 @@ TEST_F(TestConsensus, AddForks) {
         // randomly pick a branch and fork it at random height
         auto chain_id         = fac.GetRand() % branches_rec.size();
         auto& picked_chain    = branches_rec[chain_id];
-        int lucky_draw = fac.GetRand() % (picked_chain.size() - 2) + 1;
+        int lucky_draw        = fac.GetRand() % (picked_chain.size() - 2) + 1;
         auto& new_split_point = picked_chain[lucky_draw > 5 ? 5 : lucky_draw];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
@@ -191,7 +188,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 4);
 
     // add blocks in a carefully assigned sequence
-    for (int i : {0,1,2,3}){
+    for (int i : {0, 1, 2, 3}) {
         for (auto& levelset : chains[i]) {
             for (auto& blkptr : levelset) {
                 DAG->AddNewBlock(blkptr, nullptr);
