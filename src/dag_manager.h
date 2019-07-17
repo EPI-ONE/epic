@@ -44,6 +44,17 @@ public:
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
     void RespondRequestPending(uint32_t, const PeerPtr&);
 
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+
+    /**
+     * Starting from the given hash, traverses the main milestone chain
+     * backward/forward by the given length
+     */
+    std::vector<uint256> TraverseMilestoneBackward(RecordPtr, size_t) const;
+    std::vector<uint256> TraverseMilestoneForward(RecordPtr, size_t) const;
+
     /*
      * Submits tasks to a single thread in which it checks its syntax.
      * If the block passes the checking, add them to pendings in dag_manager.
@@ -114,13 +125,6 @@ private:
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 
     /**
-     * Starting from the given hash, traverses the main milestone chain
-     * backward/forward by the given length
-     */
-    std::vector<uint256> TraverseMilestoneBackward(RecordPtr, size_t);
-    std::vector<uint256> TraverseMilestoneForward(RecordPtr, size_t);
-
-    /**
      * Methods are called when the synchronization status is changed:
      * on to off and off to on.
      */
@@ -168,10 +172,6 @@ private:
     size_t GetHeight(const uint256&) const;
 
     RecordPtr GetMainChainRecord(const uint256&) const;
-
-    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
-
-    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
     bool ExistsNode(const uint256&) const;
 

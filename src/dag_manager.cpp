@@ -281,7 +281,7 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
     return locator;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) const {
     std::vector<uint256> result;
     const auto& bestChain    = milestoneChains.best()->GetStates();
     size_t leastHeightCached = bestChain.empty() ? CAT->GetHeadHeight() : bestChain.front()->height;
@@ -310,10 +310,10 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, siz
     return result;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length) {
+std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length) const {
     std::vector<uint256> result;
     const auto& bestChain    = milestoneChains.best()->GetStates();
-    size_t leastHeightCached = bestChain.front()->height;
+    size_t leastHeightCached = CAT->GetHeadHeight() + 1;
 
     size_t cursorHeight = cursor->snapshot->height;
     assert(result.empty());
@@ -768,7 +768,7 @@ size_t DAGManager::GetHeight(const uint256& blockHash) const {
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const {
     std::vector<ConstBlockPtr> lvs;
     const auto& bestChain    = GetBestChain();
-    size_t leastHeightCached = bestChain.GetStates().front()->height;
+    size_t leastHeightCached = CAT->GetHeadHeight() + 1;
 
     if (height < leastHeightCached) {
         for (auto& b : CAT->GetLevelSetAt(height)) {

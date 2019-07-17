@@ -8,6 +8,8 @@
 #include "block.h"
 #include "net_address.h"
 
+uint256 RPCHashToHash(const rpc::Hash&);
+
 rpc::Hash* HashToRPCHash(const uint256&);
 
 rpc::Block* BlockToRPCBlock(const Block&);

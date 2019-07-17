@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "block.h"
+#include "caterpillar.h"
 #include "net_address.h"
 #include "spdlog.h"
 
@@ -25,24 +26,24 @@ using rpc::GetNewMilestoneSinceResponse;
 
 class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Service {
     grpc::Status GetBlock(grpc::ServerContext* context,
-        const GetBlockRequest* request,
-        GetBlockResponse* reply) override;
+                          const GetBlockRequest* request,
+                          GetBlockResponse* reply) override;
 
     grpc::Status GetLevelSet(grpc::ServerContext* context,
-        const GetLevelSetRequest* request,
-        GetLevelSetResponse* reply) override;
+                             const GetLevelSetRequest* request,
+                             GetLevelSetResponse* reply) override;
 
     grpc::Status GetLevelSetSize(grpc::ServerContext* context,
-        const GetLevelSetSizeRequest* request,
-        GetLevelSetSizeResponse* reply) override;
+                                 const GetLevelSetSizeRequest* request,
+                                 GetLevelSetSizeResponse* reply) override;
 
     grpc::Status GetNewMilestoneSince(grpc::ServerContext* context,
-        const GetNewMilestoneSinceRequest* request,
-        GetNewMilestoneSinceResponse* reply) override;
+                                      const GetNewMilestoneSinceRequest* request,
+                                      GetNewMilestoneSinceResponse* reply) override;
 
     grpc::Status GetLatestMilestone(grpc::ServerContext* context,
-        const GetLatestMilestoneRequest* request,
-        GetLatestMilestoneResponse* reply) override;
+                                    const GetLatestMilestoneRequest* request,
+                                    GetLatestMilestoneResponse* reply) override;
 };
 
 class RPCServer {
@@ -62,4 +63,5 @@ private:
     void LaunchServer();
 };
 
+extern std::unique_ptr<RPCServer> rpc_server;
 #endif //__SRC_RPC_SERVER_H__
