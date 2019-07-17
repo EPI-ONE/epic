@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include <compat/bitcoin_endian.h>
+#include "bitcoin_endian.h"
 
 uint16_t static inline ReadLE16(const unsigned char* ptr) {
     uint16_t x;

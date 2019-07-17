@@ -170,8 +170,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 
         std::swap(lvs.front(), lvs.back());
         for (auto& blkptr : lvs) {
-            //ASSERT_EQ(**blk_it, *blkptr);
-            EXPECT_EQ(**blk_it, *blkptr);
+            ASSERT_EQ(**blk_it, *blkptr);
             blk_it++;
             if (blk_it == chain_it->end()) {
                 chain_it++;
@@ -195,9 +194,6 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     // add blocks in a carefully assigned sequence
     for (int i : {0, 1, 2, 3}) {
         for (size_t j = 0; j < chains[i].size(); j++) {
-            /*if (i > 1) {
-                usleep(50000);
-            }*/
             for (auto& blkptr : chains[i][j]) {
                 DAG->AddNewBlock(blkptr, nullptr);
             }

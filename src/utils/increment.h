@@ -48,7 +48,7 @@ public:
 
     void Merge(Increment a) {
         created_.merge(std::move(a.created_));
-        for (auto& v : a.removed_) {
+        for (auto&& v : a.removed_) {
             if (!created_.erase(v)) {
                 removed_.emplace(v);
             }
