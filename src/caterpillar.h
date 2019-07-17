@@ -32,7 +32,7 @@ public:
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     bool SaveHeadHeight(uint64_t height) const;
-    
+
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;

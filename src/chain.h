@@ -44,11 +44,8 @@ struct std::hash<Cumulator> {
 
 class Chain {
 public:
-    /** Init a chain with genesis */
-    explicit Chain(bool WithGenesis);
-
+    Chain();
     Chain(const Chain&) = delete;
-    Chain()             = delete;
 
     /**
      * Create a forked chain from $chain which has the new fork in $fork;
@@ -91,6 +88,14 @@ public:
         return states_;
     }
 
+    size_t GetLeastHeightCached() const {
+        if (states_.empty()) {
+            return UINT64_MAX;
+        }
+
+        return states_.front()->height;
+    }
+
     void AddNewState(const NodeRecord& ms) {
         states_.emplace_back(ms.snapshot);
     }
@@ -101,12 +106,6 @@ public:
      * Updates TXOC of the of the chain on whole level set
      */
     RecordPtr Verify(const ConstBlockPtr&);
-
-    /**
-     * TODO:
-     * Take snapshots and increases the height of the chain by 1
-     */
-    void UpdateChainState(const std::vector<RecordPtr>&);
 
     /**
      * Removes oldest chain state as well as corresponding data

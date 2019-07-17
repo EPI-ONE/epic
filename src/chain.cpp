@@ -7,21 +7,16 @@
 // Chain
 ////////////////////
 
-Chain::Chain(bool WithGenesis) : ismainchain_(true) {
-    if (WithGenesis) {
-        states_.push_back(GENESIS_RECORD.snapshot);
-        recordHistory_.insert({GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD)});
-    }
-}
+Chain::Chain() : ismainchain_(true) {}
 
 Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
       recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
     ChainStatePtr cursor = chain.GetChainHead();
     uint256 target       = pfork->GetMilestoneHash();
-    if (recordHistory_.find(target) == recordHistory_.end()) {
-        Chain(false);
-    } else {
+
+    if (!states_.empty()) {
+        assert(recordHistory_.find(target) != recordHistory_.end());
         for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
             for (const auto& h : (*it)->GetRecordHashes()) {
                 pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});

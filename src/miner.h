@@ -132,6 +132,14 @@ public:
                 distanceCal.Add(bPtr, true);
                 selfChainHead = bPtr;
                 DAG->AddNewBlock(bPtr, nullptr);
+
+                if (CheckMsPOW(bPtr, head->snapshot)) {
+                    // Block the thread until the verification is done
+                    while (*DAG->GetMilestoneHead()->cblock == *head->cblock) {
+                        std::this_thread::yield();
+                    }
+                }
+
                 counter++;
             }
         });

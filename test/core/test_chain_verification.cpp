@@ -13,17 +13,11 @@ public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
 
     static void SetUpTestCase() {
-        std::ostringstream os;
-        os << time(nullptr);
-        CAT                               = std::make_unique<Caterpillar>(prefix + os.str());
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreRecords(genesisLvs);
+        EpicTestEnvironment::SetUpDAG(prefix);
     }
 
     static void TearDownTestCase() {
-        std::string cmd = "exec rm -r " + prefix;
-        system(cmd.c_str());
-        CAT.reset();
+        EpicTestEnvironment::TearDownDAG(prefix);
     }
 
     void AddToHistory(Chain* c, RecordPtr prec) {
@@ -37,7 +31,7 @@ public:
     std::unique_ptr<Chain> make_chain(const ConcurrentQueue<ChainStatePtr>& states,
                                       const std::vector<RecordPtr>& recs,
                                       bool ismain = false) {
-        auto chain          = std::make_unique<Chain>(true);
+        auto chain          = std::make_unique<Chain>();
         chain->ismainchain_ = ismain;
         chain->states_      = states;
         for (const auto& pRec : recs) {
@@ -64,7 +58,7 @@ public:
 };
 
 TEST_F(TestChainVerification, chain_with_genesis) {
-    Chain c(true);
+    Chain c{};
     ASSERT_EQ(c.GetChainHead()->height, 0);
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes().size(), 1);
     ASSERT_EQ(c.GetChainHead()->GetRecordHashes()[0], GENESIS.GetHash());
@@ -125,7 +119,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     const auto b1hash = b1.GetHash();
 
     // construct a chain with only redemption blocks and blocks without transaction
-    Chain c(true);
+    Chain c{};
     c.AddPendingBlock(std::make_shared<const Block>(std::move(b1)));
     auto prevHash    = b1hash;
     auto prevRedHash = b1hash;
@@ -206,8 +200,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 }
 
 TEST_F(TestChainVerification, verify_tx_and_utxo) {
-    DAG = std::make_unique<DAGManager>();
-    Chain c(true);
+    Chain c{};
 
     Coin valueIn{4}, valueOut1{2}, valueOut2{1};
     // prepare keys and signature
@@ -273,7 +266,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 }
 
 TEST_F(TestChainVerification, ChainForking) {
-    Chain chain1(true);
+    Chain chain1{};
     ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
 
     // construct the main chain and fork
@@ -304,7 +297,7 @@ TEST_F(TestChainVerification, ValidDistance) {
     // Test for block with valid distance has been done in the above test case VerifyTx.
     // Here we only test for malicious blocks.
 
-    Chain c(true);
+    Chain c{};
 
     // Block with transaction but minerChainHeight not reached sortitionThreshold
     auto ghash = GENESIS.GetHash();
