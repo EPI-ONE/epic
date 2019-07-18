@@ -108,6 +108,7 @@ set(SRC_CODE
         )
 
 set(SRC_MAIN src/main.cpp)
+set(SRC_CLIENT_MAIN src/epicc/main.cpp)
 
 # test codes
 set(TEST_METHODS_SRCS test/test-methods)
@@ -141,6 +142,15 @@ add_library(epiccore STATIC ${SRC_CODE})
 
 # generate executable
 add_executable(epic  ${SRC_MAIN})
+
+add_executable(epicc  ${SRC_CLIENT_MAIN}
+        ${RPC_DIR}/rpc_client.cpp
+        ${PROTO_SRCS}
+        ${GRPC_SRCS}
+        )
+target_link_libraries(epicc protobuf::libprotobuf)
+target_link_libraries(epicc gRPC::grpc++_reflection)
+
 add_executable(epictest ${TEST_MAIN}  ${TEST_CODE})
 
 target_link_libraries(epiccore ${LIBEVENT_LIBRARIES})
@@ -149,6 +159,7 @@ target_link_libraries(epiccore ${Secp256k1_LIBRARY})
 target_link_libraries(epiccore ${GMP_LIBRARY})
 target_link_libraries(epiccore protobuf::libprotobuf)
 target_link_libraries(epiccore gRPC::grpc++_reflection)
+     
 
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)

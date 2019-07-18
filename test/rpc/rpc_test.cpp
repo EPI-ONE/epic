@@ -40,8 +40,9 @@ std::string TestRPCServer::adr = "";
 TEST_F(TestRPCServer, GetBlock) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
-    auto g   = std::make_shared<NodeRecord>(GENESIS_RECORD);
-    auto res = client.GetBlock(g->cblock->GetHash());
+    auto g        = std::make_shared<NodeRecord>(GENESIS_RECORD);
+    auto req_hash = std::to_string(g->cblock->GetHash());
+    auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
     auto expected = HashToRPCHash(g->cblock->GetHash());
     EXPECT_EQ(res.value().block_hash().hash(), expected->hash());
@@ -69,11 +70,13 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
     for (int i = 0; i < size; ++i) {
-        auto res_size = client.GetLevelSetSize(lvs[i]->cblock->GetHash());
+        auto req_hash = std::to_string(lvs[i]->cblock->GetHash());
+        auto res_size = client.GetLevelSetSize(req_hash);
         ASSERT_TRUE(res_size.has_value());
         EXPECT_EQ(res_size.value(), size);
     }
-    auto res_set = client.GetLevelSet(lvs[0]->cblock->GetHash());
+    auto req_hash = std::to_string(lvs[0]->cblock->GetHash());
+    auto res_set  = client.GetLevelSet(req_hash);
     ASSERT_TRUE(res_set.has_value());
     auto expected = HashToRPCHash(lvs[0]->cblock->GetHash());
     EXPECT_EQ(res_set.value()[0].block_hash().hash(), expected->hash());
@@ -134,7 +137,8 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
     size_t request_milestone_number = 3;
-    auto res = client.GetNewMilestoneSince(mss_to_check[0]->cblock->GetHash(), request_milestone_number);
+    auto req_hash                   = std::to_string(mss_to_check[0]->cblock->GetHash());
+    auto res                        = client.GetNewMilestoneSince(req_hash, request_milestone_number);
     ASSERT_TRUE(res.has_value());
     ASSERT_EQ(res.value().size(), request_milestone_number);
     for (int i = 0; i < request_milestone_number; ++i) {

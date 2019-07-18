@@ -19,11 +19,15 @@ std::unique_ptr<MemPool> memPool;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> rpc_server;
+std::unique_ptr<Miner> MINER;
 
 // TODO: init mempool
 std::unique_ptr<MemPool> MEMPOOL;
 
-static std::atomic_bool b_shutdown = false;
+ECCVerifyHandle handle;
+
+std::atomic_bool b_shutdown = false;
+
 typedef void (*signal_handler_t)(int);
 
 static void KickShutdown(int) {
@@ -142,8 +146,19 @@ int Init(int argc, char* argv[]) {
     peerManager = std::make_unique<PeerManager>();
 
     /*
+     * Initialize ECC
+     */
+    ECC_Start();
+    handle = ECCVerifyHandle();
+
+    /*
      * Load wallet TODO
      */
+
+    /*
+     * Initialize miner
+     */
+    MINER = std::make_unique<Miner>();
 
     /*
      * Create rpc instance
@@ -370,6 +385,10 @@ void ShutDown() {
     DAG.reset();
     memPool.reset();
     peerManager.reset();
+    MINER.reset();
+
+    ECC_Stop();
+    handle.~ECCVerifyHandle();
 
     spdlog::info("shutdown finish");
     spdlog::shutdown();

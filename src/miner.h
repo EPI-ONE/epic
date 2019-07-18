@@ -33,6 +33,10 @@ public:
         }
     }
 
+    bool IsRunning() {
+        return enabled_.load();
+    }
+
     void Solve(Block& b) {
         arith_uint256 target = b.GetTargetAsInteger();
         size_t nthreads      = solverPool_.GetThreadSize();
@@ -183,4 +187,5 @@ private:
     }
 };
 
+extern std::unique_ptr<Miner> MINER;
 #endif /* ifndef __SRC_POW_H__ */
