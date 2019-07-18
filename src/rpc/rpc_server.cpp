@@ -12,8 +12,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* con
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* context,
                                                            const GetLevelSetRequest* request,
                                                            GetLevelSetResponse* reply) {
-    auto record = DAG->GetState(RPCHashToHash(request->hash()));
-    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
     for (auto localBlock : ls) {
         auto newBlock   = reply->add_blocks();
         auto blockValue = BlockToRPCBlock(*localBlock);
@@ -26,8 +25,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerContext* context,
                                                                const GetLevelSetSizeRequest* request,
                                                                GetLevelSetSizeResponse* reply) {
-    auto record = DAG->GetState(RPCHashToHash(request->hash()));
-    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
     reply->set_size(ls.size());
     return grpc::Status::OK;
 }

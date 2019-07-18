@@ -44,8 +44,6 @@ public:
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
     void RespondRequestPending(uint32_t, const PeerPtr&);
 
-    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
-
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
     /**
@@ -172,6 +170,8 @@ private:
     size_t GetHeight(const uint256&) const;
 
     RecordPtr GetMainChainRecord(const uint256&) const;
+
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
 
     bool ExistsNode(const uint256&) const;
 

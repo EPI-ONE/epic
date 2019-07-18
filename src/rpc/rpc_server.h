@@ -9,7 +9,6 @@
 
 #include "block.h"
 #include "caterpillar.h"
-#include "net_address.h"
 #include "spdlog.h"
 
 using rpc::BasicBlockExplorerRPC;
