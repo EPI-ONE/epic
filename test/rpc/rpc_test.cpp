@@ -20,19 +20,21 @@ public:
 
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
-
         auto netAddress = NetAddress::GetByIP(adr);
         rpc_server      = std::make_unique<RPCServer>(*netAddress);
         rpc_server->Start();
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+        while (!rpc_server->IsRunning()) {
+            std::this_thread::yield();
+        }
     }
 
     void TearDown() {
         EpicTestEnvironment::TearDownDAG(prefix);
-
         rpc_server->Shutdown();
     }
 };
+
 std::string TestRPCServer::adr = "";
 
 TEST_F(TestRPCServer, GetBlock) {
@@ -87,8 +89,9 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
             DAG->AddNewBlock(elem, nullptr);
         }
     }
+
+    usleep(50000);
     DAG->Stop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
@@ -124,10 +127,9 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
         prev = ms->snapshot;
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    usleep(50000);
     CAT->Stop();
     DAG->Stop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 

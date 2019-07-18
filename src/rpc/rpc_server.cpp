@@ -60,14 +60,17 @@ RPCServer::RPCServer(NetAddress adr) {
 }
 
 void RPCServer::Start() {
-    keepRunning_ = true;
     std::thread t(&RPCServer::LaunchServer, this);
     t.detach();
 }
 
 void RPCServer::Shutdown() {
-    keepRunning_ = false;
+    isRunning_ = false;
     spdlog::info("RPC Server is shutting down");
+}
+
+bool RPCServer::IsRunning() {
+    return isRunning_.load();
 }
 
 void RPCServer::LaunchServer() {
@@ -76,8 +79,9 @@ void RPCServer::LaunchServer() {
     builder.AddListeningPort(this->server_address_, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+    isRunning_ = true;
     spdlog::info("RPC Server is running on {}", this->server_address_);
-    while (keepRunning_) {
+    while (IsRunning()) {
         std::this_thread::yield();
     }
     server->Shutdown();

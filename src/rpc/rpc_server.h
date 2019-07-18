@@ -9,6 +9,7 @@
 
 #include "block.h"
 #include "caterpillar.h"
+#include "net_address.h"
 #include "spdlog.h"
 
 using rpc::BasicBlockExplorerRPC;
@@ -55,9 +56,11 @@ public:
 
     void Shutdown();
 
+    bool IsRunning();
+
 private:
     std::string server_address_;
-    std::atomic<bool> keepRunning_;
+    std::atomic<bool> isRunning_;
 
     void LaunchServer();
 };
