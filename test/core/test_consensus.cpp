@@ -96,8 +96,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
 TEST_F(TestConsensus, AddForks) {
     // Construct a fully connected graph with main chain and forks
-    constexpr int chain_length = 10;
-    constexpr int n_branches   = 10;
+    constexpr int chain_length = 5;
+    constexpr int n_branches   = 5;
 
     std::vector<TestChain> branches;
     std::vector<std::vector<NodeRecord>> branches_rec;
@@ -111,10 +111,8 @@ TEST_F(TestConsensus, AddForks) {
 
     for (int i = 1; i < n_branches; ++i) {
         // randomly pick a branch and fork it at random height
-        auto chain_id         = fac.GetRand() % branches_rec.size();
-        auto& picked_chain    = branches_rec[chain_id];
-        int lucky_draw        = fac.GetRand() % (picked_chain.size() - 2) + 1;
-        auto& new_split_point = picked_chain[lucky_draw > 5 ? 5 : lucky_draw];
+        auto& picked_chain    = branches_rec[fac.GetRand() % branches_rec.size()];
+        auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 2)];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
         // fac.PrintChain(chain);

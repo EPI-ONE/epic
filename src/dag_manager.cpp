@@ -555,8 +555,8 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             if (*(ms) == *(GetMilestoneHead()->snapshot)) {
                 // new milestone on mainchain
                 ProcessMilestone(mainchain, block);
-                if (size_t level = FlushTrigger()) {
-                    if (!isStoring.load()) {
+                if (!isStoring.load()) {
+                    if (size_t level = FlushTrigger()) {
                         isStoring = true;
                         DeleteFork();
                         FlushToCAT(level);
@@ -706,6 +706,7 @@ void DAGManager::FlushToCAT(size_t level) {
                           utxoToRemove = std::move(utxoToRemove)]() {
         for (auto& lvsRec : recToStore) {
             CAT->StoreRecords(lvsRec);
+            CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
         }
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);

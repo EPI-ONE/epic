@@ -12,7 +12,6 @@ Chain::Chain() : ismainchain_(true) {}
 Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
       recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
-
     if (states_.empty()) {
         return;
     }
