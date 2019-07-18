@@ -53,7 +53,7 @@ public:
      * Moreover, it does not contain the corresponding chain state of this $fork.
      * We have to further verify it to update chain state.
      */
-    Chain(const Chain&, ConstBlockPtr fork);
+    Chain(const Chain&, const ConstBlockPtr& fork);
 
     ChainStatePtr GetChainHead() const;
 

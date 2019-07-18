@@ -9,24 +9,26 @@
 
 Chain::Chain() : ismainchain_(true) {}
 
-Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
+Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
       recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
-    ChainStatePtr cursor = chain.GetChainHead();
-    uint256 target       = pfork->GetMilestoneHash();
 
-    if (!states_.empty()) {
-        assert(recordHistory_.find(target) != recordHistory_.end());
-        for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
-            for (const auto& h : (*it)->GetRecordHashes()) {
-                pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
-                recordHistory_.erase(h);
-                ledger_.Rollback((*it)->GetTXOC());
-            }
-            states_.erase(std::next(it).base());
-        }
-        // note that we don't do any verification here
+    if (states_.empty()) {
+        return;
     }
+
+    uint256 target = pfork->GetMilestoneHash();
+    assert(recordHistory_.find(target) != recordHistory_.end());
+
+    for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
+        for (const auto& h : (*it)->GetRecordHashes()) {
+            pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
+            recordHistory_.erase(h);
+            ledger_.Rollback((*it)->GetTXOC());
+        }
+        states_.erase(std::next(it).base());
+    }
+    // note that we don't do any verification here
 }
 
 ChainStatePtr Chain::GetChainHead() const {

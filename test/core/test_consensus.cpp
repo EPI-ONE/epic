@@ -162,6 +162,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     CAT->Wait();
     DAG->Wait();
 
+    ASSERT_EQ(CAT->GetHeadHeight(), FLUSHED);
     auto chain_it = chain.cbegin();
     auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < FLUSHED; height++) {

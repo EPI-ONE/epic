@@ -94,6 +94,9 @@ private:
     /** The peer we are synching with. Null if isBatchSynching is false. */
     PeerPtr syncingPeer;
 
+    /** Indicator of whether we are storing level sets to CAT. */
+    std::atomic<bool> isStoring;
+
     /** Indicator of whether the DAG manager is doing off-line verification */
     std::atomic<bool> isVerifying;
 
