@@ -9,24 +9,25 @@
 
 Chain::Chain() : ismainchain_(true) {}
 
-Chain::Chain(const Chain& chain, ConstBlockPtr pfork)
+Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
       recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
-    ChainStatePtr cursor = chain.GetChainHead();
-    uint256 target       = pfork->GetMilestoneHash();
-
-    if (!states_.empty()) {
-        assert(recordHistory_.find(target) != recordHistory_.end());
-        for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
-            for (const auto& h : (*it)->GetRecordHashes()) {
-                pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
-                recordHistory_.erase(h);
-                ledger_.Rollback((*it)->GetTXOC());
-            }
-            states_.erase(std::next(it).base());
-        }
-        // note that we don't do any verification here
+    if (states_.empty()) {
+        return;
     }
+
+    uint256 target = pfork->GetMilestoneHash();
+    assert(recordHistory_.find(target) != recordHistory_.end());
+
+    for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
+        for (const auto& h : (*it)->GetRecordHashes()) {
+            pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
+            recordHistory_.erase(h);
+            ledger_.Rollback((*it)->GetTXOC());
+        }
+        states_.erase(std::next(it).base());
+    }
+    // note that we don't do any verification here
 }
 
 ChainStatePtr Chain::GetChainHead() const {
@@ -196,6 +197,11 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
                 state->UpdateTXOC(std::move(*update));
             } else {
                 rec->validity = NodeRecord::INVALID;
+                TXOC invalid  = CreateTXOCFromInvalid(*(rec->cblock));
+                // remove utxo of the block from pending to removed
+                ledger_.Invalidate(invalid);
+                // still take notes in chain state
+                state->UpdateTXOC(std::move(invalid));
             }
             rec->UpdateReward(GetPrevReward(*rec));
         }
@@ -217,7 +223,6 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
 
     const auto& oldRedemHash = prevRec->prevRedemHash;
     assert(!oldRedemHash.IsNull());
-
     record.prevRedemHash = oldRedemHash;
     regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
     regChange.Create(record.cblock->GetHash(), oldRedemHash);
@@ -398,9 +403,11 @@ Chain::GetDataToCAT(size_t level) {
     result_rec.reserve(level);
     TXOC result_txoc{};
 
-    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it < states_.end(); cs_it++) {
-        std::vector<RecordPtr> lvsRec{};
+    // traverse from the oldest chain state in memory 
+    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
+        std::vector<RecordPtr> lvsRec;
         lvsRec.reserve((*cs_it)->GetRecordHashes().size());
+
         for (const auto& h : (*cs_it)->GetRecordHashes()) {
             lvsRec.emplace_back(recordHistory_.at(h));
         }

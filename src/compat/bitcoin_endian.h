@@ -5,9 +5,10 @@
 #ifndef BITCOIN_COMPAT_ENDIAN_H
 #define BITCOIN_COMPAT_ENDIAN_H
 
-#include <compat/byteswap.h>
-
 #include <cstdint>
+
+#include "compat/byteswap.h"
+
 
 #if defined(HAVE_ENDIAN_H)
 #include <endian.h>

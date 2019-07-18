@@ -3,7 +3,7 @@
 #include "peer_manager.h"
 
 DAGManager::DAGManager()
-    : verifyThread_(1), syncPool_(1), storagePool_(2), isBatchSynching(false), syncingPeer(nullptr),
+    : verifyThread_(1), syncPool_(1), storagePool_(1), isBatchSynching(false), syncingPeer(nullptr), isStoring(false),
       isVerifying(false) {
     milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
@@ -555,13 +555,15 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             if (*(ms) == *(GetMilestoneHead()->snapshot)) {
                 // new milestone on mainchain
                 ProcessMilestone(mainchain, block);
-                if (size_t level = FlushTrigger()) {
-                    DeleteFork();
-                    FlushToCAT(level);
+                if (!isStoring.load()) {
+                    if (size_t level = FlushTrigger()) {
+                        isStoring = true;
+                        DeleteFork();
+                        FlushToCAT(level);
+                    }
                 }
             } else {
                 // new fork
-
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -698,39 +700,49 @@ void DAGManager::FlushToCAT(size_t level) {
 
     for (auto& lvsRec : recToStore) {
         std::swap(lvsRec.front(), lvsRec.back());
-        CAT->StoreRecords(lvsRec);
-    }
-    for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
-        CAT->AddUTXO(utxoKey, utxoPtr);
-    }
-    for (const auto& utxoKey : utxoToRemove) {
-        CAT->RemoveUTXO(utxoKey);
     }
 
-    const auto oldestCs = milestoneChains.best()->GetStates().front();
-
-    // then remove chain states from chains
-    size_t totalRecNum = 0;
-    std::for_each(recToStore.begin(), recToStore.end(), [&totalRecNum](const auto& lvs) { totalRecNum += lvs.size(); });
-    std::vector<uint256> recHashes{};
-    recHashes.reserve(totalRecNum);
-    std::unordered_set<uint256> utxoCreated{};
-    utxoCreated.reserve(utxoToStore.size());
-
-    for (auto& lvsRec : recToStore) {
-        for (auto& rec : lvsRec) {
-            recHashes.emplace_back(rec->cblock->GetHash());
+    storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
+                          utxoToRemove = std::move(utxoToRemove)]() {
+        for (auto& lvsRec : recToStore) {
+            CAT->StoreRecords(lvsRec);
+            CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
         }
-    }
+        for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
+            CAT->AddUTXO(utxoKey, utxoPtr);
+        }
+        for (const auto& utxoKey : utxoToRemove) {
+            CAT->RemoveUTXO(utxoKey);
+        }
 
-    for (const auto& [key, value] : utxoToStore) {
-        utxoCreated.emplace(key);
-    }
-    TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
+        // then remove chain states from chains
+        size_t totalRecNum = 0;
+        std::for_each(recToStore.begin(), recToStore.end(),
+                      [&totalRecNum](const auto& lvs) { totalRecNum += lvs.size(); });
+        std::vector<uint256> recHashes{};
+        recHashes.reserve(totalRecNum);
+        std::unordered_set<uint256> utxoCreated{};
+        utxoCreated.reserve(utxoToStore.size());
 
-    for (auto& chain : milestoneChains) {
-        chain->PopOldest(recHashes, txocToRemove, level);
-    }
+        for (auto& lvsRec : recToStore) {
+            for (auto& rec : lvsRec) {
+                recHashes.emplace_back(rec->cblock->GetHash());
+            }
+        }
+
+        for (const auto& [key, value] : utxoToStore) {
+            utxoCreated.emplace(key);
+        }
+        TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
+
+        verifyThread_.Execute(
+            [=, recHashes = std::move(recHashes), txocToRemove = std::move(txocToRemove), level = level]() {
+                for (auto& chain : milestoneChains) {
+                    chain->PopOldest(recHashes, txocToRemove, level);
+                }
+                isStoring = false;
+            });
+    });
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {

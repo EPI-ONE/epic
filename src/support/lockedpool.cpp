@@ -283,9 +283,9 @@ bool LockedPool::new_arena(size_t size, size_t align) {
 }
 
 LockedPool::LockedPageArena::LockedPageArena(LockedPageAllocator* allocator_in,
-    void* base_in,
-    size_t size_in,
-    size_t align_in)
+                                             void* base_in,
+                                             size_t size_in,
+                                             size_t align_in)
     : Arena(base_in, size_in, align_in), base(base_in), size(size_in), allocator(allocator_in) {}
 LockedPool::LockedPageArena::~LockedPageArena() {
     allocator->FreeLocked(base, size);

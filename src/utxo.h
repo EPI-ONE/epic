@@ -26,7 +26,7 @@ class UTXO {
 public:
     UTXO(const TxOutput& output, uint32_t index) : output_(output), index_(index) {}
     UTXO(const UTXO&) = default;
-    UTXO(VStream& s) : index_(-1) {
+    explicit UTXO(VStream& s) : index_(-1) {
         s >> output_;
     }
 
@@ -89,12 +89,13 @@ public:
     TXOC& operator=(TXOC&& other) = default;
     ~TXOC()                       = default;
 
-    TXOC(std::unordered_set<uint256>&& created, std::unordered_set<uint256>&& spent) : increment_(created, spent) {}
+    TXOC(std::unordered_set<uint256> created, std::unordered_set<uint256> spent)
+        : increment_(std::move(created), std::move(spent)) {}
 
     void AddToCreated(const UTXOPtr&);
     void AddToCreated(const uint256&, uint32_t);
     void AddToSpent(const TxInput&);
-    void Merge(TXOC&& txoc);
+    void Merge(TXOC txoc);
 
     const std::unordered_set<uint256>& GetSpent() const {
         return increment_.GetRemoved();
@@ -115,15 +116,16 @@ public:
     ChainLedger(const ChainLedger&) = default;
     ~ChainLedger()                  = default;
 
-    ChainLedger(std::unordered_map<uint256, UTXOPtr>&& pending,
-                std::unordered_map<uint256, UTXOPtr>&& confirmed,
-                std::unordered_map<uint256, UTXOPtr>&& removed)
+    ChainLedger(std::unordered_map<uint256, UTXOPtr> pending,
+                std::unordered_map<uint256, UTXOPtr> confirmed,
+                std::unordered_map<uint256, UTXOPtr> removed)
         : pending_(std::move(pending)), confirmed_(std::move(confirmed)), removed_(std::move(removed)) {}
 
     void AddToPending(UTXOPtr);
-    UTXOPtr GetFromPending(const uint256&);
     UTXOPtr FindFromLedger(const uint256&); // might be already spent
     UTXOPtr FindSpendable(const uint256&);
+    UTXOPtr GetFromPending(const uint256&);
+    void Invalidate(const TXOC&);
     void Update(const TXOC&);
     void Remove(const TXOC&);
     void Rollback(const TXOC&);
@@ -134,4 +136,5 @@ private:
     std::unordered_map<uint256, UTXOPtr> removed_;
 };
 
+TXOC CreateTXOCFromInvalid(const Block&);
 #endif /* ifndef __SRC_UTXO_H__ */

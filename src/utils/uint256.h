@@ -36,7 +36,7 @@ public:
     base_blob(base_blob<BITS>&&)      = default;
     base_blob<BITS>& operator=(const base_blob<BITS>&) = default;
     base_blob<BITS>& operator=(base_blob<BITS>&&) = default;
-    ~base_blob() = default;
+    ~base_blob()                                  = default;
 
     bool IsNull() const {
         for (int i = 0; i < WIDTH; i++)

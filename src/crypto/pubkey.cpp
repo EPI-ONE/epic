@@ -3,14 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "base58.h"
 #include "pubkey.h"
+#include "base58.h"
 
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
-namespace
-{
+namespace {
 /* Global secp256k1_context object used for verification. */
 secp256k1_context* secp256k1_context_verify = nullptr;
 } // namespace
@@ -25,12 +24,15 @@ secp256k1_context* secp256k1_context_verify = nullptr;
  *  strict DER before being passed to this module, and we know it supports all
  *  violations present in the blockchain before that point.
  */
-static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1_ecdsa_signature* sig, const unsigned char *input, size_t inputlen) {
+static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx,
+                                         secp256k1_ecdsa_signature* sig,
+                                         const unsigned char* input,
+                                         size_t inputlen) {
     size_t rpos, rlen, spos, slen;
     size_t pos = 0;
     size_t lenbyte;
     unsigned char tmpsig[64] = {0};
-    int overflow = 0;
+    int overflow             = 0;
 
     /* Hack to initialize sig with a correctly-parsed but invalid signature. */
     secp256k1_ecdsa_signature_parse_compact(ctx, sig, tmpsig);
@@ -167,7 +169,7 @@ static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1
     return 1;
 }
 
-bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
+bool CPubKey::Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const {
     if (!IsValid())
         return false;
     secp256k1_pubkey pubkey;
@@ -184,10 +186,10 @@ bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchS
     return secp256k1_ecdsa_verify(secp256k1_context_verify, &sig, hash.begin(), &pubkey);
 }
 
-bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) {
+bool CPubKey::RecoverCompact(const uint256& hash, const std::vector<unsigned char>& vchSig) {
     if (vchSig.size() != COMPACT_SIGNATURE_SIZE)
         return false;
-    int recid = (vchSig[0] - 27) & 3;
+    int recid  = (vchSig[0] - 27) & 3;
     bool fComp = ((vchSig[0] - 27) & 4) != 0;
     secp256k1_pubkey pubkey;
     secp256k1_ecdsa_recoverable_signature sig;
@@ -199,7 +201,8 @@ bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned cha
     }
     unsigned char pub[PUBLIC_KEY_SIZE];
     size_t publen = PUBLIC_KEY_SIZE;
-    secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub, &publen, &pubkey, fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED);
+    secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub, &publen, &pubkey,
+                                  fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED);
     Set(pub, pub + publen);
     return true;
 }
@@ -235,18 +238,17 @@ std::optional<CKeyID> DecodeAddress(const std::string str) {
     std::vector<unsigned char> data;
     uint160 hash;
     if (DecodeBase58Check(str, data)) {
-        // base58-encoded Public-key-hash-addresses have version 0 
+        // base58-encoded Public-key-hash-addresses have version 0
         // The data vector contains SHA160(pubkey), where pubkey is
         // the serialized public key.
-        const std::vector<unsigned char> pubkey_prefix(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
+        const std::vector<unsigned char> pubkey_prefix(1,
+                                                       GetParams().GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
         if (data.size() == hash.size() + pubkey_prefix.size() &&
-            std::equal(
-                pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
-            std::copy(
-                data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
+            std::equal(pubkey_prefix.begin(), pubkey_prefix.end(), data.begin())) {
+            std::copy(data.begin() + pubkey_prefix.size(), data.end(), hash.begin());
             return CKeyID(hash);
         }
-    } 
+    }
     return {};
 }
 
@@ -260,8 +262,7 @@ std::optional<CKeyID> DecodeAddress(const std::string str) {
 
 /* static */ int ECCVerifyHandle::refcount = 0;
 
-ECCVerifyHandle::ECCVerifyHandle()
-{
+ECCVerifyHandle::ECCVerifyHandle() {
     if (refcount == 0) {
         assert(secp256k1_context_verify == nullptr);
         secp256k1_context_verify = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
@@ -270,8 +271,7 @@ ECCVerifyHandle::ECCVerifyHandle()
     refcount++;
 }
 
-ECCVerifyHandle::~ECCVerifyHandle()
-{
+ECCVerifyHandle::~ECCVerifyHandle() {
     refcount--;
     if (refcount == 0) {
         assert(secp256k1_context_verify != nullptr);

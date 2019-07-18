@@ -9,13 +9,13 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
-    std::string prefix = "test_consensus/";
+    const std::string prefix = "test_consensus/";
 
-    void SetUp() {
+    void SetUp() override {
         EpicTestEnvironment::SetUpDAG(prefix);
     }
 
-    void TearDown() {
+    void TearDown() override {
         EpicTestEnvironment::TearDownDAG(prefix);
     }
 };
@@ -96,8 +96,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
 
 TEST_F(TestConsensus, AddForks) {
     // Construct a fully connected graph with main chain and forks
-    constexpr int chain_length = 10;
-    constexpr int n_branches   = 10;
+    constexpr int chain_length = 5;
+    constexpr int n_branches   = 5;
 
     std::vector<TestChain> branches;
     std::vector<std::vector<NodeRecord>> branches_rec;
@@ -111,10 +111,8 @@ TEST_F(TestConsensus, AddForks) {
 
     for (int i = 1; i < n_branches; ++i) {
         // randomly pick a branch and fork it at random height
-        auto chain_id         = fac.GetRand() % branches_rec.size();
-        auto& picked_chain    = branches_rec[chain_id];
-        int lucky_draw        = fac.GetRand() % (picked_chain.size() - 2) + 1;
-        auto& new_split_point = picked_chain[lucky_draw > 5 ? 5 : lucky_draw];
+        auto& picked_chain    = branches_rec[fac.GetRand() % branches_rec.size()];
+        auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 2)];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
         // fac.PrintChain(chain);
@@ -148,16 +146,21 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     TestChain chain;
     std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, HEIGHT);
 
-    for (auto& levelSet : chain) {
-        for (auto& blkptr : levelSet) {
+    for (size_t i = 0; i < chain.size(); i++) {
+        if (i > GetParams().cacheStatesSize) {
+            usleep(50000);
+        }
+        for (auto& blkptr : chain[i]) {
             DAG->AddNewBlock(blkptr, nullptr);
         }
     }
 
     usleep(50000);
+
     CAT->Wait();
     DAG->Wait();
 
+    ASSERT_EQ(CAT->GetHeadHeight(), FLUSHED);
     auto chain_it = chain.cbegin();
     auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < FLUSHED; height++) {
@@ -184,15 +187,18 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     std::array<TestChain, 4> chains;
     chains[0]                        = std::move(chain1);
     std::tie(chains[1], std::ignore) = fac.CreateChain(vMsRec[1], 1);
-    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 2);
-    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 4);
+    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 5);
+    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 5);
 
     // add blocks in a carefully assigned sequence
     for (int i : {0, 1, 2, 3}) {
-        for (auto& levelset : chains[i]) {
-            for (auto& blkptr : levelset) {
+        for (size_t j = 0; j < chains[i].size(); j++) {
+            for (auto& blkptr : chains[i][j]) {
                 DAG->AddNewBlock(blkptr, nullptr);
             }
+        }
+        if (i == 2) {
+            usleep(100000);
         }
     }
     usleep(50000);
@@ -202,6 +208,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
 
     // here we set less or equal as $chain[2] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
+    ASSERT_EQ(CAT->GetHeadHeight(), GetParams().cacheStatesToDelete);
 
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();

@@ -17,8 +17,8 @@ base_blob<BITS>::base_blob(const std::vector<unsigned char>& vch) {
 
 template <unsigned int BITS>
 std::string base_blob<BITS>::GetHex() const {
-    return HexStr(
-        std::reverse_iterator<const uint8_t*>(data + sizeof(data)), std::reverse_iterator<const uint8_t*>(data));
+    return HexStr(std::reverse_iterator<const uint8_t*>(data + sizeof(data)),
+                  std::reverse_iterator<const uint8_t*>(data));
 }
 
 template <unsigned int BITS>

@@ -21,11 +21,11 @@
  * CPrivKey is a serialized private key, with all parameters included
  * (PRIVATE_KEY_SIZE bytes)
  */
-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;
+typedef std::vector<unsigned char, secure_allocator<unsigned char>> CPrivKey;
 
 /** An encapsulated private key. */
 class CKey {
-   public:
+public:
     /**
      * secp256k1:
      */
@@ -36,9 +36,9 @@ class CKey {
      * script supports up to 75 for single byte push
      */
     static_assert(PRIVATE_KEY_SIZE >= COMPRESSED_PRIVATE_KEY_SIZE,
-        "COMPRESSED_PRIVATE_KEY_SIZE is larger than PRIVATE_KEY_SIZE");
+                  "COMPRESSED_PRIVATE_KEY_SIZE is larger than PRIVATE_KEY_SIZE");
 
-   private:
+private:
     //! Whether this private key is valid. We check for correctness when modifying the key
     //! data, so fValid should always correspond to the actual state.
     bool fValid;
@@ -47,12 +47,12 @@ class CKey {
     bool fCompressed;
 
     //! The actual byte data
-    std::vector<unsigned char, secure_allocator<unsigned char> > keydata;
+    std::vector<unsigned char, secure_allocator<unsigned char>> keydata;
 
     //! Check whether the 32-byte array pointed to by vch is valid keydata.
     bool static Check(const unsigned char* vch);
 
-   public:
+public:
     //! Construct an invalid private key.
     CKey() : fValid(false), fCompressed(false) {
         // Important: vch must be 32 bytes in length to not break serialization
@@ -64,7 +64,9 @@ class CKey {
                memcmp(a.keydata.data(), b.keydata.data(), a.size()) == 0;
     }
 
-    friend bool operator!=(const CKey& a, const CKey& b) { return !(a == b); }
+    friend bool operator!=(const CKey& a, const CKey& b) {
+        return !(a == b);
+    }
 
     //! Initialize using begin and end iterators to byte data.
     template <typename T>
@@ -81,15 +83,25 @@ class CKey {
     }
 
     //! Simple read-only vector-like interface.
-    unsigned int size() const { return (fValid ? keydata.size() : 0); }
-    const unsigned char* begin() const { return keydata.data(); }
-    const unsigned char* end() const { return keydata.data() + size(); }
+    unsigned int size() const {
+        return (fValid ? keydata.size() : 0);
+    }
+    const unsigned char* begin() const {
+        return keydata.data();
+    }
+    const unsigned char* end() const {
+        return keydata.data() + size();
+    }
 
     //! Check whether this private key is valid.
-    bool IsValid() const { return fValid; }
+    bool IsValid() const {
+        return fValid;
+    }
 
     //! Check whether the public key corresponding to this private key is (to be) compressed.
-    bool IsCompressed() const { return fCompressed; }
+    bool IsCompressed() const {
+        return fCompressed;
+    }
 
     //! Generate a new private key using a cryptographic PRNG.
     void MakeNewKey(bool fCompressed);
@@ -128,7 +140,7 @@ class CKey {
     bool VerifyPubKey(const CPubKey& vchPubKey) const;
 
     //! Load private key and check that public key matches.
-    bool Load(const CPrivKey& privkey, const CPubKey& vchPubKey, bool fSkipCheck=false);
+    bool Load(const CPrivKey& privkey, const CPubKey& vchPubKey, bool fSkipCheck = false);
 };
 
 /** Initialize the elliptic curve support. May not be called twice without calling ECC_Stop first. */

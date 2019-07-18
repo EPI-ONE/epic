@@ -6,17 +6,16 @@
 #include "chain.h"
 #include "test_env.h"
 
-static std::string prefix = "test_validation/";
-
 class TestChainVerification : public testing::Test {
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
+    const std::string prefix = "test_validation/";
 
-    static void SetUpTestCase() {
+    void SetUp() override {
         EpicTestEnvironment::SetUpDAG(prefix);
     }
 
-    static void TearDownTestCase() {
+    void TearDown() override {
         EpicTestEnvironment::TearDownDAG(prefix);
     }
 
