@@ -12,8 +12,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* con
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* context,
                                                            const GetLevelSetRequest* request,
                                                            GetLevelSetResponse* reply) {
-    auto record = DAG->GetState(RPCHashToHash(request->hash()));
-    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
     for (auto localBlock : ls) {
         auto newBlock   = reply->add_blocks();
         auto blockValue = BlockToRPCBlock(*localBlock);
@@ -26,8 +25,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerContext* context,
                                                                const GetLevelSetSizeRequest* request,
                                                                GetLevelSetSizeResponse* reply) {
-    auto record = DAG->GetState(RPCHashToHash(request->hash()));
-    auto ls     = DAG->GetMainChainLevelSet(record->height);
+    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
     reply->set_size(ls.size());
     return grpc::Status::OK;
 }
@@ -62,14 +60,17 @@ RPCServer::RPCServer(NetAddress adr) {
 }
 
 void RPCServer::Start() {
-    keepRunning_ = true;
     std::thread t(&RPCServer::LaunchServer, this);
     t.detach();
 }
 
 void RPCServer::Shutdown() {
-    keepRunning_ = false;
+    isRunning_ = false;
     spdlog::info("RPC Server is shutting down");
+}
+
+bool RPCServer::IsRunning() {
+    return isRunning_.load();
 }
 
 void RPCServer::LaunchServer() {
@@ -78,8 +79,9 @@ void RPCServer::LaunchServer() {
     builder.AddListeningPort(this->server_address_, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+    isRunning_ = true;
     spdlog::info("RPC Server is running on {}", this->server_address_);
-    while (keepRunning_) {
+    while (IsRunning()) {
         std::this_thread::yield();
     }
     server->Shutdown();

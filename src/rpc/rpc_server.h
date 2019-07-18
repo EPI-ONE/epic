@@ -56,9 +56,11 @@ public:
 
     void Shutdown();
 
+    bool IsRunning();
+
 private:
     std::string server_address_;
-    std::atomic<bool> keepRunning_;
+    std::atomic<bool> isRunning_;
 
     void LaunchServer();
 };
