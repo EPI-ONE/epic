@@ -223,11 +223,6 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     auto prevRec = GetRecord(pblock->GetPrevHash());
 
     const auto& oldRedemHash = prevRec->prevRedemHash;
-    // debug
-    if (oldRedemHash.IsNull()) {
-        std::cout << "chain height: " << GetChainHead()->height << '\n';
-        std::cout << std::to_string(*prevRec) << std::endl;
-    }
     assert(!oldRedemHash.IsNull());
     record.prevRedemHash = oldRedemHash;
     regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
