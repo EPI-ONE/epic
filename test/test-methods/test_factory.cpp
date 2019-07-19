@@ -154,7 +154,7 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
     while (count < height) {
         Block b{GetParams().version};
         if (tx) {
-            b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1)); 
+            b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
         }
         b.SetMilestoneHash(lastMs.cblock->GetHash());
         b.SetPrevHash(prevBlock->GetHash());

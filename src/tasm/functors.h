@@ -14,14 +14,14 @@ static const std::array<instruction, 256> functors = {
     // TRUE
     ([](VStream&, std::size_t) { return 0; }),
     // VERIFY
-    ([](VStream& data, std::size_t ip) {
+    ([](VStream& vdata, std::size_t ip) {
         CPubKey pubkey;
         std::vector<unsigned char> sig;
         uint256 msg;
         std::string encodedAddr;
 
         try {
-            data >> pubkey >> sig >> msg >> encodedAddr;
+            vdata >> pubkey >> sig >> msg >> encodedAddr;
         } catch (std::exception& e) {
             return ip + 1;
         }

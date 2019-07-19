@@ -32,17 +32,24 @@ public:
     typedef byte_vector::const_iterator const_iterator;
     typedef byte_vector::reverse_iterator reverse_iterator;
 
-    explicit VStream() : readPos_(0) {}
+    VStream() : readPos_(0) {}
 
-    VStream(const_iterator pbegin, const_iterator pend) : chars_(pbegin, pend), readPos_(0) {}
+    VStream(std::vector<char>::const_iterator pbegin, std::vector<char>::const_iterator pend)
+        : chars_(pbegin, pend), readPos_(0) {}
 
     VStream(const char* pbegin, const char* pend) : chars_(pbegin, pend), readPos_(0) {}
 
-    VStream(const byte_vector& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
+    VStream(const byte_vector& vchIn) : chars_(vchIn), readPos_(0) {}
+
+    VStream(byte_vector&& vchIn) : chars_(std::move(vchIn)), readPos_(0) {}
 
     VStream(const std::vector<char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
 
     VStream(const std::vector<unsigned char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
+
+    VStream(const VStream& vs) : chars_(vs.chars_), readPos_(vs.readPos_) {}
+
+    VStream(VStream&& vs) : chars_(std::move(vs.chars_)), readPos_(vs.readPos_) {}
 
     template <typename... Args>
     VStream(Args&&... args) {
@@ -50,10 +57,16 @@ public:
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(chars_);
+    VStream& operator=(const VStream& b) {
+        readPos_ = b.readPos_;
+        chars_   = b.chars_;
+        return *this;
+    }
+
+    VStream& operator=(VStream&& b) {
+        readPos_ = b.readPos_;
+        chars_   = std::move(b.chars_);
+        return *this;
     }
 
     VStream& operator+=(const VStream& b) {

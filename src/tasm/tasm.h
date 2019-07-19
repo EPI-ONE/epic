@@ -16,13 +16,25 @@ public:
     class Listing {
     public:
         std::vector<uint8_t> program;
-        VStream data;
+        std::vector<char> data;
 
         Listing() = default;
 
-        Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
-        Listing(std::vector<uint8_t>&& p, const VStream& d) : program(p), data(d.cbegin(), d.cend()) {}
-        Listing(const VStream& d) : data(d.cbegin(), d.cend()) {}
+        Listing(const std::vector<uint8_t>& p, const std::vector<char>& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(std::vector<uint8_t>&& p, const std::vector<char>& d) : program(p), data(d.cbegin(), d.cend()) {}
+
+        Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p) {
+            data.resize(d.size());
+            memcpy(&data[0], d.data(), d.size());
+        }
+
+        Listing(const std::vector<uint8_t>& p, VStream&& d) : program(p) {
+            data.reserve(d.size());
+            std::move(d.begin(), d.end(), std::back_inserter(data));
+        }
+
+        Listing(const VStream& d) : Listing(std::vector<uint8_t>(), d) {}
+        Listing(VStream&& d) : Listing(std::vector<uint8_t>(), d) {}
 
         ADD_SERIALIZE_METHODS;
         template <typename Stream, typename Operation>
@@ -37,7 +49,7 @@ public:
 
         friend Listing operator+(const Listing& a, const Listing& b) {
             Listing listing{a.program, a.data};
-            listing.data += b.data;
+            listing.data.insert(listing.data.end(), b.data.begin(), b.data.end());
             if (!b.program.empty()) {
                 for (const auto& prog : b.program) {
                     listing.program.emplace_back(prog);
@@ -51,11 +63,11 @@ public:
         is_ = is;
     };
 
-    instruction YieldInstruction(const std::vector<uint8_t> program) {
+    instruction YieldInstruction(const std::vector<uint8_t>& program) {
         return YieldInstructionNChannel(Preprocessor(program));
     }
 
-    std::vector<uint8_t> Preprocessor(const std::vector<uint8_t>& program_) {
+    static std::vector<uint8_t> Preprocessor(const std::vector<uint8_t>& program_) {
         std::vector<uint8_t> program = program_;
         if (program.back() != SUCCESS) {
             program.push_back(FAIL);
@@ -66,7 +78,8 @@ public:
     }
 
     int ExecListing(Listing l) {
-        return YieldInstruction(l.program)(l.data, 0);
+        VStream vs(l.data.cbegin(), l.data.cend());
+        return YieldInstruction(l.program)(vs, 0);
     }
 
     void SetOp(uint8_t ip, instruction i) {
@@ -80,14 +93,14 @@ public:
 private:
     std::array<instruction, 256> is_;
 
-    instruction YieldInstructionNChannel(const std::vector<uint8_t> program) {
-        return [=](VStream& data, std::size_t ip) {
+    instruction YieldInstructionNChannel(const std::vector<uint8_t>& program) {
+        return [=](VStream& vdata, std::size_t ip) {
             std::size_t ip_p = ip;
             uint8_t op;
 
             do {
                 op   = program[ip_p];
-                ip_p = is_[op](data, ip_p);
+                ip_p = is_[op](vdata, ip_p);
             } while (op != FAIL && op != SUCCESS);
 
             return op;

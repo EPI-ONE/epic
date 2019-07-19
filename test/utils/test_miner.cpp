@@ -18,7 +18,7 @@ TEST_F(TestMiner, Solve) {
     tx.AddInput(TxInput(Tasm::Listing(vs)));
 
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
+    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(std::vector<uint8_t>(), pubKeyID.value())))).FinalizeHash();
 
     block.AddTransaction(tx);
     block.SetDifficultyTarget(GetParams().maxTarget.GetCompact());

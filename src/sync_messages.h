@@ -89,7 +89,7 @@ public:
         bundleNonce.emplace_back(nonce);
     }
 
-    void AddPendingSetNonce(uint32_t nonce){
+    void AddPendingSetNonce(uint32_t nonce) {
         bundleNonce.emplace_back(nonce);
     }
 
@@ -118,6 +118,10 @@ public:
         blocks.push_back(blockPtr);
     }
 
+    void SetPayload(VStream s) {
+        payload = std::move(s);
+    }
+
     // max block size of a bundle
     const static size_t kMaxBlockSize = 100000;
 
@@ -133,6 +137,9 @@ public:
         READWRITE(blocks);
         READWRITE(nonce);
     }
+
+private:
+    VStream payload;
 };
 
 class NotFound {
