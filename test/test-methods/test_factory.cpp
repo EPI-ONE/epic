@@ -149,8 +149,8 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
     std::vector<NodeRecord> vMs;
     vMs.reserve(height);
 
-    size_t count       = 1;
-    uint32_t timestamp = startMs.cblock->GetTime();
+    size_t count = 1;
+    TimeGenerator timeg{startMs.cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
         Block b{GetParams().version};
         if (tx) {
@@ -161,9 +161,9 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
         if (testChain.size() == 1) {
             b.SetTipHash(GENESIS.GetHash());
         } else {
-            b.SetTipHash(testChain[rand() % (testChain.size() - 1)][0]->GetHash());
+            b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->GetHash());
         }
-        b.SetTime(timestamp++);
+        b.SetTime(timeg.NextTime());
         b.SetDifficultyTarget(lastMs.snapshot->blockTarget.GetCompact());
 
         // Special transaction on the first registration block

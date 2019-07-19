@@ -47,7 +47,7 @@ private:
 
 class TestFactory {
 public:
-    TestFactory() : timeGenerator(), numGenerator() {}
+    TestFactory() = default;
 
     std::string GetRandomString(size_t len);
     uint256 CreateRandomHash();
@@ -82,7 +82,6 @@ public:
         }
         std::cout << "}" << std::endl;
     }
-
 
     uint32_t GetRand() {
         return numGenerator.GetRand();

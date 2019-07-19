@@ -30,7 +30,7 @@ public:
     // constructor of a chain state of genesis.
     ChainState() = default;
     // constructor of a chain state with all data fields
-    ChainState(std::shared_ptr<ChainState>, const ConstBlockPtr&, std::vector<uint256>&&);
+    ChainState(const std::shared_ptr<ChainState>&, const ConstBlockPtr&, std::vector<uint256>&&);
     // constructor of a chain state by vstream
     ChainState(VStream&);
     // copy constructor
@@ -77,7 +77,7 @@ public:
 
     void UpdateTXOC(TXOC&&);
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(VARINT(height));
@@ -157,17 +157,17 @@ public:
     uint8_t validity = Validity::UNKNOWN;
 
     NodeRecord();
-    NodeRecord(const ConstBlockPtr&);
-    NodeRecord(const Block&);
-    NodeRecord(Block&&);
-    NodeRecord(VStream&);
     NodeRecord(const NodeRecord&) = default;
+    explicit NodeRecord(const ConstBlockPtr&);
+    explicit NodeRecord(const Block&);
+    explicit NodeRecord(Block&&);
+    explicit NodeRecord(VStream&);
 
     void LinkChainState(const ChainStatePtr&);
     size_t GetOptimalStorageSize();
     void UpdateReward(const Coin&);
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(VARINT(height));

@@ -24,12 +24,11 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
         return;
     }
 
-    /* construct new dependency
-     * for the new block */
-    obc_dep_ptr dep(new obc_dep);
-    dep->block = block;
+    // construct new dependency for the new block
+    obc_dep_ptr dep = std::make_shared<obc_dep>();
+    dep->block      = block;
 
-    /* insert new dependency into block_dep_map_ */
+    // insert new dependency into block_dep_map_
     std::unordered_set<uint256> unique_missing_hashes;
 
     auto common_insert = [&](uint256&& hash) {
@@ -37,17 +36,15 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
         unique_missing_hashes.insert(hash);
 
         if (it == block_dep_map_.end()) {
-            /* if the dependency is not in this OBC
-             * then the dep is a lose end */
+            // if the dependency is not in this OBC then the dep is a lose end
             lose_ends_[hash].insert(dep);
         } else {
-            /* if the dependency is in the OBC
-             * the dep is linked to the dependency dep */
+            // if the dependency is in the OBC the dep is linked to the dependency dep
             it->second->deps.push_back(dep);
         }
     };
 
-    /* insert new dependency into block_dep_map_ */
+    // insert new dependency into block_dep_map_
     std::unique_lock<std::shared_mutex> writer(mutex_);
 
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
@@ -71,7 +68,7 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     std::unique_lock<std::shared_mutex> writer(mutex_);
     auto range = lose_ends_.find(hash);
 
-    /* if no lose ends can be tied using this hash return */
+    // if no lose ends can be tied using this hash return
     if (range == lose_ends_.end()) {
         return {};
     }
@@ -79,10 +76,9 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
     std::vector<obc_dep_ptr> stack;
     std::vector<ConstBlockPtr> result;
 
-    /* for all deps that have the given hash as a parent/dependency */
+    // for all deps that have the given hash as a parent/dependency
     for (auto& n : range->second) {
-        /* push it onto the stack as it might
-         * be used later on */
+        // push it onto the stack as it might be used later on
         stack.push_back(n);
     }
 
@@ -95,13 +91,11 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
 
     obc_dep_ptr cursor;
     while (!stack.empty()) {
-        /* pop dependency from
-         * the stack*/
+        // pop dependency from the stack
         cursor = stack.back();
         stack.pop_back();
 
-        /* decrement the number of
-         * missing dependencies */
+        // decrement the number of missing dependencies
         cursor->ndeps--;
         if (cursor->ndeps > 0) {
             continue;

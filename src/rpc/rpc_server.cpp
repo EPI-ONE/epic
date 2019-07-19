@@ -35,7 +35,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::Server
                                                                     GetNewMilestoneSinceResponse* reply) {
     auto record = DAG->GetState(RPCHashToHash(request->hash()));
     // Ignore the first milestone hash from traverse since it's the request's one
-    auto milestone_hashes = DAG->TraverseMilestoneForward(record, request->number() + 1);
+    auto milestone_hashes = DAG->TraverseMilestoneForward(*record, request->number() + 1);
     for (size_t i = 1; i < milestone_hashes.size(); ++i) {
         auto rec        = DAG->GetState(milestone_hashes[i]);
         auto newBlock   = reply->add_blocks();

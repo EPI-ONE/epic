@@ -195,6 +195,6 @@ public:
 };
 
 std::string EncodeAddress(const CKeyID& addr);
-std::optional<CKeyID> DecodeAddress(const std::string str);
+std::optional<CKeyID> DecodeAddress(const std::string& str);
 
 #endif // BITCOIN_PUBKEY_H

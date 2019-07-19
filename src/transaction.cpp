@@ -78,17 +78,16 @@ Transaction::Transaction(const Transaction& tx) {
     SetParents();
 }
 
-Transaction::Transaction(Transaction&& tx)
-    : inputs_(std::move(tx.inputs_)), outputs_(std::move(tx.outputs_)), parentBlock_(std::move(tx.parentBlock_)) {
+Transaction::Transaction(Transaction&& tx) noexcept
+    : inputs_(std::move(tx.inputs_)), outputs_(std::move(tx.outputs_)), parentBlock_(tx.parentBlock_) {
     hash_.SetNull();
     FinalizeHash();
     SetParents();
 }
 
 Transaction::Transaction(const CKeyID& addr) {
-    AddInput(TxInput{Listing{}});
-    Coin zero{};
-    AddOutput(zero, addr);
+    AddInput(TxInput{Listing{}}).AddOutput(Coin{}, addr);
+    FinalizeHash();
 }
 
 void Transaction::SetParents() {
@@ -134,8 +133,9 @@ Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
 }
 
 void Transaction::FinalizeHash() {
-    if (hash_.IsNull())
+    if (hash_.IsNull()) {
         hash_ = Hash<1>(VStream(*this));
+    }
 }
 
 const std::vector<TxInput>& Transaction::GetInputs() const {
@@ -182,7 +182,7 @@ uint64_t Transaction::HashCode() const {
 
 bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
     Tasm tasm(functors);
-    return tasm.ExecListing(Listing(input.listingContent + outputListing));
+    return bool(tasm.ExecListing(Listing{input.listingContent + outputListing}));
 }
 
 /*

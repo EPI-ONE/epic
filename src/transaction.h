@@ -2,9 +2,7 @@
 #define __SRC_TRANSACTION_H__
 
 #include <cassert>
-#include <limits>
 #include <sstream>
-#include <unordered_set>
 
 #include "hash.h"
 #include "params.h"
@@ -26,15 +24,13 @@ public:
     uint32_t index;
 
     TxOutPoint() : index(UNCONNECTED) {}
-
-    // TODO: search for the pointer of Block in Cat
-    TxOutPoint(const uint256 fromBlock, const uint32_t index) : bHash(fromBlock), index(index) {}
+    TxOutPoint(uint256 fromBlock, const uint32_t index) : bHash(std::move(fromBlock)), index(index) {}
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
         return out1.index == out2.index && out1.bHash == out2.bHash;
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(bHash);
@@ -79,7 +75,7 @@ public:
         return (a.outpoint == b.outpoint) && (a.listingContent == b.listingContent);
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(outpoint);
@@ -109,7 +105,7 @@ public:
         return (a.value == b.value) && (a.listingContent == b.listingContent);
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(value);
@@ -130,7 +126,7 @@ public:
      * copy and move constructor with computing hash and setting parent block
      */
     Transaction(const Transaction& tx);
-    Transaction(Transaction&&);
+    Transaction(Transaction&&) noexcept;
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */
@@ -170,7 +166,7 @@ public:
 
     uint64_t HashCode() const;
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(inputs_);

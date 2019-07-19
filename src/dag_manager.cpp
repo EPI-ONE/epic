@@ -28,7 +28,7 @@ bool DAGManager::Init() {
 //
 #define SEND_MESSAGE(peer, type, msg) peer->SendMessage(NetMessage(peer->connection_handle, type, msg));
 
-void DAGManager::RequestInv(const uint256& fromHash, const size_t& length, PeerPtr peer) {
+void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer) {
     syncPool_.Execute([peer = std::move(peer), fromHash = std::move(fromHash), length, this]() {
         if (peer->isSeed) {
             return;
@@ -65,7 +65,7 @@ void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv) {
     syncPool_.Execute([inv = std::move(inv), this]() {
         auto& result = inv->hashes;
         if (result.empty()) {
-            spdlog::info("Received an empty inv, which means we have reached the same height as the peer's.",
+            spdlog::info("Received an empty inv, which means we have reached the same height as the peer's {}.",
                          syncingPeer->address.ToString());
             GetDataTask task(GetDataTask::PENDING_SET);
             task.SetPeer(syncingPeer);
@@ -102,7 +102,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
                 spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->snapshot->height);
-                hashes = TraverseMilestoneForward(startMs, Inv::kMaxInventorySize);
+                hashes = TraverseMilestoneForward(*startMs, Inv::kMaxInventorySize);
                 break;
             }
         }
@@ -169,7 +169,7 @@ void DAGManager::CallbackRequestData(std::vector<ConstBlockPtr>& blocks) {
     blocks.clear();
 }
 
-void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) {
+void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) const {
     SEND_MESSAGE(peer, BUNDLE, Bundle(GetBestChain().GetPendingBlocks(), nonce));
 }
 
@@ -180,7 +180,7 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
     auto hs_iter = hashes.begin();
     auto nc_iter = nonces.begin();
     while (hs_iter != hashes.end() && nc_iter != nonces.end()) {
-        syncPool_.Execute([n = *nc_iter, h = std::move(*hs_iter), peer, this]() {
+        syncPool_.Execute([n = *nc_iter, h = *hs_iter, peer, this]() {
             Bundle bundle(n);
             auto payload = GetMainChainRawLevelSet(h);
             if (payload.empty()) {
@@ -270,7 +270,7 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
                       std::to_string(startMilestoneHash));
     }
 
-    locator = TraverseMilestoneBackward(startMilestone, length);
+    locator = TraverseMilestoneBackward(*startMilestone, length);
 
     peer->SetLastGetInvBegin(locator.front());
     peer->SetLastGetInvLength(length);
@@ -281,13 +281,13 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
     return locator;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(const NodeRecord& cursor, size_t length) const {
     std::vector<uint256> result;
+    result.reserve(length);
+
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
-
-    size_t cursorHeight = cursor->snapshot->height;
-    assert(result.empty());
+    size_t cursorHeight      = cursor.snapshot->height;
 
     // If the cursor height is within the cache range,
     // traverse the best chain cache.
@@ -310,13 +310,13 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(RecordPtr cursor, siz
     return result;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneForward(const NodeRecord& cursor, size_t length) const {
     std::vector<uint256> result;
+    result.reserve(length);
+
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
-
-    size_t cursorHeight = cursor->snapshot->height;
-    assert(result.empty());
+    size_t cursorHeight      = cursor.snapshot->height;
 
     // If the cursor height is less than the least height in cache, traverse DB.
     while (cursorHeight <= CAT->GetHeadHeight() && result.size() < length) {
@@ -337,7 +337,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneForward(RecordPtr cursor, size
 
 bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
     auto size     = downloading.size();
-    bool contains = downloading.erase(hash);
+    bool contains = static_cast<bool>(downloading.erase(hash));
     if (contains) {
         spdlog::debug("Size of downloading = {}, removed successfully", size - 1);
     } else if (!downloading.empty()) {
@@ -405,7 +405,7 @@ void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
 //
 
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
-    verifyThread_.Execute([blk = std::move(blk), peer = std::move(peer), this] {
+    verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         if (*blk == GENESIS) {
             return;
         }
@@ -466,7 +466,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
             spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                         blk->GetDifficultyTarget(), expectedTarget);
+                         blk->GetDifficultyTarget(), expectedTarget, std::to_string(blk->GetHash()));
             return;
         }
 
@@ -492,7 +492,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     });
 }
 
-bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) {
+bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const {
     assert(ms);
 
     if (blk->IsFirstRegistration()) {
@@ -701,7 +701,7 @@ void DAGManager::FlushToCAT(size_t level) {
     }
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
-                          utxoToRemove = std::move(utxoToRemove)]() {
+                          utxoToRemove = std::move(utxoToRemove)]() mutable {
         for (auto& lvsRec : recToStore) {
             CAT->StoreRecords(lvsRec);
             CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
@@ -731,6 +731,7 @@ void DAGManager::FlushToCAT(size_t level) {
         for (const auto& [key, value] : utxoToStore) {
             utxoCreated.emplace(key);
         }
+
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
 
         verifyThread_.Execute(

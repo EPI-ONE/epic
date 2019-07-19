@@ -12,7 +12,6 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 class uint256;
 
@@ -269,10 +268,8 @@ string to_string(const base_uint<BITS>& uint);
 /** 256-bit unsigned big integer. */
 class arith_uint256 : public base_uint<256> {
 public:
-    arith_uint256() {}
+    using base_uint::base_uint;
     arith_uint256(const base_uint<256>& b) : base_uint<256>(b) {}
-    arith_uint256(uint64_t b) : base_uint<256>(b) {}
-    explicit arith_uint256(const std::string& str) : base_uint<256>(str) {}
 
     /**
      * The "compact" format is a representation of a whole

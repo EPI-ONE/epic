@@ -36,7 +36,7 @@ public:
         Listing(const VStream& d) : Listing(std::vector<uint8_t>(), d) {}
         Listing(VStream&& d) : Listing(std::vector<uint8_t>(), d) {}
 
-        ADD_SERIALIZE_METHODS;
+        ADD_SERIALIZE_METHODS
         template <typename Stream, typename Operation>
         inline void SerializationOp(Stream& s, Operation ser_action) {
             READWRITE(program);

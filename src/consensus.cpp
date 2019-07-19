@@ -3,7 +3,7 @@
 ////////////////
 // ChainState
 //
-ChainState::ChainState(std::shared_ptr<ChainState> previous,
+ChainState::ChainState(const std::shared_ptr<ChainState>& previous,
                        const ConstBlockPtr& msBlock,
                        std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),

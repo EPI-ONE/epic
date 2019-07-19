@@ -24,7 +24,7 @@ public:
         locator.emplace_back(hash);
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
@@ -59,7 +59,7 @@ public:
         return false;
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
@@ -93,7 +93,7 @@ public:
         bundleNonce.emplace_back(nonce);
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(type);
@@ -104,15 +104,15 @@ public:
 
 class Bundle {
 public:
+    Bundle(Bundle&& other) noexcept : blocks(std::move(other.blocks)), nonce(other.nonce) {}
+
     explicit Bundle(VStream& stream) {
         Deserialize(stream);
     }
 
-    explicit Bundle(Bundle&& other) : blocks(other.blocks), nonce(other.nonce) {}
-
     explicit Bundle(uint32_t nonce_) : nonce(nonce_) {}
 
-    explicit Bundle(std::vector<ConstBlockPtr> blocks_, uint32_t nonce_) : blocks(std::move(blocks_)), nonce(nonce_) {}
+    Bundle(std::vector<ConstBlockPtr> blocks_, uint32_t nonce_) : blocks(std::move(blocks_)), nonce(nonce_) {}
 
     void AddBlock(const ConstBlockPtr& blockPtr) {
         blocks.push_back(blockPtr);
@@ -161,12 +161,12 @@ public:
         Deserialize(stream);
     }
 
-    explicit NotFound(const uint256& hash_, uint32_t nonce_) : hash(hash_), nonce(nonce_) {}
+    NotFound(const uint256& hash_, uint32_t nonce_) : hash(hash_), nonce(nonce_) {}
 
     uint256 hash;
     uint32_t nonce;
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(hash);

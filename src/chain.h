@@ -46,6 +46,7 @@ class Chain {
 public:
     Chain();
     Chain(const Chain&) = delete;
+    Chain& operator=(const Chain&) = delete;
 
     /**
      * Create a forked chain from $chain which has the new fork in $fork;
