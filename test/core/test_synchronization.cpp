@@ -111,7 +111,6 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // checkout GetData task size before receiving Bundle
     ASSERT_EQ(testPeer->GetDataTaskSize(), testChainHeight - 1);
 
-
     // receive bundle in a random order
     std::vector<int> bundle_order(getData.hashes.size());
     for (int i = 0; i < getData.hashes.size(); i++) {
@@ -129,7 +128,6 @@ TEST_F(TestSync, test_basic_sync_workflow) {
         NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));
         testPeer->ProcessMessage(bundle_message);
     }
-
 
     usleep(50000);
     CAT->Wait();

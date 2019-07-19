@@ -119,7 +119,7 @@ public:
     }
 
     void SetPayload(VStream s) {
-        payload = std::move(s);
+        payload_ = std::move(s);
     }
 
     // max block size of a bundle
@@ -131,15 +131,28 @@ public:
     // nonce
     uint32_t nonce;
 
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(blocks);
-        READWRITE(nonce);
+    template <typename Stream>
+    void Serialize(Stream& s) const {
+        if (payload_.empty()) {
+            s << nonce;
+            for (const auto& b : blocks) {
+                s << *b;
+            }
+        } else {
+            s << nonce << payload_;
+        }
+    }
+
+    template <typename Stream>
+    void Deserialize(Stream& s) {
+        s >> nonce;
+        while (s.in_avail()) {
+            blocks.emplace_back(std::make_shared<const Block>(s));
+        }
     }
 
 private:
-    VStream payload;
+    VStream payload_;
 };
 
 class NotFound {

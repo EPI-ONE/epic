@@ -176,6 +176,10 @@ private:
 
     std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
 
+    VStream GetMainChainRawLevelSet(size_t height) const;
+
+    VStream GetMainChainRawLevelSet(const uint256&) const;
+
     bool ExistsNode(const uint256&) const;
 
     /**

@@ -182,15 +182,13 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
     while (hs_iter != hashes.end() && nc_iter != nonces.end()) {
         syncPool_.Execute([n = *nc_iter, h = std::move(*hs_iter), peer, this]() {
             Bundle bundle(n);
-            auto recs = GetMainChainLevelSet(h);
-            if (recs.empty()) {
+            auto payload = GetMainChainRawLevelSet(h);
+            if (payload.empty()) {
                 SEND_MESSAGE(peer, NOT_FOUND, NotFound(h, n));
                 return;
             }
 
-            for (auto& b : recs) {
-                bundle.AddBlock(b);
-            }
+            bundle.SetPayload(std::move(payload));
             SEND_MESSAGE(peer, BUNDLE, bundle);
         });
         hs_iter++;
@@ -800,6 +798,29 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
 
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& blockHash) const {
     return GetMainChainLevelSet(GetHeight(blockHash));
+}
+
+VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
+    VStream result;
+    const auto& bestChain    = GetBestChain();
+    size_t leastHeightCached = bestChain.GetLeastHeightCached();
+
+    if (height < leastHeightCached) {
+        auto vs = CAT->GetRawLevelSetAt(height);
+        if (vs) {
+            result << *vs;
+            vs->clear();
+        }
+    } else {
+        for (auto& h : bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes()) {
+            result << bestChain.GetRecord(h)->cblock;
+        }
+    }
+    return result;
+}
+
+VStream DAGManager::GetMainChainRawLevelSet(const uint256& blockHash) const {
+    return GetMainChainRawLevelSet(GetHeight(blockHash));
 }
 
 bool DAGManager::ExistsNode(const uint256& h) const {

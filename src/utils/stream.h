@@ -201,6 +201,13 @@ public:
         memcpy(&chars_[end], pch, nSize);
     }
 
+    template <typename Stream>
+    void Serialize(Stream& s) const {
+        // Special case: stream << stream concatenates like stream += stream
+        if (!chars_.empty())
+            s.write((char*) chars_.data(), chars_.size() * sizeof(value_type));
+    }
+
     template <typename T>
     VStream& operator<<(const T& obj) {
         // Serialize to this stream
@@ -218,6 +225,10 @@ public:
     void GetAndClear(byte_vector& d) {
         d.insert(d.end(), begin(), end());
         clear();
+    }
+
+    void ResetPos() {
+        readPos_ = 0;
     }
 
 protected:
