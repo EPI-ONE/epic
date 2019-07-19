@@ -784,11 +784,15 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        for (auto& b : CAT->GetLevelSetAt(height)) {
+        auto recs = CAT->GetLevelSetAt(height);
+        lvs.reserve(recs.size());
+        for (auto& b : recs) {
             lvs.emplace_back(std::move(b));
         }
     } else {
-        for (auto& h : bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes()) {
+        auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
+        lvs.reserve(hashes.size());
+        for (auto& h : hashes) {
             lvs.push_back(bestChain.GetRecord(h)->cblock);
         }
     }
@@ -806,16 +810,18 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        auto vs = CAT->GetRawLevelSetAt(height);
-        if (vs) {
-            result << *vs;
-            vs->clear();
-        }
+        result = std::move(*CAT->GetRawLevelSetAt(height));
     } else {
-        for (auto& h : bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes()) {
+        auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
+
+        // To make it have the same order as the lvs we get from file (ms goes the first)
+        std::swap(hashes.front(), hashes.back());
+
+        for (auto& h : hashes) {
             result << bestChain.GetRecord(h)->cblock;
         }
     }
+
     return result;
 }
 

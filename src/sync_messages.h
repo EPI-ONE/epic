@@ -136,7 +136,7 @@ public:
         if (payload_.empty()) {
             s << nonce;
             for (const auto& b : blocks) {
-                s << *b;
+                s << b;
             }
         } else {
             s << nonce << payload_;

@@ -350,6 +350,12 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
                              "lvsPool size = {}, MSHash = {}",
                              task->type, orphanLvsPool.size(), std::to_string(bundle->blocks[0]->GetHash()));
 
+                // Since we swap the first and the last block in a level set before we store
+                // it to DB, to make the ms being the first block, it is likely that our peer
+                // does the same thing. Thus to avoid piling too many blocks in OBC, we swap
+                // them back here, so that blocks are in time order.
+                std::swap(bundle->blocks.front(), bundle->blocks.back());
+
                 for (auto& block : bundle->blocks) {
                     DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
                 }
