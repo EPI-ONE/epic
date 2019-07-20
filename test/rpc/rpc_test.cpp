@@ -15,7 +15,7 @@ public:
     static std::string adr;
 
     static void SetUpTestCase() {
-        adr = "0.0.0.0:3777";
+        adr = "0.0.0.0:3778";
     }
 
     void SetUp() {

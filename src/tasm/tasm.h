@@ -16,12 +16,13 @@ public:
     class Listing {
     public:
         std::vector<uint8_t> program;
-        std::vector<char> data;
+        byte_vector data;
 
         Listing() = default;
 
-        Listing(const std::vector<uint8_t>& p, const std::vector<char>& d) : program(p), data(d.cbegin(), d.cend()) {}
-        Listing(std::vector<uint8_t>&& p, const std::vector<char>& d) : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(const std::vector<uint8_t>& p, const std::vector<uint8_t>& d)
+            : program(p), data(d.cbegin(), d.cend()) {}
+        Listing(std::vector<uint8_t>&& p, const std::vector<uint8_t>& d) : program(p), data(d.cbegin(), d.cend()) {}
 
         Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p) {
             data.resize(d.size());
@@ -29,8 +30,7 @@ public:
         }
 
         Listing(const std::vector<uint8_t>& p, VStream&& d) : program(p) {
-            data.reserve(d.size());
-            std::move(d.begin(), d.end(), std::back_inserter(data));
+            d.MoveTo(data);
         }
 
         Listing(const VStream& d) : Listing(std::vector<uint8_t>(), d) {}
@@ -78,8 +78,8 @@ public:
     }
 
     int ExecListing(Listing l) {
-        VStream vs(l.data.cbegin(), l.data.cend());
-        return YieldInstruction(l.program)(vs, 0);
+        VStream vs(std::move(l.data));
+        return YieldInstruction(std::move(l.program))(vs, 0);
     }
 
     void SetOp(uint8_t ip, instruction i) {
@@ -93,8 +93,8 @@ public:
 private:
     std::array<instruction, 256> is_;
 
-    instruction YieldInstructionNChannel(const std::vector<uint8_t>& program) {
-        return [=](VStream& vdata, std::size_t ip) {
+    instruction YieldInstructionNChannel(std::vector<uint8_t>&& program) {
+        return [program = std::move(program), this](VStream& vdata, std::size_t ip) {
             std::size_t ip_p = ip;
             uint8_t op;
 

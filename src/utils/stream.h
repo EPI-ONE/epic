@@ -34,8 +34,7 @@ public:
 
     VStream() : readPos_(0) {}
 
-    VStream(std::vector<char>::const_iterator pbegin, std::vector<char>::const_iterator pend)
-        : chars_(pbegin, pend), readPos_(0) {}
+    VStream(const_iterator pbegin, const_iterator pend) : chars_(pbegin, pend), readPos_(0) {}
 
     VStream(const char* pbegin, const char* pend) : chars_(pbegin, pend), readPos_(0) {}
 
@@ -222,8 +221,14 @@ public:
         return (*this);
     }
 
-    void GetAndClear(byte_vector& d) {
-        d.insert(d.end(), begin(), end());
+    void MoveTo(byte_vector& d) {
+        if (d.empty() && readPos_ == 0) {
+            d = std::move(chars_);
+            return;
+        }
+
+        d.reserve(d.size() + size());
+        d.insert(d.end(), std::make_move_iterator(begin()), std::make_move_iterator(end()));
         clear();
     }
 
