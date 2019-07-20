@@ -8,6 +8,9 @@
 #include "file_utils.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
+extern std::atomic_bool b_shutdown;
+extern ECCVerifyHandle handle;
+
 enum : uint8_t {
     NORMAL_EXIT = 0,
     COMMANDLINE_INIT_FAILURE,

@@ -8,7 +8,8 @@
 #include <thread>
 
 #include "block.h"
-#include "caterpillar.h"
+#include "init.h"
+#include "miner.h"
 #include "net_address.h"
 #include "spdlog.h"
 
@@ -23,6 +24,16 @@ using rpc::GetLevelSetSizeRequest;
 using rpc::GetLevelSetSizeResponse;
 using rpc::GetNewMilestoneSinceRequest;
 using rpc::GetNewMilestoneSinceResponse;
+
+using rpc::CommanderRPC;
+using rpc::StartMinerRequest;
+using rpc::StartMinerResponse;
+using rpc::StatusRequest;
+using rpc::StatusResponse;
+using rpc::StopMinerRequest;
+using rpc::StopMinerResponse;
+using rpc::StopRequest;
+using rpc::StopResponse;
 
 class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Service {
     grpc::Status GetBlock(grpc::ServerContext* context,
@@ -44,6 +55,20 @@ class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Ser
     grpc::Status GetLatestMilestone(grpc::ServerContext* context,
                                     const GetLatestMilestoneRequest* request,
                                     GetLatestMilestoneResponse* reply) override;
+};
+
+class CommanderRPCServiceImpl final : public CommanderRPC::Service {
+    grpc::Status Status(grpc::ServerContext* context, const StatusRequest* request, StatusResponse* reply) override;
+
+    grpc::Status Stop(grpc::ServerContext* context, const StopRequest* request, StopResponse* reply) override;
+
+    grpc::Status StartMiner(grpc::ServerContext* context,
+                            const StartMinerRequest* request,
+                            StartMinerResponse* reply) override;
+
+    grpc::Status StopMiner(grpc::ServerContext* context,
+                           const StopMinerRequest* request,
+                           StopMinerResponse* reply) override;
 };
 
 class RPCServer {

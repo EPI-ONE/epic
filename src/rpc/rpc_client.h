@@ -1,13 +1,10 @@
 #ifndef __SRC_RPCCLIENT_H__
 #define __SRC_RPCCLIENT_H__
 
+#include "spdlog/sinks/basic_file_sink.h"
 #include <grpc++/grpc++.h>
 #include <rpc.grpc.pb.h>
 #include <rpc.pb.h>
-#include <rpc_tools.h>
-
-#include "block.h"
-#include "net_address.h"
 
 using rpc::BasicBlockExplorerRPC;
 using rpc::GetBlockRequest;
@@ -21,23 +18,40 @@ using rpc::GetLevelSetSizeResponse;
 using rpc::GetNewMilestoneSinceRequest;
 using rpc::GetNewMilestoneSinceResponse;
 
+using rpc::CommanderRPC;
+using rpc::StartMinerRequest;
+using rpc::StartMinerResponse;
+using rpc::StatusRequest;
+using rpc::StatusResponse;
+using rpc::StopMinerRequest;
+using rpc::StopMinerResponse;
+using rpc::StopRequest;
+using rpc::StopResponse;
+
 class RPCClient {
 public:
     RPCClient(std::shared_ptr<grpc::Channel> channel);
 
-    std::optional<rpc::Block> GetBlock(const uint256&);
+    std::optional<rpc::Block> GetBlock(std::string&);
 
-    std::optional<std::vector<rpc::Block>> GetLevelSet(const uint256&);
+    std::optional<std::vector<rpc::Block>> GetLevelSet(std::string&);
 
-    std::optional<size_t> GetLevelSetSize(const uint256&);
+    std::optional<size_t> GetLevelSetSize(std::string&);
 
     std::optional<rpc::Block> GetLatestMilestone();
 
-    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(const uint256&, size_t);
+    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(std::string&, size_t);
+    std::optional<StatusResponse> Status();
 
+    bool Stop();
+
+    std::optional<bool> StartMiner();
+
+    std::optional<bool> StopMiner();
 
 private:
-    std::unique_ptr<BasicBlockExplorerRPC::Stub> stub_;
+    std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;
+    std::unique_ptr<CommanderRPC::Stub> commander_stub_;
 };
 
 #endif //__SRC_RPCCLIENT_H__

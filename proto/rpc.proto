@@ -77,3 +77,33 @@ message GetLevelSetSizeRequest {
 message GetLevelSetSizeResponse {
     uint64 size = 1;    
 }
+
+service CommanderRPC {
+    rpc Status (StatusRequest) returns (StatusResponse);
+    rpc Stop (StopRequest) returns (StopResponse);
+    rpc StartMiner (StartMinerRequest) returns (StartMinerResponse);
+    rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
+}
+
+message StopRequest {}
+
+message StopResponse {}
+
+message StartMinerRequest {}
+
+message StartMinerResponse {
+    bool success = 1;    
+}
+
+message StopMinerRequest {}
+
+message StopMinerResponse {
+    bool success = 1;    
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+    bool isMinerRunning = 1;
+    Hash latestMSHash = 2;
+}

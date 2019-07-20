@@ -6,7 +6,6 @@
 #include <rpc.pb.h>
 
 #include "block.h"
-#include "net_address.h"
 
 uint256 RPCHashToHash(const rpc::Hash&);
 

@@ -55,6 +55,48 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerCo
     return grpc::Status::OK;
 }
 
+grpc::Status CommanderRPCServiceImpl::Status(grpc::ServerContext* context,
+                                             const StatusRequest* request,
+                                             StatusResponse* reply) {
+    auto latestMS     = DAG->GetMilestoneHead();
+    auto latestMSHash = HashToRPCHash(latestMS->cblock->GetHash());
+    reply->set_allocated_latestmshash(latestMSHash);
+    reply->set_isminerrunning(MINER->IsRunning());
+
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::Stop(grpc::ServerContext* context,
+                                           const StopRequest* request,
+                                           StopResponse* reply) {
+    b_shutdown = true;
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::StartMiner(grpc::ServerContext* context,
+                                                 const StartMinerRequest* request,
+                                                 StartMinerResponse* reply) {
+    if (MINER->IsRunning()) {
+        reply->set_success(false);
+    } else {
+        MINER->Run();
+        reply->set_success(true);
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::StopMiner(grpc::ServerContext* context,
+                                                const StopMinerRequest* request,
+                                                StopMinerResponse* reply) {
+    if (MINER->IsRunning()) {
+        MINER->Stop();
+        reply->set_success(true);
+    } else {
+        reply->set_success(false);
+    }
+    return grpc::Status::OK;
+}
+
 RPCServer::RPCServer(NetAddress adr) {
     this->server_address_ = adr.ToString();
 }
@@ -66,7 +108,6 @@ void RPCServer::Start() {
 
 void RPCServer::Shutdown() {
     isRunning_ = false;
-    spdlog::info("RPC Server is shutting down");
 }
 
 bool RPCServer::IsRunning() {
@@ -74,15 +115,18 @@ bool RPCServer::IsRunning() {
 }
 
 void RPCServer::LaunchServer() {
-    BasicBlockExplorerRPCServiceImpl service;
+    BasicBlockExplorerRPCServiceImpl be_service;
+    CommanderRPCServiceImpl commander_service;
     grpc::ServerBuilder builder;
     builder.AddListeningPort(this->server_address_, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
+    builder.RegisterService(&be_service);
+    builder.RegisterService(&commander_service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
     isRunning_ = true;
     spdlog::info("RPC Server is running on {}", this->server_address_);
     while (IsRunning()) {
         std::this_thread::yield();
     }
+    spdlog::info("RPC Server is shutting down");
     server->Shutdown();
 }
