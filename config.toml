@@ -11,9 +11,9 @@ filename = "address.toml"
 interval = 900
 
 [network]
-ip = "127.0.0.1"
-port = 7877
-type = "Testnet"
+ip = "0.0.0.0"
+port = 7878
+type = "Unittest"
 
 [[dns_seeds]]
 hostname = "pascal.ieda.ust.hk"

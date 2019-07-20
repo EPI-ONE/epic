@@ -21,17 +21,17 @@ public:
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
         auto netAddress = NetAddress::GetByIP(adr);
-        rpc_server      = std::make_unique<RPCServer>(*netAddress);
-        rpc_server->Start();
+        RPC             = std::make_unique<RPCServer>(*netAddress);
+        RPC->Start();
 
-        while (!rpc_server->IsRunning()) {
+        while (!RPC->IsRunning()) {
             std::this_thread::yield();
         }
     }
 
     void TearDown() {
         EpicTestEnvironment::TearDownDAG(prefix);
-        rpc_server->Shutdown();
+        RPC->Shutdown();
     }
 };
 

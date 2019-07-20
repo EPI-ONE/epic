@@ -403,7 +403,7 @@ Chain::GetDataToCAT(size_t level) {
     result_rec.reserve(level);
     TXOC result_txoc{};
 
-    // traverse from the oldest chain state in memory 
+    // traverse from the oldest chain state in memory
     for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
         // get all of the blocks
         std::vector<RecordPtr> lvsRec;

@@ -12,18 +12,18 @@
 class TestSync : public testing::Test {
 public:
     static void SetUpTestCase() {
-        config = std::make_unique<Config>();
-        config->SetDBPath("testSync/");
+        CONFIG = std::make_unique<Config>();
+        CONFIG->SetDBPath("testSync/");
         spdlog::set_level(spdlog::level::debug);
 
-        EpicTestEnvironment::SetUpDAG(config->GetDBPath());
+        EpicTestEnvironment::SetUpDAG(CONFIG->GetDBPath());
         CAT->EnableOBC();
-        peerManager = std::make_unique<TestPM>();
+        PEERMAN = std::make_unique<TestPM>();
     }
 
     static void TearDownTestCase() {
-        EpicTestEnvironment::TearDownDAG(config->GetDBPath());
-        config.reset();
+        EpicTestEnvironment::TearDownDAG(CONFIG->GetDBPath());
+        CONFIG.reset();
     }
 
     TestFactory fac;
@@ -48,7 +48,7 @@ TEST_F(TestSync, test_basic_network) {
 }
 
 TEST_F(TestSync, test_basic_sync_workflow) {
-    auto testPeerManager = (TestPM*) peerManager.get();
+    auto testPeerManager = (TestPM*) PEERMAN.get();
 
     const void* peer_handle = (const void*) 1;
 
@@ -184,7 +184,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // check Inv nonce
     ASSERT_EQ(inv1.nonce, getInv.nonce);
     // check Inv hash size
-    ASSERT_EQ(inv1.hashes.size(), testChainHeight);
+    ASSERT_EQ(inv1.hashes.size(), testChainHeight - 1);
 
     // receive GetData
     testPeer->ProcessMessage(message_getData_Cmp);

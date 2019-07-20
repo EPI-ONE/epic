@@ -226,6 +226,7 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
         uint64_t height = lvs.front()->snapshot->height;
 
+
         for (const auto& rec : lvs) {
             // Write to file
             blkOffset = blkFs.GetOffset() - msBlkOffset;
@@ -245,6 +246,8 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         AddCurrentSize(totalSize);
 
         CAT->SaveHeadHeight(height);
+        std::cout << "stored height = " << height << ", hash = " << lvs.front()->cblock->GetHash().to_substr()
+                  << std::endl;
     } catch (const std::exception&) {
         return false;
     }

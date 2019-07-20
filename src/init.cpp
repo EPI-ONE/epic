@@ -12,16 +12,12 @@
 
 Block GENESIS;
 NodeRecord GENESIS_RECORD;
-std::unique_ptr<Config> config;
-std::unique_ptr<PeerManager> peerManager;
-std::unique_ptr<MemPool> memPool;
-
+std::unique_ptr<Config> CONFIG;
+std::unique_ptr<PeerManager> PEERMAN;
 std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
-std::unique_ptr<RPCServer> rpc_server;
+std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
-
-// TODO: init mempool
 std::unique_ptr<MemPool> MEMPOOL;
 
 ECCVerifyHandle handle;
@@ -65,7 +61,7 @@ int Init(int argc, char* argv[]) {
     /*
      *  Create config instance
      */
-    config = std::make_unique<Config>();
+    CONFIG = std::make_unique<Config>();
 
     /*
      *  Setup and parse the command line
@@ -91,7 +87,7 @@ int Init(int argc, char* argv[]) {
      */
     InitLogger();
 
-    config->ShowConfig();
+    CONFIG->ShowConfig();
 
     /*
      * Init signal and register handle functions
@@ -104,7 +100,7 @@ int Init(int argc, char* argv[]) {
     const std::map<std::string, ParamsType> parseType = {
         {"Mainnet", ParamsType::MAINNET}, {"Testnet", ParamsType::TESTNET}, {"Unittest", ParamsType::UNITTEST}};
     try {
-        SelectParams(parseType.at(config->GetNetworkType()));
+        SelectParams(parseType.at(CONFIG->GetNetworkType()));
     } catch (const std::out_of_range& err) {
         std::cerr << "wrong format of network type in config.toml" << std::endl;
         return PARAMS_INIT_FAILURE;
@@ -113,21 +109,21 @@ int Init(int argc, char* argv[]) {
         return PARAMS_INIT_FAILURE;
     }
 
-    file::SetDataDirPrefix(config->GetRoot());
+    file::SetDataDirPrefix(CONFIG->GetRoot());
 
     /*
      * Load caterpillar, dag and memory pool
      */
-    if (config->IsStartWithNewDB()) {
+    if (CONFIG->IsStartWithNewDB()) {
         // delete old block data
-        DeleteDir(config->GetDBPath());
-        DeleteDir(config->GetRoot() + file::typestr[file::FileType::BLK]);
-        DeleteDir(config->GetRoot() + file::typestr[file::FileType::REC]);
+        DeleteDir(CONFIG->GetDBPath());
+        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::BLK]);
+        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::REC]);
     }
 
-    CAT = std::make_unique<Caterpillar>(config->GetDBPath());
+    CAT = std::make_unique<Caterpillar>(CONFIG->GetDBPath());
 
-    if (config->IsStartWithNewDB()) {
+    if (CONFIG->IsStartWithNewDB()) {
         // put genesis block into cat
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
         CAT->StoreRecords(genesisLvs);
@@ -143,7 +139,7 @@ int Init(int argc, char* argv[]) {
     /*
      * Create network instance
      */
-    peerManager = std::make_unique<PeerManager>();
+    PEERMAN = std::make_unique<PeerManager>();
 
     /*
      * Initialize ECC
@@ -163,10 +159,9 @@ int Init(int argc, char* argv[]) {
     /*
      * Create rpc instance
      */
-    if (!(config->GetDisableRPC())) {
-        std::string rpc_addr_str = "0.0.0.0:" + std::to_string(config->GetRPCPort());
-        auto rpcAddress          = NetAddress::GetByIP(rpc_addr_str);
-        rpc_server               = std::make_unique<RPCServer>(*rpcAddress);
+    if (!(CONFIG->GetDisableRPC())) {
+        auto rpcAddress = NetAddress::GetByIP("0.0.0.0:" + std::to_string(CONFIG->GetRPCPort()));
+        RPC             = std::make_unique<RPCServer>(*rpcAddress);
     }
 
     std::cout << "Finish initializing...\n" << std::endl;
@@ -196,28 +191,28 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     }
     // since these two params have been set default values, there is no need to
     // call result.count() to detect if they have values
-    config->SetConfigFilePath(result["configpath"].as<std::string>());
+    CONFIG->SetConfigFilePath(result["configpath"].as<std::string>());
     if (result.count("bindip") > 0) {
-        config->SetBindAddress(result["bindip"].as<std::string>());
+        CONFIG->SetBindAddress(result["bindip"].as<std::string>());
     }
 
     if (result.count("bindport") > 0) {
-        config->SetBindPort(result["bindport"].as<uint16_t>());
+        CONFIG->SetBindPort(result["bindport"].as<uint16_t>());
     }
     if (result.count("connect") > 0) {
-        config->SetConnect(result["connect"].as<std::string>());
+        CONFIG->SetConnect(result["connect"].as<std::string>());
     }
     if (result.count("daemon") > 0) {
-        config->SetDaemon(result["daemon"].as<bool>());
+        CONFIG->SetDaemon(result["daemon"].as<bool>());
     }
     if (result.count("newdb") > 0) {
-        config->SetStartWithNewDB(true);
+        CONFIG->SetStartWithNewDB(true);
     }
-    config->SetDisableRPC(result["disable-rpc"].as<bool>());
+    CONFIG->SetDisableRPC(result["disable-rpc"].as<bool>());
 }
 
 void LoadConfigFile() {
-    std::string config_path = config->GetConfigFilePath();
+    std::string config_path = CONFIG->GetConfigFilePath();
     if (!CheckFileExist(config_path)) {
         std::cerr << "config.toml not found in current directory, will use the default config" << std::endl;
         return;
@@ -229,17 +224,17 @@ void LoadConfigFile() {
     if (global_config) {
         auto root = global_config->get_as<std::string>("root");
         if (root) {
-            config->SetRoot(*root);
+            CONFIG->SetRoot(*root);
         }
     }
 
-    CreateRoot(config->GetRoot());
+    CreateRoot(CONFIG->GetRoot());
 
     // logger
     auto log_config = configContent->get_table("logs");
     if (log_config) {
         auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
-        config->SetUseFileLogger(use_file_logger);
+        CONFIG->SetUseFileLogger(use_file_logger);
         if (use_file_logger) {
             auto path     = log_config->get_as<std::string>("path").value_or("./");
             auto filename = log_config->get_as<std::string>("filename").value_or("Debug.log");
@@ -248,8 +243,8 @@ void LoadConfigFile() {
                 path.append("/");
             }
 
-            config->SetLoggerFilename(filename);
-            config->SetLoggerPath(path);
+            CONFIG->SetLoggerFilename(filename);
+            CONFIG->SetLoggerPath(path);
         }
     }
 
@@ -259,9 +254,9 @@ void LoadConfigFile() {
         auto path     = address_config->get_as<std::string>("path").value_or("");
         auto filename = address_config->get_as<std::string>("filename").value_or("address.toml");
         auto interval = address_config->get_as<uint>("interval").value_or(15 * 60);
-        config->SetAddressPath(path);
-        config->SetAddressFilename(filename);
-        config->SetSaveInterval(interval);
+        CONFIG->SetAddressPath(path);
+        CONFIG->SetAddressFilename(filename);
+        CONFIG->SetSaveInterval(interval);
     }
 
     // network config
@@ -270,18 +265,18 @@ void LoadConfigFile() {
         auto ip          = network_config->get_as<std::string>("ip");
         auto port        = network_config->get_as<uint16_t>("port");
         auto networkType = network_config->get_as<std::string>("type");
-        if (ip && config->GetBindAddress() == config->defaultIP) {
-            config->SetBindAddress(*ip);
+        if (ip && CONFIG->GetBindAddress() == CONFIG->defaultIP) {
+            CONFIG->SetBindAddress(*ip);
         } else {
             spdlog::info("bind ip has been specified in the command line, discard the ip in the config file");
         }
 
-        if (port && config->GetBindPort() == config->defaultPort) {
-            config->SetBindPort(*port);
+        if (port && CONFIG->GetBindPort() == CONFIG->defaultPort) {
+            CONFIG->SetBindPort(*port);
         } else {
             spdlog::info("bind port has been specified in the command line, discard the port in the config file");
         }
-        config->SetNetworkType(*networkType);
+        CONFIG->SetNetworkType(*networkType);
     }
 
     // seeds
@@ -292,17 +287,17 @@ void LoadConfigFile() {
             auto port = seed->get_as<uint16_t>("port");
 
             if (host && port) {
-                config->AddSeedByDNS(*host, *port);
+                CONFIG->AddSeedByDNS(*host, *port);
             }
         }
 
-        if (config->GetSeedSize() == 0) {
+        if (CONFIG->GetSeedSize() == 0) {
             auto ip_seeds = configContent->get_table_array("ip_seeds");
             for (const auto& seed : *dns_seeds) {
                 auto ip   = seed->get_as<std::string>("ip");
                 auto port = seed->get_as<uint16_t>("port");
                 if (ip && port) {
-                    config->AddSeedByIP(*ip, *port);
+                    CONFIG->AddSeedByIP(*ip, *port);
                 }
             }
         }
@@ -313,7 +308,7 @@ void LoadConfigFile() {
     if (db_config) {
         auto db_path = db_config->get_as<std::string>("path");
         if (db_path) {
-            config->SetDBPath(*db_path);
+            CONFIG->SetDBPath(*db_path);
         }
     }
 
@@ -322,18 +317,18 @@ void LoadConfigFile() {
     if (rpc_config) {
         auto rpc_port = rpc_config->get_as<uint16_t>("port");
         if (rpc_port) {
-            config->SetRPCPort(*rpc_port);
+            CONFIG->SetRPCPort(*rpc_port);
         }
     }
 }
 
 void InitLogger() {
-    if (config->IsUseFileLogger()) {
-        UseFileLogger(config->GetLoggerPath(), config->GetLoggerFilename());
+    if (CONFIG->IsUseFileLogger()) {
+        UseFileLogger(CONFIG->GetLoggerPath(), CONFIG->GetLoggerFilename());
     }
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e][%t][%l] %v");
-    spdlog::set_level(spdlog::level::info);
-    spdlog::flush_on(spdlog::level::info);
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::flush_on(spdlog::level::debug);
 }
 
 void UseFileLogger(const std::string& path, const std::string& filename) {
@@ -358,14 +353,14 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 
 bool Start() {
     // start p2p network
-    if (!peerManager->Init(config)) {
+    if (!PEERMAN->Init(CONFIG)) {
         return false;
     }
-    peerManager->Start();
+    PEERMAN->Start();
 
     // start rpc server
-    if (!(config->GetDisableRPC())) {
-        rpc_server->Start();
+    if (!(CONFIG->GetDisableRPC())) {
+        RPC->Start();
     }
     return true;
 }
@@ -373,18 +368,18 @@ bool Start() {
 void ShutDown() {
     spdlog::info("shutdown start");
 
-    if (!(config->GetDisableRPC())) {
-        rpc_server->Shutdown();
+    if (!(CONFIG->GetDisableRPC())) {
+        RPC->Shutdown();
     }
 
-    peerManager->Stop();
+    PEERMAN->Stop();
     DAG->Stop();
     CAT->Stop();
 
     CAT.reset();
     DAG.reset();
-    memPool.reset();
-    peerManager.reset();
+    MEMPOOL.reset();
+    PEERMAN.reset();
     MINER.reset();
 
     ECC_Stop();
@@ -401,7 +396,7 @@ void WaitShutdown() {
 }
 
 void CreateDaemon() {
-    if (config->IsDaemon()) {
+    if (CONFIG->IsDaemon()) {
         std::cout << "Create daemon process, parent process exit" << std::endl;
         daemon(1, 0);
     }

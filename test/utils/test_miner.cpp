@@ -37,7 +37,7 @@ TEST_F(TestMiner, Solve) {
 TEST_F(TestMiner, Run) {
     EpicTestEnvironment::SetUpDAG("test_miner/");
 
-    peerManager = std::make_unique<PeerManager>();
+    PEERMAN = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 
     Miner m(2);
@@ -56,7 +56,7 @@ TEST_F(TestMiner, Run) {
     }
 
     EpicTestEnvironment::TearDownDAG("test_miner/");
-    peerManager.reset();
+    PEERMAN.reset();
     MEMPOOL.reset();
 }
 

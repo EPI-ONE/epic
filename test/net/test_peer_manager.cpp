@@ -9,8 +9,8 @@ public:
     PeerManager client;
 
     static void SetUpTestCase() {
-        config = std::make_unique<Config>();
-        config->SetBindPort(43256);
+        CONFIG = std::make_unique<Config>();
+        CONFIG->SetBindPort(43256);
         EpicTestEnvironment::SetUpDAG("test_peer_manager/");
     }
     static void TearDownTestCase() {

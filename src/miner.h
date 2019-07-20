@@ -79,6 +79,7 @@ public:
         b.SetNonce(final_nonce.load());
         b.SetTime(final_time.load());
         b.CalculateHash();
+        b.CalculateOptimalEncodingSize();
     }
 
     void Run() {
@@ -138,7 +139,7 @@ public:
                 b.source = Block::MINER;
 
                 auto bPtr = std::make_shared<const Block>(b);
-                peerManager->RelayBlock(bPtr, nullptr);
+                PEERMAN->RelayBlock(bPtr, nullptr);
                 distanceCal.Add(bPtr, true);
                 selfChainHead = bPtr;
                 DAG->AddNewBlock(bPtr, nullptr);
