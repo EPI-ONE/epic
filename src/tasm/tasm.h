@@ -77,7 +77,7 @@ public:
         return program;
     }
 
-    int ExecListing(Listing l) {
+    int ExecListing(Listing&& l) {
         VStream vs(std::move(l.data));
         return YieldInstruction(std::move(l.program))(vs, 0);
     }

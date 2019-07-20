@@ -320,7 +320,7 @@ void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from
     }
 
     for (auto& it : peerMap_) {
-        if (it.second->connection_handle != msg_from->connection_handle) {
+        if (it.second != msg_from) {
             NetMessage msg(it.second->connection_handle, BLOCK, VStream(block));
             it.second->SendMessage(msg);
         }
