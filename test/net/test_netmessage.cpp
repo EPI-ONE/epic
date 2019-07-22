@@ -73,12 +73,29 @@ TEST_F(TestNetMsg, Bundle) {
     bundle.AddBlock(factory.CreateBlockPtr(1, 2, true));
     bundle.AddBlock(factory.CreateBlockPtr(1, 3, true));
 
+    // Test serialization without payload
     VStream stream(bundle);
 
     Bundle bundle1(stream);
 
     for (int i = 0; i < 3; i++) {
         EXPECT_EQ(*bundle.blocks[i], *bundle1.blocks[i]);
+    }
+
+    // Test serialization with payload
+    VStream payload;
+    for (const auto& b : bundle.blocks) {
+        payload << b;
+    }
+
+    bundle.SetPayload(std::move(payload));
+    ASSERT_TRUE(payload.empty());
+
+    VStream stream1(bundle); // serialize
+    Bundle bundle2(stream1); // deserialize
+
+    for (int i = 0; i < 3; i++) {
+        ASSERT_EQ(*bundle.blocks[i], *bundle2.blocks[i]);
     }
 }
 

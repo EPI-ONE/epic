@@ -92,7 +92,13 @@ public:
             while (enabled_.load()) {
                 Block b(GetParams().version);
                 auto head = DAG->GetMilestoneHead();
-                assert(head);
+
+                if (!head) {
+                    spdlog::error("Cannot get milestone head. Did you init with new DB?");
+                    enabled_ = false;
+                    spdlog::info("Miner stopped.");
+                    return;
+                }
 
                 if (!selfChainHead) {
                     prevHash = GENESIS.GetHash();

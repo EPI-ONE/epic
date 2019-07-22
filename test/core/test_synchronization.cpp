@@ -111,7 +111,6 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // checkout GetData task size before receiving Bundle
     ASSERT_EQ(testPeer->GetDataTaskSize(), testChainHeight - 1);
 
-
     // receive bundle in a random order
     std::vector<int> bundle_order(getData.hashes.size());
     for (int i = 0; i < getData.hashes.size(); i++) {
@@ -126,10 +125,10 @@ TEST_F(TestSync, test_basic_sync_workflow) {
         for (auto& block : chain[i]) {
             bundle.AddBlock(block);
         }
+        std::swap(bundle.blocks.front(), bundle.blocks.back());
         NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));
         testPeer->ProcessMessage(bundle_message);
     }
-
 
     usleep(50000);
     CAT->Wait();
@@ -200,7 +199,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
         testPeer->sentMsgBox.Take(msg);
         Bundle bundle(msg.payload);
         ASSERT_EQ(bundle.blocks.size(), chain[i].size());
-        ASSERT_EQ(bundle.blocks[bundle.blocks.size() - 1]->GetHash(), chain[i][chain[i].size() - 1]->GetHash());
+        ASSERT_EQ(bundle.blocks.front()->GetHash(), chain[i][chain[i].size() - 1]->GetHash());
     }
 
     /**Finish the synchronization as the block provider*/

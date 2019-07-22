@@ -25,7 +25,7 @@ TEST_F(TestTasm, simple_listing) {
     Tasm t(functors);
     std::vector<uint8_t> p = {SUCCESS};
     Tasm::Listing l(p, v);
-    ASSERT_TRUE(t.ExecListing(l));
+    ASSERT_TRUE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, verify) {
@@ -43,8 +43,8 @@ TEST_F(TestTasm, verify) {
     v << pubkey << sig << msg << EncodeAddress(pubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
-    Tasm::Listing l(p, v);
-    ASSERT_TRUE(t.ExecListing(l));
+    Tasm::Listing l(p, std::move(v));
+    ASSERT_TRUE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, transaction_in_out_verify) {
@@ -59,7 +59,7 @@ TEST_F(TestTasm, transaction_in_out_verify) {
     // construct transaction output listing
     auto encodedAddr = EncodeAddress(addr);
     outdata << encodedAddr;
-    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
+    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, std::move(outdata)}};
 
     // construct transaction input
     indata << keypair.second << sig << hashMsg;
@@ -89,9 +89,9 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     v << EncodeAddress(maliciousPubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
-    Tasm::Listing l(p, v);
+    Tasm::Listing l(p, std::move(v));
 
-    ASSERT_FALSE(t.ExecListing(l));
+    ASSERT_FALSE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, verify_bad_signature) {
@@ -114,9 +114,9 @@ TEST_F(TestTasm, verify_bad_signature) {
     v << EncodeAddress(pubkey.GetID());
 
     std::vector<uint8_t> p = {VERIFY};
-    Tasm::Listing l(p, v);
+    Tasm::Listing l(p, std::move(v));
 
-    ASSERT_FALSE(t.ExecListing(l));
+    ASSERT_FALSE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, continuous_verify) {
@@ -139,8 +139,8 @@ TEST_F(TestTasm, continuous_verify) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    Tasm::Listing l(p, v);
-    ASSERT_TRUE(t.ExecListing(l));
+    Tasm::Listing l(p, std::move(v));
+    ASSERT_TRUE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
@@ -180,8 +180,8 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    Tasm::Listing l(p, v);
-    ASSERT_FALSE(t.ExecListing(l));
+    Tasm::Listing l(p, std::move(v));
+    ASSERT_FALSE(t.ExecListing(std::move(l)));
 }
 
 TEST_F(TestTasm, continuous_verify_bad_signature) {
@@ -221,6 +221,6 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
     }
 
     std::vector<uint8_t> p = {VERIFY, FAIL, VERIFY, FAIL, VERIFY};
-    Tasm::Listing l(p, v);
-    ASSERT_FALSE(t.ExecListing(l));
+    Tasm::Listing l(p, std::move(v));
+    ASSERT_FALSE(t.ExecListing(std::move(l)));
 }

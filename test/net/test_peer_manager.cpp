@@ -10,6 +10,7 @@ public:
 
     static void SetUpTestCase() {
         config = std::make_unique<Config>();
+        config->SetBindPort(43256);
         EpicTestEnvironment::SetUpDAG("test_peer_manager/");
     }
     static void TearDownTestCase() {
@@ -28,8 +29,8 @@ public:
 
 TEST_F(TestPeerManager, CallBack) {
     ASSERT_TRUE(server.Bind("127.0.0.1"));
-    EXPECT_TRUE(server.Listen(7877));
-    EXPECT_TRUE(client.ConnectTo("127.0.0.1:7877"));
+    EXPECT_TRUE(server.Listen(43256));
+    EXPECT_TRUE(client.ConnectTo("127.0.0.1:43256"));
     usleep(50000);
     EXPECT_EQ(server.GetFullyConnectedPeerSize(), 1);
     EXPECT_EQ(client.GetFullyConnectedPeerSize(), 1);
@@ -37,13 +38,13 @@ TEST_F(TestPeerManager, CallBack) {
 
 TEST_F(TestPeerManager, CheckHaveConnectedSameIP) {
     ASSERT_TRUE(server.Bind("127.0.0.1"));
-    EXPECT_TRUE(server.Listen(7877));
-    EXPECT_TRUE(client.ConnectTo("127.0.0.1:7877"));
+    EXPECT_TRUE(server.Listen(43256));
+    EXPECT_TRUE(client.ConnectTo("127.0.0.1:43256"));
     usleep(50000);
 
     PeerManager same_ip_client;
     same_ip_client.Start();
-    same_ip_client.ConnectTo("127.0.0.1:7877");
+    same_ip_client.ConnectTo("127.0.0.1:43256");
     usleep(50000);
     EXPECT_EQ(server.GetFullyConnectedPeerSize(), 1);
     EXPECT_EQ(same_ip_client.GetConnectedPeerSize(), 0);

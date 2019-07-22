@@ -74,28 +74,6 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
     ASSERT_EQ(outpoint, outpointFromDeserialization);
 }
 
-TEST_F(TestSer, SerializeEqDeserializeVStream) {
-    std::vector<char> deterministicVector = {'x', 'y', 'z'};
-    VStream v1(deterministicVector);
-    VStream sinput;
-    sinput << v1;
-    std::string s = sinput.str();
-
-    VStream v2;
-    sinput >> v2;
-
-    VStream soutput;
-    soutput << v2;
-
-    ASSERT_EQ(s, soutput.str());
-
-    VStream soutput1;
-    soutput1 << v2;
-    ASSERT_EQ(soutput, soutput1);
-    ASSERT_EQ(v1, v2);
-}
-
-
 TEST_F(TestSer, SerializeEqDeserializeListing) {
     std::vector<char> deterministicVector = {'x', 'y', 'z'};
     VStream v(deterministicVector);

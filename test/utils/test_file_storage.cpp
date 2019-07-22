@@ -119,8 +119,13 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     // Recover level sets in batch
     auto pvs = CAT->GetRawLevelSetBetween(0, nLvs - 1);
 
+    ASSERT_TRUE(pvs);
+
+    VStream vs = std::move(*pvs);
+    ASSERT_TRUE(pvs->empty());
+
     for (size_t i = 0; i < blocks.size(); ++i) {
-        Block recovered(*pvs);
+        Block recovered(vs);
         ASSERT_EQ(*blocks[i]->cblock, recovered);
     }
 

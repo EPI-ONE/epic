@@ -32,17 +32,23 @@ public:
     typedef byte_vector::const_iterator const_iterator;
     typedef byte_vector::reverse_iterator reverse_iterator;
 
-    explicit VStream() : readPos_(0) {}
+    VStream() : readPos_(0) {}
 
     VStream(const_iterator pbegin, const_iterator pend) : chars_(pbegin, pend), readPos_(0) {}
 
     VStream(const char* pbegin, const char* pend) : chars_(pbegin, pend), readPos_(0) {}
 
-    VStream(const byte_vector& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
+    VStream(const byte_vector& vchIn) : chars_(vchIn), readPos_(0) {}
+
+    VStream(byte_vector&& vchIn) : chars_(std::move(vchIn)), readPos_(0) {}
 
     VStream(const std::vector<char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
 
     VStream(const std::vector<unsigned char>& vchIn) : chars_(vchIn.begin(), vchIn.end()), readPos_(0) {}
+
+    VStream(const VStream& vs) : chars_(vs.chars_), readPos_(vs.readPos_) {}
+
+    VStream(VStream&& vs) : chars_(std::move(vs.chars_)), readPos_(vs.readPos_) {}
 
     template <typename... Args>
     VStream(Args&&... args) {
@@ -50,10 +56,16 @@ public:
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 
-    ADD_SERIALIZE_METHODS;
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(chars_);
+    VStream& operator=(const VStream& b) {
+        readPos_ = b.readPos_;
+        chars_   = b.chars_;
+        return *this;
+    }
+
+    VStream& operator=(VStream&& b) {
+        readPos_ = b.readPos_;
+        chars_   = std::move(b.chars_);
+        return *this;
     }
 
     VStream& operator+=(const VStream& b) {
@@ -188,6 +200,13 @@ public:
         memcpy(&chars_[end], pch, nSize);
     }
 
+    template <typename Stream>
+    void Serialize(Stream& s) const {
+        // Special case: stream << stream concatenates like stream += stream
+        if (!chars_.empty())
+            s.write((char*) chars_.data(), chars_.size() * sizeof(value_type));
+    }
+
     template <typename T>
     VStream& operator<<(const T& obj) {
         // Serialize to this stream
@@ -202,9 +221,19 @@ public:
         return (*this);
     }
 
-    void GetAndClear(byte_vector& d) {
-        d.insert(d.end(), begin(), end());
+    void MoveTo(byte_vector& d) {
+        if (d.empty() && readPos_ == 0) {
+            d = std::move(chars_);
+            return;
+        }
+
+        d.reserve(d.size() + size());
+        d.insert(d.end(), std::make_move_iterator(begin()), std::make_move_iterator(end()));
         clear();
+    }
+
+    void ResetPos() {
+        readPos_ = 0;
     }
 
 protected:
