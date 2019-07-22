@@ -48,7 +48,7 @@ public:
 
     VStream(const VStream& vs) : chars_(vs.chars_), readPos_(vs.readPos_) {}
 
-    VStream(VStream&& vs) : chars_(std::move(vs.chars_)), readPos_(vs.readPos_) {}
+    VStream(VStream&& vs) noexcept : chars_(std::move(vs.chars_)), readPos_(vs.readPos_) {}
 
     template <typename... Args>
     VStream(Args&&... args) {
@@ -62,7 +62,7 @@ public:
         return *this;
     }
 
-    VStream& operator=(VStream&& b) {
+    VStream& operator=(VStream&& b) noexcept {
         readPos_ = b.readPos_;
         chars_   = std::move(b.chars_);
         return *this;

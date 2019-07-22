@@ -337,7 +337,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneForward(const NodeRecord& curs
 
 bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
     auto size     = downloading.size();
-    bool contains = static_cast<bool>(downloading.erase(hash));
+    bool contains = bool(downloading.erase(hash));
     if (contains) {
         spdlog::debug("Size of downloading = {}, removed successfully", size - 1);
     } else if (!downloading.empty()) {

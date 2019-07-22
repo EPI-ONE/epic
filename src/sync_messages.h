@@ -14,7 +14,7 @@ public:
     // random number to track sync flow
     uint32_t nonce;
 
-    explicit GetInv(std::vector<uint256> locator_, uint32_t nonce_) : locator(std::move(locator_)), nonce(nonce_) {}
+    GetInv(std::vector<uint256> locator_, uint32_t nonce_) : locator(std::move(locator_)), nonce(nonce_) {}
 
     explicit GetInv(VStream& stream) {
         Deserialize(stream);
@@ -43,7 +43,7 @@ public:
     // random number which corresponds to GetInv message
     uint32_t nonce = 0;
 
-    explicit Inv(std::vector<uint256>& hashes_, uint32_t nonce_) : hashes(std::move(hashes_)), nonce(nonce_) {}
+    Inv(std::vector<uint256> hashes_, uint32_t nonce_) : hashes(std::move(hashes_)), nonce(nonce_) {}
 
     explicit Inv(uint32_t nonce_) : nonce(nonce_) {}
 
@@ -124,7 +124,7 @@ public:
     }
 
     // max block size of a bundle
-    const static size_t kMaxBlockSize = 100000;
+    constexpr static size_t kMaxBlockSize = 100000;
 
     // block
     std::vector<ConstBlockPtr> blocks;
