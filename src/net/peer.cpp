@@ -77,7 +77,8 @@ void Peer::ProcessMessage(NetMessage& msg) {
             }
             case NOT_FOUND: {
                 auto notfound = NotFound(msg.payload);
-                spdlog::warn("not found: {}", notfound.hash.to_substr());
+                spdlog::warn("Not found: {}", notfound.hash.to_substr());
+                ProcessNotFound(notfound.nonce);
                 break;
             }
             default: {
@@ -392,6 +393,16 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
             break;
         }
     }
+}
+
+void Peer::ProcessNotFound(const uint32_t& nonce) {
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
+    getInvsTasks.clear();
+    getDataTasks.clear();
+    orphanLvsPool.clear();
+    writer.unlock();
+
+    DAG->DisconnectPeerSync(PEERMAN->GetPeer(connection_handle));
 }
 
 uint32_t Peer::GetFirstGetDataNonce() {

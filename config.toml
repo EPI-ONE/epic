@@ -1,5 +1,8 @@
 title = "EPIC Default Config"
 
+[global]
+root = "data/"
+
 [logs]
 use_file_logger = true
 path = "logs/"

@@ -92,6 +92,9 @@ public:
     bool WriteHeadHeight(uint64_t height) const;
     uint64_t GetHeadHeight() const;
 
+    bool WriteInfo(const std::string& key, const uint64_t& value) const;
+    uint64_t GetInfo(const std::string&) const;
+
 private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
     rocksdb::DB* db_;

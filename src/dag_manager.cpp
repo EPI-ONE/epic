@@ -35,8 +35,8 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
         }
 
         if (isBatchSynching.load() && peer != syncingPeer) {
-            //            spdlog::debug("Sync ABORTED: syncing with peer {} which is not this peer {}",
-            //                          syncingPeer->address.ToString(), peer->address.ToString());
+            spdlog::debug("Sync ABORTED: syncing with peer {} which is not this peer {}",
+                          syncingPeer->address.ToString(), peer->address.ToString());
             return;
         }
 
@@ -48,11 +48,15 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
             return;
         }
 
+        if (!downloading.empty()) {
+            SPDLOG_INFO("Downloading is not empty. Clearing.");
+            downloading.clear();
+        }
 
-        //        if (!downloading.empty() || !preDownloading.Empty()) {
-        //            downloading.clear();
-        //            preDownloading.Clear();
-        //        }
+        if (!preDownloading.Empty()) {
+            SPDLOG_INFO("PreDownloading is not empty. Clearing.");
+            preDownloading.Clear();
+        }
 
         GetInvTask task{};
         task.SetPeer(peer);
@@ -397,6 +401,9 @@ void DAGManager::CompleteBatchSync() {
 
 void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
     if (peer == syncingPeer) {
+        downloading.clear();
+        preDownloading.Clear();
+        syncPool_.Abort();
         CompleteBatchSync();
     }
 }
@@ -589,6 +596,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
         if (*(ms) == *(chain->GetChainHead()) && CheckMsPOW(block, ms)) {
             // new milestone on fork
+            spdlog::debug("A fork grows to height {}", (*chainIt)->GetChainHead()->height);
             ProcessMilestone(*chainIt, block);
             milestoneChains.update_best(chainIt);
             return;
@@ -807,21 +815,23 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& block
 }
 
 VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
-    VStream result;
     const auto& bestChain    = GetBestChain();
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
+    // Find in DB
     if (height < leastHeightCached) {
-        result = std::move(*CAT->GetRawLevelSetAt(height));
-    } else {
-        auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
+        return CAT->GetRawLevelSetAt(height);
+    }
 
-        // To make it have the same order as the lvs we get from file (ms goes the first)
-        std::swap(hashes.front(), hashes.back());
+    // Find in cache
+    auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
 
-        for (auto& h : hashes) {
-            result << bestChain.GetRecord(h)->cblock;
-        }
+    // To make it have the same order as the lvs we get from file (ms goes the first)
+    std::swap(hashes.front(), hashes.back());
+
+    VStream result;
+    for (auto& h : hashes) {
+        result << bestChain.GetRecord(h)->cblock;
     }
 
     return result;

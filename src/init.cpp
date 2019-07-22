@@ -50,7 +50,7 @@ void CreateRoot(const std::string& path) {
         if (Mkdir_recursive(path)) {
             spdlog::info("root {} has been created", path);
         } else {
-            throw spdlog::spdlog_ex("fail to create the path" + path);
+            throw spdlog::spdlog_ex("fail to create the path " + path);
         }
     }
 }

@@ -6,7 +6,8 @@
 #include <unistd.h>
 
 #include "pubkey.h"
-#include "tasm/tasm.h"
+
+typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
 
 static const std::array<instruction, 256> functors = {
     // FALSE

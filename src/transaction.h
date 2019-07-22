@@ -4,13 +4,8 @@
 #include <cassert>
 #include <sstream>
 
-#include "hash.h"
 #include "params.h"
-#include "pubkey.h"
-#include "spdlog.h"
-#include "stream.h"
 #include "tasm.h"
-#include "tasm/functors.h"
 #include "tinyformat.h"
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;

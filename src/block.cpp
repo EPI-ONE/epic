@@ -262,6 +262,7 @@ size_t Block::CalculateOptimalEncodingSize() {
 }
 
 size_t Block::GetOptimalEncodingSize() const {
+    assert(optimalEncodingSize_ > 0);
     return optimalEncodingSize_;
 }
 

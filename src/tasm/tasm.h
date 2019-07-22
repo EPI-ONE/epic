@@ -8,8 +8,7 @@
 #include "opcodes.h"
 #include "stream.h"
 #include "utilstrencodings.h"
-
-typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
+#include "functors.h"
 
 class Tasm {
 public:
@@ -58,6 +57,8 @@ public:
             return listing;
         }
     };
+
+    Tasm() : is_(functors) {}
 
     explicit Tasm(std::array<instruction, 256> is) {
         is_ = is;
