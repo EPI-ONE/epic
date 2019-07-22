@@ -324,10 +324,13 @@ void Peer::ProcessGetData(GetData& getData) {
 
     switch (getData.type) {
         case GetDataTask::PENDING_SET: {
+            spdlog::debug("Received a GetData request for pending blocks from {}", peer->address.ToString());
             DAG->RespondRequestPending(getData.bundleNonce[0], peer);
             break;
         }
         case GetDataTask::LEVEL_SET: {
+            spdlog::debug("Received a GetData request for stored blocks from {} with hash {}", peer->address.ToString(),
+                          getData.hashes.front().to_substr());
             DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, std::move(peer));
             break;
         }

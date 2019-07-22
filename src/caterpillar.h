@@ -40,9 +40,14 @@ public:
     bool RollBackPrevRedemHashes(const RegChange&) const;
 
     /**
-     * Flush records to db. Called by DAGManager only.
+     * Flushes records to db. Called by DAGManager only.
      */
     bool StoreRecords(const std::vector<RecordPtr>&);
+
+    /**
+     * Removes block cache when flushing
+     */
+    void UnCache(const uint256&);
 
     /**
      * Returns true if the hash exists in DB

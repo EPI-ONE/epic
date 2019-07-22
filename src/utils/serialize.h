@@ -19,8 +19,7 @@
 
 #include "compat/bitcoin_endian.h"
 
-//static const unsigned int MAX_SIZE = 0x02000000;
-static const unsigned int MAX_SIZE = 0x0ffffffff;
+static const unsigned int MAX_SIZE = 0x02000000;
 
 /**
  * Dummy data type to identify deserializing constructors.

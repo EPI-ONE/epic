@@ -109,7 +109,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
         value.ignore(Hash::SIZE);
         FilePos blkPos(value);
         FilePos recPos(value);
-        return std::make_pair(blkPos, recPos);
+        return {{blkPos, recPos}};
     } catch (const std::exception&) {
         return {};
     }
@@ -139,7 +139,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHa
     blkPos.nOffset += blkOffset;
     recPos.nOffset += recOffset;
 
-    return std::make_pair(blkPos, recPos);
+    return {{blkPos, recPos}};
 }
 
 bool RocksDBStore::WriteRecPos(const uint256& key,

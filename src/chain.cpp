@@ -163,7 +163,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 }
 
 RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
-    spdlog::debug("Verifying milestone block {}", pblock->GetHash().to_substr());
+    spdlog::debug("Verifying milestone block {} on height {}", pblock->GetHash().to_substr(), GetChainHead()->height);
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);

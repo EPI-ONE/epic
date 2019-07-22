@@ -259,5 +259,4 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     ASSERT_EQ(soutput.size(), block1.GetOptimalStorageSize());
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
-
 }

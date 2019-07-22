@@ -6,7 +6,7 @@ Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(db
     currentBlkEpoch_ = dbStore_.GetInfo("blkE");
     currentRecEpoch_ = dbStore_.GetInfo("recE");
     currentBlkName_  = dbStore_.GetInfo("blkN");
-    currentRecName_  = dbStore_.GetInfo("recE");
+    currentRecName_  = dbStore_.GetInfo("recN");
     currentBlkSize_  = dbStore_.GetInfo("blkS");
     currentRecSize_  = dbStore_.GetInfo("recS");
 }
@@ -100,14 +100,14 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
 
 std::vector<ConstBlockPtr> Caterpillar::GetLevelSetAt(size_t height) const {
     auto vs = GetRawLevelSetAt(height);
-    std::vector<ConstBlockPtr> blocks;
 
     if (vs.empty()) {
         return {};
     }
 
-    while (!vs->empty()) {
-        blocks.emplace_back(std::make_shared<const Block>(*vs));
+    std::vector<ConstBlockPtr> blocks;
+    while (vs.in_avail()) {
+        blocks.emplace_back(std::make_shared<const Block>(vs));
     }
     return blocks;
 }
@@ -233,7 +233,6 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
         uint64_t height = lvs.front()->snapshot->height;
 
-
         for (const auto& rec : lvs) {
             // Write to file
             blkOffset = blkFs.GetOffset() - msBlkOffset;
@@ -252,21 +251,19 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
         AddCurrentSize(totalSize);
 
-<<<<<<< HEAD
-        CAT->SaveHeadHeight(height);
-        std::cout << "stored height = " << height << ", hash = " << lvs.front()->cblock->GetHash().to_substr()
-                  << std::endl;
-=======
         SaveHeadHeight(height);
 
         spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", lvs.front()->height, height,
                       std::to_string(*dbStore_.GetMsBlockPos(height)));
->>>>>>> dd26df3... Add clearing downloading and preDownloading after StartBatchSync
     } catch (const std::exception&) {
         return false;
     }
 
     return true;
+}
+
+void Caterpillar::UnCache(const uint256& blkHash) {
+    blockCache_.erase(blkHash);
 }
 
 bool Caterpillar::DBExists(const uint256& blkHash) const {

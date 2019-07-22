@@ -43,6 +43,7 @@ void Block::SetNull() {
     diffTarget_ = 0;
     nonce_      = 0;
     transaction_.reset();
+    source = Source::UNKNOWN;
 }
 
 bool Block::IsNull() const {

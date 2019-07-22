@@ -189,11 +189,15 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
             Bundle bundle(n);
             auto payload = GetMainChainRawLevelSet(h);
             if (payload.empty()) {
+                spdlog::debug("Milestone {} cannot be found. Sending a Not Found Message instead", h.to_substr());
                 SEND_MESSAGE(peer, NOT_FOUND, NotFound(h, n));
                 return;
             }
 
             bundle.SetPayload(std::move(payload));
+            spdlog::debug("Sending bundle of LVS with nonce {} with MS hash {} to peer {}", n, h.to_substr(),
+                          peer->address.ToString());
+            peer->SetLastSentBundleHash(h);
             SEND_MESSAGE(peer, BUNDLE, bundle);
         });
         hs_iter++;
@@ -558,7 +562,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     if (msBlock) {
         auto ms = msBlock->snapshot;
         if (CheckMsPOW(block, ms)) {
-            if (*(ms) == *(GetMilestoneHead()->snapshot)) {
+            if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
                 ProcessMilestone(mainchain, block);
                 if (!isStoring.load()) {
@@ -570,6 +574,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 }
             } else {
                 // new fork
+                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -594,18 +599,21 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
         ChainStatePtr ms = msBlock->snapshot;
 
-        if (*(ms) == *(chain->GetChainHead()) && CheckMsPOW(block, ms)) {
-            // new milestone on fork
-            spdlog::debug("A fork grows to height {}", (*chainIt)->GetChainHead()->height);
-            ProcessMilestone(*chainIt, block);
-            milestoneChains.update_best(chainIt);
-            return;
-        } else if (CheckMsPOW(block, ms)) {
-            // new fork
-            auto new_fork = std::make_unique<Chain>(*chain, block);
-            ProcessMilestone(new_fork, block);
-            milestoneChains.emplace(std::move(new_fork));
-            return;
+        if (CheckMsPOW(block, ms)) {
+            if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
+                // new milestone on fork
+                spdlog::debug("A fork grows to height {}", (*chainIt)->GetChainHead()->height);
+                ProcessMilestone(*chainIt, block);
+                milestoneChains.update_best(chainIt);
+                return;
+            } else {
+                // new fork
+                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
+                auto new_fork = std::make_unique<Chain>(*chain, block);
+                ProcessMilestone(new_fork, block);
+                milestoneChains.emplace(std::move(new_fork));
+                return;
+            }
         }
     }
 }
@@ -705,15 +713,18 @@ void DAGManager::FlushToCAT(size_t level) {
     // first store data to CAT
     auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(level);
 
-    for (auto& lvsRec : recToStore) {
-        std::swap(lvsRec.front(), lvsRec.back());
-    }
+    spdlog::trace("flushing at current height {}", GetBestMilestoneHeight());
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         for (auto& lvsRec : recToStore) {
+            std::swap(lvsRec.front(), lvsRec.back());
             CAT->StoreRecords(lvsRec);
             CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
+            for (auto& rec : lvsRec) {
+                CAT->UnCache(rec->cblock->GetHash());
+            }
+            globalStates_.erase(lvsRec.front()->cblock->GetHash());
         }
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);

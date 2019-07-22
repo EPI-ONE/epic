@@ -13,13 +13,7 @@ int main(int argc, char** argv) {
     if (Start()) {
         // start some applications, such as miner, visualization...
         // TODO
-
-        auto height = CAT->GetHeadHeight();
-        for (int i = 0; i < height; i++) {
-            auto l = CAT->GetMilestoneAt(i);
-            std::cout << l->height << ": " << l->cblock->GetHash().to_substr() << std::endl;
-        }
-
+        spdlog::set_level(spdlog::level::level_enum::debug);
         WaitShutdown();
     } else {
         std::cout << "Failed to start epic" << std::endl;
