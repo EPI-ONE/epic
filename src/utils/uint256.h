@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "crypto/common.h"
+#include "common.h"
 #include "stream.h"
 
 /** Template base class for fixed-sized opaque blobs. */
@@ -32,16 +32,19 @@ public:
     explicit base_blob(const std::vector<unsigned char>& vch);
 
     // Defined to be used with std::atomic
-    base_blob(const base_blob<BITS>&) = default;
-    base_blob(base_blob<BITS>&&)      = default;
+    // note that move operations are still copying
+    base_blob(const base_blob<BITS>&)     = default;
+    base_blob(base_blob<BITS>&&) noexcept = default;
     base_blob<BITS>& operator=(const base_blob<BITS>&) = default;
-    base_blob<BITS>& operator=(base_blob<BITS>&&) = default;
-    ~base_blob()                                  = default;
+    base_blob<BITS>& operator=(base_blob<BITS>&&) noexcept = default;
+    ~base_blob()                                           = default;
 
     bool IsNull() const {
-        for (int i = 0; i < WIDTH; i++)
-            if (data[i] != 0)
+        for (int i = 0; i < WIDTH; i++) {
+            if (data[i] != 0) {
                 return false;
+            }
+        }
         return true;
     }
 
@@ -116,8 +119,7 @@ string to_string(const base_blob<BITS>& uint);
  */
 class uint160 : public base_blob<160> {
 public:
-    uint160() {}
-    explicit uint160(const std::vector<unsigned char>& vch) : base_blob<160>(vch) {}
+    using base_blob::base_blob;
 };
 
 /** 256-bit opaque blob.
@@ -127,8 +129,7 @@ public:
  */
 class uint256 : public base_blob<256> {
 public:
-    uint256() {}
-    explicit uint256(const std::vector<unsigned char>& vch) : base_blob<256>(vch) {}
+    using base_blob::base_blob;
 
     explicit uint256(VStream& vs) {
         Deserialize(vs);

@@ -3,7 +3,7 @@
 ////////////////
 // ChainState
 //
-ChainState::ChainState(std::shared_ptr<ChainState> previous,
+ChainState::ChainState(const std::shared_ptr<ChainState>& previous,
                        const ConstBlockPtr& msBlock,
                        std::vector<uint256>&& lvsHash)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
@@ -160,10 +160,10 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
     s += strprintf("   cumulative reward: %s \n", rec.cumulativeReward.GetValue());
 
-    static const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
+    const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
     s += strprintf("   redemption status: %s \n", enumRedeemption[rec.isRedeemed]);
 
-    static const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
+    const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
     s += strprintf("   transaction status: %s \n }", enumName[rec.validity]);
     return s;
 }

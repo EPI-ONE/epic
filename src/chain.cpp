@@ -163,7 +163,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
 }
 
 RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
-    spdlog::trace("Verifying block {}", pblock->GetHash().to_substr());
+    spdlog::debug("Verifying milestone block {}", pblock->GetHash().to_substr());
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
@@ -399,21 +399,23 @@ void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocT
 
 std::tuple<std::vector<std::vector<RecordPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
 Chain::GetDataToCAT(size_t level) {
-    std::vector<std::vector<RecordPtr>> result_rec{};
+    std::vector<std::vector<RecordPtr>> result_rec;
     result_rec.reserve(level);
     TXOC result_txoc{};
 
     // traverse from the oldest chain state in memory 
     for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
+        // get all of the blocks
         std::vector<RecordPtr> lvsRec;
         lvsRec.reserve((*cs_it)->GetRecordHashes().size());
-
         for (const auto& h : (*cs_it)->GetRecordHashes()) {
             lvsRec.emplace_back(recordHistory_.at(h));
         }
         result_rec.emplace_back(std::move(lvsRec));
-        // TODO: optimize it after merging increament
-        result_txoc.Merge(std::move(const_cast<TXOC&>((*cs_it)->GetTXOC())));
+
+        // get all of the TXOC and merge them in advance to save space
+        auto txoc = (*cs_it)->GetTXOC();
+        result_txoc.Merge(std::move(txoc));
     }
 
     std::unordered_map<uint256, UTXOPtr> result_created{};

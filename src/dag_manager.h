@@ -30,7 +30,7 @@ public:
      * and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
      * sending queue according to the BlockLocator constructed by peer.
      */
-    void RequestInv(const uint256& fromHash, const size_t& len, PeerPtr peer);
+    void RequestInv(uint256 fromHash, const size_t& len, PeerPtr peer);
     void CallbackRequestInv(std::unique_ptr<Inv> inv);
 
     /** Called by batchSync to create a GetDataTask for a given hash. */
@@ -42,7 +42,7 @@ public:
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
-    void RespondRequestPending(uint32_t, const PeerPtr&);
+    void RespondRequestPending(uint32_t, const PeerPtr&) const;
 
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
@@ -50,8 +50,8 @@ public:
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    std::vector<uint256> TraverseMilestoneBackward(RecordPtr, size_t) const;
-    std::vector<uint256> TraverseMilestoneForward(RecordPtr, size_t) const;
+    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
+    std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
 
     /*
      * Submits tasks to a single thread in which it checks its syntax.
@@ -151,14 +151,12 @@ private:
 
     void AddToDownloadingQueue(const uint256&);
 
-    bool IsDownloading(const uint256&);
-
     void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
     void DeleteFork();
 
-    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms);
+    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
 
     /**
      * Adds a newly received block to the corresponding chain

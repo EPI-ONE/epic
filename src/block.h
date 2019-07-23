@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <ctime>
-#include <unordered_map>
 
 #include "arith_uint256.h"
 #include "pubkey.h"
@@ -25,9 +24,9 @@ class Block {
 public:
     Block();
     Block(const Block&);
-    Block(Block&&);
-    Block(uint32_t versionNum);
-    Block(VStream&);
+    Block(Block&&) noexcept;
+    explicit Block(uint32_t versionNum);
+    explicit Block(VStream&);
 
     Block(uint32_t version,
           uint256 milestoneHash,
@@ -128,7 +127,7 @@ public:
      */
     void SetParents();
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(version_);

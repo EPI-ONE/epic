@@ -2,12 +2,10 @@
 #define __SRC_CATERPILLAR_H__
 
 #include <atomic>
-#include <list>
 #include <memory>
 #include <numeric>
 #include <vector>
 
-#include "block.h"
 #include "dag_manager.h"
 #include "obc.h"
 #include "rocksdb.h"
@@ -18,7 +16,7 @@ typedef std::unique_ptr<NodeRecord, std::function<void(NodeRecord*)>> StoredReco
 class Caterpillar {
 public:
     Caterpillar() = delete;
-    Caterpillar(const std::string& dbPath);
+    explicit Caterpillar(const std::string& dbPath);
 
     /**
      * DB API for other modules

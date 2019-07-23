@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "block.h"
 #include "consensus.h"
 #include "file_utils.h"
 #include "rocksdb/db.h"

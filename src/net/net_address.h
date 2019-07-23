@@ -131,7 +131,7 @@ public:
 
     friend bool operator!=(const NetAddress& a, const NetAddress& b);
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(ip);

@@ -25,7 +25,7 @@ public:
     OrphanBlocksContainer() = default;
 
     /*
-     * clear all maps
+     * clears all maps
      */
     ~OrphanBlocksContainer();
 
@@ -58,7 +58,6 @@ public:
     std::optional<std::vector<ConstBlockPtr>> SubmitHash(const uint256& hash);
 
 private:
-    mutable std::shared_mutex mutex_;
     struct obc_dependency {
         /* number of dependencies that must be
          * found in order for this dependency
@@ -72,9 +71,10 @@ private:
         ConstBlockPtr block;
     };
 
-    typedef struct obc_dependency obc_dep;
-    typedef std::shared_ptr<obc_dep> obc_dep_ptr;
+    using obc_dep = struct obc_dependency;
+    using obc_dep_ptr = std::shared_ptr<obc_dep>;
 
+    mutable std::shared_mutex mutex_;
     /* this container maps the hash of the orphan block
      * to its dependency struct */
     std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;

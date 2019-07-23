@@ -234,7 +234,7 @@ std::string EncodeAddress(const CKeyID& addr) {
     return EncodeBase58Check(data);
 }
 
-std::optional<CKeyID> DecodeAddress(const std::string str) {
+std::optional<CKeyID> DecodeAddress(const std::string& str) {
     std::vector<unsigned char> data;
     uint160 hash;
     if (DecodeBase58Check(str, data)) {

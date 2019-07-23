@@ -1,5 +1,7 @@
 #include "block.h"
 
+#include <unordered_set>
+
 Block::Block() {
     SetNull();
 }
@@ -11,11 +13,11 @@ Block::Block(const Block& b)
     SetParents();
 }
 
-Block::Block(Block&& b)
-    : hash_(std::move(b.hash_)), version_(std::move(b.version_)), milestoneBlockHash_(std::move(b.milestoneBlockHash_)),
-      prevBlockHash_(std::move(b.prevBlockHash_)), tipBlockHash_(std::move(b.tipBlockHash_)), time_(std::move(b.time_)),
-      diffTarget_(std::move(b.diffTarget_)), nonce_(std::move(b.nonce_)), transaction_(std::move(b.transaction_)),
-      optimalEncodingSize_(std::move(b.optimalEncodingSize_)) {
+Block::Block(Block&& b) noexcept
+    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
+      nonce_(b.nonce_), transaction_(std::move(b.transaction_)), optimalEncodingSize_(b.optimalEncodingSize_) {
+    b.SetNull();
     SetParents();
 }
 
@@ -205,8 +207,9 @@ const uint256& Block::GetHash() const {
 }
 
 void Block::FinalizeHash() {
-    if (hash_.IsNull())
+    if (hash_.IsNull()) {
         CalculateHash();
+    }
 }
 
 void Block::CalculateHash() {
@@ -231,8 +234,9 @@ const uint256& Block::GetTxHash() const {
 
 size_t Block::CalculateOptimalEncodingSize() {
     optimalEncodingSize_ = HEADER_SIZE + 1; // 1 is the flag for whether there is a transaction
-    if (!HasTransaction())
+    if (!HasTransaction()) {
         return optimalEncodingSize_;
+    }
 
     optimalEncodingSize_ += ::GetSizeOfCompactSize(transaction_->GetInputs().size());
     for (const TxInput& input : transaction_->GetInputs()) {

@@ -7,12 +7,9 @@
 #define BITCOIN_ARITH_UINT256_CPP__
 
 #include "arith_uint256.h"
-#include "crypto/common.h"
+#include "common.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-
-#include <cstdio>
-#include <cstring>
 
 template <unsigned int BITS>
 base_uint<BITS>::base_uint(const std::string& str) {
