@@ -80,6 +80,7 @@ Transaction::Transaction(const Transaction& tx) {
 
 Transaction::Transaction(Transaction&& tx) noexcept
     : inputs_(std::move(tx.inputs_)), outputs_(std::move(tx.outputs_)), parentBlock_(tx.parentBlock_) {
+    tx.parentBlock_ = nullptr;
     hash_.SetNull();
     FinalizeHash();
     SetParents();

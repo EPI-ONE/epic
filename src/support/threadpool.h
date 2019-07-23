@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "blocking_queue.h"
-#include "spdlog.h"
 
 class CallableWrapper {
 public:
@@ -95,7 +94,7 @@ public:
         }
 
         typedef typename std::result_of<FunctionType()>::type result_type;
-        std::packaged_task<result_type()> packagedTask(std::move(f));
+        std::packaged_task<result_type()> packagedTask(std::forward<decltype(f)>(f));
         std::future<result_type> result(packagedTask.get_future());
         task_queue_.Put(std::move(packagedTask));
         return result;

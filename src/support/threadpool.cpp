@@ -1,5 +1,6 @@
 #include "threadpool.h"
-#include <iostream>
+#include "spdlog.h"
+
 CallableWrapper& CallableWrapper::operator=(CallableWrapper&& other) noexcept {
     impl = std::move(other.impl);
     return *this;

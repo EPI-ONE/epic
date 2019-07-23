@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "crypto/common.h"
+#include "common.h"
 #include "stream.h"
 
 /** Template base class for fixed-sized opaque blobs. */

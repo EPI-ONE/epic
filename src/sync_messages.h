@@ -104,7 +104,8 @@ public:
 
 class Bundle {
 public:
-    Bundle(Bundle&& other) noexcept : blocks(std::move(other.blocks)), nonce(other.nonce) {}
+    Bundle(Bundle&& other) noexcept
+        : blocks(std::move(other.blocks)), nonce(other.nonce), payload_(std::move(other.payload_)) {}
 
     explicit Bundle(VStream& stream) {
         Deserialize(stream);

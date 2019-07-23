@@ -14,10 +14,10 @@ Block::Block(const Block& b)
 }
 
 Block::Block(Block&& b) noexcept
-    : hash_(std::move(b.hash_)), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
-      prevBlockHash_(std::move(b.prevBlockHash_)), tipBlockHash_(std::move(b.tipBlockHash_)), time_(b.time_),
-      diffTarget_(b.diffTarget_), nonce_(b.nonce_), transaction_(std::move(b.transaction_)),
-      optimalEncodingSize_(b.optimalEncodingSize_) {
+    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
+      nonce_(b.nonce_), transaction_(std::move(b.transaction_)), optimalEncodingSize_(b.optimalEncodingSize_) {
+    b.SetNull();
     SetParents();
 }
 
