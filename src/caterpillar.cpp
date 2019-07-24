@@ -3,12 +3,12 @@
 Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     obcThread_.Start();
 
-    currentBlkEpoch_ = dbStore_.GetInfo("blkE");
-    currentRecEpoch_ = dbStore_.GetInfo("recE");
-    currentBlkName_  = dbStore_.GetInfo("blkN");
-    currentRecName_  = dbStore_.GetInfo("recN");
-    currentBlkSize_  = dbStore_.GetInfo("blkS");
-    currentRecSize_  = dbStore_.GetInfo("recS");
+    currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
+    currentRecEpoch_ = dbStore_.GetInfo<uint32_t>("recE");
+    currentBlkName_  = dbStore_.GetInfo<uint16_t>("blkN");
+    currentRecName_  = dbStore_.GetInfo<uint16_t>("recN");
+    currentBlkSize_  = dbStore_.GetInfo<uint32_t>("blkS");
+    currentRecSize_  = dbStore_.GetInfo<uint32_t>("recS");
 }
 
 Caterpillar::~Caterpillar() {
@@ -176,11 +176,19 @@ size_t Caterpillar::GetHeight(const uint256& blkHash) const {
 }
 
 uint64_t Caterpillar::GetHeadHeight() const {
-    return dbStore_.GetHeadHeight();
+    return dbStore_.GetInfo<uint64_t>("headHeight");
 }
 
 bool Caterpillar::SaveHeadHeight(uint64_t height) const {
-    return dbStore_.WriteHeadHeight(height);
+    return dbStore_.WriteInfo("headHeight", height);
+}
+
+uint256 Caterpillar::GetMinerChainHead() const {
+    return dbStore_.GetInfo<uint256>("minerHead");
+}
+
+bool Caterpillar::SaveMinerChainHead(const uint256& h) const {
+    return dbStore_.WriteInfo("minerHead", h);
 }
 
 std::unique_ptr<UTXO> Caterpillar::GetUTXO(const uint256& key) const {
@@ -354,7 +362,7 @@ void Caterpillar::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentBlkSize() > 0 && loadCurrentBlkSize() + addon.first > fileCapacity_) {
         currentBlkName_.fetch_add(1, std::memory_order_seq_cst);
         currentBlkSize_.store(0, std::memory_order_seq_cst);
-        dbStore_.WriteInfo("blkS", 0);
+        dbStore_.WriteInfo("blkS", (uint32_t) 0);
         if (loadCurrentBlkName() == epochCapacity_) {
             currentBlkEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentBlkName_.store(0, std::memory_order_seq_cst);
@@ -367,7 +375,7 @@ void Caterpillar::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentRecSize() > 0 && loadCurrentRecSize() + addon.second > fileCapacity_) {
         currentRecName_.fetch_add(1, std::memory_order_seq_cst);
         currentRecSize_.store(0, std::memory_order_seq_cst);
-        dbStore_.WriteInfo("recS", 0);
+        dbStore_.WriteInfo("recS", (uint32_t) 0);
         if (loadCurrentRecName() == epochCapacity_) {
             currentRecEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentRecName_.store(0, std::memory_order_seq_cst);

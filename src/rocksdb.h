@@ -89,11 +89,10 @@ public:
     bool UpdateReg(const RegChange&) const;
     bool RollBackReg(const RegChange&) const;
 
-    bool WriteHeadHeight(uint64_t height) const;
-    uint64_t GetHeadHeight() const;
-
-    bool WriteInfo(const std::string& key, const uint64_t& value) const;
-    uint64_t GetInfo(const std::string&) const;
+    template <typename V>
+    bool WriteInfo(const std::string& key, const V& value) const;
+    template <typename V>
+    V GetInfo(const std::string&) const;
 
 private:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
@@ -101,7 +100,7 @@ private:
     std::string dbpath_;
 
     // keys in the "info" column
-    const std::string kHeadHeight = "HeadHeight";
+    const std::string kHeadHeight = "headHeight";
 
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 

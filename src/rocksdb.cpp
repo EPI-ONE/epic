@@ -257,33 +257,35 @@ bool RocksDBStore::RollBackReg(const RegChange& change) const {
     return WriteRegSet(change.GetRemoved());
 }
 
-bool RocksDBStore::WriteHeadHeight(uint64_t height) const {
-    return WriteInfo(kHeadHeight, height);
-}
-
-uint64_t RocksDBStore::GetHeadHeight() const {
-    return GetInfo(kHeadHeight);
-}
-
-bool RocksDBStore::WriteInfo(const std::string& k, const uint64_t& v) const {
+template <typename V>
+bool RocksDBStore::WriteInfo(const std::string& k, const V& v) const {
     VStream value(v);
     Slice valueSlice(value.data(), value.size());
     return db_->Put(WriteOptions(), handleMap_.at("info"), k, valueSlice).ok();
 }
+template bool RocksDBStore::WriteInfo(const std::string&, const uint256&) const;
+template bool RocksDBStore::WriteInfo(const std::string&, const uint64_t&) const;
+template bool RocksDBStore::WriteInfo(const std::string&, const uint32_t&) const;
+template bool RocksDBStore::WriteInfo(const std::string&, const uint16_t&) const;
 
-uint64_t RocksDBStore::GetInfo(const std::string& k) const {
+template <typename V>
+V RocksDBStore::GetInfo(const std::string& k) const {
     Slice keySlice(k);
-    GET_VALUE(handleMap_.at("info"), 0);
+    GET_VALUE(handleMap_.at("info"), V{});
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
         valueSlice.Reset();
-        uint64_t result;
+        V result;
         value >> result;
         return result;
     } catch (const std::exception&) {
-        return 0;
+        return V{};
     }
 }
+template uint256 RocksDBStore::GetInfo(const std::string&) const;
+template uint64_t RocksDBStore::GetInfo(const std::string&) const;
+template uint32_t RocksDBStore::GetInfo(const std::string&) const;
+template uint16_t RocksDBStore::GetInfo(const std::string&) const;
 
 string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
     GET_VALUE(handleMap_.at(column), "");

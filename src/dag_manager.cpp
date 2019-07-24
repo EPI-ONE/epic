@@ -628,6 +628,16 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
     isVerifying = false;
 
     UpdateDownloadingQueue(block->GetHash());
+
+    // Save miner chain head
+    const auto& lvs = newMs->snapshot->GetLevelSet();
+    for (auto it = lvs.rbegin(); it != lvs.rend(); ++it) {
+        const auto& blk = (*it->lock()).cblock;
+        if (blk->source == Block::MINER) {
+            CAT->SaveMinerChainHead(blk->GetHash());
+            break;
+        }
+    }
 }
 
 void DAGManager::DeleteFork() {
