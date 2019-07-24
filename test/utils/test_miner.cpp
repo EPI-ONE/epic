@@ -42,7 +42,6 @@ TEST_F(TestMiner, Solve) {
 }
 
 TEST_F(TestMiner, Run) {
-
     PEERMAN = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 

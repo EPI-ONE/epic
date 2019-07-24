@@ -13,8 +13,8 @@ public:
     Miner() : solverPool_(1) {}
     explicit Miner(size_t nThreads) : solverPool_(nThreads) {}
 
-    void Start();
-    void Stop();
+    bool Start();
+    bool Stop();
     void Solve(Block&);
     void Run();
 
@@ -34,10 +34,11 @@ private:
     std::thread runner_;
     ThreadPool solverPool_;
     std::atomic<bool> enabled_ = false;
+
     std::atomic<uint32_t> final_nonce;
 
     ConstBlockPtr selfChainHead = nullptr;
-
+    Cumulator distanceCal;
     CKey firstRegKey;
 
     uint256 SelectTip();

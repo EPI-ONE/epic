@@ -99,9 +99,6 @@ private:
     rocksdb::DB* db_;
     std::string dbpath_;
 
-    // keys in the "info" column
-    const std::string kHeadHeight = "headHeight";
-
     void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
 
     uint256 GetMsHashAt(const uint64_t& height) const;

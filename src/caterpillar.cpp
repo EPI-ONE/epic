@@ -51,11 +51,24 @@ void Caterpillar::DisableOBC() {
 }
 
 ConstBlockPtr Caterpillar::GetBlockCache(const uint256& blkHash) const {
-    try {
-        return blockCache_.at(blkHash);
-    } catch (std::exception&) {
-        return nullptr;
+    auto cache_iter = blockCache_.find(blkHash);
+    if (cache_iter != blockCache_.end()) {
+        return cache_iter->second;
     }
+
+    return nullptr;
+}
+
+ConstBlockPtr Caterpillar::FindBlock(const uint256& blkHash) const {
+    if (auto cache = GetBlockCache(blkHash)) {
+        return cache;
+    }
+
+    if (dbStore_.Exists(blkHash)) {
+        return GetRecord(blkHash)->cblock;
+    }
+
+    return nullptr;
 }
 
 RecordPtr Caterpillar::GetMilestoneAt(size_t height) const {

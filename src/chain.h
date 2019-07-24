@@ -19,6 +19,7 @@ public:
     arith_uint256 Sum() const;
     uint32_t TimeSpan() const;
     bool Full() const;
+    bool Empty() const;
 
     friend std::string std::to_string(const Cumulator&);
 

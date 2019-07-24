@@ -1,14 +1,17 @@
 #include "miner.h"
 
-void Miner::Start() {
+bool Miner::Start() {
     bool flag = false;
     if (enabled_.compare_exchange_strong(flag, true)) {
         solverPool_.Start();
         spdlog::info("Miner started.");
+        return true;
     }
+
+    return false;
 }
 
-void Miner::Stop() {
+bool Miner::Stop() {
     bool flag = true;
     if (enabled_.compare_exchange_strong(flag, false)) {
         spdlog::info("Miner stopping...");
@@ -17,7 +20,10 @@ void Miner::Stop() {
             runner_.join();
         }
         spdlog::info("Miner stopped.");
+        return true;
     }
+
+    return false;
 }
 
 void Miner::Solve(Block& b) {
@@ -66,11 +72,27 @@ void Miner::Solve(Block& b) {
 }
 
 void Miner::Run() {
-    Start();
+    if (Start()) {
+        const auto& bestchain = DAG->GetBestChain();
+
+        // Restore miner chain head
+        auto headHash = CAT->GetMinerChainHead();
+        if (!headHash.IsNull()) {
+            selfChainHead = CAT->FindBlock(headHash);
+        }
+
+        // Restore distanceCal
+        if (selfChainHead && distanceCal.Empty()) {
+            auto cursor = selfChainHead;
+            do {
+                distanceCal.Add(cursor, false);
+                cursor = bestchain.GetRecord(cursor->GetPrevHash())->cblock;
+            } while (selfChainHead->GetHash() != GENESIS.GetHash() && !distanceCal.Full());
+        }
+    }
 
     runner_ = std::thread([&]() {
         uint256 prevHash;
-        Cumulator distanceCal;
         uint32_t counter = 0;
         uint32_t ms_cnt  = 0;
 
@@ -126,6 +148,7 @@ void Miner::Run() {
             distanceCal.Add(bPtr, true);
             selfChainHead = bPtr;
             DAG->AddNewBlock(bPtr, nullptr);
+            CAT->SaveMinerChainHead(bPtr->GetHash());
 
             if (CheckMsPOW(bPtr, head->snapshot)) {
                 spdlog::debug("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());

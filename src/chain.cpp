@@ -476,6 +476,10 @@ bool Cumulator::Full() const {
     return timestamps.size() == GetParams().sortitionThreshold;
 }
 
+bool Cumulator::Empty() const {
+    return timestamps.empty();
+}
+
 std::string std::to_string(const Cumulator& cum) {
     std::string s;
     s += " Cumulator { \n";

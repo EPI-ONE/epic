@@ -24,6 +24,7 @@ public:
     RecordPtr GetMilestoneAt(size_t height) const;
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
+    ConstBlockPtr FindBlock(const uint256&) const;
     std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
     VStream GetRawLevelSetAt(size_t height) const;
     VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
