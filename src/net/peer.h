@@ -196,6 +196,12 @@ private:
     void ProcessBundle(const std::shared_ptr<Bundle>& bundle);
 
     /**
+     * process notfound, terminate synchronization and clear all the queues
+     * @param nonce
+     */
+    void ProcessNotFound(const uint32_t& nonce);
+
+    /**
      * get the first nonce of GetData tasks
      */
     uint32_t GetFirstGetDataNonce();

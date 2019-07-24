@@ -256,5 +256,5 @@ protected:
     std::string connect_;
 };
 
-extern std::unique_ptr<PeerManager> peerManager;
+extern std::unique_ptr<PeerManager> PEERMAN;
 #endif // EPIC_PEER_MANAGER_H

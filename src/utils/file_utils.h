@@ -158,7 +158,7 @@ public:
         std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
         fbuf_.open(filename_, std::ios_base::out | std::ios_base::binary | std::ios_base::app);
         if (!fbuf_.is_open()) {
-            throw std::string("file stream is not opened");
+            throw std::string("file writer stream is not opened");
         }
     }
     FileWriter() = delete;
@@ -179,11 +179,11 @@ public:
     FileModifier(file::FileType type, const FilePos& pos) {
         std::string filename_ = file::GetFilePath(type, pos);
         if (!CheckFileExist(filename_)) {
-            throw std::string("targetfile does not exists");
+            throw std::string("target file does not exists");
         }
         fbuf_.open(filename_, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
         if (!fbuf_.is_open()) {
-            throw std::string("file stream is not opened");
+            throw std::string("file modifier stream is not opened");
         }
         fbuf_.seekp(pos.nOffset, std::ios_base::beg);
     }

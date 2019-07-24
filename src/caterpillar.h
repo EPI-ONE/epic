@@ -25,8 +25,8 @@ public:
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
     std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
-    std::unique_ptr<VStream> GetRawLevelSetAt(size_t height) const;
-    std::unique_ptr<VStream> GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
+    VStream GetRawLevelSetAt(size_t height) const;
+    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     bool SaveHeadHeight(uint64_t height) const;
@@ -40,9 +40,14 @@ public:
     bool RollBackPrevRedemHashes(const RegChange&) const;
 
     /**
-     * Flush records to db. Called by DAGManager only.
+     * Flushes records to db. Called by DAGManager only.
      */
     bool StoreRecords(const std::vector<RecordPtr>&);
+
+    /**
+     * Removes block cache when flushing
+     */
+    void UnCache(const uint256&);
 
     /**
      * Returns true if the hash exists in DB

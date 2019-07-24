@@ -2,6 +2,13 @@
 
 Caterpillar::Caterpillar(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
     obcThread_.Start();
+
+    currentBlkEpoch_ = dbStore_.GetInfo("blkE");
+    currentRecEpoch_ = dbStore_.GetInfo("recE");
+    currentBlkName_  = dbStore_.GetInfo("blkN");
+    currentRecName_  = dbStore_.GetInfo("recN");
+    currentBlkSize_  = dbStore_.GetInfo("blkS");
+    currentRecSize_  = dbStore_.GetInfo("recS");
 }
 
 Caterpillar::~Caterpillar() {
@@ -93,28 +100,28 @@ StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, F
 
 std::vector<ConstBlockPtr> Caterpillar::GetLevelSetAt(size_t height) const {
     auto vs = GetRawLevelSetAt(height);
-    std::vector<ConstBlockPtr> blocks;
 
-    if (!vs) {
-        return blocks;
+    if (vs.empty()) {
+        return {};
     }
 
-    while (!vs->empty()) {
-        blocks.emplace_back(std::make_shared<const Block>(*vs));
+    std::vector<ConstBlockPtr> blocks;
+    while (vs.in_avail()) {
+        blocks.emplace_back(std::make_shared<const Block>(vs));
     }
     return blocks;
 }
 
-std::unique_ptr<VStream> Caterpillar::GetRawLevelSetAt(size_t height) const {
+VStream Caterpillar::GetRawLevelSetAt(size_t height) const {
     return GetRawLevelSetBetween(height, height);
 }
 
-std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const {
+VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2) const {
     assert(height1 <= height2);
     auto leftPos  = dbStore_.GetMsBlockPos(height1);
     auto rightPos = dbStore_.GetMsBlockPos(height2 + 1);
 
-    auto result = std::make_unique<VStream>();
+    VStream result;
     if (!leftPos) {
         return result;
     }
@@ -124,13 +131,13 @@ std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size
     auto rightOffset = rightPos ? rightPos->nOffset : 0;
 
     if (rightPos && leftPos->SameFileAs(*rightPos)) {
-        reader.read(rightOffset - leftOffset, *result);
+        reader.read(rightOffset - leftOffset, result);
         return result;
     }
 
     // Read all of the first file
     auto size = reader.Size();
-    reader.read(size - leftOffset, *result);
+    reader.read(size - leftOffset, result);
     reader.Close();
 
     if (rightPos) {
@@ -139,13 +146,13 @@ std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size
         while (file < *rightPos && !file.SameFileAs(*rightPos)) {
             FileReader cursor(file::BLK, file);
             size = cursor.Size();
-            cursor.read(size, *result);
+            cursor.read(size, result);
             NextFile(file);
         }
 
         // Read the last file
         FileReader cursor(file::BLK, file);
-        cursor.read(rightOffset, *result);
+        cursor.read(rightOffset, result);
         return result;
     }
 
@@ -157,7 +164,7 @@ std::unique_ptr<VStream> Caterpillar::GetRawLevelSetBetween(size_t height1, size
     while (CheckFileExist(file::GetFilePath(file::BLK, file)) && nFiles < nFilesMax) {
         FileReader cursor(file::BLK, file);
         size = cursor.Size();
-        cursor.read(size, *result);
+        cursor.read(size, result);
         NextFile(file);
         nFiles++;
     }
@@ -244,12 +251,19 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
 
         AddCurrentSize(totalSize);
 
-        CAT->SaveHeadHeight(height);
+        SaveHeadHeight(height);
+
+        spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", lvs.front()->height, height,
+                      std::to_string(*dbStore_.GetMsBlockPos(height)));
     } catch (const std::exception&) {
         return false;
     }
 
     return true;
+}
+
+void Caterpillar::UnCache(const uint256& blkHash) {
+    blockCache_.erase(blkHash);
 }
 
 bool Caterpillar::DBExists(const uint256& blkHash) const {
@@ -329,25 +343,36 @@ void Caterpillar::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentBlkSize() > 0 && loadCurrentBlkSize() + addon.first > fileCapacity_) {
         currentBlkName_.fetch_add(1, std::memory_order_seq_cst);
         currentBlkSize_.store(0, std::memory_order_seq_cst);
+        dbStore_.WriteInfo("blkS", 0);
         if (loadCurrentBlkName() == epochCapacity_) {
             currentBlkEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentBlkName_.store(0, std::memory_order_seq_cst);
+            dbStore_.WriteInfo("blkE", loadCurrentBlkEpoch());
         }
+
+        dbStore_.WriteInfo("blkN", loadCurrentBlkName());
     }
 
     if (loadCurrentRecSize() > 0 && loadCurrentRecSize() + addon.second > fileCapacity_) {
         currentRecName_.fetch_add(1, std::memory_order_seq_cst);
         currentRecSize_.store(0, std::memory_order_seq_cst);
+        dbStore_.WriteInfo("recS", 0);
         if (loadCurrentRecName() == epochCapacity_) {
             currentRecEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentRecName_.store(0, std::memory_order_seq_cst);
+            dbStore_.WriteInfo("recE", loadCurrentRecEpoch());
         }
+
+        dbStore_.WriteInfo("recN", loadCurrentRecName());
     }
 }
 
 void Caterpillar::AddCurrentSize(std::pair<uint32_t, uint32_t> size) {
     currentBlkSize_.fetch_add(size.first, std::memory_order_seq_cst);
     currentRecSize_.fetch_add(size.second, std::memory_order_seq_cst);
+
+    dbStore_.WriteInfo("blkS", loadCurrentBlkSize());
+    dbStore_.WriteInfo("recS", loadCurrentRecSize());
 }
 
 FilePos& Caterpillar::NextFile(FilePos& pos) const {

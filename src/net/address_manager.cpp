@@ -6,13 +6,13 @@ AddressManager::AddressManager() {
 }
 
 void AddressManager::Init() {
-    for (const NetAddress& seed : config->GetSeeds()) {
+    for (const NetAddress& seed : CONFIG->GetSeeds()) {
         allSeeds_.insert(seed);
         seedQueue_.push(seed);
     }
 
     LoadLocalAddresses();
-    LoadAddress(config->GetAddressPath(), config->GetAddressFilename());
+    LoadAddress(CONFIG->GetAddressPath(), CONFIG->GetAddressFilename());
 }
 
 bool AddressManager::IsSeedAddress(const IPAddress& address) {

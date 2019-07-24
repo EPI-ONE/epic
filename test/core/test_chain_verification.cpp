@@ -265,11 +265,8 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 }
 
 TEST_F(TestChainVerification, ChainForking) {
-    Chain chain1{};
-    ASSERT_EQ(chain1.GetChainHead()->height, GENESIS_RECORD.snapshot->height);
-
     // construct the main chain and fork
-    ConcurrentQueue<ChainStatePtr> dqcs{{std::make_shared<ChainState>()}};
+    ConcurrentQueue<ChainStatePtr> dqcs{{GetParams().GetGenesisRecord().snapshot}};
     std::vector<RecordPtr> recs{};
     ConstBlockPtr forkblk;
     ChainStatePtr split;
@@ -289,6 +286,7 @@ TEST_F(TestChainVerification, ChainForking) {
     Chain fork{*chain, forkblk};
 
     ASSERT_EQ(fork.GetChainHead()->height, 5);
+    // because we don't do any verification so there is no increment in chain height
     ASSERT_EQ(*split, *fork.GetChainHead());
 }
 

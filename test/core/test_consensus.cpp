@@ -112,7 +112,7 @@ TEST_F(TestConsensus, AddForks) {
     for (int i = 1; i < n_branches; ++i) {
         // randomly pick a branch and fork it at random height
         auto& picked_chain    = branches_rec[fac.GetRand() % branches_rec.size()];
-        auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 2)];
+        auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 3)];
 
         auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
         // fac.PrintChain(chain);
@@ -124,7 +124,7 @@ TEST_F(TestConsensus, AddForks) {
     ///////////////////////////
     // Test starts here
     //
-    // spdlog::set_level(spdlog::level::trace);
+    // spdlog::set_level(spdlog::level::debug);
     for (const auto& chain : branches) {
         for (const auto& lvs : chain) {
             for (const auto& blkptr : lvs) {
@@ -170,6 +170,8 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
         std::swap(lvs.front(), lvs.back());
         for (auto& blkptr : lvs) {
             ASSERT_EQ(**blk_it, *blkptr);
+            ASSERT_TRUE(blkptr.unique());
+            ASSERT_FALSE(bool(CAT->GetBlockCache(blkptr->GetHash())));
             blk_it++;
             if (blk_it == chain_it->end()) {
                 chain_it++;

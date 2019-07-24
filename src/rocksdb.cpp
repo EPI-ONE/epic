@@ -109,7 +109,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
         value.ignore(Hash::SIZE);
         FilePos blkPos(value);
         FilePos recPos(value);
-        return std::make_pair(blkPos, recPos);
+        return {{blkPos, recPos}};
     } catch (const std::exception&) {
         return {};
     }
@@ -139,7 +139,7 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHa
     blkPos.nOffset += blkOffset;
     recPos.nOffset += recOffset;
 
-    return std::make_pair(blkPos, recPos);
+    return {{blkPos, recPos}};
 }
 
 bool RocksDBStore::WriteRecPos(const uint256& key,
@@ -257,6 +257,34 @@ bool RocksDBStore::RollBackReg(const RegChange& change) const {
     return WriteRegSet(change.GetRemoved());
 }
 
+bool RocksDBStore::WriteHeadHeight(uint64_t height) const {
+    return WriteInfo(kHeadHeight, height);
+}
+
+uint64_t RocksDBStore::GetHeadHeight() const {
+    return GetInfo(kHeadHeight);
+}
+
+bool RocksDBStore::WriteInfo(const std::string& k, const uint64_t& v) const {
+    VStream value(v);
+    Slice valueSlice(value.data(), value.size());
+    return db_->Put(WriteOptions(), handleMap_.at("info"), k, valueSlice).ok();
+}
+
+uint64_t RocksDBStore::GetInfo(const std::string& k) const {
+    Slice keySlice(k);
+    GET_VALUE(handleMap_.at("info"), 0);
+    try {
+        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+        valueSlice.Reset();
+        uint64_t result;
+        value >> result;
+        return result;
+    } catch (const std::exception&) {
+        return 0;
+    }
+}
+
 string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
     GET_VALUE(handleMap_.at(column), "");
     return valueSlice.ToString();
@@ -346,26 +374,6 @@ bool RocksDBStore::WritePosImpl(const string& column, const K& key, const H& h, 
     Slice valueSlice(value.data(), value.size());
 
     return db_->Put(WriteOptions(), handleMap_.at(column), keySlice, valueSlice).ok();
-}
-
-bool RocksDBStore::WriteHeadHeight(uint64_t height) const {
-    VStream value(height);
-    Slice valueSlice(value.data(), value.size());
-    return db_->Put(WriteOptions(), handleMap_.at("info"), kHeadHeight, valueSlice).ok();
-}
-
-uint64_t RocksDBStore::GetHeadHeight() const {
-    Slice keySlice(kHeadHeight);
-    GET_VALUE(handleMap_.at("info"), 0);
-    try {
-        VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-        valueSlice.Reset();
-        uint64_t height;
-        value >> height;
-        return height;
-    } catch (const std::exception&) {
-        return 0;
-    }
 }
 
 template bool RocksDBStore::WritePosImpl(

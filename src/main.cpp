@@ -1,3 +1,5 @@
+#include "caterpillar.h"
+#include "dag_manager.h"
 #include "init.h"
 
 int main(int argc, char** argv) {
@@ -11,6 +13,7 @@ int main(int argc, char** argv) {
     if (Start()) {
         // start some applications, such as miner, visualization...
         // TODO
+        spdlog::set_level(spdlog::level::level_enum::debug);
         WaitShutdown();
     } else {
         std::cout << "Failed to start epic" << std::endl;

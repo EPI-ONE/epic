@@ -185,7 +185,7 @@ void PeerManager::OpenConnection() {
         }
         auto seed = addressManager_->GetOneSeed();
         if (seed) {
-            NetAddress seed_address = NetAddress(*seed, config->defaultPort);
+            NetAddress seed_address = NetAddress(*seed, CONFIG->defaultPort);
             ConnectTo(seed_address);
         }
 
@@ -304,7 +304,7 @@ void PeerManager::SendLocalAddresses() {
     auto local_address = addressManager_->GetBestLocalAddress();
     if (local_address.IsRoutable()) {
         AddressMessage msg = AddressMessage();
-        msg.AddAddress(NetAddress(local_address, config->GetBindPort()));
+        msg.AddAddress(NetAddress(local_address, CONFIG->GetBindPort()));
         for (auto& it : peerMap_) {
             auto data = VStream(msg);
             NetMessage message(it.first, ADDR, data);

@@ -40,16 +40,21 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
             return;
         }
 
+        StartBatchSync(peer);
+
         std::vector<uint256> locator = ConstructLocator(fromHash, length, peer);
         if (locator.empty()) {
             spdlog::debug("RequestInv return: locator is null");
             return;
         }
 
-        StartBatchSync(peer);
-
-        if (!downloading.empty() || !preDownloading.Empty()) {
+        if (!downloading.empty()) {
+            SPDLOG_INFO("Downloading is not empty. Clearing.");
             downloading.clear();
+        }
+
+        if (!preDownloading.Empty()) {
+            SPDLOG_INFO("PreDownloading is not empty. Clearing.");
             preDownloading.Clear();
         }
 
@@ -184,11 +189,15 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
             Bundle bundle(n);
             auto payload = GetMainChainRawLevelSet(h);
             if (payload.empty()) {
+                spdlog::debug("Milestone {} cannot be found. Sending a Not Found Message instead", h.to_substr());
                 SEND_MESSAGE(peer, NOT_FOUND, NotFound(h, n));
                 return;
             }
 
             bundle.SetPayload(std::move(payload));
+            spdlog::debug("Sending bundle of LVS with nonce {} with MS hash {} to peer {}", n, h.to_substr(),
+                          peer->address.ToString());
+            peer->SetLastSentBundleHash(h);
             SEND_MESSAGE(peer, BUNDLE, bundle);
         });
         hs_iter++;
@@ -206,10 +215,10 @@ void DAGManager::BatchSync(std::vector<uint256>& requests, const PeerPtr& reques
         // We will continue to send out the remaning hashes in preDownloading,
         // which are left last time this method is called, because the GetData
         // size exceeds the limit
+        spdlog::debug("Sending another round of getDataTasks. preDownloading size = {}", preDownloading.Size());
         preDownloading.DrainTo(finalHashes, maxGetDataSize);
         for (const auto& h : finalHashes) {
             finalTasks.push_back(*RequestData(h, requestFrom));
-            spdlog::debug("Sending another round of getDataTasks. preDownloading size = {}", preDownloading.Size());
         }
     } else {
         for (auto& h : requests) {
@@ -316,7 +325,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneForward(const NodeRecord& curs
 
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
-    size_t cursorHeight      = cursor.snapshot->height;
+    size_t cursorHeight      = cursor.snapshot->height + 1;
 
     // If the cursor height is less than the least height in cache, traverse DB.
     while (cursorHeight <= CAT->GetHeadHeight() && result.size() < length) {
@@ -396,6 +405,9 @@ void DAGManager::CompleteBatchSync() {
 
 void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
     if (peer == syncingPeer) {
+        downloading.clear();
+        preDownloading.Clear();
+        syncPool_.Abort();
         CompleteBatchSync();
     }
 }
@@ -448,8 +460,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // Abort and send GetBlock requests.
             CAT->AddBlockToOBC(blk, mask());
 
-            if (peer) {
-                RequestInv(Hash::GetZeroHash(), 5, std::move(peer));
+            if (peer && !isBatchSynching.load()) {
+                RequestInv(uint256(), 5, std::move(peer));
             }
 
             return;
@@ -482,7 +494,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         CAT->Cache(blk);
 
         if (peer) {
-            peerManager->RelayBlock(blk, peer);
+            PEERMAN->RelayBlock(blk, peer);
         }
 
         // TODO: erase transaction from mempool
@@ -550,7 +562,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     if (msBlock) {
         auto ms = msBlock->snapshot;
         if (CheckMsPOW(block, ms)) {
-            if (*(ms) == *(GetMilestoneHead()->snapshot)) {
+            if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
                 ProcessMilestone(mainchain, block);
                 if (!isStoring.load()) {
@@ -562,6 +574,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 }
             } else {
                 // new fork
+                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -586,17 +599,21 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
         ChainStatePtr ms = msBlock->snapshot;
 
-        if (*(ms) == *(chain->GetChainHead()) && CheckMsPOW(block, ms)) {
-            // new milestone on fork
-            ProcessMilestone(*chainIt, block);
-            milestoneChains.update_best(chainIt);
-            return;
-        } else if (CheckMsPOW(block, ms)) {
-            // new fork
-            auto new_fork = std::make_unique<Chain>(*chain, block);
-            ProcessMilestone(new_fork, block);
-            milestoneChains.emplace(std::move(new_fork));
-            return;
+        if (CheckMsPOW(block, ms)) {
+            if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
+                // new milestone on fork
+                spdlog::debug("A fork grows to height {}", (*chainIt)->GetChainHead()->height);
+                ProcessMilestone(*chainIt, block);
+                milestoneChains.update_best(chainIt);
+                return;
+            } else {
+                // new fork
+                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
+                auto new_fork = std::make_unique<Chain>(*chain, block);
+                ProcessMilestone(new_fork, block);
+                milestoneChains.emplace(std::move(new_fork));
+                return;
+            }
         }
     }
 }
@@ -696,15 +713,18 @@ void DAGManager::FlushToCAT(size_t level) {
     // first store data to CAT
     auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(level);
 
-    for (auto& lvsRec : recToStore) {
-        std::swap(lvsRec.front(), lvsRec.back());
-    }
+    spdlog::trace("flushing at current height {}", GetBestMilestoneHeight());
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         for (auto& lvsRec : recToStore) {
+            std::swap(lvsRec.front(), lvsRec.back());
             CAT->StoreRecords(lvsRec);
             CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
+            for (auto& rec : lvsRec) {
+                CAT->UnCache(rec->cblock->GetHash());
+            }
+            globalStates_.erase(lvsRec.front()->cblock->GetHash());
         }
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);
@@ -806,21 +826,23 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& block
 }
 
 VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
-    VStream result;
     const auto& bestChain    = GetBestChain();
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
+    // Find in DB
     if (height < leastHeightCached) {
-        result = std::move(*CAT->GetRawLevelSetAt(height));
-    } else {
-        auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
+        return CAT->GetRawLevelSetAt(height);
+    }
 
-        // To make it have the same order as the lvs we get from file (ms goes the first)
-        std::swap(hashes.front(), hashes.back());
+    // Find in cache
+    auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
 
-        for (auto& h : hashes) {
-            result << bestChain.GetRecord(h)->cblock;
-        }
+    // To make it have the same order as the lvs we get from file (ms goes the first)
+    std::swap(hashes.front(), hashes.back());
+
+    VStream result;
+    for (auto& h : hashes) {
+        result << bestChain.GetRecord(h)->cblock;
     }
 
     return result;

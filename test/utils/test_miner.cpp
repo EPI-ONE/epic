@@ -4,7 +4,14 @@
 #include "test_env.h"
 #include "utilstrencodings.h"
 
-class TestMiner : public testing::Test {};
+class TestMiner : public testing::Test {
+    void SetUp() override {
+        EpicTestEnvironment::SetUpDAG("test_miner/");
+    }
+    void TearDown() override {
+        EpicTestEnvironment::TearDownDAG("test_miner/");
+    }
+};
 
 TEST_F(TestMiner, Solve) {
     /*
@@ -35,9 +42,8 @@ TEST_F(TestMiner, Solve) {
 }
 
 TEST_F(TestMiner, Run) {
-    EpicTestEnvironment::SetUpDAG("test_miner/");
 
-    peerManager = std::make_unique<PeerManager>();
+    PEERMAN = std::make_unique<PeerManager>();
     MEMPOOL     = std::make_unique<MemPool>();
 
     Miner m(2);
@@ -55,8 +61,7 @@ TEST_F(TestMiner, Run) {
         ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     }
 
-    EpicTestEnvironment::TearDownDAG("test_miner/");
-    peerManager.reset();
+    PEERMAN.reset();
     MEMPOOL.reset();
 }
 

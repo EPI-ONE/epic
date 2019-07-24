@@ -44,6 +44,8 @@ public:
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
     void RespondRequestPending(uint32_t, const PeerPtr&) const;
 
+    void DisconnectPeerSync(const PeerPtr&);
+
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
     /**
@@ -131,7 +133,6 @@ private:
      */
     void StartBatchSync(const PeerPtr&);
     void CompleteBatchSync();
-    void DisconnectPeerSync(const PeerPtr&);
 
     /**
      * Start a new thread and create a list of GetData tasks that is either added

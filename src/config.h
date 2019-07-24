@@ -238,6 +238,6 @@ private:
     bool daemon_;
 };
 
-extern std::unique_ptr<Config> config;
+extern std::unique_ptr<Config> CONFIG;
 
 #endif // __SRC_CONFIG_H__

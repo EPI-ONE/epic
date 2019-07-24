@@ -79,6 +79,7 @@ public:
         b.SetNonce(final_nonce.load());
         b.SetTime(final_time.load());
         b.CalculateHash();
+        b.CalculateOptimalEncodingSize();
     }
 
     void Run() {
@@ -88,6 +89,7 @@ public:
             uint256 prevHash;
             Cumulator distanceCal;
             uint32_t counter = 0;
+            uint32_t ms_cnt  = 0;
 
             while (enabled_.load()) {
                 Block b(GetParams().version);
@@ -137,18 +139,24 @@ public:
                 assert(b.CheckPOW());
                 b.source = Block::MINER;
 
-                auto bPtr = std::make_shared<const Block>(b);
-                peerManager->RelayBlock(bPtr, nullptr);
+                auto bPtr = std::make_shared<const Block>(std::move(b));
+                PEERMAN->RelayBlock(bPtr, nullptr);
                 distanceCal.Add(bPtr, true);
                 selfChainHead = bPtr;
                 DAG->AddNewBlock(bPtr, nullptr);
 
                 if (CheckMsPOW(bPtr, head->snapshot)) {
+                    spdlog::debug("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
+                    ms_cnt++;
                     // Block the thread until the verification is done
                     while (*DAG->GetMilestoneHead()->cblock == *head->cblock) {
                         std::this_thread::yield();
                     }
                 }
+
+                /*if (ms_cnt == 40) {
+                    break;
+                }*/
 
                 counter++;
             }

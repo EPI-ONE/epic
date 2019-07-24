@@ -75,6 +75,12 @@ void Peer::ProcessMessage(NetMessage& msg) {
                 ProcessBlock(block);
                 break;
             }
+            case NOT_FOUND: {
+                auto notfound = NotFound(msg.payload);
+                spdlog::warn("Not found: {}", notfound.hash.to_substr());
+                ProcessNotFound(notfound.nonce);
+                break;
+            }
             default: {
                 throw ProtocolException("undefined message");
             }
@@ -98,7 +104,7 @@ void Peer::ProcessVersionACK() {
 
     if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
         spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
-        DAG->RequestInv(uint256(), 5, peerManager->GetPeer(connection_handle));
+        DAG->RequestInv(uint256(), 5, PEERMAN->GetPeer(connection_handle));
     }
 }
 
@@ -155,7 +161,7 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
         // send local address
         AddressMessage addressMessage;
         IPAddress localAddress = addressManager_->GetBestLocalAddress();
-        addressMessage.AddAddress(NetAddress(localAddress, config->GetBindPort()));
+        addressMessage.AddAddress(NetAddress(localAddress, CONFIG->GetBindPort()));
         SendMessage(NetMessage(connection_handle, ADDR, VStream(addressMessage)));
         spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
 
@@ -273,7 +279,7 @@ void Peer::SendAddresses() {
 }
 
 void Peer::ProcessBlock(ConstBlockPtr& block) {
-    DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
+    DAG->AddNewBlock(block, PEERMAN->GetPeer(connection_handle));
 }
 
 void Peer::ProcessGetInv(GetInv& getInv) {
@@ -288,7 +294,7 @@ void Peer::ProcessGetInv(GetInv& getInv) {
                  std::to_string(getInv.locator[0]), std::to_string(getInv.locator[getInv.locator.size() - 1]),
                  getInv.locator.size());
 
-    auto peer = peerManager->GetPeer(connection_handle);
+    auto peer = PEERMAN->GetPeer(connection_handle);
     if (!peer) {
         return;
     }
@@ -307,7 +313,7 @@ void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
 }
 
 void Peer::ProcessGetData(GetData& getData) {
-    auto peer = peerManager->GetPeer(connection_handle);
+    auto peer = PEERMAN->GetPeer(connection_handle);
     if (!peer) {
         return;
     }
@@ -318,10 +324,13 @@ void Peer::ProcessGetData(GetData& getData) {
 
     switch (getData.type) {
         case GetDataTask::PENDING_SET: {
+            spdlog::debug("Received a GetData request for pending blocks from {}", peer->address.ToString());
             DAG->RespondRequestPending(getData.bundleNonce[0], peer);
             break;
         }
         case GetDataTask::LEVEL_SET: {
+            spdlog::debug("Received a GetData request for stored blocks from {} with hash {}", peer->address.ToString(),
+                          getData.hashes.front().to_substr());
             DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, std::move(peer));
             break;
         }
@@ -357,7 +366,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
                 std::swap(bundle->blocks.front(), bundle->blocks.back());
 
                 for (auto& block : bundle->blocks) {
-                    DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
+                    DAG->AddNewBlock(block, PEERMAN->GetPeer(connection_handle));
                 }
 
                 uint32_t nextNonce = GetFirstGetDataNonce();
@@ -382,11 +391,21 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
         case GetDataTask::PENDING_SET: {
             spdlog::info("The Bundle answers a GetDataTask of type {}, add it to dag", task->type);
             for (auto& block : bundle->blocks) {
-                DAG->AddNewBlock(block, peerManager->GetPeer(connection_handle));
+                DAG->AddNewBlock(block, nullptr);
             }
             break;
         }
     }
+}
+
+void Peer::ProcessNotFound(const uint32_t& nonce) {
+    std::unique_lock<std::shared_mutex> writer(sync_lock);
+    getInvsTasks.clear();
+    getDataTasks.clear();
+    orphanLvsPool.clear();
+    writer.unlock();
+
+    DAG->DisconnectPeerSync(PEERMAN->GetPeer(connection_handle));
 }
 
 uint32_t Peer::GetFirstGetDataNonce() {

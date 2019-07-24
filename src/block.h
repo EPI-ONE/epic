@@ -4,10 +4,8 @@
 #include <atomic>
 #include <ctime>
 
-#include "arith_uint256.h"
-#include "pubkey.h"
+#include "spdlog.h"
 #include "transaction.h"
-#include "utilstrencodings.h"
 
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;

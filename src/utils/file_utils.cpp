@@ -30,7 +30,7 @@ bool Mkdir_recursive(const std::string& path) {
     if (pathArray[len - 1] == '/')
         pathArray[len - 1] = 0;
     for (char* p = pathArray; *p; p++)
-        if (*p == '/') {
+        if (*p == '/' && p != pathArray) {
             *p = 0;
             if (mkdir(pathArray, S_IRWXU) != 0) {
                 if (errno != EEXIST)

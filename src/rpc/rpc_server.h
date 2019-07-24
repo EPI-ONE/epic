@@ -90,5 +90,5 @@ private:
     void LaunchServer();
 };
 
-extern std::unique_ptr<RPCServer> rpc_server;
+extern std::unique_ptr<RPCServer> RPC;
 #endif //__SRC_RPC_SERVER_H__
