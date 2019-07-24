@@ -9,6 +9,7 @@
 #include "mempool.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
+#include "wallet.h"
 
 Block GENESIS;
 NodeRecord GENESIS_RECORD;
@@ -18,6 +19,9 @@ std::unique_ptr<Caterpillar> CAT;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
+std::shared_ptr<Wallet> WALLET;
+
+// TODO: init mempool
 std::unique_ptr<MemPool> MEMPOOL;
 
 ECCVerifyHandle handle;
@@ -150,6 +154,8 @@ int Init(int argc, char* argv[]) {
     /*
      * Load wallet TODO
      */
+    WALLET = std::make_shared<Wallet>();
+    DAG->RegisterOnLvsConfirmedListener(WALLET);
 
     /*
      * Initialize miner

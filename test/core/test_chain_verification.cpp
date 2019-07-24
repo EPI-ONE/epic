@@ -8,7 +8,7 @@
 
 class TestChainVerification : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
+    TestFactory fac          = EpicTestEnvironment::GetFactory();
     const std::string prefix = "test_validation/";
 
     void SetUp() override {
@@ -181,12 +181,13 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             }
         } else {
             if (i > 0 && !isMilestone[i]) {
-                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + 1);
+                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + GetParams().reward);
             } else if (i == 0) {
-                ASSERT_TRUE(recs[i]->cumulativeReward == 1);
+                ASSERT_TRUE(recs[i]->cumulativeReward == GetParams().reward);
             } else {
                 ASSERT_TRUE(recs[i]->cumulativeReward ==
-                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetLevelSet().size());
+                            recs[i - 1]->cumulativeReward +
+                                GetParams().reward * recs[i]->snapshot->GetRecordHashes().size());
             }
         }
         if (isMilestone[i]) {

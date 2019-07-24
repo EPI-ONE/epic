@@ -410,7 +410,6 @@ Chain::GetDataToCAT(size_t level) {
     for (const auto& key_created : result_txoc.GetCreated()) {
         result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
-
     return {result_rec, result_created, result_txoc.GetSpent()};
 }
 

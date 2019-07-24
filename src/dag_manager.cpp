@@ -715,6 +715,9 @@ void DAGManager::FlushToCAT(size_t level) {
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
+        std::vector<RecordPtr> blocksToListener;
+        std::unordered_set<UTXOPtr> unspent;
+
         for (auto& lvsRec : recToStore) {
             std::swap(lvsRec.front(), lvsRec.back());
             const auto& ms = *lvsRec.front().lock();
@@ -723,15 +726,22 @@ void DAGManager::FlushToCAT(size_t level) {
             CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
 
             for (auto& rec : lvsRec) {
+                blocksToListener.push_back(rec.lock());
                 CAT->UnCache((*rec.lock()).cblock->GetHash());
             }
             globalStates_.erase(ms.cblock->GetHash());
         }
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);
+            unspent.insert(utxoPtr);
         }
         for (const auto& utxoKey : utxoToRemove) {
             CAT->RemoveUTXO(utxoKey);
+        }
+
+        // notify the listener
+        if (onLvsConfirmedListener) {
+            onLvsConfirmedListener->OnLvsConfirmed(blocksToListener, unspent, utxoToRemove);
         }
 
         // then remove chain states from chains
@@ -754,6 +764,7 @@ void DAGManager::FlushToCAT(size_t level) {
         }
 
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
+
 
         verifyThread_.Execute(
             [=, recHashes = std::move(recHashes), txocToRemove = std::move(txocToRemove), level = level]() {
@@ -864,4 +875,8 @@ bool DAGManager::ExistsNode(const uint256& h) const {
         }
     }
     return false;
+}
+
+void DAGManager::RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener) {
+    onLvsConfirmedListener = listener;
 }

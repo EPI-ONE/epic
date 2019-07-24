@@ -78,6 +78,8 @@ set(COMPAT_DIR src/compat)
 set(SUPPORT_DIR src/support)
 set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
+set(INTERFACE_DIR src/interfaces)
+set(WALLET_DIR src/wallet)
 set(CORE_DIR src)
 set(TOOLS_DIR src/tools)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
@@ -88,7 +90,8 @@ aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
-
+aux_source_directory(${INTERFACE_DIR} INTERFACE_SRCS)
+aux_source_directory(${WALLET_DIR} WALLET_SRCS)
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
 include_directories(src
@@ -102,6 +105,8 @@ include_directories(src
         ${TASM_DIR}
         ${SPDLOG_DIR}
         ${SUPPORT_DIR}
+        ${INTERFACE_DIR}
+        ${WALLET_DIR}
         )
 
 set(SRC_CODE
@@ -113,7 +118,9 @@ set(SRC_CODE
         ${CRYPTO_SRCS}
         ${CORE_SRCS}
         ${TASM_SRCS}
-        ${SUPPORT_DIR}
+        ${SUPPORT_SRCS}
+        ${INTERFACE_SRCS}
+        ${WALLET_SRCS}
         )
 
 set(SRC_MAIN src/main.cpp)
@@ -170,7 +177,7 @@ if (GMP_FOUND)
 endif()
 target_link_libraries(epiccore protobuf::libprotobuf)
 target_link_libraries(epiccore gRPC::grpc++_reflection)
-     
+
 
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)

@@ -48,6 +48,10 @@ public:
         return output_;
     }
 
+    uint32_t GetIndex() const {
+        return index_;
+    }
+
     uint256 GetContainingBlkHash() const;
 
     /**
@@ -65,6 +69,7 @@ private:
     TxOutput output_;
     uint32_t index_;
 };
+
 
 template <>
 struct std::hash<UTXO> {
