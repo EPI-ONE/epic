@@ -62,6 +62,7 @@ void Miner::Solve(Block& b) {
     b.SetNonce(final_nonce.load());
     b.SetTime(final_time.load());
     b.CalculateHash();
+    b.CalculateOptimalEncodingSize();
 }
 
 void Miner::Run() {

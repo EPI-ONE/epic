@@ -106,7 +106,7 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
             blocks.emplace_back(b);
         }
 
-        ASSERT_TRUE(CAT->StoreRecords(lvs));
+        ASSERT_TRUE(CAT->StoreLevelSet(lvs));
     }
 
     // Inspect inserted records

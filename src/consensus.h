@@ -12,6 +12,7 @@ enum MilestoneStatus : uint8_t {
 
 class NodeRecord;
 typedef std::shared_ptr<NodeRecord> RecordPtr;
+typedef std::weak_ptr<NodeRecord> RecordWPtr;
 
 class ChainState {
 public:
@@ -30,7 +31,7 @@ public:
     // constructor of a chain state of genesis.
     ChainState() = default;
     // constructor of a chain state with all data fields
-    ChainState(const std::shared_ptr<ChainState>&, const ConstBlockPtr&, std::vector<uint256>&&);
+    ChainState(const std::shared_ptr<ChainState>&, const ConstBlockPtr&, std::vector<RecordWPtr>&&);
     // constructor of a chain state by vstream
     ChainState(VStream&);
     // copy constructor
@@ -43,9 +44,9 @@ public:
                arith_uint256 milestoneTarget,
                arith_uint256 blockTarget,
                uint64_t hashRate,
-               std::vector<uint256>&& lvsHashes)
+               std::vector<RecordWPtr>&& lvs)
         : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
-          blockTarget(blockTarget), hashRate(hashRate), lvsHashes_(std::move(lvsHashes)) {}
+          blockTarget(blockTarget), hashRate(hashRate), lvs_(std::move(lvs)) {}
 
     inline bool IsDiffTransition() const {
         return ((height + 1) % GetParams().interval) == 0;
@@ -59,17 +60,19 @@ public:
         return (arith_uint256(GetParams().maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
-    const std::vector<uint256>& GetRecordHashes() const {
-        return lvsHashes_;
+    const std::vector<RecordWPtr>& GetLevelSet() const {
+        return lvs_;
     }
 
-    void PushHash(const uint256& hash) {
-        lvsHashes_.emplace_back(hash);
+    void PushBlkToLvs(const RecordPtr& rec) {
+        lvs_.emplace_back(rec);
     }
 
-    const uint256& GetMilestoneHash() const {
-        return lvsHashes_.back();
+    RecordPtr GetMilestone() const {
+        return lvs_.back().lock();
     }
+
+    const uint256& GetMilestoneHash() const;
 
     const TXOC& GetTXOC() const {
         return txoc_;
@@ -94,6 +97,9 @@ public:
         }
     }
 
+    /**
+     * Does NOT compare lvs_, regChange, and txoc_
+     */
     bool operator==(const ChainState& rhs) const {
         // clang-format off
         return lastUpdateTime               == rhs.lastUpdateTime &&
@@ -110,7 +116,7 @@ public:
 
 private:
     // a vector consists of hashes of blocks in level set of this chain state
-    std::vector<uint256> lvsHashes_;
+    std::vector<std::weak_ptr<NodeRecord>> lvs_;
     // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
@@ -119,7 +125,7 @@ private:
 
 typedef std::shared_ptr<ChainState> ChainStatePtr;
 
-ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes);
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& lvs);
 
 /*
  * A structure that contains a shared_ptr<const Block> that will

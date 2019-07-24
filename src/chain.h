@@ -69,7 +69,6 @@ public:
     ConstBlockPtr GetRandomTip() const;
 
     RecordPtr GetMsRecordCache(const uint256&);
-    RecordPtr GetRecordCache(const uint256&);
     RecordPtr GetRecord(const uint256&) const;
 
     /** Gets a list of block to verify by the post-order DFS */
@@ -112,7 +111,7 @@ public:
      * Removes oldest chain state as well as corresponding data
      */
     void PopOldest(const std::vector<uint256>&, const TXOC&, size_t);
-    std::tuple<std::vector<std::vector<RecordPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+    std::tuple<std::vector<std::vector<RecordWPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
         GetDataToCAT(size_t);
 
     bool IsMilestone(const uint256&) const;

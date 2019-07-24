@@ -97,7 +97,7 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
         // Link a ms instance
         auto cs =
             std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(), arith_uint256(GetRand()),
-                                         arith_uint256(GetRand()), GetRand(), std::vector<uint256>{});
+                                         arith_uint256(GetRand()), GetRand(), std::vector<RecordWPtr>{});
         rec.LinkChainState(cs);
 
         if (GetRand() % 2) {
@@ -131,12 +131,12 @@ RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
 
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous,
                                                NodeRecord& record,
-                                               std::vector<uint256>&& hashes) {
-    return CreateNextChainState(previous, record, std::move(hashes));
+                                               std::vector<RecordWPtr>&& lvs) {
+    return CreateNextChainState(previous, record, std::move(lvs));
 }
 
 ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
-    return CreateNextChainState(previous, *pRec, std::vector<uint256>{pRec->cblock->GetHash()});
+    return CreateNextChainState(previous, *pRec, std::vector<RecordWPtr>{pRec});
 }
 
 std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const NodeRecord& startMs,
@@ -178,7 +178,7 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
 
         if (CheckMsPOW(blkptr, lastMs.snapshot)) {
             NodeRecord node{blkptr};
-            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<uint256>{});
+            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<RecordWPtr>{});
             vMs.emplace_back(std::move(node));
             lastMs = vMs.back();
             count++;

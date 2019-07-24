@@ -20,8 +20,10 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     assert(recordHistory_.find(target) != recordHistory_.end());
 
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
-        for (const auto& h : (*it)->GetRecordHashes()) {
-            pendingBlocks_.insert({h, recordHistory_.at(h)->cblock});
+        for (const auto& rwp : (*it)->GetLevelSet()) {
+            const auto& rpt = *rwp.lock();
+            const auto& h   = rpt.cblock->GetHash();
+            pendingBlocks_.insert({h, rpt.cblock});
             recordHistory_.erase(h);
             ledger_.Rollback((*it)->GetTXOC());
         }
@@ -32,8 +34,8 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
 
 ChainStatePtr Chain::GetChainHead() const {
     if (states_.empty()) {
-        uint64_t height = CAT->GetHeadHeight();
-        return CAT->GetMilestoneAt(height)->snapshot;
+        // Note: the lvs_ in the returned ChainStatePtr contains a dummy weak_ptr that CANNOT be used
+        return CAT->GetMilestoneAt(CAT->GetHeadHeight())->snapshot;
     }
     return states_.back();
 }
@@ -169,16 +171,16 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
     std::vector<RecordPtr> recs;
-    std::vector<uint256> hashes;
+    std::vector<RecordWPtr> wrecs;
     recs.reserve(blocksToValidate.size());
-    hashes.reserve(blocksToValidate.size());
+    wrecs.reserve(blocksToValidate.size());
     verifying_.clear();
 
     for (const auto& b : blocksToValidate) {
         recs.emplace_back(std::make_shared<NodeRecord>(b));
-        hashes.emplace_back(b->GetHash());
+        wrecs.emplace_back(recs.back());
     }
-    auto state = CreateNextChainState(GetChainHead(), *recs.back(), std::move(hashes));
+    auto state = CreateNextChainState(GetChainHead(), *recs.back(), std::move(wrecs));
 
     // validate each block in order
     for (auto& rec : recs) {
@@ -374,14 +376,6 @@ RecordPtr Chain::GetMsRecordCache(const uint256& msHash) {
     return nullptr;
 }
 
-RecordPtr Chain::GetRecordCache(const uint256& h) {
-    auto entry = recordHistory_.find(h);
-    if (entry != recordHistory_.end()) {
-        return entry->second;
-    }
-    return nullptr;
-}
-
 void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove, size_t level) {
     // remove records
     for (const auto& lvsh : recToRemove) {
@@ -397,25 +391,19 @@ void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocT
     }
 }
 
-std::tuple<std::vector<std::vector<RecordPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+std::tuple<std::vector<std::vector<RecordWPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
 Chain::GetDataToCAT(size_t level) {
-    std::vector<std::vector<RecordPtr>> result_rec;
+    std::vector<std::vector<RecordWPtr>> result_rec{};
     result_rec.reserve(level);
     TXOC result_txoc{};
 
     // traverse from the oldest chain state in memory
     for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
-        // get all of the blocks
-        std::vector<RecordPtr> lvsRec;
-        lvsRec.reserve((*cs_it)->GetRecordHashes().size());
-        for (const auto& h : (*cs_it)->GetRecordHashes()) {
-            lvsRec.emplace_back(recordHistory_.at(h));
-        }
-        result_rec.emplace_back(std::move(lvsRec));
+        result_rec.emplace_back((*cs_it)->GetLevelSet());
 
         // get all of the TXOC and merge them in advance to save space
         auto txoc = (*cs_it)->GetTXOC();
-        result_txoc.Merge(std::move(txoc));
+        result_txoc.Merge(std::move(const_cast<TXOC&>((*cs_it)->GetTXOC())));
     }
 
     std::unordered_map<uint256, UTXOPtr> result_created{};

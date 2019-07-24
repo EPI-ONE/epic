@@ -13,7 +13,7 @@ TEST_F(TestInit, test_init_dag) {
     CAT                               = std::make_unique<Caterpillar>(dir);
     DAG                               = std::make_unique<DAGManager>();
     std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-    CAT->StoreRecords(genesisLvs);
+    CAT->StoreLevelSet(genesisLvs);
 
     // validate blocks and flush to DB
     auto factory = EpicTestEnvironment::GetFactory();

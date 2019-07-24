@@ -719,12 +719,15 @@ void DAGManager::FlushToCAT(size_t level) {
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         for (auto& lvsRec : recToStore) {
             std::swap(lvsRec.front(), lvsRec.back());
-            CAT->StoreRecords(lvsRec);
-            CAT->UpdatePrevRedemHashes(lvsRec.front()->snapshot->regChange);
+            const auto& ms = *lvsRec.front().lock();
+
+            CAT->StoreLevelSet(lvsRec);
+            CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
+
             for (auto& rec : lvsRec) {
-                CAT->UnCache(rec->cblock->GetHash());
+                CAT->UnCache((*rec.lock()).cblock->GetHash());
             }
-            globalStates_.erase(lvsRec.front()->cblock->GetHash());
+            globalStates_.erase(ms.cblock->GetHash());
         }
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);
@@ -744,7 +747,7 @@ void DAGManager::FlushToCAT(size_t level) {
 
         for (auto& lvsRec : recToStore) {
             for (auto& rec : lvsRec) {
-                recHashes.emplace_back(rec->cblock->GetHash());
+                recHashes.emplace_back((*rec.lock()).cblock->GetHash());
             }
         }
 
@@ -769,7 +772,11 @@ bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
 }
 
 RecordPtr DAGManager::GetMilestoneHead() const {
-    return GetState(GetBestChain().GetChainHead()->GetMilestoneHash());
+    if (GetBestChain().GetStates().empty()) {
+        return CAT->GetMilestoneAt(CAT->GetHeadHeight());
+    }
+
+    return GetBestChain().GetChainHead()->GetMilestone();
 }
 
 size_t DAGManager::GetBestMilestoneHeight() const {
@@ -811,10 +818,10 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
             lvs.emplace_back(std::move(b));
         }
     } else {
-        auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
-        lvs.reserve(hashes.size());
-        for (auto& h : hashes) {
-            lvs.push_back(bestChain.GetRecord(h)->cblock);
+        auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+        lvs.reserve(recs.size());
+        for (auto& rwp : recs) {
+            lvs.push_back((*rwp.lock()).cblock);
         }
     }
 
@@ -835,14 +842,14 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     }
 
     // Find in cache
-    auto hashes = bestChain.GetStates()[height - leastHeightCached]->GetRecordHashes();
+    VStream result;
+    auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
-    std::swap(hashes.front(), hashes.back());
+    std::swap(recs.front(), recs.back());
 
-    VStream result;
-    for (auto& h : hashes) {
-        result << bestChain.GetRecord(h)->cblock;
+    for (auto& rwp : recs) {
+        result << (*rwp.lock()).cblock;
     }
 
     return result;

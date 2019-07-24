@@ -22,7 +22,6 @@ public:
 
     void TearDown() override {
         ECC_Stop();
-        handle.~ECCVerifyHandle();
     }
 
     static void SetUpDAG(std::string dirPath) {
@@ -34,7 +33,7 @@ public:
 
         // Initialize DB with genesis
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreRecords(genesisLvs);
+        CAT->StoreLevelSet(genesisLvs);
     }
 
     static void TearDownDAG(std::string dirPath) {

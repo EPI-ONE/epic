@@ -62,7 +62,7 @@ protected:
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
 
     std::unique_ptr<Block> genesis_;
-    std::unique_ptr<NodeRecord> genesisRecord_;
+    std::shared_ptr<NodeRecord> genesisRecord_;
     void CreateGenesis(const std::string& genesisHexStr);
 };
 

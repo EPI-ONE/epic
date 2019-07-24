@@ -57,11 +57,10 @@ public:
 };
 
 TEST_F(TestChainVerification, chain_with_genesis) {
-    Chain c{};
-    ASSERT_EQ(c.GetChainHead()->height, 0);
-    ASSERT_EQ(c.GetChainHead()->GetRecordHashes().size(), 1);
-    ASSERT_EQ(c.GetChainHead()->GetRecordHashes()[0], GENESIS.GetHash());
-    ASSERT_EQ(*GetRecord(&c, GENESIS.GetHash()), GENESIS_RECORD);
+    ASSERT_EQ(DAG->GetMilestoneHead()->height, 0);
+    ASSERT_EQ(DAG->GetMilestoneHead()->snapshot->GetLevelSet().size(), 1);
+    ASSERT_EQ(*DAG->GetMilestoneHead()->snapshot->GetLevelSet()[0].lock()->cblock, GENESIS);
+    ASSERT_EQ(*DAG->GetBestChain().GetRecord(GENESIS.GetHash()), GENESIS_RECORD);
 }
 
 TEST_F(TestChainVerification, UTXO) {
@@ -187,7 +186,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
                 ASSERT_TRUE(recs[i]->cumulativeReward == 1);
             } else {
                 ASSERT_TRUE(recs[i]->cumulativeReward ==
-                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetRecordHashes().size());
+                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetLevelSet().size());
             }
         }
         if (isMilestone[i]) {

@@ -58,9 +58,9 @@ ConstBlockPtr Caterpillar::GetBlockCache(const uint256& blkHash) const {
     }
 }
 
-StoredRecord Caterpillar::GetMilestoneAt(size_t height) const {
-    auto rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
-    rec->snapshot->PushHash(rec->cblock->GetHash());
+RecordPtr Caterpillar::GetMilestoneAt(size_t height) const {
+    RecordPtr rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
+    rec->snapshot->PushBlkToLvs(rec);
     return rec;
 }
 
@@ -206,13 +206,13 @@ bool Caterpillar::RollBackPrevRedemHashes(const RegChange& change) const {
     return dbStore_.RollBackReg(change);
 }
 
-bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
+bool Caterpillar::StoreLevelSet(const std::vector<RecordWPtr>& lvs) {
     try {
         // Function to sum up storage sizes for blk and rec in this lvs
         auto sumSize = [](const std::pair<uint32_t, uint32_t>& prevSum,
-                          const RecordPtr& rec) -> std::pair<uint32_t, uint32_t> {
-            return std::make_pair(prevSum.first + rec->cblock->GetOptimalEncodingSize(),
-                                  prevSum.second + rec->GetOptimalStorageSize());
+                          const RecordWPtr& rec) -> std::pair<uint32_t, uint32_t> {
+            return std::make_pair(prevSum.first + (*rec.lock()).cblock->GetOptimalEncodingSize(),
+                                  prevSum.second + (*rec.lock()).GetOptimalStorageSize());
         };
 
         // pair of (total block size, total record size)
@@ -231,35 +231,46 @@ bool Caterpillar::StoreRecords(const std::vector<RecordPtr>& lvs) {
         uint32_t msBlkOffset = msBlkPos.nOffset;
         uint32_t msRecOffset = msRecPos.nOffset;
 
-        uint64_t height = lvs.front()->snapshot->height;
+        const auto& ms  = (*lvs.front().lock());
+        uint64_t height = ms.snapshot->height;
 
-        for (const auto& rec : lvs) {
+        for (const auto& rec_wpt : lvs) {
             // Write to file
-            blkOffset = blkFs.GetOffset() - msBlkOffset;
-            recOffset = recFs.GetOffset() - msRecOffset;
-            blkFs << *(rec->cblock);
+            const auto& rec = (*rec_wpt.lock());
+            blkOffset       = blkFs.GetOffset() - msBlkOffset;
+            recOffset       = recFs.GetOffset() - msRecOffset;
+            blkFs << *(rec.cblock);
             blkFs.Flush();
-            recFs << *rec;
+            recFs << rec;
             recFs.Flush();
 
             // Write positions to db
-            dbStore_.WriteRecPos(rec->cblock->GetHash(), height, blkOffset, recOffset);
+            dbStore_.WriteRecPos(rec.cblock->GetHash(), height, blkOffset, recOffset);
         }
 
         // Write ms position at last to enable search for all blocks in the lvs
-        dbStore_.WriteMsPos(height, lvs.front()->cblock->GetHash(), msBlkPos, msRecPos);
+        dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msRecPos);
 
         AddCurrentSize(totalSize);
 
         SaveHeadHeight(height);
 
-        spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", lvs.front()->height, height,
+        spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", ms.height, height,
                       std::to_string(*dbStore_.GetMsBlockPos(height)));
     } catch (const std::exception&) {
         return false;
     }
 
     return true;
+}
+
+bool Caterpillar::StoreLevelSet(const std::vector<RecordPtr>& lvs) {
+    std::vector<RecordWPtr> wLvs;
+    std::transform(lvs.begin(), lvs.end(), std::back_inserter(wLvs), [](RecordPtr p) {
+        RecordWPtr wptr = p;
+        return wptr;
+    });
+    return StoreLevelSet(wLvs);
 }
 
 void Caterpillar::UnCache(const uint256& blkHash) {

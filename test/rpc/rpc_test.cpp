@@ -65,7 +65,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
         b->height      = ms->height;
         lvs.push_back(b);
     }
-    ASSERT_TRUE(CAT->StoreRecords(lvs));
+    ASSERT_TRUE(CAT->StoreLevelSet(lvs));
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
@@ -114,7 +114,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     first_ms->height           = 1;
     mss.push_back(first_ms);
     mss_to_check.push_back(first_ms);
-    ASSERT_TRUE(CAT->StoreRecords(mss));
+    ASSERT_TRUE(CAT->StoreLevelSet(mss));
     mss.clear();
     auto prev = first_ms->snapshot;
     for (int i = 2; i < size; ++i) {
@@ -125,7 +125,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
         ms->height                 = i;
         mss.push_back(ms);
         mss_to_check.push_back(ms);
-        ASSERT_TRUE(CAT->StoreRecords(mss));
+        ASSERT_TRUE(CAT->StoreLevelSet(mss));
         mss.clear();
         prev = ms->snapshot;
     }

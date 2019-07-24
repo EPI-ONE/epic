@@ -21,7 +21,7 @@ public:
     /**
      * DB API for other modules
      */
-    StoredRecord GetMilestoneAt(size_t height) const;
+    RecordPtr GetMilestoneAt(size_t height) const;
     StoredRecord GetRecord(const uint256&) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
     std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
@@ -40,9 +40,12 @@ public:
     bool RollBackPrevRedemHashes(const RegChange&) const;
 
     /**
-     * Flushes records to db. Called by DAGManager only.
+     * Flushes a level set to db.
+     * Note that this method assumes that the milestone is
+     * the first block in the lvs.
      */
-    bool StoreRecords(const std::vector<RecordPtr>&);
+    bool StoreLevelSet(const std::vector<RecordWPtr>& lvs);
+    bool StoreLevelSet(const std::vector<RecordPtr>& lvs);
 
     /**
      * Removes block cache when flushing
