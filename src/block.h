@@ -4,6 +4,7 @@
 #include <atomic>
 #include <ctime>
 
+#include "net_message.h"
 #include "spdlog.h"
 #include "transaction.h"
 
@@ -18,7 +19,7 @@ namespace std {
 string to_string(const Block& b, bool showtx = true);
 } // namespace std
 
-class Block {
+class Block : public NetMessage {
 public:
     Block();
     Block(const Block&);
@@ -33,7 +34,7 @@ public:
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce)
-        : version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
+        : NetMessage(BLOCK), version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
           tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
@@ -126,6 +127,7 @@ public:
     void SetParents();
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(version_);

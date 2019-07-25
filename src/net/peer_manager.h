@@ -14,6 +14,7 @@
 #include "connection_manager.h"
 #include "net_address.h"
 #include "peer.h"
+#include "scheduler.h"
 #include "spdlog.h"
 
 class PeerManager {
@@ -67,17 +68,15 @@ public:
      * the callback function for connection manager to call when connect() or
      * accept() event happens
      * @param connection_handle
-     * @param address
-     * @param inbound
      */
-    void OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound);
+    void OnConnectionCreated(shared_connection_t& connection);
 
     /*
      * the callback function for connection manager to call when disconnect
      * event happens
      * @param connection_handle
      */
-    void OnConnectionClosed(const void* connection_handle);
+    void OnConnectionClosed(shared_connection_t& connection);
 
     /*
      * get size of all peers(including not fully connected ones)
@@ -92,29 +91,12 @@ public:
      */
     size_t GetFullyConnectedPeerSize();
 
-    /*
-     * send a message to specified peer
-     * @param message
-     */
-    void SendMessage(NetMessage& message);
-
-    /*
-     * send a message to specified peer
-     * @param message
-     */
-    void SendMessage(NetMessage&& message);
-
-    /**
-     * regularly broadcast local address to peers
-     */
-    void SendLocalAddresses();
-
     /**
      * get the pointer of peer via the connection handle
      * @param connection_handle
      * @return
      */
-    virtual PeerPtr GetPeer(const void* connection_handle);
+    PeerPtr GetPeer(shared_connection_t& connection);
 
     /**
      * relay block to neighbors
@@ -122,25 +104,16 @@ public:
      */
     void RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from);
 
-protected:
+
+private:
     /*
      * create a peer after a new connection is setup
-     * @param connection_handle
-     * @param address
-     * @param inbound
-     * @return
      */
-    PeerPtr CreatePeer(void* connection_handle, NetAddress& address, bool inbound);
+    PeerPtr CreatePeer(shared_connection_t& connection, NetAddress& address);
 
-    void RemovePeer(const void* connection_handle);
+    void RemovePeer(shared_connection_t connection);
 
-    /*
-     * release resources of a peer and then delete it
-     * @param peer
-     */
-    void DeletePeer(const PeerPtr& peer);
-
-    void DisconnectPeer(PeerPtr& peer);
+    void DisconnectAllPeer();
 
     /*
      * check if we have connected to the ip address
@@ -153,19 +126,9 @@ protected:
      * @param handle
      * @param peer
      */
-    void AddPeer(const void* handle, const PeerPtr& peer);
+    void AddPeer(shared_connection_t& connection, const PeerPtr& peer);
 
-    /**
-     * add a connected address
-     * @param address
-     */
-    void AddAddr(const NetAddress& address);
-
-    /**
-     * remove a connected address
-     * @param address
-     */
-    void RemoveAddr(const NetAddress& address);
+    void ClearPeers();
 
     /**
      * a while loop function to receive and process messages
@@ -186,7 +149,7 @@ protected:
 
     void BroadcastMessage();
 
-
+    void InitScheduleTask();
     /*
      * default network parameter based on the protocol
      */
@@ -202,7 +165,15 @@ protected:
     const static int kConnectionSetupTimeout = 3 * 60;
 
     // broadcast local address per 24h
-    const static long kBroadLocalAddressInterval = 24 * 60 * 60;
+    const static uint32_t kBroadLocalAddressInterval = 24 * 60 * 60;
+
+    // send addresses to neighbors per 30s
+    const static uint32_t kSendAddressInterval = 30;
+
+    const static uint32_t kCheckTimeoutInterval = 1; // second
+
+    // interval of sending ping
+    const static uint32_t kPingSendInterval = 2 * 60; // second
 
     // timeout between sending ping and receiving pong
     const static long kPingWaitTimeout = 3 * 60;
@@ -217,6 +188,8 @@ protected:
     // last time of sending local address
     long lastSendLocalAddressTime{0};
 
+    Scheduler scheduler_;
+
     /*
      * internal data structures
      */
@@ -225,13 +198,7 @@ protected:
     std::shared_mutex peerLock_;
 
     // a map to save all peers
-    std::unordered_map<const void*, PeerPtr> peerMap_;
-
-    // lock of connected address set
-    std::mutex addressLock_;
-
-    // a set to save connected addresses
-    std::unordered_set<IPAddress> connectedAddress_;
+    std::unordered_map<shared_connection_t, PeerPtr> peerMap_;
 
     // address manager
     AddressManager* addressManager_;

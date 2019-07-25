@@ -7,7 +7,6 @@
 #include "chains.h"
 #include "concurrent_container.h"
 #include "consensus.h"
-#include "message_type.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"

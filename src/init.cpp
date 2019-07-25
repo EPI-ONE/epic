@@ -398,6 +398,9 @@ void WaitShutdown() {
 void CreateDaemon() {
     if (CONFIG->IsDaemon()) {
         std::cout << "Create daemon process, parent process exit" << std::endl;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         daemon(1, 0);
+#pragma clang diagnostic pop
     }
 }

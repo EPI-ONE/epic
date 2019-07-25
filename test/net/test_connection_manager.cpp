@@ -2,15 +2,19 @@
 #include <connection_manager.h>
 #include <gtest/gtest.h>
 
+#include "message_header.h"
+#include "sync_messages.h"
+#include "uint256.h"
+
 class TestConnectionManager : public testing::Test {
 public:
     ConnectionManager server;
     ConnectionManager client;
     std::atomic_bool test_connect_run = false;
     std::atomic_bool test_connect_inbound;
-    std::atomic<void*> test_connect_handle = nullptr;
-    std::atomic_bool test_disconnect_run   = false;
-    std::vector<void*> handle_vector;
+    shared_connection_t test_connect_handle = nullptr;
+    std::atomic_bool test_disconnect_run    = false;
+    std::vector<shared_connection_t> handle_vector;
     std::string test_address;
 
     void SetUp() {
@@ -23,28 +27,29 @@ public:
         client.Stop();
     }
 
-    void TestNewConnectionCallback(void* connection_handle, std::string& address, bool inbound) {
-        std::string direction = inbound ? "inbound" : "outbound";
-        std::cout << "new connection handle:" << connection_handle << " " << address << " " << direction << std::endl;
-        test_connect_handle  = connection_handle;
-        test_connect_run     = true;
-        test_connect_inbound = inbound;
-        test_address         = address;
+    void TestNewConnectionCallback(shared_connection_t handle) {
+        std::string direction = handle->IsInbound() ? "inbound" : "outbound";
+        test_connect_handle   = handle;
+        test_connect_run      = true;
+        test_connect_inbound  = handle->IsInbound();
+        test_address          = handle->GetRemote();
+        std::cout << "new connection handle:" << handle << " " << test_address << " " << direction << std::endl;
     }
 
-    void TestDisconnectCallback(void* connection_handle) {
-        std::cout << "disconnect handle:" << connection_handle << std::endl;
+    void TestDisconnectCallback(shared_connection_t handle) {
+        std::cout << "disconnect handle:" << handle << std::endl;
         test_disconnect_run = true;
+        test_connect_handle.reset();
     }
 
-    void TestMultiClientNewCallback(void* connection_handle, std::string&, bool) {
-        handle_vector.push_back(connection_handle);
+    void TestMultiClientNewCallback(shared_connection_t handle) {
+        handle_vector.push_back(handle);
     }
 };
 
 TEST_F(TestConnectionManager, Listen) {
-    server.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    server.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
 
     ASSERT_TRUE(server.Bind(0x7f000001));
     ASSERT_TRUE(server.Listen(12345));
@@ -57,6 +62,7 @@ TEST_F(TestConnectionManager, Listen) {
     EXPECT_EQ(server.GetInboundNum(), 1);
     EXPECT_EQ(server.GetOutboundNum(), 0);
     EXPECT_EQ(server.GetConnectionNum(), 1);
+    test_connect_handle->Disconnect();
 }
 
 TEST_F(TestConnectionManager, Listen_fail) {
@@ -65,8 +71,8 @@ TEST_F(TestConnectionManager, Listen_fail) {
 }
 
 TEST_F(TestConnectionManager, Connect) {
-    client.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    client.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
 
     test_connect_inbound = true;
 
@@ -81,11 +87,15 @@ TEST_F(TestConnectionManager, Connect) {
     EXPECT_EQ(client.GetInboundNum(), 0);
     EXPECT_EQ(client.GetOutboundNum(), 1);
     EXPECT_EQ(client.GetConnectionNum(), 1);
+    EXPECT_EQ(server.GetInboundNum(), 1);
+    EXPECT_EQ(server.GetOutboundNum(), 0);
+    EXPECT_EQ(server.GetConnectionNum(), 1);
+    test_connect_handle->Disconnect();
 }
 
 TEST_F(TestConnectionManager, Disconnect) {
-    server.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    server.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
@@ -99,18 +109,24 @@ TEST_F(TestConnectionManager, Disconnect) {
     EXPECT_EQ(server.GetInboundNum(), 1);
     EXPECT_EQ(server.GetOutboundNum(), 0);
     EXPECT_EQ(server.GetConnectionNum(), 1);
-    server.Disconnect(test_connect_handle);
+    EXPECT_EQ(client.GetInboundNum(), 0);
+    EXPECT_EQ(client.GetOutboundNum(), 1);
+    EXPECT_EQ(client.GetConnectionNum(), 1);
+    test_connect_handle->Disconnect();
 
     usleep(50000);
     EXPECT_EQ(test_disconnect_run, true);
     EXPECT_EQ(server.GetInboundNum(), 0);
     EXPECT_EQ(server.GetOutboundNum(), 0);
     EXPECT_EQ(server.GetConnectionNum(), 0);
+    EXPECT_EQ(client.GetInboundNum(), 0);
+    EXPECT_EQ(client.GetOutboundNum(), 0);
+    EXPECT_EQ(client.GetConnectionNum(), 0);
 }
 
 TEST_F(TestConnectionManager, SendAndReceive) {
-    client.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    client.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
@@ -120,31 +136,32 @@ TEST_F(TestConnectionManager, SendAndReceive) {
 
     usleep(50000);
 
-    int data_len       = 4 * 1000 * 1000 - 24;
-    uint32_t test_type = 0x55555555;
+    size_t size    = MAX_MESSAGE_LENGTH / 32 - 32;
+    uint32_t nonce = 0x55555555;
+    uint256 h      = uint256S(std::string(64, 'a'));
+    std::vector<uint256> data(size, h);
+    test_connect_handle->SendMessage(std::make_unique<Inv>(data, nonce));
 
-    VStream payload;
-    payload.resize(data_len);
-    memset(payload.data(), 'A', data_len);
+    usleep(50000);
+    connection_message_t receive_message;
+    ASSERT_TRUE(server.ReceiveMessage(receive_message));
 
-    NetMessage send_message(test_connect_handle, test_type, payload);
-    client.SendMessage(send_message);
+    Inv* msg = dynamic_cast<Inv*>(receive_message.second.get());
 
-    NetMessage receive_message;
-    server.ReceiveMessage(receive_message);
-
-    EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
-    EXPECT_EQ(receive_message.header.type, test_type);
-    EXPECT_EQ(receive_message.header.payload_length, data_len);
-
-    for (size_t i = 0; i < receive_message.payload.size(); i++) {
-        EXPECT_EQ(receive_message.payload[i], 'A');
+    ASSERT_TRUE(msg != nullptr);
+    ASSERT_EQ(msg->GetType(), NetMessage::INV);
+    ASSERT_EQ(msg->nonce, nonce);
+    ASSERT_EQ(msg->hashes.size(), size);
+    for (auto hash : msg->hashes) {
+        ASSERT_EQ(h, hash);
     }
+
+    test_connect_handle->Disconnect();
 }
 
 TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
-    client.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    client.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
@@ -154,23 +171,20 @@ TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
 
     usleep(50000);
 
-    uint32_t test_type = 0xAAAAAAAA;
+    test_connect_handle->SendMessage(std::make_unique<NetMessage>(NetMessage::VERSION_ACK));
 
-    NetMessage send_message(test_connect_handle, test_type);
-    client.SendMessage(send_message);
+    usleep(50000);
 
-    NetMessage receive_message;
-    server.ReceiveMessage(receive_message);
+    connection_message_t receive_message;
+    ASSERT_TRUE(server.ReceiveMessage(receive_message));
 
-    EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
-    EXPECT_EQ(receive_message.header.type, test_type);
-    EXPECT_EQ(receive_message.header.payload_length, 0);
-    EXPECT_EQ(receive_message.payload, send_message.payload);
+    ASSERT_EQ(receive_message.second->GetType(), NetMessage::VERSION_ACK);
+    test_connect_handle->Disconnect();
 }
 
 TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
-    client.RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestNewConnectionCallback, this,
-        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    client.RegisterNewConnectionCallback(
+        std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
@@ -180,29 +194,34 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 
     usleep(50000);
 
-    int data_len = 2000;
-    int num      = 3;
+    int num     = 3;
+    size_t size = 1000;
 
     for (int i = 0; i < num; i++) {
-        VStream payload;
-        payload.resize(data_len);
-        memset(payload.data(), 'A' + i, data_len);
+        uint32_t nonce = 0x55555555 + i;
+        uint256 h      = uint256S(std::string(64, 'a' + i));
+        std::vector<uint256> data(size, h);
 
-        NetMessage send_message(test_connect_handle, i, payload);
-        client.SendMessage(send_message);
+        test_connect_handle->SendMessage(std::make_unique<Inv>(data, nonce));
+        usleep(50000);
     }
 
-    NetMessage receive_message;
+    connection_message_t receive_message;
 
     for (int i = 0; i < num; i++) {
-        server.ReceiveMessage(receive_message);
-        EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
-        EXPECT_EQ(receive_message.header.type, i);
-        EXPECT_EQ(receive_message.header.payload_length, data_len);
-        for (size_t j = 0; j < receive_message.payload.size(); j++) {
-            EXPECT_EQ(receive_message.payload[j], 'A' + i);
+        uint32_t nonce = 0x55555555 + i;
+        uint256 h      = uint256S(std::string(64, 'a' + i));
+        ASSERT_TRUE(server.ReceiveMessage(receive_message));
+        Inv* msg = dynamic_cast<Inv*>(receive_message.second.get());
+        ASSERT_TRUE(msg != nullptr);
+        ASSERT_EQ(msg->GetType(), NetMessage::INV);
+        ASSERT_EQ(msg->nonce, nonce);
+        ASSERT_EQ(msg->hashes.size(), size);
+        for (auto hash : msg->hashes) {
+            ASSERT_EQ(h, hash);
         }
     }
+    test_connect_handle->Disconnect();
 }
 
 TEST_F(TestConnectionManager, MultiClient) {
@@ -213,8 +232,8 @@ TEST_F(TestConnectionManager, MultiClient) {
     ConnectionManager client[client_num];
 
     for (int i = 0; i < client_num; i++) {
-        client[i].RegisterNewConnectionCallback(std::bind(&TestConnectionManager::TestMultiClientNewCallback, this,
-            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        client[i].RegisterNewConnectionCallback(
+            std::bind(&TestConnectionManager::TestMultiClientNewCallback, this, std::placeholders::_1));
         client[i].Start();
         ASSERT_TRUE(client[i].Connect(0x7f000001, 51030));
     }
@@ -224,33 +243,36 @@ TEST_F(TestConnectionManager, MultiClient) {
     EXPECT_EQ(server.GetOutboundNum(), 0);
     EXPECT_EQ(server.GetConnectionNum(), 3);
 
-    int data_len          = 2000;
-    uint32_t message_type = 100;
+    size_t size = 1000;
 
     for (int i = 0; i < client_num; i++) {
-        VStream payload;
-        payload.resize(data_len);
-        memset(payload.data(), 'A' + i, data_len);
-
-        NetMessage send_message(handle_vector.at(i), message_type, payload);
-        client[i].SendMessage(send_message);
+        uint32_t nonce = 0x55555555 + i;
+        uint256 h      = uint256S(std::string(64, 'a' + i));
+        std::vector<uint256> data(size, h);
+        handle_vector.at(i)->SendMessage(std::make_unique<Inv>(data, nonce));
         usleep(50000);
     }
 
     for (int i = 0; i < client_num; i++) {
-        NetMessage receive_message;
-        server.ReceiveMessage(receive_message);
-        EXPECT_EQ(receive_message.header.magic_number, GetMagicNumber());
-        EXPECT_EQ(receive_message.header.type, message_type);
-        EXPECT_EQ(receive_message.header.payload_length, data_len);
-        for (size_t j = 0; j < receive_message.payload.size(); j++) {
-            EXPECT_EQ(receive_message.payload[j], 'A' + i);
+        uint32_t nonce = 0x55555555 + i;
+        uint256 h      = uint256S(std::string(64, 'a' + i));
+        connection_message_t receive_message;
+        ASSERT_TRUE(server.ReceiveMessage(receive_message));
+        Inv* msg = dynamic_cast<Inv*>(receive_message.second.get());
+        ASSERT_TRUE(msg != nullptr);
+        ASSERT_EQ(msg->GetType(), NetMessage::INV);
+        ASSERT_EQ(msg->nonce, nonce);
+        ASSERT_EQ(msg->hashes.size(), size);
+        for (auto hash : msg->hashes) {
+            ASSERT_EQ(h, hash);
         }
     }
 
     for (int i = 0; i < client_num; i++) {
+        handle_vector.at(i)->Disconnect();
         client[i].Stop();
     }
+    handle_vector.clear();
 
     usleep(100000);
     EXPECT_EQ(server.GetInboundNum(), 0);

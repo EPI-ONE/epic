@@ -2,19 +2,19 @@
 
 #include <unordered_set>
 
-Block::Block() {
+Block::Block() : NetMessage(BLOCK) {
     SetNull();
 }
 
 Block::Block(const Block& b)
-    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+    : NetMessage(BLOCK), hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
       prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
       nonce_(b.nonce_), transaction_(b.transaction_), optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     SetParents();
 }
 
 Block::Block(Block&& b) noexcept
-    : hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
+    : NetMessage(BLOCK), hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
       prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), time_(b.time_), diffTarget_(b.diffTarget_),
       nonce_(b.nonce_), transaction_(std::move(b.transaction_)), optimalEncodingSize_(b.optimalEncodingSize_),
       source(b.source) {
@@ -30,7 +30,7 @@ Block::Block(uint32_t versionNum) : Block() {
     time_               = time(nullptr);
 }
 
-Block::Block(VStream& payload) {
+Block::Block(VStream& payload) : NetMessage(BLOCK) {
     payload >> *this;
 }
 

@@ -16,14 +16,17 @@ ThreadPool::ThreadPool(size_t worker_size) {
 
 void ThreadPool::WorkerThread(uint32_t id) {
     try {
-        CallableWrapper task;
-        while (task_queue_.Take(task)) {
-            if (task_queue_enabled_.load()) {
+        bool run;
+        do {
+            CallableWrapper task;
+            run = task_queue_.Take(task);
+            if (task_queue_enabled_.load() && run) {
                 working_states->at(id) = true;
                 task();
                 working_states->at(id) = false;
             }
-        }
+        } while (run);
+
     } catch (std::exception& e) {
         spdlog::error(e.what());
     }

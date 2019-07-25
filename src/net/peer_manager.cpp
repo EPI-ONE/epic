@@ -14,13 +14,12 @@ PeerManager::~PeerManager() {
 void PeerManager::Start() {
     spdlog::info("Starting the Peer Manager...");
     addressManager_->Init();
+    InitScheduleTask();
 
-    connectionManager_->RegisterNewConnectionCallback(std::bind(
-        &PeerManager::OnConnectionCreated, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    connectionManager_->RegisterNewConnectionCallback(
+        std::bind(&PeerManager::OnConnectionCreated, this, std::placeholders::_1));
     connectionManager_->RegisterDeleteConnectionCallBack(
         std::bind(&PeerManager::OnConnectionClosed, this, std::placeholders::_1));
-
-    //    Bind(config->GetBindAddress() + ":" + std::to_string(config->GetBindPort()));
 
     connectionManager_->Start();
 
@@ -36,20 +35,23 @@ void PeerManager::Start() {
 void PeerManager::Stop() {
     spdlog::info("Stopping the Peer Manager...");
     interrupt_ = true;
-
-    connectionManager_->Stop();
+    connectionManager_->QuitQueue();
 
     if (handleMessageTask_.joinable()) {
         handleMessageTask_.join();
     }
 
     if (scheduleTask_.joinable()) {
-        scheduleTask_.detach();
+        scheduleTask_.join();
     }
 
     if (openConnectionTask_.joinable()) {
-        openConnectionTask_.detach();
+        openConnectionTask_.join();
     }
+
+    DisconnectAllPeer();
+    ClearPeers();
+    connectionManager_->Stop();
 }
 
 bool PeerManager::Init(std::unique_ptr<Config>& config) {
@@ -64,57 +66,47 @@ bool PeerManager::Init(std::unique_ptr<Config>& config) {
     return true;
 }
 
-void PeerManager::OnConnectionCreated(void* connection_handle, const std::string& address, bool inbound) {
-    std::optional<NetAddress> net_address = NetAddress::GetByIP(address);
+void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
+    std::optional<NetAddress> net_address = NetAddress::GetByIP(connection->GetRemote());
 
-    // disconnect if we have connected to the same ip address
-    if (HasConnectedTo(*net_address)) {
-        connectionManager_->Disconnect(connection_handle);
-        return;
-    }
+    auto peer = CreatePeer(connection, *net_address);
 
-    auto peer = CreatePeer(connection_handle, *net_address, inbound);
-
-    AddPeer(connection_handle, peer);
-    AddAddr(peer->address);
-    spdlog::info("{} {}   ({} connected)", inbound ? "Accept" : "Connect to", address, GetConnectedPeerSize());
+    AddPeer(connection, peer);
+    spdlog::info("{} {}   ({} connected)", connection->IsInbound() ? "Accept" : "Connect to", connection->GetRemote(),
+                 GetConnectedPeerSize());
 
     // send version message
-    if (!peer->isInbound) {
-        VersionMessage ver(peer->address, DAG->GetBestMilestoneHeight());
-        NetMessage msg(peer->connection_handle, VERSION_MSG, VStream(ver));
-        SendMessage(msg);
-        spdlog::info("send version message to {}", peer->address.ToString());
+    if (!peer->IsInbound()) {
+        peer->SendVersion(DAG->GetBestMilestoneHeight());
     }
 }
 
-void PeerManager::OnConnectionClosed(const void* connection_handle) {
-    auto peer = GetPeer(connection_handle);
-    if (peer) {
-        RemoveAddr(peer->address);
-        RemovePeer(connection_handle);
-        spdlog::info("{} {}   ({} connected)", "Disconnected ", peer->address.ToString(), GetConnectedPeerSize());
+void PeerManager::OnConnectionClosed(shared_connection_t& connection) {
+    std::thread t([connection, this]() { RemovePeer(connection); });
+    t.detach();
+}
+
+void PeerManager::DisconnectAllPeer() {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    for (auto peer : peerMap_) {
+        peer.second->Disconnect();
     }
 }
 
-void PeerManager::DisconnectPeer(std::shared_ptr<Peer>& peer) {
-    peer->disconnect = true;
-    connectionManager_->Disconnect(peer->connection_handle);
+PeerPtr PeerManager::CreatePeer(shared_connection_t& connection, NetAddress& address) {
+    auto peer = std::make_shared<Peer>(address, connection, addressManager_->IsSeedAddress(address), addressManager_);
+    peer->SetWeakPeer(peer);
+    return peer;
 }
 
-std::shared_ptr<Peer> PeerManager::CreatePeer(void* connection_handle, NetAddress& address, bool inbound) {
-    return std::make_shared<Peer>(address, connection_handle, inbound, addressManager_->IsSeedAddress(address),
-                                  connectionManager_, addressManager_);
-}
-
-void PeerManager::RemovePeer(const void* connection_handle) {
+void PeerManager::ClearPeers() {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
-    peerMap_.erase(connection_handle);
+    peerMap_.clear();
 }
 
-void PeerManager::DeletePeer(const std::shared_ptr<Peer>& peer) {
-    spdlog::info("{} Peer died", peer->address.ToString());
-    // TODO remove some tasks or data from peer
+void PeerManager::RemovePeer(shared_connection_t connection) {
+    std::unique_lock<std::shared_mutex> lk(peerLock_);
+    peerMap_.erase(connection);
 }
 
 bool PeerManager::Listen(uint16_t port) {
@@ -155,31 +147,21 @@ size_t PeerManager::GetFullyConnectedPeerSize() {
     return count;
 }
 
-void PeerManager::SendMessage(NetMessage& message) {
-    connectionManager_->SendMessage(message);
-}
-
-void PeerManager::SendMessage(NetMessage&& message) {
-    connectionManager_->SendMessage(message);
-}
-
 void PeerManager::HandleMessage() {
     while (!interrupt_) {
-        NetMessage msg;
+        connection_message_t msg;
         if (connectionManager_->ReceiveMessage(msg)) {
-            auto msg_from = GetPeer(msg.GetConnectionHandle());
-            if (!msg_from) {
-                spdlog::warn("can't find the peer with the handle {}", msg.GetConnectionHandle());
-                continue;
+            auto msg_from = GetPeer(msg.first);
+            if (msg_from && msg_from->IsVaild()) {
+                msg_from->ProcessMessage(msg.second);
             }
-            msg_from->ProcessMessage(msg);
         }
     }
 }
 
 void PeerManager::OpenConnection() {
     while (!interrupt_) {
-        sleep(30);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         if (connectionManager_->GetOutboundNum() > kMax_outbound) {
             continue;
         }
@@ -196,7 +178,6 @@ void PeerManager::OpenConnection() {
 
             // means we don't have enough addresses to connect
             if (!try_to_connect) {
-                std::this_thread::yield();
                 break;
             }
 
@@ -222,95 +203,59 @@ void PeerManager::OpenConnection() {
 }
 
 void PeerManager::CheckTimeout() {
-    std::shared_lock<std::shared_mutex> lk(peerLock_);
-    std::vector<const void*> remove_handles;
-    for (auto& it : peerMap_) {
-        std::shared_ptr<Peer> peer = it.second;
+    std::unique_lock<std::shared_mutex> lk(peerLock_);
+    for (auto it = peerMap_.begin(); it != peerMap_.end();) {
+        std::shared_ptr<Peer> peer = it->second;
         if (peer->isFullyConnected) {
             // check ping timeout
             if (peer->GetLastPingTime() > peer->GetLastPongTime() + kPingWaitTimeout ||
                 peer->GetNPingFailed() > kMaxPingFailures) {
                 spdlog::info("[NET:disconnect]: fully connected peer {} ping timeout", peer->address.ToString());
-                DisconnectPeer(peer);
-                remove_handles.push_back(peer->connection_handle);
+                peer->Disconnect();
+                peerMap_.erase(it++);
+            } else {
+                it++;
             }
         } else {
             // check version timeout
             if (peer->connected_time + kConnectionSetupTimeout < (uint64_t) time(nullptr)) {
                 spdlog::info("[NET:disconnect]: non-fully connected peer {} version handshake timeout",
                              peer->address.ToString());
-                DisconnectPeer(peer);
-                remove_handles.push_back(peer->connection_handle);
+                peer->Disconnect();
+                peerMap_.erase(it++);
+            } else {
+                it++;
             }
         }
     }
-
-    for (auto& handle : remove_handles) {
-        OnConnectionClosed(handle);
-    }
-    remove_handles.clear();
-}
-
-void PeerManager::BroadcastMessage() {
-    std::shared_lock<std::shared_mutex> lk(peerLock_);
-    for (auto& it : peerMap_) {
-        it.second->SendMessages();
-    }
-    SendLocalAddresses();
 }
 
 void PeerManager::ScheduleTask() {
     while (!interrupt_) {
-        sleep(1 * 60);
-        CheckTimeout();
-        BroadcastMessage();
+        scheduler_.Loop();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
-PeerPtr PeerManager::GetPeer(const void* connection_handle) {
+PeerPtr PeerManager::GetPeer(shared_connection_t& connection) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
-    auto it = peerMap_.find(connection_handle);
-    if (it == peerMap_.end()) {
-        return nullptr;
-    }
-    return it->second;
+    auto it = peerMap_.find(connection);
+    return it == peerMap_.end() ? nullptr : it->second;
 }
 
-void PeerManager::AddPeer(const void* handle, const std::shared_ptr<Peer>& peer) {
+void PeerManager::AddPeer(shared_connection_t& connection, const std::shared_ptr<Peer>& peer) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
-    peerMap_.insert(std::make_pair(handle, peer));
-}
-
-void PeerManager::AddAddr(const NetAddress& address) {
-    std::unique_lock<std::mutex> lk(addressLock_);
-    connectedAddress_.insert(address);
-}
-
-void PeerManager::RemoveAddr(const NetAddress& address) {
-    std::unique_lock<std::mutex> lk(addressLock_);
-    connectedAddress_.erase(address);
+    peerMap_.insert(std::make_pair(connection, peer));
 }
 
 bool PeerManager::HasConnectedTo(const IPAddress& address) {
-    std::unique_lock<std::mutex> lk(addressLock_);
-    return connectedAddress_.find(address) != connectedAddress_.end();
-}
-
-void PeerManager::SendLocalAddresses() {
-    if (lastSendLocalAddressTime + kBroadLocalAddressInterval >= time(nullptr)) {
-        return;
-    }
-
-    auto local_address = addressManager_->GetBestLocalAddress();
-    if (local_address.IsRoutable()) {
-        AddressMessage msg = AddressMessage();
-        msg.AddAddress(NetAddress(local_address, CONFIG->GetBindPort()));
-        for (auto& it : peerMap_) {
-            auto data = VStream(msg);
-            NetMessage message(it.first, ADDR, data);
-            SendMessage(message);
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    for (auto& peer : peerMap_) {
+        if (0 == std::memcmp(peer.second->address.GetIP(), address.GetIP(), 16)) {
+            return true;
         }
     }
+    return false;
 }
 
 void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from) {
@@ -321,8 +266,32 @@ void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from
 
     for (auto& it : peerMap_) {
         if (it.second != msg_from) {
-            NetMessage msg(it.second->connection_handle, BLOCK, VStream(block));
-            it.second->SendMessage(msg);
+            it.second->SendMessage(std::make_unique<Block>(*block));
         }
     }
+}
+
+void PeerManager::InitScheduleTask() {
+    scheduler_.AddPeriodTask(kCheckTimeoutInterval, std::bind(&PeerManager::CheckTimeout, this));
+
+    scheduler_.AddPeriodTask(kBroadLocalAddressInterval, [this]() {
+        std::shared_lock<std::shared_mutex> lk(peerLock_);
+        for (auto& it : peerMap_) {
+            it.second->SendLocalAddress();
+        }
+    });
+
+    scheduler_.AddPeriodTask(kSendAddressInterval, [this]() {
+        std::shared_lock<std::shared_mutex> lk(peerLock_);
+        for (auto& it : peerMap_) {
+            it.second->SendAddresses();
+        }
+    });
+
+    scheduler_.AddPeriodTask(kPingSendInterval, [this]() {
+        std::shared_lock<std::shared_mutex> lk(peerLock_);
+        for (auto& it : peerMap_) {
+            it.second->SendPing();
+        }
+    });
 }

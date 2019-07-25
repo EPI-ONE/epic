@@ -1,25 +1,27 @@
 #ifndef __SRC_ADDRESS_MESSAGE_H__
 #define __SRC_ADDRESS_MESSAGE_H__
 
+
 #include <vector>
 
 #include "net_address.h"
+#include "net_message.h"
 #include "serialize.h"
 #include "stream.h"
 
-class AddressMessage {
+class AddressMessage : public NetMessage {
 public:
     static const long kMaxAddressSize = 1024;
 
     std::vector<NetAddress> addressList;
 
-    AddressMessage() = default;
+    AddressMessage() : NetMessage(ADDR) {}
 
-    explicit AddressMessage(VStream& stream) {
+    explicit AddressMessage(VStream& stream) : NetMessage(ADDR) {
         Deserialize(stream);
     }
 
-    explicit AddressMessage(std::vector<NetAddress>&& address_list) : addressList(address_list) {}
+    explicit AddressMessage(std::vector<NetAddress>&& address_list) : NetMessage(ADDR), addressList(address_list) {}
 
     void AddAddress(NetAddress& addr) {
         addressList.push_back(addr);
@@ -34,6 +36,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(addressList);
     }
+    ADD_NET_SERIALIZE_METHODS
 };
 
 class GetAddrMessage {

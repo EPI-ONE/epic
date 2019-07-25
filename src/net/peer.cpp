@@ -1,84 +1,67 @@
 #include "peer.h"
 #include "caterpillar.h"
-#include "peer_manager.h"
 
-Peer::Peer(NetAddress& netAddress,
-           const void* handle,
-           bool inbound,
-           bool isSeedPeer,
-           ConnectionManager* connectionManager,
-           AddressManager* addressManager)
-    : address(std::move(netAddress)), connection_handle(handle), isSeed(isSeedPeer), isInbound(inbound),
-      connected_time(time(nullptr)), lastPingTime(0), lastPongTime(0), nPingFailed(0),
-      connectionManager_(connectionManager), addressManager_(addressManager) {}
+Peer::Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager)
+    : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(0),
+      lastPongTime(0), nPingFailed(0), addressManager_(addressManager), connection_(connection) {}
 
 Peer::~Peer() {
-    addrSendQueue.Quit();
     delete versionMessage;
 }
 
-void Peer::ProcessMessage(NetMessage& msg) {
+void Peer::ProcessMessage(unique_message_t& msg) {
     try {
-        switch (msg.header.type) {
-            case PING: {
-                Ping ping(msg.payload);
-                ProcessPing(ping);
+        switch (msg->GetType()) {
+            case NetMessage::PING: {
+                ProcessPing(*dynamic_cast<Ping*>(msg.get()));
                 break;
             }
-            case PONG: {
-                Pong pong(msg.payload);
-                ProcessPong(pong);
+            case NetMessage::PONG: {
+                ProcessPong(*dynamic_cast<Pong*>(msg.get()));
                 break;
             }
-            case VERSION_MSG: {
-                VersionMessage versionMessage_(msg.payload);
-                ProcessVersionMessage(versionMessage_);
+            case NetMessage::VERSION_MSG: {
+                ProcessVersionMessage(*dynamic_cast<VersionMessage*>(msg.get()));
                 break;
             }
-            case VERSION_ACK: {
+            case NetMessage::VERSION_ACK: {
                 ProcessVersionACK();
                 break;
             }
-            case GET_ADDR: {
+            case NetMessage::GET_ADDR: {
                 ProcessGetAddrMessage();
                 break;
             }
-            case ADDR: {
-                AddressMessage addressMessage(msg.payload);
-                ProcessAddressMessage(addressMessage);
+            case NetMessage::ADDR: {
+                ProcessAddressMessage(*dynamic_cast<AddressMessage*>(msg.get()));
                 break;
             }
-            case GET_INV: {
-                GetInv getBlock(msg.payload);
-                ProcessGetInv(getBlock);
+            case NetMessage::GET_INV: {
+                ProcessGetInv(*dynamic_cast<GetInv*>(msg.get()));
                 break;
             }
-            case INV: {
-                auto inv = std::make_unique<Inv>(msg.payload);
-                ProcessInv(std::move(inv));
+            case NetMessage::INV: {
+                ProcessInv(std::unique_ptr<Inv>(dynamic_cast<Inv*>(msg.release())));
                 break;
             }
-            case GET_DATA: {
-                GetData getData(msg.payload);
-                ProcessGetData(getData);
+            case NetMessage::GET_DATA: {
+                ProcessGetData(*dynamic_cast<GetData*>(msg.get()));
                 break;
             }
-            case BUNDLE: {
-                auto bundle = std::make_shared<Bundle>(msg.payload);
-                ProcessBundle(bundle);
+            case NetMessage::BUNDLE: {
+                ProcessBundle(std::shared_ptr<Bundle>(dynamic_cast<Bundle*>(msg.release())));
                 break;
             }
-            case BLOCK: {
-                Block b(msg.payload);
-                b.source            = Block::NETWORK;
-                ConstBlockPtr block = std::make_shared<const Block>(std::move(b));
-                ProcessBlock(block);
+            case NetMessage::BLOCK: {
+                Block* b  = dynamic_cast<Block*>(msg.release());
+                b->source = Block::NETWORK;
+                ProcessBlock(std::shared_ptr<const Block>(b));
                 break;
             }
-            case NOT_FOUND: {
-                auto notfound = NotFound(msg.payload);
-                spdlog::warn("Not found: {}", notfound.hash.to_substr());
-                ProcessNotFound(notfound.nonce);
+            case NetMessage::NOT_FOUND: {
+                NotFound* notfound = dynamic_cast<NotFound*>(msg.get());
+                spdlog::warn("Not found: {}", notfound->hash.to_substr());
+                ProcessNotFound(notfound->nonce);
                 break;
             }
             default: {
@@ -86,15 +69,13 @@ void Peer::ProcessMessage(NetMessage& msg) {
             }
         }
     } catch (ProtocolException& exception) {
-        spdlog::warn(exception.ToString());
+        spdlog::debug(exception.ToString());
+    } catch (const std::bad_cast& e) {
+        spdlog::debug("message cast fail {}", e.what());
     }
 }
 
 void Peer::ProcessVersionACK() {
-    if (!versionMessage) {
-        spdlog::warn("{}: VersionMessage is null before processing VersionAck", address.ToString());
-        throw ProtocolException("got a version ack before version");
-    }
     if (isFullyConnected) {
         spdlog::warn("{}: VersionMessage is null before processing VersionAck", address.ToString());
         throw ProtocolException("got more than one version ack");
@@ -102,18 +83,16 @@ void Peer::ProcessVersionACK() {
     isFullyConnected = true;
     spdlog::info("finish version handshake with {}", address.ToString());
 
-    if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
-        spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
-        DAG->RequestInv(uint256(), 5, PEERMAN->GetPeer(connection_handle));
+    if (IsInbound()) {
+        if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
+            spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
+            DAG->RequestInv(uint256(), 5, weak_peer_.lock());
+        }
     }
 }
 
 void Peer::ProcessPing(const Ping& ping) {
-    Pong pong(ping.nonce);
-    VStream stream;
-    stream << pong;
-    NetMessage netMessage(connection_handle, PONG, stream);
-    SendMessage(netMessage);
+    SendMessage(std::make_unique<Pong>(ping.nonce));
 }
 
 void Peer::ProcessPong(const Pong& pong) {
@@ -133,7 +112,7 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
     if (versionMessage_.client_version < kMinProtocolVersion) {
         spdlog::warn("client version {} < min protocol version {}, disconnect peer {}", versionMessage_.client_version,
                      kMinProtocolVersion, address.ToString());
-        disconnect = true;
+        Disconnect();
         return;
     }
 
@@ -146,29 +125,28 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
                  versionMessage->current_height);
 
     // send version message if peer is inbound
-    if (isInbound) {
-        VersionMessage vmsg(address, DAG->GetBestMilestoneHeight());
-        SendMessage(NetMessage(connection_handle, VERSION_MSG, VStream(vmsg)));
-        spdlog::info("send version message to {}", address.ToString());
+    if (IsInbound()) {
+        SendVersion(DAG->GetBestMilestoneHeight());
     }
 
     // send version ack
-    SendMessage(NetMessage(connection_handle, VERSION_ACK, VStream()));
+    SendMessage(std::make_unique<NetMessage>(NetMessage::VERSION_ACK));
 
     // add the score of the our local address as reported by the peer
     addressManager_->SeenLocalAddress(versionMessage_.address_you);
-    if (!isInbound) {
+    if (!IsInbound()) {
         // send local address
-        AddressMessage addressMessage;
-        IPAddress localAddress = addressManager_->GetBestLocalAddress();
-        addressMessage.AddAddress(NetAddress(localAddress, CONFIG->GetBindPort()));
-        SendMessage(NetMessage(connection_handle, ADDR, VStream(addressMessage)));
-        spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
+        SendLocalAddress();
 
         // ask for addresses
-        SendMessage(NetMessage(connection_handle, GET_ADDR, VStream()));
+        SendMessage(std::make_unique<NetMessage>(NetMessage::GET_ADDR));
 
         addressManager_->MarkOld(address);
+
+        if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
+            spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
+            DAG->RequestInv(uint256(), 5, weak_peer_.lock());
+        }
     }
 }
 
@@ -191,35 +169,16 @@ void Peer::ProcessAddressMessage(AddressMessage& addressMessage) {
     // disconnect the connection after we get the addresses if the peer is a seed
     if (isSeed) {
         spdlog::warn("disconnect seed {}", address.ToString());
-        disconnect = true;
+        Disconnect();
     }
 }
 
 void Peer::ProcessGetAddrMessage() {
-    if (!isInbound || haveReplyGetAddr) {
+    if (!IsInbound() || haveReplyGetAddr) {
         return;
     }
-    AddressMessage msg(addressManager_->GetAddresses());
-    SendMessage(NetMessage(connection_handle, ADDR, VStream(msg)));
+    SendMessage(std::make_unique<AddressMessage>(addressManager_->GetAddresses()));
     haveReplyGetAddr = true;
-}
-
-void Peer::SendMessage(NetMessage& message) {
-    try {
-        connectionManager_->SendMessage(message);
-    } catch (std::exception& e) {
-        spdlog::warn("{} , failed  to send message to {}, disconnect", e.what(), address.ToString());
-        connectionManager_->Disconnect(connection_handle);
-    }
-}
-
-void Peer::SendMessage(NetMessage&& message) {
-    try {
-        connectionManager_->SendMessage(message);
-    } catch (std::exception& e) {
-        spdlog::warn("{} , failed  to send message to {}, disconnect", e.what(), address.ToString());
-        connectionManager_->Disconnect(connection_handle);
-    }
 }
 
 const std::atomic_uint64_t& Peer::GetLastPingTime() const {
@@ -246,40 +205,29 @@ void Peer::SetNPingFailed(size_t nPingFailed_) {
     Peer::nPingFailed = nPingFailed_;
 }
 
-void Peer::SendMessages() {
-    SendAddresses();
-    if (isFullyConnected) {
-        SendPing();
-    }
-}
-
 void Peer::SendPing() {
-    if (lastPingTime + kPingSendInterval < (uint64_t) time(nullptr)) {
+    if (isFullyConnected) {
         lastNonce = time(nullptr);
-        Ping ping(lastNonce);
-        NetMessage msg(connection_handle, PING, VStream(ping));
-        SendMessage(msg);
+        SendMessage(std::make_unique<Ping>(lastNonce));
         spdlog::info("send ping to {}, nonce = {}", address.ToString(), lastNonce);
     }
 }
 
 void Peer::SendAddresses() {
-    if (lastSendAddressTime + kSendAddressInterval < (uint64_t) time(nullptr) && !addrSendQueue.Empty()) {
-        AddressMessage msg;
-        NetAddress addr;
+    if (!addrSendQueue.empty()) {
+        std::vector<NetAddress> addresses;
 
-        while (!addrSendQueue.Empty() && msg.addressList.size() < AddressMessage::kMaxAddressSize) {
-            addrSendQueue.Take(addr);
-            msg.AddAddress(addr);
+        while (!addrSendQueue.empty() && addresses.size() < AddressMessage::kMaxAddressSize) {
+            addresses.push_back(addrSendQueue.front());
+            addrSendQueue.pop_front();
         }
 
-        SendMessage(NetMessage(connection_handle, ADDR, VStream(msg)));
-        lastSendAddressTime = time(nullptr);
+        SendMessage(std::make_unique<AddressMessage>(std::move(addresses)));
     }
 }
 
-void Peer::ProcessBlock(ConstBlockPtr& block) {
-    DAG->AddNewBlock(block, PEERMAN->GetPeer(connection_handle));
+void Peer::ProcessBlock(const ConstBlockPtr& block) {
+    DAG->AddNewBlock(block, weak_peer_.lock());
 }
 
 void Peer::ProcessGetInv(GetInv& getInv) {
@@ -294,11 +242,7 @@ void Peer::ProcessGetInv(GetInv& getInv) {
                  std::to_string(getInv.locator[0]), std::to_string(getInv.locator[getInv.locator.size() - 1]),
                  getInv.locator.size());
 
-    auto peer = PEERMAN->GetPeer(connection_handle);
-    if (!peer) {
-        return;
-    }
-    DAG->RespondRequestInv(getInv.locator, getInv.nonce, std::move(peer));
+    DAG->RespondRequestInv(getInv.locator, getInv.nonce, weak_peer_.lock());
 }
 
 void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
@@ -313,25 +257,20 @@ void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
 }
 
 void Peer::ProcessGetData(GetData& getData) {
-    auto peer = PEERMAN->GetPeer(connection_handle);
-    if (!peer) {
-        return;
-    }
-
     if (getData.bundleNonce.empty()) {
         throw ProtocolException("GetData nonce size = 0, msg from " + address.ToString());
     }
 
     switch (getData.type) {
         case GetDataTask::PENDING_SET: {
-            spdlog::debug("Received a GetData request for pending blocks from {}", peer->address.ToString());
-            DAG->RespondRequestPending(getData.bundleNonce[0], peer);
+            spdlog::debug("Received a GetData request for pending blocks from {}", address.ToString());
+            DAG->RespondRequestPending(getData.bundleNonce[0], weak_peer_.lock());
             break;
         }
         case GetDataTask::LEVEL_SET: {
-            spdlog::debug("Received a GetData request for stored blocks from {} with hash {}", peer->address.ToString(),
+            spdlog::debug("Received a GetData request for stored blocks from {} with hash {}", address.ToString(),
                           getData.hashes.front().to_substr());
-            DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, std::move(peer));
+            DAG->RespondRequestLVS(getData.hashes, getData.bundleNonce, weak_peer_.lock());
             break;
         }
         default: {
@@ -366,7 +305,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
                 std::swap(bundle->blocks.front(), bundle->blocks.back());
 
                 for (auto& block : bundle->blocks) {
-                    DAG->AddNewBlock(block, PEERMAN->GetPeer(connection_handle));
+                    DAG->AddNewBlock(block, weak_peer_.lock());
                 }
 
                 uint32_t nextNonce = GetFirstGetDataNonce();
@@ -405,7 +344,7 @@ void Peer::ProcessNotFound(const uint32_t& nonce) {
     orphanLvsPool.clear();
     writer.unlock();
 
-    DAG->DisconnectPeerSync(PEERMAN->GetPeer(connection_handle));
+    DAG->DisconnectPeerSync(weak_peer_.lock());
 }
 
 uint32_t Peer::GetFirstGetDataNonce() {
@@ -507,4 +446,22 @@ size_t Peer::GetLastGetInvLength() const {
 
 void Peer::SetLastGetInvLength(const size_t& l) {
     lastGetInvLength = l;
+}
+void Peer::SendMessage(unique_message_t&& message) {
+    connection_->SendMessage(std::move(message));
+}
+
+void Peer::SendVersion(uint64_t height) {
+    SendMessage(std::make_unique<VersionMessage>(address, height, 0, 0));
+    spdlog::info("send version message to {}", address.ToString());
+}
+
+void Peer::SendLocalAddress() {
+    IPAddress localAddress = addressManager_->GetBestLocalAddress();
+    if (!localAddress.IsRoutable()) {
+        return;
+    }
+    std::vector<NetAddress> addresses{NetAddress(localAddress, CONFIG->GetBindPort())};
+    SendMessage(std::make_unique<AddressMessage>(std::move(addresses)));
+    spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
 }

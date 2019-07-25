@@ -14,9 +14,16 @@ class BlockingQueue {
 public:
     BlockingQueue() : mtx_(), full_(), empty_(), capacity_(DEFAULT_CAPACITY) {}
 
+    ~BlockingQueue() {
+        Clear();
+    }
+
     void Put(T& element) {
         std::unique_lock<std::mutex> lock(mtx_);
         full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
+        if (quit_) {
+            return;
+        }
         queue_.emplace(std::move(element));
         empty_.notify_all();
     }
@@ -24,6 +31,9 @@ public:
     void Put(T&& element) {
         std::unique_lock<std::mutex> lock(mtx_);
         full_.wait(lock, [this] { return (queue_.size() < capacity_ || quit_); });
+        if (quit_) {
+            return;
+        }
         queue_.emplace(std::move(element));
         empty_.notify_all();
     }

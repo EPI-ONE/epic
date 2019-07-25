@@ -2,9 +2,10 @@
 #define EPIC_VERSION_MESSAGE_H
 
 #include "net_address.h"
+#include "net_message.h"
 #include "serialize.h"
 
-class VersionMessage {
+class VersionMessage : public NetMessage {
 public:
     int client_version     = 0;
     uint64_t local_service = 0;
@@ -12,21 +13,23 @@ public:
     NetAddress address_you;
     uint64_t current_height;
 
-    VersionMessage() = default;
+    explicit VersionMessage() : NetMessage(VERSION_MSG) {}
 
     VersionMessage(NetAddress address_you,
                    uint64_t current_height,
                    int client_version     = 0,
                    uint64_t local_service = 0,
                    uint64_t nTime         = time(nullptr))
-        : client_version(client_version), local_service(local_service), nTime(nTime),
+        : NetMessage(VERSION_MSG), client_version(client_version), local_service(local_service), nTime(nTime),
+
           address_you(std::move(address_you)), current_height(current_height) {}
 
-    explicit VersionMessage(VStream& stream) {
+    explicit VersionMessage(VStream& stream) : NetMessage(VERSION_MSG) {
         Deserialize(stream);
     }
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(client_version);

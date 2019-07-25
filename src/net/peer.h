@@ -10,7 +10,6 @@
 #include "blocking_queue.h"
 #include "concurrent_container.h"
 #include "connection_manager.h"
-#include "message_type.h"
 #include "net_address.h"
 #include "ping.h"
 #include "pong.h"
@@ -22,33 +21,17 @@
 
 class Peer {
 public:
-    /**
-     * @param netAddress
-     * @param handle ,the libevent socket handle
-     * @param inbound
-     * @param isSeedPeer, if the peer address is a seed
-     * @param connectionManager
-     * @param addressManager
-     */
-    Peer(NetAddress& netAddress,
-         const void* handle,
-         bool inbound,
-         bool isSeedPeer,
-         ConnectionManager* connectionManager,
-         AddressManager* addressManager);
+    Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager);
 
     virtual ~Peer();
 
-    void ProcessMessage(NetMessage& message);
+    void SetWeakPeer(std::shared_ptr<Peer>& peer) {
+        weak_peer_ = peer;
+    };
 
-    virtual void SendMessage(NetMessage& message);
+    void ProcessMessage(unique_message_t& message);
 
-    virtual void SendMessage(NetMessage&& message);
-
-    /**
-     * send scheduled messages(ping, address) to the peer
-     */
-    void SendMessages();
+    void SendMessage(unique_message_t&& message);
 
     /**
      * regularly send ping to the peer
@@ -59,6 +42,14 @@ public:
      * regularly send addresses to the peer
      */
     void SendAddresses();
+
+    void SendVersion(uint64_t height);
+
+    void SendLocalAddress();
+
+    void Disconnect() {
+        connection_->Disconnect();
+    }
 
     const std::atomic_uint64_t& GetLastPingTime() const;
 
@@ -111,14 +102,8 @@ public:
     // network address
     const NetAddress address;
 
-    // libevent connection handle
-    const void* connection_handle;
-
     // if the peer is a seed
     const bool isSeed;
-
-    // if the peer connects us first
-    const bool isInbound;
 
     // the time when the connection is setup
     const uint64_t connected_time;
@@ -130,8 +115,14 @@ public:
     // ack
     std::atomic_bool isFullyConnected = false;
 
-    // if we will disconnect the peer
-    std::atomic_bool disconnect = false;
+    bool IsInbound() {
+        return connection_->IsInbound();
+    }
+
+    bool IsVaild() {
+        return connection_->IsValid();
+    }
+
 
 private:
     /*
@@ -172,7 +163,7 @@ private:
      * process block, add to dag and relay
      * @param block
      */
-    void ProcessBlock(ConstBlockPtr& block);
+    void ProcessBlock(const ConstBlockPtr& block);
 
     /**
      * process GetInv, respond with an Inv message
@@ -209,12 +200,6 @@ private:
     /**
      * Parameters of network setting
      */
-    // interval of sending ping
-    const static uint64_t kPingSendInterval = 2 * 60;
-
-    // send addresses to neighbors per 30s
-    const static uint64_t kSendAddressInterval = 30;
-
     // record at most 2000 net addresses
     const static int kMaxAddress = 2000;
 
@@ -236,14 +221,11 @@ private:
     // number of ping failures
     size_t nPingFailed;
 
-    // last time of sending addresses
-    long lastSendAddressTime;
-
     // if we have reply GetAddr to this peer
     bool haveReplyGetAddr;
 
     // the address queue to send
-    BlockingQueue<NetAddress> addrSendQueue;
+    ConcurrentQueue<NetAddress> addrSendQueue;
 
     /*
      * Synchronization information
@@ -261,11 +243,13 @@ private:
     std::map<uint32_t, GetDataTask> getDataTasks;
     std::unordered_map<uint32_t, std::shared_ptr<Bundle>> orphanLvsPool;
 
+    std::weak_ptr<Peer> weak_peer_;
+
     /*
      * pointer from outside
      */
-    ConnectionManager* connectionManager_;
     AddressManager* addressManager_;
+    shared_connection_t connection_;
 };
 
 typedef std::shared_ptr<Peer> PeerPtr;

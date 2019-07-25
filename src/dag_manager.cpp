@@ -26,7 +26,6 @@ bool DAGManager::Init() {
 /////////////////////////////////////
 // Synchronization specific methods
 //
-#define SEND_MESSAGE(peer, type, msg) peer->SendMessage(NetMessage(peer->connection_handle, type, msg));
 
 void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer) {
     syncPool_.Execute([peer = std::move(peer), fromHash = std::move(fromHash), length, this]() {
@@ -60,9 +59,8 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
 
         GetInvTask task{};
         task.SetPeer(peer);
-        GetInv message(locator, task.id);
         peer->AddPendingGetInvTask(task);
-        SEND_MESSAGE(peer, GET_INV, message);
+        peer->SendMessage(std::make_unique<GetInv>(locator, task.id));
     });
 }
 
@@ -75,9 +73,9 @@ void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv) {
             GetDataTask task(GetDataTask::PENDING_SET);
             task.SetPeer(syncingPeer);
             syncingPeer->AddPendingGetDataTask(task);
-            GetData pending_request(task.type);
-            pending_request.AddPendingSetNonce(task.id);
-            SEND_MESSAGE(syncingPeer, GET_DATA, pending_request);
+            auto pending_request = std::make_unique<GetData>(task.type);
+            pending_request->AddPendingSetNonce(task.id);
+            syncingPeer->SendMessage(std::move(pending_request));
             spdlog::trace("Synching peer to complete {}", syncingPeer->address.ToString());
             CompleteBatchSync();
         } else if (result.size() == 1 && result.at(0) == GENESIS.GetHash()) {
@@ -99,7 +97,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
                               "Last bundle sent to this peer: {}",
                               std::to_string(peer->GetLastSentBundleHash()));
                 std::vector<uint256> empty;
-                SEND_MESSAGE(peer, INV, Inv(empty, nonce));
+                peer->SendMessage(std::make_unique<Inv>(empty, nonce));
                 return;
             }
             if (IsMainChainMS(start)) {
@@ -146,7 +144,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
             }
         }
 
-        SEND_MESSAGE(peer, INV, Inv(hashes, nonce));
+        peer->SendMessage(std::make_unique<Inv>(hashes, nonce));
     });
 }
 
@@ -175,7 +173,7 @@ void DAGManager::CallbackRequestData(std::vector<ConstBlockPtr>& blocks) {
 }
 
 void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) const {
-    SEND_MESSAGE(peer, BUNDLE, Bundle(GetBestChain().GetPendingBlocks(), nonce));
+    peer->SendMessage(std::make_unique<Bundle>(GetBestChain().GetPendingBlocks(), nonce));
 }
 
 void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
@@ -186,19 +184,19 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
     auto nc_iter = nonces.begin();
     while (hs_iter != hashes.end() && nc_iter != nonces.end()) {
         syncPool_.Execute([n = *nc_iter, h = *hs_iter, peer, this]() {
-            Bundle bundle(n);
+            auto bundle  = std::make_unique<Bundle>(n);
             auto payload = GetMainChainRawLevelSet(h);
             if (payload.empty()) {
                 spdlog::debug("Milestone {} cannot be found. Sending a Not Found Message instead", h.to_substr());
-                SEND_MESSAGE(peer, NOT_FOUND, NotFound(h, n));
+                peer->SendMessage(std::make_unique<NotFound>(h, n));
                 return;
             }
 
-            bundle.SetPayload(std::move(payload));
+            bundle->SetPayload(std::move(payload));
             spdlog::debug("Sending bundle of LVS with nonce {} with MS hash {} to peer {}", n, h.to_substr(),
                           peer->address.ToString());
             peer->SetLastSentBundleHash(h);
-            SEND_MESSAGE(peer, BUNDLE, bundle);
+            peer->SendMessage(std::move(bundle));
         });
         hs_iter++;
         nc_iter++;
@@ -249,18 +247,18 @@ void DAGManager::BatchSync(std::vector<uint256>& requests, const PeerPtr& reques
         std::this_thread::yield();
     }
 
-    GetData message(GetDataTask::LEVEL_SET);
+    auto message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
 
     auto hIter = finalHashes.begin();
     auto tIter = finalTasks.begin();
     while (hIter != finalHashes.end() && tIter != finalTasks.end()) {
         requestFrom->AddPendingGetDataTask(*tIter);
-        message.AddItem(*hIter, tIter->id);
+        message->AddItem(*hIter, tIter->id);
         downloading.insert(*hIter);
         ++hIter;
         ++tIter;
     }
-    SEND_MESSAGE(requestFrom, GET_DATA, message);
+    requestFrom->SendMessage(std::move(message));
 }
 
 std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr& peer) {
