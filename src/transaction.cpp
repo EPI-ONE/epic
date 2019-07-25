@@ -5,22 +5,6 @@ using Listing = Tasm::Listing;
 /*
  * TxInput class START
  */
-
-TxInput::TxInput(const TxOutPoint& outpointToPrev, const Tasm::Listing& listingData) {
-    outpoint       = outpointToPrev;
-    listingContent = listingData;
-}
-
-TxInput::TxInput(const uint256& fromBlockHash, uint32_t indexNum, const Tasm::Listing& listingData) {
-    outpoint       = TxOutPoint(fromBlockHash, indexNum);
-    listingContent = listingData;
-}
-
-TxInput::TxInput(const Tasm::Listing& listingData) {
-    outpoint       = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
-    listingContent = listingData;
-}
-
 bool TxInput::IsRegistration() const {
     return outpoint.index == UNCONNECTED;
 }
@@ -87,7 +71,7 @@ Transaction::Transaction(Transaction&& tx) noexcept
 }
 
 Transaction::Transaction(const CKeyID& addr) {
-    AddInput(TxInput{Listing{}}).AddOutput(Coin{}, addr);
+    AddInput(TxInput{}).AddOutput(Coin{}, addr);
     FinalizeHash();
 }
 

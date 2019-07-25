@@ -164,6 +164,22 @@ bool CKey::Check(const unsigned char* vch) {
     return secp256k1_ec_seckey_verify(secp256k1_context_sign, vch);
 }
 
+// TODO: make it very strong
+void GetRandBytes(CPrivKey& buf) {
+    unsigned long long x;
+    uint_fast8_t j;
+
+    for (std::size_t i = 0; i < buf.size(); i++) {
+        j = i % 8;
+        if (j == 0) {
+            while (!_rdrand64_step(&x))
+                ;
+        }
+
+        buf[i] = ((unsigned char*) &x)[j];
+    }
+}
+
 void CKey::MakeNewKey(bool fCompressedIn) {
     do {
         GetRandBytes(keydata);
@@ -309,21 +325,6 @@ void ECC_Stop() {
 
     if (ctx) {
         secp256k1_context_destroy(ctx);
-    }
-}
-
-void GetRandBytes(CPrivKey& buf) {
-    unsigned long long x;
-    uint_fast8_t j;
-
-    for (std::size_t i = 0; i < buf.size(); i++) {
-        j = i % 8;
-        if (j == 0) {
-            while (!_rdrand64_step(&x))
-                ;
-        }
-
-        buf[i] = ((unsigned char*) &x)[j];
     }
 }
 

@@ -152,8 +152,6 @@ void ECC_Stop();
 /** Check that required EC support is available at runtime. */
 bool ECC_InitSanityCheck();
 
-void GetRandBytes(CPrivKey& buf);
-
 CKey DecodeSecret(const std::string& str);
 std::string EncodeSecret(const CKey& key);
 

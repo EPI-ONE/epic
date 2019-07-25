@@ -7,6 +7,8 @@
 #include "key.h"
 #include "threadpool.h"
 
+#include <utility>
+
 using UTXOKey     = uint256;
 using TxHash      = uint256;
 using OutputIndex = uint32_t;
@@ -59,9 +61,11 @@ private:
 
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
 
-    ConcurrentHashMap<CKeyID, CKey> keyBook;
+    ConcurrentHashMap<CKeyID, std::pair<CKey, CPubKey>> keyBook;
 
     ThreadPool threadPool;
+
+    std::pair<uint256, Coin> minerInfo_;
 
     std::atomic<size_t> totalBalance;
 
@@ -72,6 +76,8 @@ private:
     void UpdateBalance();
 
     void TraceTx();
+
+    TxInput CreateSignedVin(CKeyID targetAddr, TxOutPoint outpoint, std::string& msg);
 };
 
 extern std::shared_ptr<Wallet> WALLET;

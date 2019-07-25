@@ -51,12 +51,19 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
     if (!record->cblock->HasTransaction()) {
         return;
     }
+
     auto it = pendingTx.find(record->cblock->GetTransaction()->GetHash());
     if (it == pendingTx.end()) {
         return;
     }
+
     if (record->validity != record->VALID) {
         spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}", std::to_string(record->cblock->GetHash()));
+    }
+
+    // update miner info
+    if (record->cblock->source == Block::Source::MINER) {
+        minerInfo_ = {record->cblock->GetHash(), record->cumulativeReward};
     }
     pendingTx.erase(it);
     // TODO trace tx history
@@ -68,7 +75,7 @@ CKeyID Wallet::CreateNewKey(bool compressed) {
     CPubKey pubkey = privkey.GetPubKey();
     auto addr      = pubkey.GetID();
 
-    keyBook.emplace(addr, std::move(privkey), std::move(pubkey));
+    keyBook.emplace(addr, std::pair{std::move(privkey), std::move(pubkey)});
     return addr;
 }
 
@@ -84,11 +91,9 @@ TxInput Wallet::CreateSignedVin(CKeyID targetAddr, TxOutPoint outpoint, std::str
 }
 
 ConstTxPtr Wallet::CreateRedemption(CKeyID targetAddr, CKeyID nextAddr, std::string& msg) {
-    // TODO: fetch data of a least value that can be redeemed
-    Coin redeemValue = 0;
     Transaction redeem{};
-    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerRedeemHash_, UNCONNECTED}, msg))
-        .AddOutput(redeemValue, nextAddr);
+    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo_.first, UNCONNECTED}, msg))
+        .AddOutput(minerInfo_.second, nextAddr);
 
     return std::make_shared<const Transaction>(std::move(redeem));
 }
@@ -165,5 +170,4 @@ CKeyID Wallet::GetRandomAddress() {
 
 void Wallet::ImportKey(CKey& key, CPubKey& pubKey) {
     keyBook.insert_or_assign(pubKey.GetID(), {key, pubKey});
->>>>>>> c74ebf1... create tx by wallet
 }
