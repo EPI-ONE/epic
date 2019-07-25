@@ -3,15 +3,15 @@
 
 #include "serialize.h"
 
-class Pong {
+class Pong : public NetMessage {
 public:
     uint64_t nonce = 0;
 
-    Pong() = default;
+    explicit Pong() : NetMessage(PONG) {}
 
-    explicit Pong(uint64_t nonce) : nonce(nonce) {}
+    explicit Pong(uint64_t nonce) : NetMessage(PONG), nonce(nonce) {}
 
-    explicit Pong(VStream& stream) {
+    explicit Pong(VStream& stream) : NetMessage(PONG) {
         Deserialize(stream);
     }
 
@@ -20,6 +20,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
     }
+    ADD_NET_SERIALIZE_METHODS
 };
 
 #endif // EPIC_PONG_H

@@ -6,19 +6,37 @@
 #include "caterpillar.h"
 #include "consensus.h"
 #include "dag_manager.h"
+#include "peer_manager.h"
 #include "test_env.h"
-#include "test_network.h"
 
 class TestSync : public testing::Test {
 public:
+    ConnectionManager server;
+    ConnectionManager client;
+    AddressManager* addressManager;
+
+    PeerPtr peer_server;
+    shared_connection_t client_connection;
+
+    void ServerCallback(shared_connection_t connection) {
+        std::optional<NetAddress> address = NetAddress::GetByIP(connection->GetRemote());
+        peer_server                       = std::make_shared<Peer>(*address, connection, false, addressManager);
+        peer_server->SetWeakPeer(peer_server);
+    }
+
+    void ClientCallback(shared_connection_t connection) {
+        client_connection = connection;
+    }
+
     static void SetUpTestCase() {
         CONFIG = std::make_unique<Config>();
         CONFIG->SetDBPath("testSync/");
         spdlog::set_level(spdlog::level::debug);
 
         EpicTestEnvironment::SetUpDAG(CONFIG->GetDBPath());
+
         CAT->EnableOBC();
-        PEERMAN = std::make_unique<TestPM>();
+        PEERMAN = std::make_unique<PeerManager>();
     }
 
     static void TearDownTestCase() {
@@ -26,94 +44,94 @@ public:
         CONFIG.reset();
     }
 
+    void SetUp() {
+        addressManager = new AddressManager();
+        server.Start();
+        client.Start();
+        server.RegisterNewConnectionCallback(std::bind(&TestSync::ServerCallback, this, std::placeholders::_1));
+        client.RegisterNewConnectionCallback(std::bind(&TestSync::ClientCallback, this, std::placeholders::_1));
+    }
+
+    void TearDown() {
+        peer_server->Disconnect();
+        server.Stop();
+        client.Stop();
+        delete addressManager;
+    }
+
     TestFactory fac;
 };
 
-TEST_F(TestSync, test_basic_network) {
-    TestPM testPm;
-    testPm.AddNewTestPeer(1);
-    auto p = testPm.GetPeer((const void*) 1);
-    ASSERT_TRUE(p);
-
-    Ping ping(1);
-    p->SendMessage(NetMessage((const void*) 1, PING, VStream(ping)));
-
-    auto testPeer = (TestPeer*) p.get();
-    ASSERT_TRUE(!testPeer->sentMsgBox.Empty());
-
-    NetMessage msg;
-    testPeer->sentMsgBox.Take(msg);
-
-    ASSERT_TRUE(testPeer->sentMsgBox.Empty());
-}
-
 TEST_F(TestSync, test_basic_sync_workflow) {
-    auto testPeerManager = (TestPM*) PEERMAN.get();
-
-    const void* peer_handle = (const void*) 1;
-
-    testPeerManager->AddNewTestPeer(1);
-    auto p = testPeerManager->GetPeer(peer_handle);
-    ASSERT_TRUE(p);
-
     // create a new chain
     constexpr long testChainHeight = 5;
     TestChain chain;
     std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, testChainHeight);
 
-    auto testPeer            = (TestPeer*) p.get();
-    testPeer->versionMessage = new VersionMessage(TestPeer::GetFakeAddr(), testChainHeight);
+    ASSERT_TRUE(server.Bind(0x7f000001));
+    ASSERT_TRUE(server.Listen(12121));
+    ASSERT_TRUE(client.Connect(0x7f000001, 12121));
+    usleep(50000);
+
+    client_connection->SendMessage(std::make_unique<VersionMessage>(peer_server->address, testChainHeight, 0, 0));
+    usleep(50000);
+    connection_message_t message;
+
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::VERSION_MSG);
+    peer_server->ProcessMessage(message.second);
+
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    client_connection->SendMessage(std::make_unique<NetMessage>(NetMessage::VERSION_ACK));
+
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::VERSION_ACK);
+    peer_server->ProcessMessage(message.second);
 
     /**Start the synchronization as the block requester*/
-
-    // receive version ack
-    NetMessage version_ack(peer_handle, VERSION_ACK, VStream(VersionACK()));
-    testPeer->ProcessMessage(version_ack);
-
-    // send GetInv
-    NetMessage message_getInv;
-    testPeer->sentMsgBox.Take(message_getInv);
-
-    NetMessage message_getInv_Cmp = message_getInv;
-    GetInv getInv(message_getInv.payload);
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_INV);
+    GetInv* getInv = dynamic_cast<GetInv*>(message.second.get());
 
     // check GetInv message
-    ASSERT_EQ(getInv.locator.size(), 1);
-    ASSERT_EQ(getInv.locator[0], GENESIS_RECORD.cblock->GetHash());
+    ASSERT_EQ(getInv->locator.size(), 1);
+    ASSERT_EQ(getInv->locator[0], GENESIS_RECORD.cblock->GetHash());
+
+    auto getInv_Cmp = std::unique_ptr<GetInv>(dynamic_cast<GetInv*>(message.second.release()));
 
     // check getInv task size before receiving Inv
-    ASSERT_EQ(testPeer->GetInvTaskSize(), 1);
+    ASSERT_EQ(peer_server->GetInvTaskSize(), 1);
 
     // receive Inv
-    Inv inv(getInv.nonce);
+    std::vector<uint256> hashes;
     for (auto& levelSet : chain) {
-        inv.AddItem(levelSet[levelSet.size() - 1]->GetHash());
+        hashes.push_back(levelSet[levelSet.size() - 1]->GetHash());
     }
-    NetMessage inventory(peer_handle, INV, VStream(inv));
-    testPeer->ProcessMessage(inventory);
+    client_connection->SendMessage(std::make_unique<Inv>(hashes, getInv->nonce));
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::INV);
+    peer_server->ProcessMessage(message.second);
 
     // check GetInv task size after receiving Inv
-    ASSERT_EQ(testPeer->GetInvTaskSize(), 0);
+    ASSERT_EQ(peer_server->GetInvTaskSize(), 0);
 
     // send GetData
-    NetMessage message_getData;
-    testPeer->sentMsgBox.Take(message_getData);
-
-    NetMessage message_getData_Cmp = message_getData;
-    GetData getData(message_getData.payload);
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_DATA);
+    GetData* getData = dynamic_cast<GetData*>(message.second.get());
 
     // check GetData message
-    ASSERT_EQ(getData.hashes.size(), testChainHeight - 1);
+    ASSERT_EQ(getData->hashes.size(), testChainHeight - 1);
     for (int i = 0; i < testChainHeight - 1; i++) {
-        ASSERT_EQ(getData.hashes[i], chain[i][chain[i].size() - 1]->GetHash());
+        ASSERT_EQ(getData->hashes[i], chain[i][chain[i].size() - 1]->GetHash());
     }
 
-    // checkout GetData task size before receiving Bundle
-    ASSERT_EQ(testPeer->GetDataTaskSize(), testChainHeight - 1);
+    auto getData_Cmp = std::unique_ptr<GetData>(dynamic_cast<GetData*>(message.second.release()));
 
     // receive bundle in a random order
-    std::vector<int> bundle_order(getData.hashes.size());
-    for (int i = 0; i < getData.hashes.size(); i++) {
+    std::vector<int> bundle_order(getData->hashes.size());
+    for (int i = 0; i < getData->hashes.size(); i++) {
         bundle_order[i] = i;
     }
     std::random_device rd;
@@ -121,13 +139,18 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     std::shuffle(bundle_order.begin(), bundle_order.end(), g);
 
     for (auto& i : bundle_order) {
-        Bundle bundle(getData.bundleNonce[i]);
+        auto bundle = std::make_unique<Bundle>(getData->bundleNonce[i]);
         for (auto& block : chain[i]) {
-            bundle.AddBlock(block);
+            bundle->AddBlock(block);
         }
-        std::swap(bundle.blocks.front(), bundle.blocks.back());
-        NetMessage bundle_message(peer_handle, BUNDLE, VStream(bundle));
-        testPeer->ProcessMessage(bundle_message);
+        std::swap(bundle->blocks.front(), bundle->blocks.back());
+        client_connection->SendMessage(std::move(bundle));
+    }
+
+    for (int i = 0; i < bundle_order.size(); i++) {
+        ASSERT_TRUE(server.ReceiveMessage(message));
+        ASSERT_EQ(message.second->GetType(), NetMessage::BUNDLE);
+        peer_server->ProcessMessage(message.second);
     }
 
     usleep(50000);
@@ -135,72 +158,87 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     DAG->Wait();
 
     // the last GetInv to ensure that local node has downloaded enough blocks
-    ASSERT_EQ(testPeer->GetInvTaskSize(), 1);
-    ASSERT_EQ(testPeer->GetDataTaskSize(), 0);
+    ASSERT_EQ(peer_server->GetInvTaskSize(), 1);
+    ASSERT_EQ(peer_server->GetDataTaskSize(), 0);
 
     // after downloading all task block, local node will send a GetInv to trigger the next synchronization
-    NetMessage message_ms_ack;
-    testPeer->sentMsgBox.Take(message_ms_ack);
-    GetInv ms_ack(message_ms_ack.payload);
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_INV);
+    GetInv* ms_ack = dynamic_cast<GetInv*>(message.second.get());
 
     // tell node that it has downloaded enough blocks
-    Inv sync_complete_ack(ms_ack.nonce);
-    NetMessage message_sync_complete_ack(peer_handle, INV, VStream(sync_complete_ack));
-    testPeer->ProcessMessage(message_sync_complete_ack);
+    client_connection->SendMessage(std::make_unique<Inv>(ms_ack->nonce));
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::INV);
+    peer_server->ProcessMessage(message.second);
+
 
     usleep(50000);
     DAG->Wait();
 
-    ASSERT_EQ(testPeer->GetInvTaskSize(), 0);
-    ASSERT_EQ(testPeer->GetDataTaskSize(), 1);
+    ASSERT_EQ(peer_server->GetInvTaskSize(), 0);
+    ASSERT_EQ(peer_server->GetDataTaskSize(), 1);
 
-    NetMessage message_pendingSet;
-    testPeer->sentMsgBox.Take(message_pendingSet);
-    GetData pendingSet_request(message_pendingSet.payload);
-    ASSERT_EQ(pendingSet_request.type, GetDataTask::PENDING_SET);
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_DATA);
+    GetData* pendingSet_request = dynamic_cast<GetData*>(message.second.get());
+    ASSERT_EQ(pendingSet_request->type, GetDataTask::PENDING_SET);
 
-    Bundle pending_set(pendingSet_request.bundleNonce[0]);
-    NetMessage message_pendingSet_bundle(peer_handle, BUNDLE, VStream(pending_set));
-    testPeer->ProcessMessage(message_pendingSet_bundle);
+    client_connection->SendMessage(std::make_unique<Bundle>(pendingSet_request->bundleNonce[0]));
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::BUNDLE);
+    peer_server->ProcessMessage(message.second);
 
     usleep(50000);
     DAG->Wait();
 
-    ASSERT_EQ(testPeer->GetInvTaskSize(), 0);
-    ASSERT_EQ(testPeer->GetDataTaskSize(), 0);
+    ASSERT_EQ(peer_server->GetInvTaskSize(), 0);
+    ASSERT_EQ(peer_server->GetDataTaskSize(), 0);
     /**Finish the synchronization as the block requester*/
 
-
     /**Start  the synchronization as the block provider*/
-
     // receive GetInv
-    testPeer->ProcessMessage(message_getInv_Cmp);
+    uint32_t nonce = getInv_Cmp->nonce;
+    client_connection->SendMessage(std::move(getInv_Cmp));
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_INV);
+    peer_server->ProcessMessage(message.second);
 
     // send Inv
-    NetMessage message_inv;
-    testPeer->sentMsgBox.Take(message_inv);
-    Inv inv1(message_inv.payload);
+    ASSERT_TRUE(client.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::INV);
+    Inv* inv1 = dynamic_cast<Inv*>(message.second.get());
 
     // check Inv nonce
-    ASSERT_EQ(inv1.nonce, getInv.nonce);
+    ASSERT_EQ(inv1->nonce, nonce);
     // check Inv hash size
-    ASSERT_EQ(inv1.hashes.size(), testChainHeight - 1);
+    ASSERT_EQ(inv1->hashes.size(), testChainHeight - 1);
 
     // receive GetData
-    testPeer->ProcessMessage(message_getData_Cmp);
+    client_connection->SendMessage(std::move(getData_Cmp));
+    ASSERT_TRUE(server.ReceiveMessage(message));
+    ASSERT_EQ(message.second->GetType(), NetMessage::GET_DATA);
+    peer_server->ProcessMessage(message.second);
 
     usleep(50000);
     DAG->Wait();
 
     // send Bundle
-    ASSERT_EQ(testPeer->sentMsgBox.Size(), testChainHeight - 1);
-    for (int i = 0; i < testChainHeight - 1; i++) {
-        NetMessage msg;
-        testPeer->sentMsgBox.Take(msg);
-        Bundle bundle(msg.payload);
-        ASSERT_EQ(bundle.blocks.size(), chain[i].size());
-        ASSERT_EQ(bundle.blocks.front()->GetHash(), chain[i][chain[i].size() - 1]->GetHash());
+    std::set<uint256> ms_hash;
+    for (auto& levelSet : chain) {
+        ms_hash.insert(levelSet[0]->GetHash());
     }
+    for (int i = 0; i < testChainHeight - 1; i++) {
+        ASSERT_TRUE(client.ReceiveMessage(message));
+        ASSERT_EQ(message.second->GetType(), NetMessage::BUNDLE);
+        Bundle* bundle = dynamic_cast<Bundle*>(message.second.get());
+        int j          = bundle->nonce - 1;
+        ASSERT_EQ(bundle->blocks.size(), chain[j].size());
+        ASSERT_EQ(bundle->blocks[bundle->blocks.size() - 1]->GetHash(), chain[j][0]->GetHash());
+        ms_hash.erase(bundle->blocks[bundle->blocks.size() - 1]->GetHash());
+    }
+
+    ASSERT_TRUE(ms_hash.empty());
 
     /**Finish the synchronization as the block provider*/
 }

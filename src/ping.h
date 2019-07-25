@@ -4,16 +4,16 @@
 #include "net_message.h"
 #include "serialize.h"
 
-class Ping {
+class Ping : public NetMessage {
 public:
     // Serialize
     uint64_t nonce = 0;
 
-    Ping() = default;
+    explicit Ping() : NetMessage(PING) {}
 
-    explicit Ping(uint64_t nonce) : nonce(nonce) {}
+    explicit Ping(uint64_t nonce) : NetMessage(PING), nonce(nonce) {}
 
-    explicit Ping(VStream& stream) {
+    explicit Ping(VStream& stream) : NetMessage(PING) {
         Deserialize(stream);
     }
 
@@ -22,6 +22,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
     }
+    ADD_NET_SERIALIZE_METHODS
 };
 
 #endif // EPIC_PING_H

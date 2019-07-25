@@ -4,9 +4,10 @@
 #include <vector>
 
 #include "block.h"
+#include "net_message.h"
 #include "task.h"
 
-class GetInv {
+class GetInv : public NetMessage {
 public:
     // local milestone hashes
     std::vector<uint256> locator;
@@ -14,9 +15,10 @@ public:
     // random number to track sync flow
     uint32_t nonce;
 
-    GetInv(std::vector<uint256> locator_, uint32_t nonce_) : locator(std::move(locator_)), nonce(nonce_) {}
+    GetInv(std::vector<uint256> locator_, uint32_t nonce_)
+        : NetMessage(GET_INV), locator(std::move(locator_)), nonce(nonce_) {}
 
-    explicit GetInv(VStream& stream) {
+    GetInv(VStream& stream) : NetMessage(GET_INV) {
         Deserialize(stream);
     }
 
@@ -25,6 +27,7 @@ public:
     }
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
@@ -32,7 +35,7 @@ public:
     }
 };
 
-class Inv {
+class Inv : public NetMessage {
 public:
     // max size of inv message
     const static size_t kMaxInventorySize = 1000;
@@ -43,11 +46,11 @@ public:
     // random number which corresponds to GetInv message
     uint32_t nonce = 0;
 
-    Inv(std::vector<uint256> hashes_, uint32_t nonce_) : hashes(std::move(hashes_)), nonce(nonce_) {}
+    Inv(std::vector<uint256> hashes_, uint32_t nonce_) : NetMessage(INV), hashes(std::move(hashes_)), nonce(nonce_) {}
 
-    explicit Inv(uint32_t nonce_) : nonce(nonce_) {}
+    explicit Inv(uint32_t nonce_) : NetMessage(INV), nonce(nonce_) {}
 
-    explicit Inv(VStream& stream) {
+    explicit Inv(VStream& stream) : NetMessage(INV) {
         Deserialize(stream);
     }
 
@@ -60,6 +63,7 @@ public:
     }
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nonce);
@@ -67,7 +71,7 @@ public:
     }
 };
 
-class GetData {
+class GetData : public NetMessage {
 public:
     // data type
     uint8_t type;
@@ -78,9 +82,9 @@ public:
     // random number to track bundle
     std::vector<uint32_t> bundleNonce;
 
-    explicit GetData(GetDataTask::GetDataType type_) : type(type_) {}
+    explicit GetData(GetDataTask::GetDataType type_) : NetMessage(GET_DATA), type(type_) {}
 
-    explicit GetData(VStream& stream) {
+    explicit GetData(VStream& stream) : NetMessage(GET_DATA) {
         Deserialize(stream);
     }
 
@@ -94,6 +98,7 @@ public:
     }
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(type);
@@ -102,18 +107,20 @@ public:
     }
 };
 
-class Bundle {
+class Bundle : public NetMessage {
 public:
     Bundle(Bundle&& other) noexcept
-        : blocks(std::move(other.blocks)), nonce(other.nonce), payload_(std::move(other.payload_)) {}
+        : NetMessage(BUNDLE), blocks(std::move(other.blocks)), nonce(other.nonce), payload_(std::move(other.payload_)) {
+    }
 
-    explicit Bundle(VStream& stream) {
+    explicit Bundle(VStream& stream) : NetMessage(BUNDLE) {
         Deserialize(stream);
     }
 
-    explicit Bundle(uint32_t nonce_) : nonce(nonce_) {}
+    explicit Bundle(uint32_t nonce_) : NetMessage(BUNDLE), nonce(nonce_) {}
 
-    Bundle(std::vector<ConstBlockPtr> blocks_, uint32_t nonce_) : blocks(std::move(blocks_)), nonce(nonce_) {}
+    Bundle(std::vector<ConstBlockPtr> blocks_, uint32_t nonce_)
+        : NetMessage(BUNDLE), blocks(std::move(blocks_)), nonce(nonce_) {}
 
     void AddBlock(const ConstBlockPtr& blockPtr) {
         blocks.push_back(blockPtr);
@@ -152,22 +159,25 @@ public:
         }
     }
 
+    ADD_NET_SERIALIZE_METHODS
+
 private:
     VStream payload_;
 };
 
-class NotFound {
+class NotFound : public NetMessage {
 public:
-    explicit NotFound(VStream& stream) {
+    explicit NotFound(VStream& stream) : NetMessage(NOT_FOUND) {
         Deserialize(stream);
     }
 
-    NotFound(const uint256& hash_, uint32_t nonce_) : hash(hash_), nonce(nonce_) {}
+    NotFound(const uint256& hash_, uint32_t nonce_) : NetMessage(NOT_FOUND), hash(hash_), nonce(nonce_) {}
 
     uint256 hash;
     uint32_t nonce;
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(hash);

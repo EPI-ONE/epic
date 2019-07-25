@@ -8,30 +8,21 @@
 #include <event2/event.h>
 #include <event2/listener.h>
 #include <functional>
-#include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <thread>
-#include <tuple>
-#include <unordered_map>
 
 #include "blocking_queue.h"
+#include "connection.h"
 #include "net_message.h"
-#include "stream.h"
+#include "threadpool.h"
 
-typedef std::function<void(void* connection_handle, std::string& address, bool inbound)> new_connection_callback_t;
-typedef std::function<void(void* connection_handle)> delete_connection_callback_t;
+typedef std::pair<shared_connection_t, unique_message_t> connection_message_t;
+typedef std::function<void(shared_connection_t&)> connection_callback_t;
 
-typedef struct bufferevent bufferevent_t;
 typedef struct event_base event_base_t;
 typedef struct evconnlistener evconnlistener_t;
 typedef struct evbuffer evbuffer_t;
 
-/*
- * bool if true means inbound, if false means outbound
- * size_t is the length of next receive message
- */
-typedef std::tuple<bool, size_t> bev_info_t;
 
 class ConnectionManager {
 public:
@@ -59,11 +50,6 @@ public:
      */
     bool Connect(uint32_t ip, uint16_t port);
 
-    /*
-     * disconnect
-     * @param connection_handle
-     */
-    void Disconnect(const void* connection_handle);
     void Start();
     void Stop();
 
@@ -71,26 +57,24 @@ public:
      * set the callback function when a new socket accepted or connected
      * @param callback_func
      */
-    void RegisterNewConnectionCallback(new_connection_callback_t&& callback_func);
+    void RegisterNewConnectionCallback(connection_callback_t&& callback_func) {
+        new_connection_callback_ = std::move(callback_func);
+    }
 
     /*
      * set the callback function when a socket disconnected by remote
      * @param callback_func
      */
-    void RegisterDeleteConnectionCallBack(delete_connection_callback_t&& callback_func);
-
-    /*
-     * when the send message queue is full ,the function will block the thread
-     * @param message
-     */
-    void SendMessage(NetMessage& message);
+    void RegisterDeleteConnectionCallBack(connection_callback_t&& callback_func) {
+        delete_connection_callback_ = std::move(callback_func);
+    }
 
     /*
      * when the receive message queue is empty, the function will block the thread
      * @param message
      * @return true if successful, false when an empty queue quit wait
      */
-    bool ReceiveMessage(NetMessage& message);
+    bool ReceiveMessage(connection_message_t& message);
 
     /*
      * the internal accept or event callback function called by bufferevent
@@ -98,34 +82,35 @@ public:
      * @param address string format ip:port
      * @param inbound true if in connection, false if out connection
      */
-    void NewConnectionCallback(void* connection_handle, std::string& address, bool inbound);
+    void NewConnectionCallback(shared_connection_t& handle) {
+        if (new_connection_callback_ != nullptr) {
+            new_connection_callback_(handle);
+        }
+    }
 
     /*
      * the internal event callback function called by bufferevent
      * @param connection_handle
      */
-    void DeleteConnectionCallback(void* connection_handle);
+    void DeleteConnectionCallback(shared_connection_t& handle) {
+        if (delete_connection_callback_ != nullptr) {
+            delete_connection_callback_(handle);
+        }
+    }
 
     /*
      * the internal read callback function called by bufferevent
      * @param bev
      */
-    void ReadMessages(bufferevent_t* bev);
+    void ReadMessages(bufferevent_t* bev, Connection* handle);
 
-    /*
-     * create a bufferevent and insert into the bufferevent map
-     * @param base event base
-     * @param fd socket fd
-     * @param options
-     * @return bufferevent pointer
-     */
-    bufferevent_t* CreateBufferevent(event_base_t* base, evutil_socket_t fd, int options, bool inbound);
+    void IncreaseNum(bool inbound) {
+        inbound ? inbound_num_++ : outbound_num_++;
+    }
 
-    /*
-     * free the bufferevent memory and erase from the bufferevent map
-     * @param bev
-     */
-    void FreeBufferevent(bufferevent_t* bev);
+    void DecreaseNum(bool inbound) {
+        inbound ? inbound_num_-- : outbound_num_--;
+    }
 
     uint32_t GetInboundNum() const;
 
@@ -133,24 +118,17 @@ public:
 
     uint32_t GetConnectionNum() const;
 
-private:
-    event_base_t* base_                                      = nullptr;
-    evconnlistener_t* listener_                              = nullptr;
-    new_connection_callback_t new_connection_callback_       = nullptr;
-    delete_connection_callback_t delete_connection_callback_ = nullptr;
+    void QuitQueue();
 
-    std::atomic_bool interrupt_send_message_ = false;
+private:
+    event_base_t* base_                               = nullptr;
+    evconnlistener_t* listener_                       = nullptr;
+    connection_callback_t new_connection_callback_    = nullptr;
+    connection_callback_t delete_connection_callback_ = nullptr;
 
     std::thread thread_event_base_;
-    std::thread thread_send_message_;
 
-    std::shared_mutex bev_lock_;
-
-    /* the key is bufferevent, the value store the custom information of the bufferevent */
-    std::unordered_map<bufferevent_t*, bev_info_t> bufferevent_map_;
-
-    BlockingQueue<NetMessage> receive_message_queue_;
-    BlockingQueue<NetMessage> send_message_queue_;
+    BlockingQueue<connection_message_t> receive_message_queue_;
 
     std::atomic_uint32_t inbound_num_  = 0;
     std::atomic_uint32_t outbound_num_ = 0;
@@ -165,15 +143,13 @@ private:
     std::atomic_size_t checksum_error_bytes_    = 0;
     std::atomic_size_t checksum_error_packages_ = 0;
 
-    void FreeAllBufferevent_();
-    bool isExist_(bufferevent_t* bev);
-    void ThreadSendMessage_();
+    ThreadPool serialize_pool_;
+    uint32_t serialize_pool_size_ = 4;
 
-    /*
-     * write message bytes to bufferevent output buffer
-     * @param message
-     */
-    void WriteOneMessage_(NetMessage& message);
+    ThreadPool deserialize_pool_;
+    uint32_t deserialize_pool_size_ = 2;
+
+    void WriteOneMessage_(shared_connection_t connection, unique_message_t& message);
 
     /*
      * read one message from the input buffer, if success then put the message into receive queue
@@ -181,7 +157,7 @@ private:
      * @param next_message_length
      * @return true if successful
      */
-    bool ReadOneMessage_(bufferevent_t* bev, size_t& next_message_length);
+    bool ReadOneMessage_(bufferevent_t* bev, Connection* handle);
 
     /*
      * seek next message length in a buffer
@@ -203,6 +179,8 @@ private:
      * @return the length of the message payload
      */
     size_t SeekMessagePayloadLength_(evbuffer_t* buf);
+
+    friend class Connection;
 };
 
 #endif // EPIC_CONNECTION_MANAGER_H

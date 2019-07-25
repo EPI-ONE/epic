@@ -1,55 +1,54 @@
 #ifndef EPIC_NET_MESSAGE_H
 #define EPIC_NET_MESSAGE_H
 
-#include <sstream>
-#include <vector>
-
-#include "crc32.h"
-#include "message_header.h"
+#include "event2/util.h"
 #include "stream.h"
+
+#define ADD_NET_SERIALIZE_METHODS             \
+    virtual void NetSerialize(VStream& s) {   \
+        Serialize(s);                         \
+    }                                         \
+    virtual void NetDeserialize(VStream& s) { \
+        Deserialize(s);                       \
+    }
+
+class NetMessage;
+
+typedef std::unique_ptr<NetMessage> unique_message_t;
 
 class NetMessage {
 public:
-    message_header_t header;
-    VStream payload;
+    enum Type {
+        PING = 0,
+        PONG,
+        VERSION_MSG,
+        VERSION_ACK,
+        GET_ADDR,
+        ADDR,
+        BLOCK,
+        BUNDLE,
+        GET_INV,
+        INV,
+        GET_DATA,
+        NOT_FOUND,
+        NONE,
+    };
 
-    NetMessage() : header({0, 0, 0, 0}), connection_handle_(nullptr) {}
+    explicit NetMessage(NetMessage::Type type = NONE) : type_(type) {}
 
-    NetMessage(void* handle, message_header_t& message_header, VStream& data)
-        : header(message_header), payload(std::move(data)), connection_handle_(handle) {}
+    virtual ~NetMessage() {}
 
-    NetMessage(const void* handle, uint32_t message_type, VStream&& data)
-        : payload(std::move(data)), connection_handle_(handle) {
-        header.magic_number   = GetMagicNumber();
-        header.type           = message_type;
-        header.payload_length = payload.size();
-        header.checksum       = GetCrc32((unsigned char*) payload.data(), payload.size());
+    static unique_message_t MessageFactory(uint32_t type, VStream& s);
+
+    NetMessage::Type GetType() const {
+        return type_;
     }
 
-    NetMessage(const void* handle, uint32_t message_type, VStream& data)
-        : payload(std::move(data)), connection_handle_(handle) {
-        header.magic_number   = GetMagicNumber();
-        header.type           = message_type;
-        header.payload_length = payload.size();
-        header.checksum       = GetCrc32((unsigned char*) payload.data(), payload.size());
-    }
+    virtual void NetSerialize(VStream& s) {}
+    virtual void NetDeserialize(VStream& s) {}
 
-    NetMessage(void* handle, uint32_t message_type) : connection_handle_(handle) {
-        header.magic_number   = GetMagicNumber();
-        header.type           = message_type;
-        header.payload_length = 0;
-        header.checksum       = 0;
-    }
-
-    template <typename M>
-    NetMessage(const void* handle, uint32_t message_type, const M& message)
-        : NetMessage(handle, message_type, VStream(message)) {}
-
-    const void* GetConnectionHandle();
-    bool VerifyChecksum();
-
-private:
-    const void* connection_handle_;
+protected:
+    NetMessage::Type type_;
 };
 
 #endif // EPIC_NET_MESSAGE_H
