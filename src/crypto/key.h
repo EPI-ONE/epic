@@ -8,8 +8,8 @@
 #define BITCOIN_KEY_H
 
 #include "pubkey.h"
+#include "secure.h"
 #include "serialize.h"
-#include "support/secure.h"
 #include "uint256.h"
 
 #include <optional>

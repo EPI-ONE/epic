@@ -128,7 +128,7 @@ TEST_F(TestConsensus, AddForks) {
     ///////////////////////////
     // Test starts here
     //
-    // spdlog::set_level(spdlog::level::debug);
+    // SetLogLevel(SPDLOG_LEVEL_DEBUG);
     for (const auto& chain : branches) {
         for (const auto& lvs : chain) {
             for (const auto& blkptr : lvs) {

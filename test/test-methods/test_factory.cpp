@@ -35,7 +35,7 @@ std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
 
 std::pair<uint256, std::vector<unsigned char>> TestFactory::CreateSig(const CKey& privateKey) {
     auto msg     = GetRandomString(10);
-    auto hashMsg = Hash<1>(msg.cbegin(), msg.cend());
+    auto hashMsg = HashSHA2<1>(&msg, msg.size());
     std::vector<unsigned char> sig;
     privateKey.Sign(hashMsg, sig);
     return std::make_pair(hashMsg, sig);
@@ -57,7 +57,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(),
-                    timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
+                    timeGenerator.NextTime(), GetParams().maxTarget.GetCompact(), 0);
 
     if (numTxInput || numTxOutput) {
         Transaction tx;

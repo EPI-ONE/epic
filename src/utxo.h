@@ -19,7 +19,7 @@ string to_string(const ChainLedger&);
 /**
  * Computation methods of keys for searching UTXO in maps or in DB: hash ^ index
  */
-uint256 XOR(const uint256& hash, uint32_t index);
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t index);
 
 /**
  * UTXO stands for unspend transaction output

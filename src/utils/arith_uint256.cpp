@@ -143,7 +143,7 @@ std::string base_uint<BITS>::GetHex() const {
 
 template <unsigned int BITS>
 void base_uint<BITS>::SetHex(const char* psz) {
-    *this = UintToArith256(uint256S(psz));
+    *this = UintToArith256(uintS<256>(psz));
 }
 
 template <unsigned int BITS>

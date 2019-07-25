@@ -126,7 +126,7 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
 
             // release all relavent utxos from pending
             for (auto& input : record->cblock->GetTransaction()->GetInputs()) {
-                auto utxoKey    = XOR(input.outpoint.bHash, input.outpoint.index);
+                auto utxoKey    = ComputeUTXOKey(input.outpoint.bHash, input.outpoint.index);
                 auto it_pending = pending.find(utxoKey);
                 if (it_pending != pending.end()) {
                     unspent.insert(*it_pending);
@@ -163,7 +163,7 @@ CKey Wallet::CreateNewKey(bool compressed) {
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {
     // get keys and sign
     const auto& [privkey, pubkey] = keyBook.at(targetAddr);
-    auto hashMsg                  = Hash<1>(msg.cbegin(), msg.cend());
+    auto hashMsg                  = HashSHA2<1>(msg.data(), msg.size());
     std::vector<unsigned char> sig;
     privkey.Sign(hashMsg, sig);
 
@@ -237,7 +237,7 @@ std::pair<Coin, std::vector<Wallet::utxo_info>> Wallet::Select(const Coin& amoun
 
 void Wallet::AddInput(Transaction& tx, const utxo_info& utxo) {
     auto index     = std::get<OUTPUT_INDEX>(utxo.second);
-    auto blockHash = XOR(utxo.first, index);
+    auto blockHash = ComputeUTXOKey(utxo.first, index);
     auto& keyID    = std::get<CKeyID>(utxo.second);
     std::string message("wallet_create_new_transaction");
     tx.AddInput(CreateSignedVin(keyID, TxOutPoint(blockHash, index), message));

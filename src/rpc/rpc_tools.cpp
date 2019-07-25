@@ -1,7 +1,7 @@
 #include <rpc_tools.h>
 
 uint256 RPCHashToHash(const rpc::Hash& h) {
-    uint256 result = uint256S(h.hash());
+    uint256 result = uintS<256>(h.hash());
     return result;
 }
 

@@ -47,4 +47,12 @@ private:
     ECCVerifyHandle handle;
 };
 
+inline void SetLogLevel(int level) {
+    spdlog::set_level((spdlog::level::level_enum) level);
+}
+
+inline void ResetLogLevel() {
+    SetLogLevel(SPDLOG_LEVEL_INFO);
+}
+
 #endif // __TEST_ENV__

@@ -1,50 +1,51 @@
 #ifndef __SRC_CRYPTO_HASH__
 #define __SRC_CRYPTO_HASH__
 
-#include <vector>
-
+#include "blake2b.h"
 #include "sha256.h"
 #include "stream.h"
 #include "uint256.h"
+
+#include <vector>
 
 /* Compute the 256-bit hash of an object.
  * R: number of hashing rounds:
  * 1 = single hash
  * 2 = double hash */
-template <std::size_t R, typename T1>
-inline uint256 Hash(const T1 pbegin, const T1 pend) {
+template <std::size_t R, typename T>
+inline uint256 HashSHA2(const T* pin, size_t inlen) {
     static const unsigned char emptyByte[0] = {};
-    uint256 hash;
+    uint256 result;
     CSHA256 sha;
 
-    sha.Write((pbegin == pend) ? emptyByte : (const unsigned char*) &pbegin[0], (pend - pbegin) * sizeof(pbegin[0]));
-    sha.Finalize((unsigned char*) &hash);
+    sha.Write((pin == pin + inlen) ? emptyByte : (const unsigned char*) pin, inlen);
+    sha.Finalize((unsigned char*) &result);
 
 #pragma clang loop unroll_count(R)
     for (size_t i = 1; i < R; i++) {
         sha.Reset();
-        sha.Write((unsigned char*) &hash, 32);
-        sha.Finalize((unsigned char*) &hash);
+        sha.Write((unsigned char*) &result, 32);
+        sha.Finalize((unsigned char*) &result);
     }
 
-    return hash;
+    return result;
 }
 
 template <std::size_t R>
-uint256 Hash(const VStream& data) {
-    return Hash<R>(data.cbegin(), data.cend());
+uint256 HashSHA2(const VStream& data) {
+    return HashSHA2<R>(data.data(), data.size());
 }
 
 /* Compute the 160-bit hash an object
  * NOTE: R means the same as with uint256 Hash */
-template <std::size_t R, typename T1>
-inline uint160 Hash160(const T1 pbegin, const T1 pend) {
-    return Hash<R>(pbegin, pend).GetUint160();
+template <std::size_t R, typename T>
+inline uint160 Hash160(const T* pin, size_t inlen) {
+    return HashSHA2<R>(pin, inlen).GetUint160();
 }
 
 template <std::size_t R>
 inline uint160 Hash160(const VStream& vch) {
-    return Hash160<R>(vch.cbegin(), vch.cend());
+    return Hash160<R>(vch.data(), vch.size());
 }
 
 namespace Hash {
@@ -52,5 +53,17 @@ const uint256& GetZeroHash();
 const uint256& GetDoubleZeroHash();
 static constexpr uint32_t SIZE = 32;
 } // namespace Hash
+
+template <unsigned int OUTPUT_SIZE, typename T>
+inline base_blob<OUTPUT_SIZE> HashBLAKE2(const T* pin, size_t inlen) {
+    base_blob<OUTPUT_SIZE> result;
+    HashBLAKE2((char*) pin, inlen, result.begin(), OUTPUT_SIZE / 8);
+    return result;
+}
+
+template <unsigned int OUTPUT_SIZE>
+inline base_blob<OUTPUT_SIZE> HashBLAKE2(const VStream& data) {
+    return HashBLAKE2<OUTPUT_SIZE>(data.data(), data.size());
+}
 
 #endif

@@ -5,48 +5,46 @@
 #include "utilstrencodings.h"
 
 class TestMiner : public testing::Test {
+public:
+    TestFactory fac = EpicTestEnvironment::GetFactory();
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG("test_miner/");
-        PEERMAN = std::make_unique<PeerManager>();
+
         CKey key;
         key.MakeNewKey(false);
         auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
+
         MEMPOOL = std::make_unique<MemPool>();
         MEMPOOL->PushRedemptionTx(tx);
     }
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG("test_miner/");
-        PEERMAN.reset();
         MEMPOOL.reset();
     }
 };
 
 TEST_F(TestMiner, Solve) {
-    /*
-     * Create a basic block to solve
-     */
-    Transaction tx;
-    Block block(GetParams().version);
+    Block block = fac.CreateBlock(1, 1);
 
-    std::string hexStr("0123456789ABCDEF");
-    auto vs = VStream(ParseHex(hexStr));
-    tx.AddInput(TxInput(Tasm::Listing(vs)));
-
-    std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
-
-    block.AddTransaction(tx);
-    block.SetDifficultyTarget(GetParams().maxTarget.GetCompact());
-
-    /*
-     * test the solver
-     */
     Miner m(4);
     m.Start();
     m.Solve(block);
     m.Stop();
 
     EXPECT_TRUE(block.Verify());
+}
+
+TEST_F(TestMiner, SolveCuckaroo) {
+    SetLogLevel(SPDLOG_LEVEL_TRACE);
+
+    Block b = fac.CreateBlock();
+
+    Miner m(5, 16);
+    m.Start();
+    m.SolveCuckaroo(b);
+    m.Stop();
+
+    ResetLogLevel();
 }
 
 TEST_F(TestMiner, Run) {
@@ -99,7 +97,8 @@ TEST_F(TestMiner, MineGenesis) {
     Block genesisBlock{100};
     Transaction tx;
 
-    // Construct a script containing the difficulty bits and the following message:
+    // Construct a script containing the difficulty bits and the following
+    // message:
     std::string hexStr("04ffff001d0104454974206973206e6f772074656e2070617374207"
                        "4656e20696e20746865206576656e696e6720616e64207765206172"
                        "65207374696c6c20776f726b696e6721");
@@ -130,8 +129,8 @@ TEST_F(TestMiner, MineGenesis) {
     // m.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
-    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
-    // EXPECT_TRUE(genesisBlock.Verify());
+    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) <<
+    // std::endl; EXPECT_TRUE(genesisBlock.Verify());
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result

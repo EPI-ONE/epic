@@ -208,7 +208,9 @@ uint256 RocksDBStore::GetLastReg(const uint256& key) const {
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
         valueSlice.Reset();
-        return uint256(value);
+        uint256 result;
+        value >> result;
+        return result;
     } catch (const std::exception&) {
         return uint256{};
     }
@@ -268,7 +270,8 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
         valueSlice.Reset();
 
-        uint256 msHash(value);
+        uint256 msHash;
+        value >> msHash;
         return msHash;
     } catch (const std::exception&) {
         return uint256();

@@ -3,8 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <key.h>
-
+#include "key.h"
 #include "base58.h"
 #include "cleanse.h"
 #include "common.h"
@@ -259,7 +258,7 @@ bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
     CPrivKey rnd(8);
     GetRandBytes(rnd);
     VStream vstream(rnd);
-    uint256 hash = Hash<1>(vstream);
+    uint256 hash = HashSHA2<1>(vstream);
     std::vector<unsigned char> vchSig;
     Sign(hash, vchSig);
     return pubkey.Verify(hash, vchSig);

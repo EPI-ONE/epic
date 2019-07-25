@@ -71,6 +71,70 @@ void Miner::Solve(Block& b) {
     b.CalculateOptimalEncodingSize();
 }
 
+void Miner::SolveCuckaroo(Block& b) {
+    arith_uint256 target = b.GetTargetAsInteger();
+    size_t nthreads      = solverPool_.GetThreadSize();
+
+    final_nonce = 0;
+    final_time  = b.GetTime();
+
+    std::vector<std::unique_ptr<CTX>> ctx_q(nthreads);
+
+    for (size_t i = 0; i < nthreads; ++i) {
+        solverPool_.Execute([&, i]() {
+            SolverParams params = this->params;
+            Block blk(b);
+            blk.SetNonce(i);
+
+            params.device   = i;
+            ctx_q[i]        = CreateSolverCtx(&params);
+            const auto& ctx = ctx_q[i];
+
+            while (final_nonce.load() == 0 && enabled_.load()) {
+                VStream vs(blk);
+                ctx->setheader(vs.data(), vs.size());
+                std::cout << "Solving for nonce " << blk.GetNonce() << std::endl;
+
+                if (ctx->solve()) {
+                    uint256 cyclehash = HashBLAKE2<256>(ctx->cg.sols[0], sizeof(ctx->cg.sols[0]));
+                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}", blk.GetNonce(),
+                                  cyclehash.to_substr(), ArithToUint256(target).to_substr());
+                    if (UintToArith256(cyclehash) <= target) {
+                        uint32_t zero = 0;
+                        if (final_nonce.compare_exchange_strong(zero, blk.GetNonce())) {
+                            final_time = blk.GetTime();
+                        }
+                        break;
+                    }
+                }
+
+                if (blk.GetNonce() >= UINT_LEAST32_MAX - nthreads) {
+                    blk.SetTime(time(nullptr));
+                    blk.SetNonce(i);
+                } else {
+                    blk.SetNonce(blk.GetNonce() + nthreads);
+                }
+            }
+        });
+    }
+
+    while (final_nonce.load() == 0 && enabled_.load()) {
+        std::this_thread::yield();
+    }
+
+    // Abort unfinished tasks
+    for (const auto& ctx : ctx_q) {
+        StopSolver(ctx);
+    }
+    solverPool_.Abort();
+
+    spdlog::trace("Final nonce {}", final_nonce.load());
+    b.SetNonce(final_nonce.load());
+    b.SetTime(final_time.load());
+    b.CalculateHash();
+    b.CalculateOptimalEncodingSize();
+}
+
 void Miner::Run() {
     if (Start()) {
         // Restore miner chain head

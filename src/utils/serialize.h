@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "compat/bitcoin_endian.h"
+#include "portable_endian.h"
 
 static const unsigned int MAX_SIZE = 0x02000000;
 
