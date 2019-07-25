@@ -73,8 +73,6 @@ void Miner::Solve(Block& b) {
 
 void Miner::Run() {
     if (Start()) {
-        const auto& bestchain = DAG->GetBestChain();
-
         // Restore miner chain head
         auto headHash = CAT->GetMinerChainHead();
         if (!headHash.IsNull()) {
@@ -86,8 +84,8 @@ void Miner::Run() {
             auto cursor = selfChainHead;
             do {
                 distanceCal.Add(cursor, false);
-                cursor = bestchain.GetRecord(cursor->GetPrevHash())->cblock;
-            } while (selfChainHead->GetHash() != GENESIS.GetHash() && !distanceCal.Full());
+                cursor = CAT->FindBlock(cursor->GetPrevHash());
+            } while (*selfChainHead != GENESIS && !distanceCal.Full());
         }
     }
 

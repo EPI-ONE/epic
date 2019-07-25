@@ -7,9 +7,13 @@
 class TestMiner : public testing::Test {
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG("test_miner/");
+        PEERMAN = std::make_unique<PeerManager>();
+        MEMPOOL = std::make_unique<MemPool>();
     }
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG("test_miner/");
+        PEERMAN.reset();
+        MEMPOOL.reset();
     }
 };
 
@@ -42,26 +46,45 @@ TEST_F(TestMiner, Solve) {
 }
 
 TEST_F(TestMiner, Run) {
-    PEERMAN = std::make_unique<PeerManager>();
-    MEMPOOL     = std::make_unique<MemPool>();
-
     Miner m(2);
     m.Run();
     usleep(500000);
     m.Stop();
 
-    usleep(50000);
     DAG->Stop();
 
     ASSERT_TRUE(m.GetSelfChainHead());
     ASSERT_TRUE(m.GetFirstKey().IsValid());
 
-    if (DAG->GetBestChain().GetPendingBlocks().empty()) {
-        ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
+    ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
+    ASSERT_TRUE(DAG->GetChains().size() == 1);
+}
+
+TEST_F(TestMiner, Restart) {
+    Miner m(2);
+    m.Run();
+    usleep(100000);
+    m.Stop();
+
+    DAG->Wait();
+
+    auto selfChainHead = m.GetSelfChainHead();
+
+    m.Run();
+    usleep(100000);
+    m.Stop();
+
+    DAG->Stop();
+
+    auto cursor = m.GetSelfChainHead();
+
+    ASSERT_NE(*cursor, *selfChainHead);
+
+    while (*cursor != GENESIS && *cursor != *selfChainHead) {
+        cursor = CAT->FindBlock(cursor->GetPrevHash());
     }
 
-    PEERMAN.reset();
-    MEMPOOL.reset();
+    ASSERT_EQ(*cursor, *selfChainHead);
 }
 
 TEST_F(TestMiner, MineGenesis) {

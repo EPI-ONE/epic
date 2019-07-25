@@ -403,7 +403,7 @@ Chain::GetDataToCAT(size_t level) {
 
         // get all of the TXOC and merge them in advance to save space
         auto txoc = (*cs_it)->GetTXOC();
-        result_txoc.Merge(std::move(const_cast<TXOC&>((*cs_it)->GetTXOC())));
+        result_txoc.Merge(std::move(txoc));
     }
 
     std::unordered_map<uint256, UTXOPtr> result_created{};

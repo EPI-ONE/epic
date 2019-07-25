@@ -842,12 +842,12 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     }
 
     // Find in cache
-    VStream result;
     auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
     std::swap(recs.front(), recs.back());
 
+    VStream result;
     for (auto& rwp : recs) {
         result << (*rwp.lock()).cblock;
     }
