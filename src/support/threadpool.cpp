@@ -35,6 +35,9 @@ void ThreadPool::SetThreadSize(size_t size) {
 }
 
 void ThreadPool::Start() {
+    task_queue_.Clear();
+    task_queue_.Enable();
+
     for (size_t i = 0; i < size_; i++) {
         workers_.emplace_back(&ThreadPool::WorkerThread, this, i);
     }
@@ -48,6 +51,7 @@ void ThreadPool::Stop() {
             worker.join();
         }
     }
+    workers_.clear();
 
     if (working_states) {
         delete working_states;

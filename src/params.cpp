@@ -43,7 +43,7 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     genesisBlock.CalculateOptimalEncodingSize();
 
     genesis_       = std::make_unique<Block>(genesisBlock);
-    genesisRecord_ = std::make_unique<NodeRecord>(genesisBlock);
+    genesisRecord_ = std::make_shared<NodeRecord>(genesisBlock);
 
     arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
     arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};
@@ -51,7 +51,7 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
     static auto genesisState = std::make_shared<ChainState>(0, chainwork, genesisBlock.GetTime(), msTarget, blockTarget,
-                                                            hashRate, std::vector<uint256>{genesisBlock.GetHash()});
+                                                            hashRate, std::vector<RecordWPtr>{genesisRecord_});
 
     genesisRecord_->LinkChainState(genesisState);
 }

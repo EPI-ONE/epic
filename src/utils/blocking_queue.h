@@ -79,6 +79,13 @@ public:
         empty_.notify_all();
     }
 
+    void Enable() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        quit_ = false;
+        full_.notify_all();
+        empty_.notify_all();
+    }
+
     void Clear() {
         std::lock_guard<std::mutex> lock(mtx_);
         std::queue<T> empty;

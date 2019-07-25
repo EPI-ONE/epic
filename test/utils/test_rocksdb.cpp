@@ -175,8 +175,8 @@ TEST_F(TestRocksDB, reg) {
 
 TEST_F(TestRocksDB, headheight) {
     for (int i = 0; i < 100; i++) {
-        db->WriteHeadHeight(i);
-        uint64_t read_height = db->GetHeadHeight();
+        db->WriteInfo("headHeight", (uint64_t) i);
+        uint64_t read_height = db->GetInfo<uint64_t>("headHeight");
         ASSERT_EQ(i, read_height);
     }
 }

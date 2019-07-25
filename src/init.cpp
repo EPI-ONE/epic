@@ -126,7 +126,7 @@ int Init(int argc, char* argv[]) {
     if (CONFIG->IsStartWithNewDB()) {
         // put genesis block into cat
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreRecords(genesisLvs);
+        CAT->StoreLevelSet(genesisLvs);
     }
 
     DAG = std::make_unique<DAGManager>();

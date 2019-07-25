@@ -151,6 +151,10 @@ public:
         return hash_ == another.hash_;
     }
 
+    bool operator!=(const Block& another) const {
+        return !(*this == another);
+    }
+
     friend std::string std::to_string(const Block& b, bool showtx);
 
 protected:

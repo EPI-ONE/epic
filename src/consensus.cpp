@@ -5,9 +5,9 @@
 //
 ChainState::ChainState(const std::shared_ptr<ChainState>& previous,
                        const ConstBlockPtr& msBlock,
-                       std::vector<uint256>&& lvsHash)
+                       std::vector<RecordWPtr>&& lvs)
     : height(previous->height + 1), lastUpdateTime(previous->lastUpdateTime),
-      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvsHashes_(std::move(lvsHash)) {
+      milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget), lvs_(std::move(lvs)) {
     chainwork = previous->chainwork + (GetParams().maxTarget / previous->milestoneTarget);
     UpdateDifficulty(msBlock->GetTime());
 }
@@ -53,8 +53,12 @@ void ChainState::UpdateTXOC(TXOC&& txoc) {
     txoc_.Merge(std::move(txoc));
 }
 
-ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<uint256>&& hashes) {
-    auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(hashes));
+const uint256& ChainState::GetMilestoneHash() const {
+    return (*lvs_.back().lock()).cblock->GetHash();
+}
+
+ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& lvs) {
+    auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(lvs));
     record.LinkChainState(pcs);
     return pcs;
 }
@@ -101,7 +105,7 @@ void NodeRecord::UpdateReward(const Coin& prevReward) {
     // update reward of miletone
     if (isMilestone) {
         cumulativeReward +=
-            GetParams().reward * ((snapshot->GetRecordHashes().size() - 1) / GetParams().msRewardCoefficient);
+            GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
     }
 }
 
