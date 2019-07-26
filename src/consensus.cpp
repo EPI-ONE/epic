@@ -35,10 +35,14 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
         return;
     }
 
-    hashRate        = GetParams().interval * GetMsDifficulty() / timespan;
+    hashRate = GetParams().interval * GetMsDifficulty() / timespan;
+
     milestoneTarget = milestoneTarget * timespan / targetTimespan;
-    blockTarget     = milestoneTarget * arith_uint256(GetParams().targetTPS);
+    milestoneTarget.Round(sizeof(uint32_t));
+
+    blockTarget = milestoneTarget * arith_uint256(GetParams().targetTPS);
     blockTarget *= GetParams().timeInterval;
+    blockTarget.Round(sizeof(uint32_t));
 
     if (blockTarget > GetParams().maxTarget) {
         // in case that it is not difficult in this round
