@@ -294,6 +294,13 @@ public:
     arith_uint256& SetCompact(uint32_t nCompact, bool* pfNegative = nullptr, bool* pfOverflow = nullptr);
     uint32_t GetCompact(bool fNegative = false) const;
 
+    void Round(size_t bytes) {
+        if (bytes > 32) {
+            return;
+        }
+        memset(pn, 0, 32 - bytes);
+    }
+
     friend uint256 ArithToUint256(const arith_uint256&);
     friend arith_uint256 UintToArith256(const uint256&);
 };
