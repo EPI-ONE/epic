@@ -287,32 +287,6 @@ template uint64_t RocksDBStore::GetInfo(const std::string&) const;
 template uint32_t RocksDBStore::GetInfo(const std::string&) const;
 template uint16_t RocksDBStore::GetInfo(const std::string&) const;
 
-string RocksDBStore::Get(const string& column, const Slice& keySlice) const {
-    GET_VALUE(handleMap_.at(column), "");
-    return valueSlice.ToString();
-}
-
-string RocksDBStore::Get(const string& column, const string& key) const {
-    return Get(column, Slice(key));
-}
-
-bool RocksDBStore::Delete(const std::string& column, std::string&& key) const {
-    return db_->Delete(WriteOptions(), handleMap_.at(column), key).ok();
-}
-
-void RocksDBStore::InitHandleMap(std::vector<ColumnFamilyHandle*> handles) {
-    handleMap_.reserve(COLUMN_NAMES.size());
-    auto keyIter = COLUMN_NAMES.begin();
-    auto valIter = handles.begin();
-    while (keyIter != COLUMN_NAMES.end() && valIter != handles.end()) {
-        handleMap_[*keyIter] = *valIter;
-        ++keyIter;
-        ++valIter;
-    }
-
-    assert(!handleMap_.empty());
-}
-
 uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);
     GET_VALUE(handleMap_.at("ms"), uint256());

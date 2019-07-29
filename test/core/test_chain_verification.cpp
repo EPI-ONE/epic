@@ -187,7 +187,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             } else {
                 ASSERT_TRUE(recs[i]->cumulativeReward ==
                             recs[i - 1]->cumulativeReward +
-                                GetParams().reward * recs[i]->snapshot->GetRecordHashes().size());
+                                GetParams().reward * recs[i]->snapshot->GetLevelSet().size());
             }
         }
         if (isMilestone[i]) {

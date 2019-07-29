@@ -1,12 +1,15 @@
 #ifndef __SRC_MEMPOOL_H__
 #define __SRC_MEMPOOL_H__
 
+#include "arith_uint256.h"
+#include "blocking_queue.h"
+#include "transaction.h"
 #include <optional>
+#include <shared_mutex>
 #include <unordered_set>
 
-#include "arith_uint256.h"
-#include "transaction.h"
-
+#define READER_LOCK(mu) std::shared_lock<std::shared_mutex> reader(mu);
+#define WRITER_LOCK(mu) std::unique_lock<std::shared_mutex> writer(mu);
 class MemPool {
 public:
     MemPool()
@@ -47,11 +50,18 @@ public:
 
     ConstTxPtr ExtractTransaction(const uint256&, const arith_uint256& threashold);
 
+    void PushRedemptionTx(ConstTxPtr redemption);
+
+    ConstTxPtr GetRedemptionTx(bool IsRegistration);
+
 private:
     std::unordered_set<ConstTxPtr,
                        std::function<size_t(const ConstTxPtr&)>,
                        std::function<bool(const ConstTxPtr&, const ConstTxPtr&)>>
         mempool_;
+
+    BlockingQueue<ConstTxPtr> redemptionTxQueue;
+    mutable std::shared_mutex mutex_;
 };
 
 extern std::unique_ptr<MemPool> MEMPOOL;

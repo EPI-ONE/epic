@@ -725,6 +725,7 @@ void DAGManager::FlushToCAT(size_t level) {
             CAT->StoreLevelSet(lvsRec);
             CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
 
+            std::swap(lvsRec.front(), lvsRec.back());
             for (auto& rec : lvsRec) {
                 blocksToListener.push_back(rec.lock());
                 CAT->UnCache((*rec.lock()).cblock->GetHash());

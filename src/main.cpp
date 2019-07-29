@@ -1,7 +1,4 @@
-#include "caterpillar.h"
-#include "dag_manager.h"
 #include "init.h"
-
 int main(int argc, char** argv) {
     int init_result = Init(argc, argv);
     if (!init_result) {

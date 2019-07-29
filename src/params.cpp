@@ -128,7 +128,7 @@ TestNetParams::TestNetParams() {
 
 UnitTestParams::UnitTestParams() {
     version              = 100;
-    targetTimespan       = 9;
+    targetTimespan       = 99;
     timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;

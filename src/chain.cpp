@@ -161,7 +161,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     nodeHandler.key() = b.cblock->GetHash();
     cumulatorMap_.insert(std::move(nodeHandler));
 
-    return dist <= allowed;
+    return PartitionCmp(dist, allowed);
 }
 
 RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
@@ -264,8 +264,9 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
+    auto prevBlock = GetRecord(record.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter
-    if (!(vout.value <= prevReg->cumulativeReward)) {
+    if (!(vout.value <= prevBlock->cumulativeReward)) {
         spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
         return {};
     }

@@ -9,18 +9,16 @@
 
 #include <utility>
 
-using UTXOKey     = uint256;
-using TxHash      = uint256;
-using OutputIndex = uint32_t;
-
 constexpr uint64_t MIN_FEE = 1;
-
-enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
-
-using utxo_info = std::pair<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>>;
 
 class Wallet : public OnLvsConfirmedInterface {
 public:
+    using UTXOKey     = uint256;
+    using TxHash      = uint256;
+    using OutputIndex = uint32_t;
+    using utxo_info   = std::pair<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>>;
+    enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
+
     Wallet() : totalBalance{0} {
         threadPool.SetThreadSize(2);
     }
@@ -41,8 +39,6 @@ public:
 
     void ProcessRecord(const RecordPtr& record);
 
-    void GenerateNewKey();
-
     const Coin GetBalance() const {
         return Coin(totalBalance.load());
     }
@@ -53,8 +49,31 @@ public:
 
     CKeyID CreateNewKey(bool compressed);
 
-    ConstTxPtr CreateRedemption(CKeyID targetAddr, CKeyID nextAddr, std::string& msg);
-    ConstTxPtr CreateTx(std::vector<std::pair<Coin, CKeyID>> outputs);
+    ConstTxPtr CreateRedemption(CKeyID targetAddr, CKeyID nextAddr, std::string msg);
+
+    ConstTxPtr CreateFirstRegistration(CKeyID address);
+
+    ConstTxPtr CreateTx(std::vector<std::pair<Coin, CKeyID>> outputs, const Coin& fee = 0);
+
+    Coin GetCurrentMinerReward() const;
+
+    bool SendTxToMemPool(ConstTxPtr txPtr);
+
+    const auto& GetUnspent() const {
+        return unspent;
+    }
+
+    const auto& GetSpent() const {
+        return spent;
+    }
+
+    const auto& GetPending() const {
+        return pending;
+    }
+
+    const auto& GetPendingTx() const {
+        return pendingTx;
+    }
 
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>> unspent, pending, spent;
@@ -65,7 +84,9 @@ private:
 
     ThreadPool threadPool;
 
-    std::pair<uint256, Coin> minerInfo_;
+    // WalletStore walletStore_;
+
+    std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
 
     std::atomic<size_t> totalBalance;
 
@@ -73,9 +94,7 @@ private:
 
     void SpendUTXO(UTXOKey utxoKey);
 
-    void UpdateBalance();
-
-    void TraceTx();
+    std::pair<Coin, std::vector<utxo_info>> Select(const Coin& amount) const;
 
     TxInput CreateSignedVin(CKeyID targetAddr, TxOutPoint outpoint, std::string& msg);
 };

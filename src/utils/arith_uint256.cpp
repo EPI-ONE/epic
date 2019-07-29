@@ -10,6 +10,7 @@
 #include "common.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
+#include <c++/v1/iostream>
 
 template <unsigned int BITS>
 base_uint<BITS>::base_uint(const std::string& str) {
@@ -239,6 +240,10 @@ arith_uint256 UintToArith256(const uint256& a) {
     for (int x = 0; x < b.WIDTH; ++x)
         b.pn[x] = ReadLE32(a.begin() + x * 4);
     return b;
+}
+
+bool PartitionCmp(const arith_uint256& a, const arith_uint256& b) {
+    return (a << 32) < b;
 }
 
 #endif // BITCOIN_ARITH_UINT256_CPP__
