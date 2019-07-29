@@ -121,6 +121,7 @@ public:
      */
     Transaction(const Transaction& tx);
     Transaction(Transaction&&) noexcept;
+    explicit Transaction(VStream&);
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */

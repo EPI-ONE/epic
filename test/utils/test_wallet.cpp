@@ -3,16 +3,27 @@
 #include "test_env.h"
 #include "test_factory.h"
 #include "wallet.h"
+
+#include <chrono>
 #include <gtest/gtest.h>
 
 class TestWallet : public testing::Test {
 public:
-    TestFactory factory;
+    const std::string dir = "test_wallet";
+    const uint32_t period = 600;
+    TestFactory fac;
+
+    void TearDown() override {
+        std::string cmd = "exec rm -r " + dir;
+        system(cmd.c_str());
+    }
 };
 
 TEST_F(TestWallet, basic_workflow_in_wallet) {
+    {
     Coin init_money{100};
-    Wallet wallet;
+    Wallet wallet{dir, 1};
+    wallet.Start();
     wallet.CreateNewKey(false);
     auto addr = wallet.GetRandomAddress();
     Transaction tx;
@@ -79,10 +90,21 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
     ASSERT_EQ(wallet.GetPendingTx().size(), 0);
     ASSERT_EQ(wallet.GetBalance(), init_money - spent_money - MIN_FEE);
     MEMPOOL.reset();
+
+    // wait for wallet to backup
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    wallet.Stop();
+    }
+
+    Wallet newWallet{dir, period};
+    ASSERT_EQ(newWallet.GetUnspent().size(), 1);
+    ASSERT_EQ(newWallet.GetPending().size(), 0);
+    ASSERT_EQ(newWallet.GetSpent().size(), 1);
+    ASSERT_EQ(newWallet.GetPendingTx().size(), 0);
 }
 
 TEST_F(TestWallet, test_wallet_store) {
-    WalletStore store{"wallet_db/"};
+    WalletStore store{dir};
     // very simple tx tests
     auto tx = fac.CreateTx(fac.GetRand() % 10, fac.GetRand() % 10);
     store.StoreTx(tx);
@@ -107,17 +129,17 @@ TEST_F(TestWallet, test_wallet_store) {
     ASSERT_TRUE(std::getline(input, line));
     ASSERT_EQ(line, EncodeSecret(priv));
 
-    std::string cmd = "exec rm -r wallet_db/";
-    system(cmd.c_str());
+    store.ClearOldData();
+    ASSERT_EQ(store.GetAllTx().size(), 0);
 }
 
 TEST_F(TestWallet, work_flow) {
-    spdlog::set_level(spdlog::level::debug);
+    // spdlog::set_level(spdlog::level::debug);
     std::string path = "test_wallet/";
     EpicTestEnvironment::SetUpDAG(path);
     MEMPOOL = std::make_unique<MemPool>();
     MINER   = std::make_unique<Miner>();
-    WALLET  = std::make_shared<Wallet>();
+    WALLET  = std::make_shared<Wallet>(dir, period);
     DAG->RegisterOnLvsConfirmedListener(WALLET);
 
     WALLET->CreateNewKey(false);

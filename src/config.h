@@ -110,7 +110,7 @@ public:
         networkType_ = networkType;
     }
 
-    const std::string GetDBPath() const {
+    std::string GetDBPath() const {
         return GetRoot() + dbPath_;
     }
 
@@ -186,6 +186,7 @@ public:
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
         ss << "rpc port = " << rpcPort_ << std::endl;
         ss << "seeds = [" << std::endl;
+        ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << std::endl;
 
         for (const NetAddress& addr : seeds_) {
             ss << addr.ToString() << ',' << std::endl;
@@ -201,6 +202,22 @@ public:
 
     const std::string& GetConnect() const {
         return connect_;
+    }
+
+    void SetWalletPath(const std::string& wallet) {
+        walletPath_ = wallet;
+    }
+
+    std::string GetWalletPath() const {
+        return GetRoot() + walletPath_;
+    }
+
+    void SetWalletBackup(uint32_t backup) {
+        backupPeriod_ = backup;
+    }
+
+    uint32_t GetWalletBackup() {
+        return backupPeriod_;
     }
 
 private:
@@ -221,18 +238,22 @@ private:
     // network config
     std::string bindAddress_ = defaultIP;
     uint16_t bindPort_       = defaultPort;
+    std::string connect_;
     std::string networkType_ = "Testnet";
-
     std::vector<NetAddress> seeds_;
 
     // db
     bool startWithNewDB = false;
     std::string dbPath_ = "db/";
-    std::string connect_;
 
     // rpc
     bool disableRPC_;
     uint16_t rpcPort_ = defaultRPCPort;
+
+    // wallet
+    std::string walletPath_ = "wallet/";
+    uint32_t backupPeriod_;
+
 
     // daemon
     bool daemon_;

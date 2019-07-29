@@ -123,6 +123,7 @@ int Init(int argc, char* argv[]) {
         DeleteDir(CONFIG->GetDBPath());
         DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::BLK]);
         DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::REC]);
+        DeleteDir(CONFIG->GetWalletPath());
     }
 
     CAT = std::make_unique<Caterpillar>(CONFIG->GetDBPath());
@@ -138,6 +139,12 @@ int Init(int argc, char* argv[]) {
         return DAG_INIT_FAILURE;
     }
 
+    /*
+     * Load wallet
+     */
+    WALLET = std::make_shared<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
+    DAG->RegisterOnLvsConfirmedListener(WALLET);
+
     MEMPOOL = std::make_unique<MemPool>();
 
     /*
@@ -150,12 +157,6 @@ int Init(int argc, char* argv[]) {
      */
     ECC_Start();
     handle = ECCVerifyHandle();
-
-    /*
-     * Load wallet TODO
-     */
-    WALLET = std::make_shared<Wallet>();
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
 
     /*
      * Initialize miner
@@ -324,6 +325,20 @@ void LoadConfigFile() {
         auto rpc_port = rpc_config->get_as<uint16_t>("port");
         if (rpc_port) {
             CONFIG->SetRPCPort(*rpc_port);
+        }
+    }
+
+    // wallet
+    auto wallet_config = configContent->get_table("wallet");
+    if (wallet_config) {
+        auto wallet_path = wallet_config->get_as<std::string>("path");
+        if (wallet_path) {
+            CONFIG->SetWalletPath(*wallet_path);
+        }
+
+        auto wallet_backup = wallet_config->get_as<uint32_t>("backup_period");
+        if (wallet_backup) {
+            CONFIG->SetWalletBackup(*wallet_backup);
         }
     }
 }

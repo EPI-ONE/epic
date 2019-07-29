@@ -7,37 +7,12 @@
 #include <vector>
 
 #include "consensus.h"
+#include "db_wrapper.h"
 #include "file_utils.h"
-#include "rocksdb/db.h"
-#include "rocksdb/options.h"
-#include "rocksdb/slice.h"
 
-static const std::vector<std::string> COLUMN_NAMES = {
-    rocksdb::kDefaultColumnFamilyName, // (key) block hash
-                                       // (value) {height, blk offset, ms offset}
-                                       // Note: offsets are relative to the offsets of
-                                       // the milestone contained in the same level set
-
-    "ms", // (key) level set height
-          // (value) {blk FilePos, rec FilePos}
-
-    "utxo", // (key) outpoint hash ^ outpoint index
-            // (value) utxo
-
-    "reg", // (key) hash of peer chain head
-           // (value) hash of the last registration block on this peer chain
-
-    "info" // Stores necessary info to recover the system,
-           // e.g., lastest ms head in db
-};
-
-class RocksDBStore {
+class RocksDBStore : public DBWrapper {
 public:
-    RocksDBStore()                    = delete;
-    RocksDBStore(const RocksDBStore&) = delete;
     explicit RocksDBStore(std::string dbPath);
-
-    ~RocksDBStore();
 
     bool Exists(const uint256&) const;
     size_t GetHeight(const uint256&) const;

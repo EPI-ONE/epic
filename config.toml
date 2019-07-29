@@ -31,3 +31,7 @@ path = "db/"
 
 [rpc]
 port = 3777
+
+[wallet]
+path = "wallet/"
+backup_period = 600

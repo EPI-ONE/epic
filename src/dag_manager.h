@@ -8,7 +8,6 @@
 #include "concurrent_container.h"
 #include "consensus.h"
 #include "dag_service.h"
-#include "message_type.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"

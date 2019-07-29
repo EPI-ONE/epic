@@ -10,7 +10,6 @@
 #include "common.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
-#include <c++/v1/iostream>
 
 template <unsigned int BITS>
 base_uint<BITS>::base_uint(const std::string& str) {

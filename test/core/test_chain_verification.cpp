@@ -203,7 +203,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     Coin valueIn{4}, valueOut1{2}, valueOut2{1};
     // prepare keys and signature
-    auto key     = DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
+    auto key     = *DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
     auto addr    = key.GetPubKey().GetID();
     auto hashMsg = uint256S("4de04506f44155e2a59d2e8af4e6e15e9f50f5f0b1dc7a0742021799981180c2");
     std::vector<unsigned char> sig;
@@ -271,7 +271,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ConstBlockPtr forkblk;
     ChainStatePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
-        recs.emplace_back(fac.CreateConsecutiveRecordPtr());
+        recs.emplace_back(fac.CreateConsecutiveRecordPtr(fac.NextTime()));
         dqcs.push_back(fac.CreateChainStatePtr(dqcs.back(), recs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5

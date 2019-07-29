@@ -70,6 +70,12 @@ Transaction::Transaction(Transaction&& tx) noexcept
     SetParents();
 }
 
+Transaction::Transaction(VStream& vs) {
+    vs >> *this;
+    FinalizeHash();
+    SetParents();
+}
+
 Transaction::Transaction(const CKeyID& addr) {
     AddInput(TxInput{}).AddOutput(Coin{}, addr);
     FinalizeHash();

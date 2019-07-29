@@ -328,7 +328,7 @@ void ECC_Stop() {
     }
 }
 
-CKey DecodeSecret(const std::string& str) {
+std::optional<CKey> DecodeSecret(const std::string& str) {
     CKey key;
     std::vector<unsigned char> data;
     if (DecodeBase58Check(str, data)) {
@@ -342,6 +342,9 @@ CKey DecodeSecret(const std::string& str) {
     }
     if (!data.empty()) {
         memory_cleanse(data.data(), data.size());
+    }
+    if (!key.IsValid()) {
+        return {};
     }
     return key;
 }

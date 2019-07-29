@@ -32,22 +32,26 @@ TEST_F(TestConsensus, SyntaxChecking) {
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
+    TimeGenerator timeGenerator{GENESIS.GetTime(), 25, 400, fac.GetRand()};
+
     constexpr size_t HEIGHT = 100;
     std::array<std::shared_ptr<ChainState>, HEIGHT> arrayMs;
     arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec   = fac.CreateConsecutiveRecordPtr();
+        auto rec   = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
-        if (((i + 1) % GetParams().timeInterval) == 0) {
+        if (arrayMs[i]->IsDiffTransition()) {
             ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
         }
-        ASSERT_NE(0, arrayMs[i - 1]->hashRate);
+        if (i > GetParams().interval + 3) {
+            ASSERT_NE(0, arrayMs[i - 1]->hashRate);
+        }
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
 }

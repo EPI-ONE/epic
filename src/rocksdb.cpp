@@ -18,57 +18,30 @@ using namespace rocksdb;
         return null_return;                                                   \
     }
 
-RocksDBStore::RocksDBStore(string dbPath) {
-    this->dbpath_ = dbPath;
-    // Make directory DBPATH if missing
-    if (!CheckDirExist(dbpath_)) {
-        Mkdir_recursive(dbpath_);
-    }
+static const std::vector<std::string> COLUMN_NAMES = {
+    kDefaultColumnFamilyName, // (key) block hash
+                              // (value) {height, blk offset, ms offset}
+                              // Note: offsets are relative to the offsets of
+                              // the milestone contained in the same level set
 
-    // Create column families
-    std::vector<ColumnFamilyDescriptor> descriptors;
-    for (const string& columnName : COLUMN_NAMES) {
-        ColumnFamilyOptions cOptions;
-        if (columnName == kDefaultColumnFamilyName) {
-            cOptions.OptimizeForPointLookup(500L);
-        }
+    "ms", // (key) level set height
+          // (value) {blk FilePos, rec FilePos}
 
-        descriptors.push_back(ColumnFamilyDescriptor(columnName, cOptions));
-    }
+    "utxo", // (key) outpoint hash ^ outpoint index
+            // (value) utxo
 
-    // Set options
-    DBOptions dbOptions;
-    dbOptions.db_log_dir                     = dbpath_ + "/log";
-    dbOptions.create_if_missing              = true;
-    dbOptions.create_missing_column_families = true;
-    dbOptions.IncreaseParallelism(2);
+    "reg", // (key) hash of peer chain head
+           // (value) hash of the last registration block on this peer chain
 
-    std::vector<ColumnFamilyHandle*> handles;
+    "info" // Stores necessary info to recover the system,
+           // e.g., lastest ms head in db
+};
 
-    // Open DB
-    if (!DB::Open(dbOptions, dbpath_, descriptors, &handles, &db_).ok()) {
-        throw std::string("DB initialization failed");
-    }
-
-    // Store handles into a map
-    InitHandleMap(handles);
-    handles.clear();
-    descriptors.clear();
-}
-
-RocksDBStore::~RocksDBStore() {
-    // delete column falimy handles
-    for (auto entry = handleMap_.begin(); entry != handleMap_.end(); ++entry) {
-        delete entry->second;
-    }
-    handleMap_.clear();
-
-    delete db_;
-}
+RocksDBStore::RocksDBStore(string dbPath) : DBWrapper(std::move(dbPath), COLUMN_NAMES) {}
 
 bool RocksDBStore::Exists(const uint256& blockHash) const {
     MAKE_KEY_SLICE((uint64_t) GetHeight(blockHash));
-    return !Get("ms", keySlice).empty();
+    return !DBWrapper::Get("ms", keySlice).empty();
 }
 
 size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
@@ -333,7 +306,7 @@ bool RocksDBStore::WriteRegSet(const std::unordered_set<std::pair<uint256, uint2
 
 bool RocksDBStore::DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
     for (const auto& e : s) {
-        if (!Delete("reg", VStream(e.first).str())) {
+        if (!DBWrapper::Delete("reg", VStream(e.first).str())) {
             return false;
         }
     }

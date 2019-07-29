@@ -133,7 +133,6 @@ private:
      * Stores data not yet verified in this chain
      */
     ConcurrentHashMap<uint256, ConstBlockPtr> pendingBlocks_;
-    std::unordered_map<uint256, UTXOPtr> pendingUTXOs_;
 
     /**
      * Stores verified blocks on this chain as cache

@@ -61,7 +61,7 @@ public:
     ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
     NodeRecord CreateNodeRecord(ConstBlockPtr b);
     RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
-    RecordPtr CreateConsecutiveRecordPtr();
+    RecordPtr CreateConsecutiveRecordPtr(uint32_t);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& hashes);
     std::tuple<TestChain, std::vector<NodeRecord>> CreateChain(const NodeRecord& startMs,

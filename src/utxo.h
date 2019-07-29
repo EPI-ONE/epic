@@ -8,10 +8,12 @@
 
 class UTXO;
 class TXOC;
+class ChainLedger;
 
 namespace std {
 string to_string(const UTXO&);
 string to_string(const TXOC&);
+string to_string(const ChainLedger&);
 } // namespace std
 
 /**
@@ -102,6 +104,8 @@ public:
     void AddToSpent(const TxInput&);
     void Merge(TXOC txoc);
 
+    bool Empty();
+
     const std::unordered_set<uint256>& GetSpent() const {
         return increment_.GetRemoved();
     }
@@ -139,6 +143,8 @@ private:
     std::unordered_map<uint256, UTXOPtr> pending_;
     std::unordered_map<uint256, UTXOPtr> confirmed_;
     std::unordered_map<uint256, UTXOPtr> removed_;
+
+    friend std::string std::to_string(const ChainLedger&);
 };
 
 TXOC CreateTXOCFromInvalid(const Block&);

@@ -17,7 +17,8 @@ ChainState::ChainState(VStream& payload) {
 }
 
 void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
-    uint32_t timespan = blockUpdateTime - lastUpdateTime, targetTimespan = GetParams().targetTimespan;
+    uint32_t timespan         = blockUpdateTime - lastUpdateTime;
+    const auto targetTimespan = GetParams().targetTimespan;
     if (timespan < targetTimespan / 4) {
         timespan = targetTimespan / 4;
     }

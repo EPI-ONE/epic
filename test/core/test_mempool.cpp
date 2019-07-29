@@ -72,17 +72,17 @@ TEST_F(TestMemPool, get_transaction_test) {
     pool.Insert(transactions[0]);
 
     /* = */
-    arith_uint256 threshold = UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(blkHash);
-    EXPECT_TRUE(pool.GetTransaction(blkHash, threshold));
+    arith_uint256 threshold = (UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(blkHash)) << 32;
+    ASSERT_FALSE(pool.GetTransaction(blkHash, threshold));
 
     /* > */
     threshold--;
-    EXPECT_FALSE(pool.GetTransaction(blkHash, threshold));
+    ASSERT_FALSE(pool.GetTransaction(blkHash, threshold));
 
     /* < */
     threshold += 2;
-    EXPECT_TRUE(pool.GetTransaction(blkHash, threshold));
+    ASSERT_TRUE(pool.GetTransaction(blkHash, threshold));
 
-    EXPECT_TRUE(pool.ExtractTransaction(blkHash, threshold));
-    EXPECT_TRUE(pool.IsEmpty());
+    ASSERT_TRUE(pool.ExtractTransaction(blkHash, threshold));
+    ASSERT_TRUE(pool.IsEmpty());
 }

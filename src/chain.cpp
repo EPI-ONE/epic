@@ -49,7 +49,7 @@ void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
         return;
     }
     for (const auto& u : utxos) {
-        pendingUTXOs_.emplace(u->GetKey(), u);
+        ledger_.AddToPending(u);
     }
 }
 
@@ -194,9 +194,11 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
             if (auto update = Validate(*rec, state->regChange)) {
                 rec->validity = NodeRecord::VALID;
                 // update ledger in chain for future reference
-                ledger_.Update(*update);
-                // take notes in chain state; will be used when flushing this state from memory to CAT
-                state->UpdateTXOC(std::move(*update));
+                if (!update->Empty()) {
+                    ledger_.Update(*update);
+                    // take notes in chain state; will be used when flushing this state from memory to CAT
+                    state->UpdateTXOC(std::move(*update));
+                }
             } else {
                 rec->validity = NodeRecord::INVALID;
                 TXOC invalid  = CreateTXOCFromInvalid(*(rec->cblock));

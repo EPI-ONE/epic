@@ -2,11 +2,13 @@
 #define EPIC_DAG_SERVICE_H
 #include <unordered_set>
 
-#include "block.h"
+#include "consensus.h"
 #include "utxo.h"
 
 class OnLvsConfirmedInterface {
 public:
+    OnLvsConfirmedInterface() = default;
+
     virtual void OnLvsConfirmed(std::vector<RecordPtr> blocks,
                                 std::unordered_set<UTXOPtr> UTXOs,
                                 std::unordered_set<uint256> STXOs) = 0;

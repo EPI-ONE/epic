@@ -51,6 +51,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     for (int i = 0; i < numTxOutput; ++i) {
         tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
     }
+    tx.FinalizeHash();
     return tx;
 }
 
@@ -119,8 +120,9 @@ RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool fin
     return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize)));
 }
 
-RecordPtr TestFactory::CreateConsecutiveRecordPtr() {
+RecordPtr TestFactory::CreateConsecutiveRecordPtr(uint32_t timeToset) {
     Block b = CreateBlock(0, 0, false);
+    b.SetTime(timeToset);
     do {
         b.SetNonce(b.GetNonce() + 1);
         b.Solve();
