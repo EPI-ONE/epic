@@ -136,7 +136,8 @@ ConcurrentHashMap<CKeyID, CKey> WalletStore::GetAllKey() {
     return result;
 }
 
-bool WalletStore::StoreUTXO(const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin, uint8_t category) {
+bool WalletStore::StoreUTXO(
+    const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin, uint8_t category) {
     VStream key{utxokey};
     VStream value;
     value << EncodeAddress(addr) << outputIndex << coin;
@@ -236,13 +237,13 @@ void WalletStore::ClearOldData() {
         ColumnFamilyOptions cOptions;
         descriptors.emplace_back(ColumnFamilyDescriptor(columnName, cOptions));
     }
-    vecDrop.clear();
-    db_->CreateColumnFamilies(descriptors, &vecDrop);
+    std::vector<ColumnFamilyHandle*> vec;
+    db_->CreateColumnFamilies(descriptors, &vec);
 
     auto name_it   = vecStr.cbegin();
-    auto handle_it = vecDrop.cbegin();
-    while (name_it != vecStr.cend() && handle_it != vecDrop.cend()) {
-        handleMap_.at(*name_it) =  *handle_it;
+    auto handle_it = vec.cbegin();
+    while (name_it != vecStr.cend() && handle_it != vec.cend()) {
+        handleMap_.at(*name_it)=*handle_it;
         name_it++;
         handle_it++;
     }

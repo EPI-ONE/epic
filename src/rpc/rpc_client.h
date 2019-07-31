@@ -19,6 +19,8 @@ using rpc::GetNewMilestoneSinceRequest;
 using rpc::GetNewMilestoneSinceResponse;
 
 using rpc::CommanderRPC;
+using rpc::CreateTxRequest;
+using rpc::CreateTxResponse;
 using rpc::StartMinerRequest;
 using rpc::StartMinerResponse;
 using rpc::StatusRequest;
@@ -48,6 +50,8 @@ public:
     std::optional<bool> StartMiner();
 
     std::optional<bool> StopMiner();
+
+    std::optional<std::string> CreateTx(size_t size);
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;

@@ -413,7 +413,7 @@ void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
 /////////////////////////////////////
 // End of synchronization methods
 //
-
+int counter = 0;
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         if (*blk == GENESIS) {
@@ -496,7 +496,10 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         }
 
         // TODO: erase transaction from mempool
-
+        if (blk->HasTransaction()) {
+            std::cout << "verifying tx " << std::to_string(blk->GetTransaction()->GetHash())
+                      << ", index = " << counter++ << std::endl;
+        }
         AddBlockToPending(blk);
         CAT->ReleaseBlocks(blk->GetHash());
     });

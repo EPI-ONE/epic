@@ -143,3 +143,16 @@ std::optional<bool> RPCClient::StopMiner() {
     }
     return reply.success();
 }
+
+std::optional<std::string> RPCClient::CreateTx(size_t size) {
+    CreateTxRequest request;
+    CreateTxResponse response;
+    grpc::ClientContext context;
+    request.set_size(size);
+    auto status = commander_stub_->CreateTx(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.result();
+}

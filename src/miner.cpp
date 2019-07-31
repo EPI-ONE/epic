@@ -108,9 +108,13 @@ void Miner::Run() {
             if (!selfChainHead) {
                 auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
                 if (!firstRegTx) {
-                    spdlog::error("Can't get the first registration tx, Stop the miner");
-                    return;
+                    spdlog::warn("Can't get the first registration tx, keep waiting...");
+                    while (!firstRegTx) {
+                        std::this_thread::yield();
+                        firstRegTx = MEMPOOL->GetRedemptionTx(true);
+                    }
                 }
+                spdlog::info("Get first registration, start mining");
                 prevHash = GENESIS.GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {

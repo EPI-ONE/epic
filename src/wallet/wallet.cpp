@@ -10,6 +10,7 @@
 void Wallet::Start() {
     stopFlag_ = false;
     threadPool_.Start();
+
     threadPool_.Execute([=, period = storePeriod_]() { SendingStorageTask(period); });
 }
 
@@ -37,16 +38,11 @@ void Wallet::Load() {
     for (auto& utxoPair : unspent) {
         balance += std::get<COIN>(utxoPair.second);
     }
-    totalBalance = balance;
+    totalBalance_ = balance;
 }
 
 void Wallet::SendingStorageTask(uint32_t period) {
-    std::chrono::seconds backupPeriod{period};
-
-    while (!stopFlag_) {
-        // period task of storing data
-        std::this_thread::sleep_for(backupPeriod);
-
+    scheduler.AddPeriodTask(period, [&]() {
         walletStore_.ClearOldData();
 
         for (const auto& pairTx : pendingTx) {
@@ -60,6 +56,11 @@ void Wallet::SendingStorageTask(uint32_t period) {
             walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
                                       std::get<COIN>(utxoTuple));
         }
+    });
+    while (!stopFlag_) {
+        // period task of storing data
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+        scheduler.Loop();
     }
 }
 
@@ -69,25 +70,20 @@ void Wallet::OnLvsConfirmed(std::vector<RecordPtr> records,
     for (auto& record : records) {
         ProcessRecord(record);
     }
-    for (auto& stxo : STXOs) {
-        ProcessSTXO(stxo);
-    }
     for (auto& utxo : UTXOs) {
         ProcessUTXO(utxo);
     }
+    for (auto& stxo : STXOs) {
+        ProcessSTXO(stxo);
+    }
 }
 
-void Wallet::ProcessUTXO(const UTXOPtr& utxo) {
-    std::string addrString;
-    const auto content = utxo->GetOutput().listingContent;
-    VStream stream(content.data);
-    stream >> addrString;
-    auto keyId = DecodeAddress(addrString);
+void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
+    auto keyId = ParseAddrFromScript(utxo->GetOutput().listingContent);
     if (keyId) {
         if (keyBook.find(*keyId) != keyBook.end()) {
-            unspent.insert(
-                {utxo->GetKey(), std::make_tuple(*keyId, utxo->GetIndex(), utxo->GetOutput().value.GetValue())});
-            totalBalance += utxo->GetOutput().value.GetValue();
+            unspent.insert({utxokey, std::make_tuple(*keyId, utxo->GetIndex(), utxo->GetOutput().value.GetValue())});
+            totalBalance_ += utxo->GetOutput().value.GetValue();
         }
     }
 }
@@ -104,7 +100,7 @@ void Wallet::ProcessSTXO(const UTXOKey& stxo) {
 void Wallet::ProcessRecord(const RecordPtr& record) {
     // update miner info
     if (record->cblock->source == Block::Source::MINER) {
-        minerInfo_ = {record->cblock->GetHash(), record->cumulativeReward};
+        UpdateMinerInfo(record->cblock->GetHash(), record->cumulativeReward);
     }
 
     if (!record->cblock->HasTransaction()) {
@@ -112,16 +108,34 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
     }
 
     auto it = pendingTx.find(record->cblock->GetTransaction()->GetHash());
-    if (it == pendingTx.end()) {
+    if (it != pendingTx.end()) {
+        if (record->validity != record->VALID) {
+            spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}",
+                         std::to_string(record->cblock->GetHash()));
+
+            // release all relavent utxos from pending
+            for (auto& input : record->cblock->GetTransaction()->GetInputs()) {
+                auto utxoKey    = XOR(input.outpoint.bHash, input.outpoint.index);
+                auto it_pending = pending.find(utxoKey);
+                if (it_pending != pending.end()) {
+                    unspent.insert(*it_pending);
+                    totalBalance_ += std::get<COIN>(it_pending->second);
+                    pending.erase(it_pending);
+                }
+            }
+        }
+        pendingTx.erase(it);
         return;
     }
 
-    if (record->validity != record->VALID) {
-        spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}", std::to_string(record->cblock->GetHash()));
+    it = pendingRedemption.find(record->cblock->GetTransaction()->GetHash());
+    if (it != pendingRedemption.end()) {
+        auto output = it->second->GetOutputs()[0];
+        auto keyId  = ParseAddrFromScript(output.listingContent);
+        assert(keyId);
+        setLastRedemAddress(*keyId);
+        pendingRedemption.erase(it);
     }
-
-    pendingTx.erase(it);
-    // TODO trace tx history
 }
 
 CKeyID Wallet::CreateNewKey(bool compressed) {
@@ -146,23 +160,28 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
     return TxInput{outpoint, Tasm::Listing{VStream{pubkey, sig, hashMsg}}};
 }
 
-ConstTxPtr Wallet::CreateRedemption(CKeyID& targetAddr, CKeyID& nextAddr, std::string msg) {
+ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& nextAddr, const std::string& msg) {
     Transaction redeem{};
-    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo_.first, UNCONNECTED}, msg))
-        .AddOutput(minerInfo_.second, nextAddr);
-
-    return std::make_shared<const Transaction>(std::move(redeem));
+    auto minerInfo = GetMinerInfo();
+    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo.first, UNCONNECTED}, msg))
+        .AddOutput(minerInfo.second, nextAddr);
+    auto redemPtr = std::make_shared<const Transaction>(std::move(redeem));
+    pendingRedemption.insert({redemPtr->GetHash(), redemPtr});
+    return redemPtr;
 }
 
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
-    return std::make_shared<const Transaction>(address);
+    auto reg                  = std::make_shared<const Transaction>(address);
+    hasSentFirstRegistration_ = true;
+    setLastRedemAddress(address);
+    return reg;
 }
 
 ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
     auto totalCost = std::accumulate(outputs.begin(), outputs.end(), Coin{0},
                                      [](Coin prev, auto pair) { return prev + pair.first; });
     totalCost      = totalCost + (fee == 0 ? MIN_FEE : fee);
-    if (totalCost > totalBalance) {
+    if (totalCost > totalBalance_) {
         spdlog::warn("[Wallet] too much money that we can't afford");
         return nullptr;
     }
@@ -217,7 +236,7 @@ void Wallet::AddInput(Transaction& tx, const utxo_info& utxo) {
 void Wallet::SpendUTXO(const UTXOKey& utxoKey) {
     auto it = unspent.find(utxoKey);
     if (it != unspent.end()) {
-        totalBalance -= std::get<COIN>(it->second);
+        totalBalance_ -= std::get<COIN>(it->second);
         pending.emplace(*it);
         unspent.erase(utxoKey);
     }
@@ -243,5 +262,73 @@ bool Wallet::SendTxToMemPool(ConstTxPtr txPtr) {
 }
 
 Coin Wallet::GetCurrentMinerReward() const {
-    return minerInfo_.second;
+    return GetMinerInfo().second;
+}
+
+bool Wallet::CanRedeem() {
+    return GetMinerInfo().second > 0 && pendingRedemption.empty();
+}
+
+void Wallet::CreateRandomTx(size_t sizeTx) {
+    threadPool_.Execute([=, size = sizeTx]() {
+        for (int i = 0; i < size; i++) {
+            auto addr = CreateNewKey(false);
+            if (!hasSentFirstRegistration_) {
+                auto reg = CreateFirstRegistration(addr);
+                spdlog::info("[Wallet] Created first registration {}, index = {}", std::to_string(reg->GetHash()), i);
+                MEMPOOL->PushRedemptionTx(reg);
+                continue;
+            }
+            if (GetBalance() <= MIN_FEE) {
+                if (CanRedeem()) {
+                    auto redem = CreateRedemption(getLastRedemAddress(), addr, "lalala");
+                    spdlog::info("[Wallet] Created redemption {}, index = {}", std::to_string(redem->GetHash()), i);
+                    pendingRedemption.insert({redem->GetHash(), redem});
+                    MEMPOOL->PushRedemptionTx(redem);
+                    continue;
+                } else {
+                    while (GetBalance() <= MIN_FEE && !CanRedeem()) {
+                        // give up creating tx if we don't have enough balance nor can't redeem
+                        std::this_thread::yield();
+                    }
+                    // try again to create redemption or normal transaction
+                    i--;
+                    continue;
+                }
+            } else {
+                Coin coin{random() % (GetBalance() - MIN_FEE).GetValue()};
+                auto tx = CreateTx({{coin, addr}});
+                SendTxToMemPool(tx);
+                spdlog::info("[Wallet] Created tx {}, index = {}", std::to_string(tx->GetHash()), i);
+            }
+        }
+    });
+}
+
+void Wallet::UpdateMinerInfo(uint256 blockHash, const Coin& value) {
+    WRITER_LOCK(lock_)
+    minerInfo_.first  = blockHash;
+    minerInfo_.second = value;
+}
+
+std::pair<uint256, Coin> Wallet::GetMinerInfo() const {
+    READER_LOCK(lock_)
+    return minerInfo_;
+}
+
+const CKeyID Wallet::getLastRedemAddress() const {
+    READER_LOCK(lock_)
+    return lastRedemAddress_;
+}
+
+void Wallet::setLastRedemAddress(const CKeyID& lastRedemAddress) {
+    WRITER_LOCK(lock_)
+    Wallet::lastRedemAddress_ = lastRedemAddress;
+}
+
+std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content) {
+    std::string addrString;
+    VStream stream(content.data);
+    stream >> addrString;
+    return DecodeAddress(addrString);
 }

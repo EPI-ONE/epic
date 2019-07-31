@@ -5,23 +5,16 @@
 #include "consensus.h"
 #include "dag_service.h"
 #include "key.h"
+#include "scheduler.h"
 #include "threadpool.h"
 #include "wallet_store.h"
-
 #include <atomic>
 #include <utility>
 
 constexpr uint64_t MIN_FEE = 1;
 
-<<<<<<< HEAD
-=======
-enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
+std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content);
 
-enum { UNSPENT = 0, PENDING = 1, SPENT = 2 };
-
-using utxo_info = std::pair<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>>;
-
->>>>>>> 0232cd3... add methods of wallet store as well as print keys to a file
 class Wallet : public OnLvsConfirmedInterface {
 public:
     using UTXOKey     = uint256;
@@ -31,7 +24,7 @@ public:
     enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
 
     Wallet(std::string walletPath, uint32_t period)
-        : OnLvsConfirmedInterface(), threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance{0} {
+        : OnLvsConfirmedInterface(), threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
         Load();
     }
 
@@ -49,8 +42,8 @@ public:
     void ProcessSTXO(const UTXOKey& stxo);
     void ProcessRecord(const RecordPtr& record);
 
-    const Coin GetBalance() const {
-        return Coin(totalBalance.load());
+    Coin GetBalance() const {
+        return Coin(totalBalance_.load());
     }
 
     CKeyID GetRandomAddress();
@@ -59,8 +52,10 @@ public:
 
     CKeyID CreateNewKey(bool compressed);
     ConstTxPtr CreateFirstRegistration(const CKeyID&);
-    ConstTxPtr CreateRedemption(CKeyID&, CKeyID&, std::string);
+    ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
     ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
+
+    void CreateRandomTx(size_t size);
 
     Coin GetCurrentMinerReward() const;
 
@@ -85,17 +80,29 @@ public:
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
+    ConcurrentHashMap<TxHash, ConstTxPtr> pendingRedemption;
     ConcurrentHashMap<CKeyID, std::pair<CKey, CPubKey>> keyBook;
 
     ThreadPool threadPool_;
 
     std::atomic<bool> stopFlag_;
+
     WalletStore walletStore_;
+
     uint32_t storePeriod_;
+
+    Scheduler scheduler;
+
+    mutable std::shared_mutex lock_;
 
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
 
-    std::atomic<size_t> totalBalance;
+    CKeyID lastRedemAddress_;
+
+
+    std::atomic<size_t> totalBalance_;
+
+    std::atomic_bool hasSentFirstRegistration_{false};
 
     void AddInput(Transaction& tx, const utxo_info& utxo);
 
@@ -106,6 +113,16 @@ private:
     TxInput CreateSignedVin(const CKeyID&, TxOutPoint, const std::string&);
 
     void SendingStorageTask(uint32_t);
+
+    void UpdateMinerInfo(uint256 blockHash, const Coin& value);
+
+    std::pair<uint256, Coin> GetMinerInfo() const;
+
+    bool CanRedeem();
+
+    const CKeyID getLastRedemAddress() const;
+
+    void setLastRedemAddress(const CKeyID& lastRedemAddress);
 };
 
 extern std::shared_ptr<Wallet> WALLET;

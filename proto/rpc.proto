@@ -83,6 +83,7 @@ service CommanderRPC {
     rpc Stop (StopRequest) returns (StopResponse);
     rpc StartMiner (StartMinerRequest) returns (StartMinerResponse);
     rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
+    rpc CreateTx (CreateTxRequest) returns (CreateTxResponse);
 }
 
 message StopRequest {}
@@ -106,4 +107,12 @@ message StatusRequest {}
 message StatusResponse {
     bool isMinerRunning = 1;
     Hash latestMSHash = 2;
+}
+
+message CreateTxRequest{
+    uint64 size = 1;
+}
+
+message CreateTxResponse{
+    string result = 1;
 }

@@ -12,6 +12,7 @@
 #include "miner.h"
 #include "net_address.h"
 #include "spdlog.h"
+#include "wallet.h"
 
 using rpc::BasicBlockExplorerRPC;
 using rpc::GetBlockRequest;
@@ -26,6 +27,8 @@ using rpc::GetNewMilestoneSinceRequest;
 using rpc::GetNewMilestoneSinceResponse;
 
 using rpc::CommanderRPC;
+using rpc::CreateTxRequest;
+using rpc::CreateTxResponse;
 using rpc::StartMinerRequest;
 using rpc::StartMinerResponse;
 using rpc::StatusRequest;
@@ -69,6 +72,10 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     grpc::Status StopMiner(grpc::ServerContext* context,
                            const StopMinerRequest* request,
                            StopMinerResponse* reply) override;
+
+    grpc::Status CreateTx(grpc::ServerContext* context,
+                          const CreateTxRequest* request,
+                          CreateTxResponse* reply) override;
 };
 
 class RPCServer {

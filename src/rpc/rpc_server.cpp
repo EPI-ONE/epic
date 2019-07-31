@@ -33,7 +33,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerConte
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
                                                                     const GetNewMilestoneSinceRequest* request,
                                                                     GetNewMilestoneSinceResponse* reply) {
-    auto record = DAG->GetState(RPCHashToHash(request->hash()));
+    auto record           = DAG->GetState(RPCHashToHash(request->hash()));
     auto milestone_hashes = DAG->TraverseMilestoneForward(*record, request->number());
     for (size_t i = 0; i < milestone_hashes.size(); ++i) {
         auto rec        = DAG->GetState(milestone_hashes[i]);
@@ -92,6 +92,18 @@ grpc::Status CommanderRPCServiceImpl::StopMiner(grpc::ServerContext* context,
         reply->set_success(true);
     } else {
         reply->set_success(false);
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
+                                               const CreateTxRequest* request,
+                                               CreateTxResponse* reply) {
+    if (!WALLET) {
+        reply->set_result("Wallet has not been started");
+    } else {
+        WALLET->CreateRandomTx(request->size());
+        reply->set_result("Now wallet is creating tx");
     }
     return grpc::Status::OK;
 }
