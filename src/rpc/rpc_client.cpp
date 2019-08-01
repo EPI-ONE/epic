@@ -1,6 +1,6 @@
 #include <rpc_client.h>
 
-rpc::Hash* HashToRPCHash(std::string& h) {
+rpc::Hash* HashToRPCHash(std::string h) {
     rpc::Hash* rpch = new rpc::Hash();
     rpch->set_hash(h);
     return rpch;
@@ -9,7 +9,7 @@ rpc::Hash* HashToRPCHash(std::string& h) {
 RPCClient::RPCClient(std::shared_ptr<grpc::Channel> channel)
     : be_stub_(BasicBlockExplorerRPC::NewStub(channel)), commander_stub_(CommanderRPC::NewStub(channel)) {}
 
-std::optional<rpc::Block> RPCClient::GetBlock(std::string& block_hash) {
+std::optional<rpc::Block> RPCClient::GetBlock(std::string block_hash) {
     GetBlockRequest request;
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
@@ -25,7 +25,7 @@ std::optional<rpc::Block> RPCClient::GetBlock(std::string& block_hash) {
     return {reply.block()};
 }
 
-std::optional<std::vector<rpc::Block>> RPCClient::GetLevelSet(std::string& block_hash) {
+std::optional<std::vector<rpc::Block>> RPCClient::GetLevelSet(std::string block_hash) {
     GetLevelSetRequest request;
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
@@ -37,16 +37,18 @@ std::optional<std::vector<rpc::Block>> RPCClient::GetLevelSet(std::string& block
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    auto n = reply.blocks_size();
-    std::vector<rpc::Block> r;
-    r.resize(n);
-    for (size_t i = 0; i < n; ++i) {
-        r[i] = reply.blocks(i);
+    if (auto n = reply.blocks_size()) {
+        std::vector<rpc::Block> r;
+        r.resize(n);
+        for (size_t i = 0; i < n; ++i) {
+            r[i] = reply.blocks(i);
+        }
+        return {r};
     }
-    return {r};
+    return {};
 }
 
-std::optional<size_t> RPCClient::GetLevelSetSize(std::string& block_hash) {
+std::optional<size_t> RPCClient::GetLevelSetSize(std::string block_hash) {
     GetLevelSetSizeRequest request;
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
@@ -73,7 +75,7 @@ std::optional<rpc::Block> RPCClient::GetLatestMilestone() {
     return {reply.milestone()};
 }
 
-std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::string& block_hash,
+std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::string block_hash,
                                                                        size_t numberOfMilestone) {
     GetNewMilestoneSinceRequest request;
     rpc::Hash* h = HashToRPCHash(block_hash);
@@ -88,13 +90,15 @@ std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::stri
         return {};
     }
 
-    auto n = reply.blocks_size();
-    std::vector<rpc::Block> r;
-    r.resize(n);
-    for (size_t i = 0; i < n; ++i) {
-        r[i] = reply.blocks(i);
+    if (auto n = reply.blocks_size()) {
+        std::vector<rpc::Block> blocks;
+        blocks.resize(n);
+        for (size_t i = 0; i < n; ++i) {
+            blocks[i] = reply.blocks(i);
+        }
+        return {blocks};
     }
-    return {r};
+    return {};
 }
 
 std::optional<StatusResponse> RPCClient::Status() {
@@ -108,6 +112,7 @@ std::optional<StatusResponse> RPCClient::Status() {
     }
     return {reply};
 }
+
 bool RPCClient::Stop() {
     StopRequest request;
     StopResponse reply;

@@ -5,7 +5,7 @@
 #include "transaction.h"
 #include "uint256.h"
 
-#include <cstdio>
+//#include <cstdio>
 #include <fstream>
 
 using namespace rocksdb;
@@ -194,7 +194,7 @@ ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> WalletStore::
     return GetAllUTXO(SPENT);
 }
 
-void WalletStore::KeysToFile(std::string filePath) {
+int WalletStore::KeysToFile(std::string filePath) {
     // get all data
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kKeyBook));
     std::vector<std::string> keyList;
@@ -218,7 +218,7 @@ void WalletStore::KeysToFile(std::string filePath) {
     }
     output.close();
 
-    std::rename(tmpPath.c_str(), filePath.c_str());
+    return std::rename(tmpPath.c_str(), filePath.c_str());
 }
 
 void WalletStore::ClearOldData() {
@@ -243,7 +243,7 @@ void WalletStore::ClearOldData() {
     auto name_it   = vecStr.cbegin();
     auto handle_it = vec.cbegin();
     while (name_it != vecStr.cend() && handle_it != vec.cend()) {
-        handleMap_.at(*name_it)=*handle_it;
+        handleMap_.at(*name_it) = *handle_it;
         name_it++;
         handle_it++;
     }

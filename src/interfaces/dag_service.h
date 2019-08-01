@@ -10,7 +10,7 @@ public:
     OnLvsConfirmedInterface() = default;
 
     virtual void OnLvsConfirmed(std::vector<RecordPtr> blocks,
-                                std::unordered_set<UTXOPtr> UTXOs,
+                                std::unordered_map<uint256, UTXOPtr> UTXOs,
                                 std::unordered_set<uint256> STXOs) = 0;
 };
 

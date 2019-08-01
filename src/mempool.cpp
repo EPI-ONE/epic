@@ -1,11 +1,11 @@
 #include "mempool.h"
 
+#define READER_LOCK(mu) std::shared_lock<std::shared_mutex> reader(mu);
+#define WRITER_LOCK(mu) std::unique_lock<std::shared_mutex> writer(mu);
+
 bool MemPool::Insert(ConstTxPtr value) {
-    /* TODO: in future version we have to
-     * check UTXO for incoming transaction */
     WRITER_LOCK(mutex_)
-    auto result = mempool_.insert(std::move(value));
-    return std::get<1>(result);
+    return std::get<1>(mempool_.emplace(std::move(value)));
 }
 
 bool MemPool::Contains(const ConstTxPtr& value) const {
@@ -30,8 +30,6 @@ bool MemPool::IsEmpty() const {
     return this->Size() == 0;
 }
 
-/* for phase one linear search seems to be fine but later on
- * we have to improve this method; TODO optimize */
 ConstTxPtr MemPool::GetTransaction(const uint256& blockHash, const arith_uint256& threshold) {
     arith_uint256 base_hash = UintToArith256(blockHash);
     READER_LOCK(mutex_)
@@ -47,11 +45,6 @@ ConstTxPtr MemPool::GetTransaction(const uint256& blockHash, const arith_uint256
 }
 
 ConstTxPtr MemPool::ExtractTransaction(const uint256& blkHash, const arith_uint256& threashold) {
-    if (!redemptionTxQueue.Empty()) {
-        ConstTxPtr ptr;
-        redemptionTxQueue.Take(ptr);
-        return ptr;
-    }
     auto txptr = GetTransaction(blkHash, threashold);
     Erase(txptr);
     return txptr;
@@ -59,15 +52,15 @@ ConstTxPtr MemPool::ExtractTransaction(const uint256& blkHash, const arith_uint2
 
 void MemPool::PushRedemptionTx(ConstTxPtr redemption) {
     READER_LOCK(mutex_)
-    redemptionTxQueue.Put(redemption);
+    redemptionTxQueue_.Put(redemption);
 }
 
-ConstTxPtr MemPool::GetRedemptionTx(bool IsRegistration) {
+ConstTxPtr MemPool::GetRedemptionTx(bool IsFirstReg) {
     READER_LOCK(mutex_)
-    if (!redemptionTxQueue.Empty()) {
+    if (!redemptionTxQueue_.Empty()) {
         ConstTxPtr ptr;
-        redemptionTxQueue.Take(ptr);
-        if (IsRegistration && !ptr->IsFirstRegistration()) {
+        redemptionTxQueue_.Take(ptr);
+        if (IsFirstReg && !ptr->IsFirstRegistration()) {
             return nullptr;
         }
         return ptr;

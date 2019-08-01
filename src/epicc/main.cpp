@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     uint16_t rpc_port;
     // clang-format off
     cxxopts::Options options("epicc", "epic client");
-    options.positional_help("COMMAND. available commands: status, start-miner, stop-miner, stop").show_positional_help();
+    options.positional_help("COMMAND. available commands: status, start-miner, stop-miner, create-tx, stop").show_positional_help();
 
     options
     .add_options("command")

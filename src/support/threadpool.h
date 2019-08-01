@@ -70,7 +70,7 @@ public:
     /**
      * execute a callable which has the operator () without return value, if you want to pass the arguments,
      * you should use std::bind or lambda function
-     * @tparam FunctionType
+     * @param FunctionType
      * @param f
      */
     template <typename FunctionType>

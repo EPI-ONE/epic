@@ -97,15 +97,6 @@ Transaction& Transaction::AddInput(TxInput&& txin) {
     return *this;
 }
 
-Transaction& Transaction::AddSignedInput(const TxOutPoint& outpoint,
-                                         const CPubKey& pubkey,
-                                         const uint256& hashMsg,
-                                         const std::vector<unsigned char>& sig) {
-    VStream indata{pubkey, sig, hashMsg};
-    AddInput(TxInput{outpoint, Tasm::Listing{indata}});
-    return *this;
-}
-
 Transaction& Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(this);
@@ -119,8 +110,8 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 }
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
-    std::string s = EncodeAddress(addr);
-    VStream vstream{EncodeAddress(addr)};
+    VStream vstream;
+    vstream << EncodeAddress(addr);
     return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, std::move(vstream)}});
 }
 

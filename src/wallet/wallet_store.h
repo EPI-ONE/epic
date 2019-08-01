@@ -30,7 +30,8 @@ public:
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> GetAllPending();
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> GetAllSpent();
 
-    void KeysToFile(std::string filePath);
+    // returns 0 upon success or non-zero value on error.
+    int KeysToFile(std::string filePath);
     void ClearOldData();
 private:
     bool StoreUTXO(const uint256&, const CKeyID&, uint32_t, uint64_t, uint8_t);

@@ -34,15 +34,15 @@ class RPCClient {
 public:
     RPCClient(std::shared_ptr<grpc::Channel> channel);
 
-    std::optional<rpc::Block> GetBlock(std::string&);
+    std::optional<rpc::Block> GetBlock(std::string);
 
-    std::optional<std::vector<rpc::Block>> GetLevelSet(std::string&);
+    std::optional<std::vector<rpc::Block>> GetLevelSet(std::string);
 
-    std::optional<size_t> GetLevelSetSize(std::string&);
+    std::optional<size_t> GetLevelSetSize(std::string);
 
     std::optional<rpc::Block> GetLatestMilestone();
 
-    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(std::string&, size_t);
+    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(std::string, size_t);
     std::optional<StatusResponse> Status();
 
     bool Stop();

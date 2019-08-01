@@ -126,7 +126,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
         Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
             Transaction redeem{};
-            redeem.AddSignedInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig)
+            redeem.AddInput(TxInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig))
                 .AddOutput(0, addr);
             ASSERT_TRUE(redeem.IsRegistration());
             blk.AddTransaction(redeem);
@@ -242,7 +242,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     // construct another block
     Transaction tx{};
-    tx.AddSignedInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig)
+    tx.AddInput(TxInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig))
         .AddOutput(valueOut1, addr)
         .AddOutput(valueOut2, addr);
     Block b3{GetParams().version, ghash, b2hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};

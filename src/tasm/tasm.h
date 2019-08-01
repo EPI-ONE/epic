@@ -78,9 +78,9 @@ public:
         return program;
     }
 
-    int ExecListing(Listing&& l) {
+    bool ExecListing(Listing&& l) {
         VStream vs(std::move(l.data));
-        return YieldInstruction(std::move(l.program))(vs, 0);
+        return bool(YieldInstruction(std::move(l.program))(vs, 0));
     }
 
     void SetOp(uint8_t ip, instruction i) {

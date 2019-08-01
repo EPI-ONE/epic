@@ -55,6 +55,13 @@ public:
         : outpoint(outpointToprev), listingContent(std::move(listing)) {}
     TxInput(const uint256& fromBlock, uint32_t index, Tasm::Listing listing)
         : outpoint(fromBlock, index), listingContent(std::move(listing)) {}
+
+    TxInput(const TxOutPoint& outpoint,
+            const CPubKey& pubkey,
+            const uint256& hashMsg,
+            const std::vector<unsigned char>& sig)
+        : TxInput(outpoint, Tasm::Listing{VStream(pubkey, sig, hashMsg)}) {}
+
     explicit TxInput(Tasm::Listing listing) : outpoint(), listingContent(std::move(listing)) {}
 
     bool IsRegistration() const;
@@ -107,7 +114,7 @@ public:
     }
 
 private:
-    const Transaction* parentTx_;
+    const Transaction* parentTx_{nullptr};
 };
 
 class Transaction {
@@ -137,10 +144,6 @@ public:
     void SetParents();
 
     Transaction& AddInput(TxInput&& input);
-    Transaction& AddSignedInput(const TxOutPoint& outpoint,
-                                const CPubKey& pubkey,
-                                const uint256& hashMsg,
-                                const std::vector<unsigned char>& sig);
     Transaction& AddOutput(TxOutput&& output);
     Transaction& AddOutput(uint64_t, const CKeyID&);
     Transaction& AddOutput(const Coin&, const CKeyID&);

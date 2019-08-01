@@ -20,8 +20,6 @@ std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
 std::shared_ptr<Wallet> WALLET;
-
-// TODO: init mempool
 std::unique_ptr<MemPool> MEMPOOL;
 
 ECCVerifyHandle handle;
@@ -378,6 +376,7 @@ bool Start() {
         return false;
     }
     PEERMAN->Start();
+    WALLET->Start();
 
     // start rpc server
     if (!(CONFIG->GetDisableRPC())) {
@@ -394,8 +393,12 @@ void ShutDown() {
     }
 
     PEERMAN->Stop();
+    WALLET->Stop();
     DAG->Stop();
     CAT->Stop();
+    if (MINER->IsRunning()) {
+        MINER->Stop();
+    }
 
     CAT.reset();
     DAG.reset();

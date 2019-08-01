@@ -1,5 +1,5 @@
-#include "mempool.h"
 #include "wallet.h"
+#include "mempool.h"
 
 #include <algorithm>
 #include <chrono>
@@ -11,11 +11,17 @@ void Wallet::Start() {
     stopFlag_ = false;
     threadPool_.Start();
 
-    threadPool_.Execute([=, period = storePeriod_]() { SendingStorageTask(period); });
+    // zero period means no storing
+    if (storePeriod_ != 0) {
+        scheduleTask_ = std::thread([&]() { SendingStorageTask(storePeriod_); });
+    }
 }
 
 void Wallet::Stop() {
     stopFlag_ = true;
+    if (scheduleTask_.joinable()) {
+        scheduleTask_.join();
+    }
     threadPool_.Stop();
 }
 
@@ -42,40 +48,45 @@ void Wallet::Load() {
 }
 
 void Wallet::SendingStorageTask(uint32_t period) {
-    scheduler.AddPeriodTask(period, [&]() {
-        walletStore_.ClearOldData();
+    // period task of storing data
+    scheduler_.AddPeriodTask(period, [&]() {
+        threadPool_.Execute([&]() {
+            walletStore_.ClearOldData();
 
-        for (const auto& pairTx : pendingTx) {
-            walletStore_.StoreTx(*pairTx.second);
-        }
-        for (const auto& [utxoKey, utxoTuple] : unspent) {
-            walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
-                                      std::get<COIN>(utxoTuple));
-        }
-        for (const auto& [utxoKey, utxoTuple] : pending) {
-            walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
-                                      std::get<COIN>(utxoTuple));
-        }
+            for (const auto& pairTx : pendingTx) {
+                walletStore_.StoreTx(*pairTx.second);
+            }
+            for (const auto& [utxoKey, utxoTuple] : unspent) {
+                walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
+                                          std::get<COIN>(utxoTuple));
+            }
+            for (const auto& [utxoKey, utxoTuple] : pending) {
+                walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
+                                          std::get<COIN>(utxoTuple));
+            }
+        });
     });
+
     while (!stopFlag_) {
-        // period task of storing data
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        scheduler.Loop();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        scheduler_.Loop();
     }
 }
 
 void Wallet::OnLvsConfirmed(std::vector<RecordPtr> records,
-                            std::unordered_set<UTXOPtr> UTXOs,
+                            std::unordered_map<uint256, UTXOPtr> UTXOs,
                             std::unordered_set<uint256> STXOs) {
-    for (auto& record : records) {
-        ProcessRecord(record);
-    }
-    for (auto& utxo : UTXOs) {
-        ProcessUTXO(utxo);
-    }
-    for (auto& stxo : STXOs) {
-        ProcessSTXO(stxo);
-    }
+    threadPool_.Execute([=, records = std::move(records), UTXOs = std::move(UTXOs), STXOs = std::move(STXOs)]() {
+        for (auto& record : records) {
+            ProcessRecord(record);
+        }
+        for (auto& [utxokey, utxo] : UTXOs) {
+            ProcessUTXO(utxokey, utxo);
+        }
+        for (auto& stxo : STXOs) {
+            ProcessSTXO(stxo);
+        }
+    });
 }
 
 void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
@@ -133,7 +144,7 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
         auto output = it->second->GetOutputs()[0];
         auto keyId  = ParseAddrFromScript(output.listingContent);
         assert(keyId);
-        setLastRedemAddress(*keyId);
+        SetLastRedemAddress(*keyId);
         pendingRedemption.erase(it);
     }
 }
@@ -145,7 +156,7 @@ CKeyID Wallet::CreateNewKey(bool compressed) {
     auto addr      = pubkey.GetID();
 
     walletStore_.StoreKeys(addr, privkey);
-    keyBook.emplace(addr, std::pair{std::move(privkey), std::move(pubkey)});
+    keyBook.emplace(addr, std::pair{std::move(privkey), pubkey});
     return addr;
 }
 
@@ -157,7 +168,7 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
     privkey.Sign(hashMsg, sig);
 
     // return prepared input
-    return TxInput{outpoint, Tasm::Listing{VStream{pubkey, sig, hashMsg}}};
+    return TxInput{outpoint, pubkey, hashMsg, sig};
 }
 
 ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& nextAddr, const std::string& msg) {
@@ -173,7 +184,7 @@ ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& next
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     auto reg                  = std::make_shared<const Transaction>(address);
     hasSentFirstRegistration_ = true;
-    setLastRedemAddress(address);
+    SetLastRedemAddress(address);
     return reg;
 }
 
@@ -272,6 +283,9 @@ bool Wallet::CanRedeem() {
 void Wallet::CreateRandomTx(size_t sizeTx) {
     threadPool_.Execute([=, size = sizeTx]() {
         for (int i = 0; i < size; i++) {
+            if (stopFlag_) {
+                return;
+            }
             auto addr = CreateNewKey(false);
             if (!hasSentFirstRegistration_) {
                 auto reg = CreateFirstRegistration(addr);
@@ -281,7 +295,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             }
             if (GetBalance() <= MIN_FEE) {
                 if (CanRedeem()) {
-                    auto redem = CreateRedemption(getLastRedemAddress(), addr, "lalala");
+                    auto redem = CreateRedemption(GetLastRedemAddress(), addr, "lalala");
                     spdlog::info("[Wallet] Created redemption {}, index = {}", std::to_string(redem->GetHash()), i);
                     pendingRedemption.insert({redem->GetHash(), redem});
                     MEMPOOL->PushRedemptionTx(redem);
@@ -290,6 +304,9 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     while (GetBalance() <= MIN_FEE && !CanRedeem()) {
                         // give up creating tx if we don't have enough balance nor can't redeem
                         std::this_thread::yield();
+                        if (stopFlag_) {
+                            return;
+                        }
                     }
                     // try again to create redemption or normal transaction
                     i--;
@@ -316,12 +333,12 @@ std::pair<uint256, Coin> Wallet::GetMinerInfo() const {
     return minerInfo_;
 }
 
-const CKeyID Wallet::getLastRedemAddress() const {
+const CKeyID Wallet::GetLastRedemAddress() const {
     READER_LOCK(lock_)
     return lastRedemAddress_;
 }
 
-void Wallet::setLastRedemAddress(const CKeyID& lastRedemAddress) {
+void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     Wallet::lastRedemAddress_ = lastRedemAddress;
 }
