@@ -25,10 +25,24 @@ public:
                   return *a == *b;
               }) {}
 
+    /**
+     * basic operations for memory pool
+     */
     bool Insert(ConstTxPtr value);
     bool Contains(const ConstTxPtr& value) const;
     bool Erase(const ConstTxPtr& value);
     bool IsEmpty() const;
+
+    /** 
+     * processes transactions received from other nodes(memory pool)
+     */
+    bool ReceiveTx(const ConstTxPtr& tx);
+
+    /**
+     *  removes all conflicting transactions if this transaction is valid,
+     *  otherwise simply remove it
+     */
+    void ReleaseTxFromConfirmed(const Transaction& tx, bool valid);
 
     std::size_t Size() const;
 

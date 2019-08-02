@@ -100,10 +100,15 @@ public:
 
     /**
      * relay block to neighbors
-     * @param block
+     * @param ConstBlockPtr, PeerPtr
      */
     void RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from);
 
+    /**
+     * relay transaction to neighbors
+     * @param ConstTxPtr, PeerPtr
+     */
+    void RelayTransaction(const ConstTxPtr& tx, const PeerPtr& msg_from);
 
 private:
     /*

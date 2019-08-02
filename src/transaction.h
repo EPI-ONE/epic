@@ -4,6 +4,7 @@
 #include <cassert>
 #include <sstream>
 
+#include "net_message.h"
 #include "params.h"
 #include "tasm.h"
 #include "tinyformat.h"
@@ -12,6 +13,11 @@ static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
 
 class Block;
 class Transaction;
+
+/**
+ * Computation methods of keys for searching UTXO in maps or in DB: hash ^ index
+ */
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t index);
 
 class TxOutPoint {
 public:
@@ -34,6 +40,10 @@ public:
 
     uint64_t HashCode() const {
         return bHash.GetCheapHash() ^ index;
+    }
+
+    uint256 GetOutKey() const {
+        return ComputeUTXOKey(bHash, index);
     }
 };
 
@@ -117,7 +127,7 @@ private:
     const Transaction* parentTx_{nullptr};
 };
 
-class Transaction {
+class Transaction : public NetMessage {
 public:
     /**
      * constructor of an empty transcation
@@ -149,6 +159,7 @@ public:
     Transaction& AddOutput(const Coin&, const CKeyID&);
 
     void FinalizeHash();
+    bool Verify() const;
 
     const std::vector<TxInput>& GetInputs() const;
     std::vector<TxInput>& GetInputs();
@@ -165,6 +176,7 @@ public:
     uint64_t HashCode() const;
 
     ADD_SERIALIZE_METHODS
+    ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(inputs_);

@@ -17,11 +17,6 @@ string to_string(const ChainLedger&);
 } // namespace std
 
 /**
- * Computation methods of keys for searching UTXO in maps or in DB: hash ^ index
- */
-uint256 ComputeUTXOKey(const uint256& hash, uint32_t index);
-
-/**
  * UTXO stands for unspend transaction output
  */
 class UTXO {
@@ -138,6 +133,8 @@ public:
     void Update(const TXOC&);
     void Remove(const TXOC&);
     void Rollback(const TXOC&);
+
+    bool IsSpendable(const uint256&) const;
 
 private:
     std::unordered_map<uint256, UTXOPtr> pending_;

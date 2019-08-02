@@ -159,6 +159,11 @@ bool RocksDBStore::WriteMsPos(const uint64_t& key,
     return WritePosImpl("ms", key, msHash, blkPos, recPos);
 }
 
+bool RocksDBStore::ExistsUTXO(const uint256& key) const {
+    MAKE_KEY_SLICE(key);
+    return !DBWrapper::Get("utxo", keySlice).empty();
+}
+
 std::unique_ptr<UTXO> RocksDBStore::GetUTXO(const uint256& key) const {
     MAKE_KEY_SLICE(key);
     GET_VALUE(handleMap_.at("utxo"), nullptr);

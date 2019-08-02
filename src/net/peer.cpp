@@ -1,5 +1,8 @@
 #include "peer.h"
+
 #include "caterpillar.h"
+#include "mempool.h"
+#include "peer_manager.h"
 
 Peer::Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager)
     : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(0),
@@ -50,6 +53,10 @@ void Peer::ProcessMessage(unique_message_t& msg) {
             }
             case NetMessage::BUNDLE: {
                 ProcessBundle(std::shared_ptr<Bundle>(dynamic_cast<Bundle*>(msg.release())));
+                break;
+            }
+            case NetMessage::TX: {
+                ProcessTransaction(std::shared_ptr<Transaction>(dynamic_cast<Transaction*>(msg.release())));
                 break;
             }
             case NetMessage::BLOCK: {
@@ -223,6 +230,15 @@ void Peer::SendAddresses() {
         }
 
         SendMessage(std::make_unique<AddressMessage>(std::move(addresses)));
+    }
+}
+
+void Peer::ProcessTransaction(const ConstTxPtr& tx) {
+    if (!tx->Verify()) {
+        return;
+    }
+    if (MEMPOOL->ReceiveTx(tx)) {
+        PEERMAN->RelayTransaction(tx, weak_peer_.lock());
     }
 }
 

@@ -60,7 +60,7 @@ public:
     void SetNonce(uint32_t);
 
     void AddTransaction(const Transaction&);
-    void AddTransaction(ConstTxPtr&&);
+    void AddTransaction(ConstTxPtr);
     bool HasTransaction() const;
     const std::optional<Transaction>& GetTransaction() const;
 

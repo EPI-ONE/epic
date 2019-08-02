@@ -160,6 +160,12 @@ private:
     void ProcessGetAddrMessage();
 
     /**
+     * process transaction, add to memory pool and relay
+     * @param transaction
+     */
+    void ProcessTransaction(const ConstTxPtr& tx);
+
+    /**
      * process block, add to dag and relay
      * @param block
      */

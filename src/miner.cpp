@@ -226,6 +226,7 @@ void Miner::Run() {
             }
             distanceCal.Add(bPtr, true);
             selfChainHead = bPtr;
+            MEMPOOL->ReleaseTxFromConfirmed(*bPtr->GetTransaction(), true);
             DAG->AddNewBlock(bPtr, nullptr);
             CAT->SaveMinerChainHead(bPtr->GetHash());
 

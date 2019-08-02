@@ -271,6 +271,19 @@ void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from
     }
 }
 
+void PeerManager::RelayTransaction(const ConstTxPtr& tx, const PeerPtr& msg_from) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    if (peerMap_.empty()) {
+        return;
+    }
+
+    for (auto& it : peerMap_) {
+        if (it.second != msg_from) {
+            it.second->SendMessage(std::make_unique<Transaction>(*tx));
+        }
+    }
+}
+
 void PeerManager::InitScheduleTask() {
     scheduler_.AddPeriodTask(kCheckTimeoutInterval, std::bind(&PeerManager::CheckTimeout, this));
 

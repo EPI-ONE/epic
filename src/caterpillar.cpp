@@ -218,6 +218,10 @@ bool Caterpillar::SaveMinerChainHead(const uint256& h) const {
     return dbStore_.WriteInfo("minerHead", h);
 }
 
+bool Caterpillar::ExistsUTXO(const uint256& key) const {
+    return dbStore_.ExistsUTXO(key);
+}
+
 std::unique_ptr<UTXO> Caterpillar::GetUTXO(const uint256& key) const {
     return dbStore_.GetUTXO(key);
 }

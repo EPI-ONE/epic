@@ -25,6 +25,7 @@ public:
         VERSION_ACK,
         GET_ADDR,
         ADDR,
+        TX,
         BLOCK,
         BUNDLE,
         GET_INV,

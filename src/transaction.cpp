@@ -1,6 +1,14 @@
 #include "transaction.h"
+#include "params.h"
+#include "spdlog.h"
+
+#include <unordered_set>
 
 using Listing = Tasm::Listing;
+
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t index) {
+    return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
+}
 
 /*
  * TxInput class START
@@ -119,6 +127,37 @@ void Transaction::FinalizeHash() {
     if (hash_.IsNull()) {
         hash_ = HashSHA2<1>(VStream(*this));
     }
+}
+
+bool Transaction::Verify() const {
+    if (inputs_.empty() || outputs_.empty()) {
+        spdlog::info("Transaction {} contains empty inputs or outputs", hash_.to_substr());
+        return false;
+    }
+    // TODO: whether to add size checking
+
+    // check no double spending on the same output
+    std::unordered_set<TxOutPoint> outpoints;
+    outpoints.reserve(inputs_.size());
+    for (const auto& input : inputs_) {
+        if (outpoints.count(input.outpoint) > 0) {
+            spdlog::info("Transaction {} contains duplicated outpoints", hash_.to_substr());
+            return false;
+        }
+        outpoints.emplace(input.outpoint);
+    }
+
+    // check sum of outputs does not exceed maximal allowed money
+    Coin valueOut{0};
+    for (const auto& output : outputs_) {
+        valueOut += output.value;
+        if (valueOut > GetParams().maxMoney) {
+            spdlog::info("Transaction {} total output value exceeds maximal allow money", hash_.to_substr());
+            return false;
+        }
+    }
+
+    return true;
 }
 
 const std::vector<TxInput>& Transaction::GetInputs() const {
