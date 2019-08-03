@@ -79,6 +79,7 @@ set(SUPPORT_DIR src/support)
 set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
 set(CORE_DIR src)
+set(TOOLS_DIR src/tools)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
@@ -86,6 +87,8 @@ aux_source_directory(${TASM_DIR} TASM_SRCS)
 aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
 aux_source_directory(${SUPPORT_DIR} SUPPORT_DIR)
+aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
+
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
 include_directories(src
@@ -176,6 +179,9 @@ target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest epiccore)
 add_dependencies(epictest epiccore)
 
+add_executable(parseBlocks ${TOOLS_SRCS})
+target_link_libraries(parseBlocks epiccore)
+add_dependencies(parseBlocks epiccore)
 
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)

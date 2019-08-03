@@ -28,6 +28,7 @@ public:
     std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
     VStream GetRawLevelSetAt(size_t height) const;
     VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
+    std::vector<RecordPtr> GetLevelSetWithRecAt(size_t height) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     bool SaveHeadHeight(uint64_t height) const;
