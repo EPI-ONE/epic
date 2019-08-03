@@ -81,6 +81,20 @@ StoredRecord Caterpillar::GetRecord(const uint256& blkHash) const {
     return ConstructNRFromFile(dbStore_.GetRecordPos(blkHash));
 }
 
+std::vector<RecordPtr> Caterpillar::GetLevelSetWithRecAt(size_t height) const {
+    auto levelSet = GetLevelSetAt(height);
+    std::vector<RecordPtr> result;
+    for (auto& blk : levelSet) {
+        auto [blkPos, recPos] = *(dbStore_.GetRecordPos(blk->GetHash()));
+
+        RecordPtr record = std::make_shared<NodeRecord>(*blk);
+        FileReader recReader{file::REC, recPos};
+        recReader >> *record;
+        result.emplace_back(record);
+    }
+    return result;
+}
+
 StoredRecord Caterpillar::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value) const {
     if (!value) {
         StoredRecord ret{nullptr, [](NodeRecord* ptr) {}};
