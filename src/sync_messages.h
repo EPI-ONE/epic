@@ -5,7 +5,6 @@
 
 #include "block.h"
 #include "net_message.h"
-#include "task.h"
 
 class GetInv : public NetMessage {
 public:
@@ -82,7 +81,7 @@ public:
     // random number to track bundle
     std::vector<uint32_t> bundleNonce;
 
-    explicit GetData(GetDataTask::GetDataType type_) : NetMessage(GET_DATA), type(type_) {}
+    explicit GetData(uint8_t t) : NetMessage(GET_DATA), type(t) {}
 
     explicit GetData(VStream& stream) : NetMessage(GET_DATA) {
         Deserialize(stream);

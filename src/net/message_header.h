@@ -11,7 +11,7 @@
 #define MESSAGE_HEADER_LENGTH \
     MESSAGE_MAGIC_NUMBER_LENGTH + MESSAGE_COMMAND_LENGTH + MESSAGE_LENGTH_LENGTH + MESSAGE_CHECKSUM_LENGTH
 
-#define MAX_MESSAGE_LENGTH 4 * 1000 * 1000
+#define MAX_MESSAGE_LENGTH 100 * 1024 * 1024
 
 typedef struct {
     uint32_t magic;
@@ -25,7 +25,7 @@ inline uint32_t GetMagicNumber() {
     return 0x44535A5A;
 }
 
-inline bool VerifyChecksum(message_header_t &header) {
+inline bool VerifyChecksum(message_header_t& header) {
     return header.checksum == header.magic + header.type + header.length;
 }
 

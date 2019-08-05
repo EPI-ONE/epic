@@ -16,6 +16,7 @@
 #include "protocol_exception.h"
 #include "spdlog/spdlog.h"
 #include "sync_messages.h"
+#include "task.h"
 #include "version_ack.h"
 #include "version_message.h"
 
@@ -47,53 +48,76 @@ public:
 
     void SendLocalAddress();
 
-    void Disconnect() {
-        connection_->Disconnect();
+    void Disconnect();
+
+    uint64_t GetLastPingTime() {
+        return lastPingTime;
     }
-
-    const std::atomic_uint64_t& GetLastPingTime() const;
-
-    void SetLastPingTime(uint64_t lastPingTime_);
-
-    const std::atomic_uint64_t& GetLastPongTime() const;
-
-    void SetLastPongTime(uint64_t lastPongTime_);
 
     size_t GetNPingFailed() const;
 
-    void SetNPingFailed(size_t nPingFailed_);
+    void AddPendingGetInvTask(std::shared_ptr<GetInvTask> task);
 
-    void AddPendingGetInvTask(const GetInvTask&);
-
-    std::optional<GetInvTask> RemovePendingGetInvTask(uint32_t task_id);
+    bool RemovePendingGetInvTask(uint32_t task_id);
 
     size_t GetInvTaskSize();
 
-    void AddPendingGetDataTask(const GetDataTask&);
+    void AddPendingGetDataTask(std::shared_ptr<GetDataTask> task) {
+        getDataTasks.Push_back(task);
+    }
 
-    std::optional<GetDataTask> RemovePendingGetDataTask(uint32_t task_id);
+    size_t GetDataTaskSize() {
+        return getDataTasks.Size();
+    }
 
-    size_t GetDataTaskSize();
+    uint256 GetLastSentBundleHash() const {
+        return lastSentBundleHash;
+    }
 
-    uint256 GetLastSentBundleHash() const;
+    void SetLastSentBundleHash(const uint256& h) {
+        lastSentBundleHash = h;
+    }
 
-    void SetLastSentBundleHash(const uint256&);
+    uint256 GetLastSentInvHash() const {
+        return lastSentInvHash;
+    }
 
-    uint256 GetLastSentInvHash() const;
+    void SetLastSentInvHash(const uint256& h) {
+        lastSentInvHash = h;
+    }
 
-    void SetLastSentInvHash(const uint256&);
+    uint256 GetLastGetInvEnd() const {
+        return lastGetInvEnd;
+    }
 
-    uint256 GetLastGetInvBegin() const;
+    void SetLastGetInvEnd(const uint256& h) {
+        lastGetInvEnd = h;
+    }
 
-    void SetLastGetInvBegin(const uint256&);
+    size_t GetLastGetInvLength() const {
+        return lastGetInvLength;
+    }
 
-    uint256 GetLastGetInvEnd() const;
+    void SetLastGetInvLength(const size_t& l) {
+        lastGetInvLength = l;
+    }
 
-    void SetLastGetInvEnd(const uint256&);
+    bool IsInbound() {
+        return connection_->IsInbound();
+    }
 
-    size_t GetLastGetInvLength() const;
+    bool IsVaild() {
+        return connection_->IsValid();
+    }
 
-    void SetLastGetInvLength(const size_t&);
+    void StartSync();
+
+    void CompleteSync() {
+        isSyncing = false;
+        isHigher  = false;
+    }
+
+    bool IsSyncTimeout();
 
     /*
      * basic information of peer
@@ -115,14 +139,9 @@ public:
     // ack
     std::atomic_bool isFullyConnected = false;
 
-    bool IsInbound() {
-        return connection_->IsInbound();
-    }
+    std::atomic_bool isHigher = false;
 
-    bool IsVaild() {
-        return connection_->IsValid();
-    }
-
+    std::atomic_bool isSyncing = false;
 
 private:
     /*
@@ -141,7 +160,7 @@ private:
      * process version message
      * @param versionMessage
      */
-    void ProcessVersionMessage(VersionMessage& versionMessage_);
+    void ProcessVersionMessage(VersionMessage& version);
 
     /*
      * process version ack message
@@ -199,11 +218,6 @@ private:
     void ProcessNotFound(const uint32_t& nonce);
 
     /**
-     * get the first nonce of GetData tasks
-     */
-    uint32_t GetFirstGetDataNonce();
-
-    /**
      * Parameters of network setting
      */
     // record at most 2000 net addresses
@@ -219,7 +233,8 @@ private:
      */
 
     // last sending ping time and last receiving pong time
-    std::atomic_uint64_t lastPingTime, lastPongTime;
+    std::atomic_uint64_t lastPingTime = time(nullptr);
+    std::atomic_uint64_t lastPongTime = time(nullptr);
 
     // last sending nonce
     std::atomic_uint64_t lastNonce;
@@ -237,17 +252,17 @@ private:
      * Synchronization information
      */
 
-    mutable std::shared_mutex sync_lock;
 
     // Keep track of the last request we made to the peer in GetInv
     // so we can avoid redundant and harmful GetInv requests.
-    uint256 lastGetInvBegin, lastGetInvEnd;
+    std::atomic<uint256> lastGetInvEnd;
     std::atomic_size_t lastGetInvLength;
-    uint256 lastSentBundleHash, lastSentInvHash;
+    std::atomic<uint256> lastSentBundleHash;
+    std::atomic<uint256> lastSentInvHash;
 
-    std::unordered_map<uint32_t, GetInvTask> getInvsTasks;
-    std::map<uint32_t, GetDataTask> getDataTasks;
-    std::unordered_map<uint32_t, std::shared_ptr<Bundle>> orphanLvsPool;
+    mutable std::shared_mutex inv_task_mutex_;
+    std::unordered_map<uint32_t, std::shared_ptr<GetInvTask>> getInvsTasks;
+    GetDataTaskManager getDataTasks;
 
     std::weak_ptr<Peer> weak_peer_;
 

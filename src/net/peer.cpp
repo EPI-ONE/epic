@@ -89,16 +89,10 @@ void Peer::ProcessVersionACK() {
     }
     isFullyConnected = true;
     spdlog::info("finish version handshake with {}", address.ToString());
-
-    if (IsInbound()) {
-        if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
-            spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
-            DAG->RequestInv(uint256(), 5, weak_peer_.lock());
-        }
-    }
 }
 
 void Peer::ProcessPing(const Ping& ping) {
+    lastPingTime = time(nullptr);
     SendMessage(std::make_unique<Pong>(ping.nonce));
 }
 
@@ -108,7 +102,7 @@ void Peer::ProcessPong(const Pong& pong) {
     spdlog::info("receive pong from {}, nonce = {}", address.ToString(), pong.nonce);
 }
 
-void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
+void Peer::ProcessVersionMessage(VersionMessage& version) {
     if (versionMessage) {
         throw ProtocolException("Got two version messages from peer");
     }
@@ -116,20 +110,24 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
     // TODO check if we have connected to ourself
 
     // check version
-    if (versionMessage_.client_version < kMinProtocolVersion) {
-        spdlog::warn("client version {} < min protocol version {}, disconnect peer {}", versionMessage_.client_version,
+    if (version.client_version < kMinProtocolVersion) {
+        spdlog::warn("client version {} < min protocol version {}, disconnect peer {}", version.client_version,
                      kMinProtocolVersion, address.ToString());
         Disconnect();
         return;
     }
 
     versionMessage  = new VersionMessage();
-    *versionMessage = versionMessage_;
+    *versionMessage = version;
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
     spdlog::info("{}: Got version = {}, services = {}, time = {}, height = {}", address.ToString(),
                  versionMessage->client_version, versionMessage->local_service, std::string(time_buffer),
                  versionMessage->current_height);
+
+    if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
+        isHigher = true;
+    }
 
     // send version message if peer is inbound
     if (IsInbound()) {
@@ -140,7 +138,7 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
     SendMessage(std::make_unique<NetMessage>(NetMessage::VERSION_ACK));
 
     // add the score of the our local address as reported by the peer
-    addressManager_->SeenLocalAddress(versionMessage_.address_you);
+    addressManager_->SeenLocalAddress(version.address_you);
     if (!IsInbound()) {
         // send local address
         SendLocalAddress();
@@ -149,11 +147,6 @@ void Peer::ProcessVersionMessage(VersionMessage& versionMessage_) {
         SendMessage(std::make_unique<NetMessage>(NetMessage::GET_ADDR));
 
         addressManager_->MarkOld(address);
-
-        if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
-            spdlog::info("we are behind our peer {}, start batch synchronization", address.ToString());
-            DAG->RequestInv(uint256(), 5, weak_peer_.lock());
-        }
     }
 }
 
@@ -188,28 +181,8 @@ void Peer::ProcessGetAddrMessage() {
     haveReplyGetAddr = true;
 }
 
-const std::atomic_uint64_t& Peer::GetLastPingTime() const {
-    return lastPingTime;
-}
-
-void Peer::SetLastPingTime(const uint64_t lastPingTime_) {
-    Peer::lastPingTime = lastPingTime_;
-}
-
-const std::atomic_uint64_t& Peer::GetLastPongTime() const {
-    return lastPongTime;
-}
-
-void Peer::SetLastPongTime(const uint64_t lastPongTime_) {
-    Peer::lastPongTime = lastPongTime_;
-}
-
 size_t Peer::GetNPingFailed() const {
     return nPingFailed;
-}
-
-void Peer::SetNPingFailed(size_t nPingFailed_) {
-    Peer::nPingFailed = nPingFailed_;
 }
 
 void Peer::SendPing() {
@@ -263,13 +236,13 @@ void Peer::ProcessGetInv(GetInv& getInv) {
 
 void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
     spdlog::debug("received inventory message, size = {}, from {} ", inv->hashes.size(), address.ToString());
-    auto task = RemovePendingGetInvTask(inv->nonce);
-    if (!task) {
-        throw ProtocolException("unknown inv, nonce = " + std::to_string(inv->nonce));
+    if (!RemovePendingGetInvTask(inv->nonce)) {
+        spdlog::debug("unknown inv, nonce = {}", inv->nonce);
+        return;
     } else {
         spdlog::debug("Size of getInvsTasks = {}, removed successfully", GetInvTaskSize());
     }
-    DAG->CallbackRequestInv(std::move(inv));
+    DAG->CallbackRequestInv(std::move(inv), weak_peer_.lock());
 }
 
 void Peer::ProcessGetData(GetData& getData) {
@@ -296,173 +269,60 @@ void Peer::ProcessGetData(GetData& getData) {
 }
 
 void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
-    uint32_t firstNonce = GetFirstGetDataNonce();
-    auto task           = RemovePendingGetDataTask(bundle->nonce);
-    if (!task) {
-        throw ProtocolException("unknown bundle, nonce = " + std::to_string(bundle->nonce) + ", msg from " +
-                                address.ToString());
+    if (getDataTasks.Empty()) {
+        spdlog::debug("no pending task");
+        return;
     }
-    switch (task->type) {
-        case GetDataTask::LEVEL_SET: {
-            if (firstNonce == 0) {
-                throw ProtocolException("receive a bundle that we don't need, msg from " + address.ToString());
+
+    if (!getDataTasks.CompleteTask(bundle)) {
+        spdlog::debug("unknown bundle, nonce = {}, msg from{} ", std::to_string(bundle->nonce), address.ToString());
+        return;
+    }
+
+    spdlog::debug("receive bundle nonce = {}, first nonce = {}", bundle->nonce, getDataTasks.Front()->nonce);
+
+    while (getDataTasks.Front() && getDataTasks.Front()->bundle) {
+        auto& front = getDataTasks.Front();
+        if (front->type == GetDataTask::LEVEL_SET) {
+            std::swap(front->bundle->blocks.front(), front->bundle->blocks.back());
+            for (auto& block : front->bundle->blocks) {
+                DAG->AddNewBlock(block, weak_peer_.lock());
             }
-            spdlog::info("bundle nonce = {}, first nonce = {}", bundle->nonce, firstNonce);
-
-            if (bundle->nonce == firstNonce) {
-                spdlog::info("The Bundle answers a GetDataTask of type {}, add it to dag, "
-                             "lvsPool size = {}, MSHash = {}",
-                             task->type, orphanLvsPool.size(), std::to_string(bundle->blocks[0]->GetHash()));
-
-                // Since we swap the first and the last block in a level set before we store
-                // it to DB, to make the ms being the first block, it is likely that our peer
-                // does the same thing. Thus to avoid piling too many blocks in OBC, we swap
-                // them back here, so that blocks are in time order.
-                std::swap(bundle->blocks.front(), bundle->blocks.back());
-
-                for (auto& block : bundle->blocks) {
-                    DAG->AddNewBlock(block, weak_peer_.lock());
-                }
-
-                uint32_t nextNonce = GetFirstGetDataNonce();
-                if (nextNonce != 0) {
-                    auto next = orphanLvsPool.find(nextNonce);
-                    if (next != orphanLvsPool.end()) {
-                        auto next_bundle = next->second;
-                        orphanLvsPool.erase(next);
-                        ProcessBundle(next_bundle);
-                    }
-                }
-            } else {
-                orphanLvsPool[bundle->nonce] = bundle;
-                AddPendingGetDataTask(*task);
-                spdlog::info("The Bundle answers a GetDataTask of type {}, wait for prev level set to be solidified, "
-                             "lvsPool size = {}",
-                             task->type, orphanLvsPool.size());
-            }
-
-            break;
-        }
-        case GetDataTask::PENDING_SET: {
-            spdlog::info("The Bundle answers a GetDataTask of type {}, add it to dag", task->type);
+            spdlog::info("receive levelset ms = {}", std::to_string(front->bundle->blocks.back()->GetHash()));
+        } else if (front->type == GetDataTask::PENDING_SET) {
             for (auto& block : bundle->blocks) {
                 DAG->AddNewBlock(block, nullptr);
             }
-            break;
+            spdlog::info("receive pending set");
         }
+
+        getDataTasks.Pop_front();
+    }
+
+    if (getDataTasks.Empty()) {
+        isSyncing = false;
     }
 }
 
 void Peer::ProcessNotFound(const uint32_t& nonce) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    getInvsTasks.clear();
-    getDataTasks.clear();
-    orphanLvsPool.clear();
-    writer.unlock();
-
-    DAG->DisconnectPeerSync(weak_peer_.lock());
+    Disconnect();
 }
 
-uint32_t Peer::GetFirstGetDataNonce() {
-    auto it = getDataTasks.begin();
-    if (it != getDataTasks.end()) {
-        return it->second.id;
-    }
-    return 0;
+void Peer::AddPendingGetInvTask(std::shared_ptr<GetInvTask> task) {
+    std::unique_lock<std::shared_mutex> writer(inv_task_mutex_);
+    getInvsTasks.insert_or_assign(task->nonce, task);
 }
 
-void Peer::AddPendingGetInvTask(const GetInvTask& task) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    getInvsTasks.insert_or_assign(task.id, task);
-}
-
-std::optional<GetInvTask> Peer::RemovePendingGetInvTask(uint32_t task_id) {
-    std::optional<GetInvTask> result;
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    auto it = getInvsTasks.find(task_id);
-
-    if (it != getInvsTasks.end()) {
-        result = it->second;
-        getInvsTasks.erase(it);
-    }
-
-    return result;
+bool Peer::RemovePendingGetInvTask(uint32_t task_id) {
+    std::unique_lock<std::shared_mutex> writer(inv_task_mutex_);
+    return getInvsTasks.erase(task_id);
 }
 
 size_t Peer::GetInvTaskSize() {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
+    std::shared_lock<std::shared_mutex> reader(inv_task_mutex_);
     return getInvsTasks.size();
 }
 
-void Peer::AddPendingGetDataTask(const GetDataTask& task) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    getDataTasks.insert_or_assign(task.id, task);
-}
-
-std::optional<GetDataTask> Peer::RemovePendingGetDataTask(uint32_t task_id) {
-    std::optional<GetDataTask> result;
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    auto it = getDataTasks.find(task_id);
-
-    if (it != getDataTasks.end()) {
-        result = it->second;
-        getDataTasks.erase(it);
-    }
-    return result;
-}
-
-size_t Peer::GetDataTaskSize() {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
-    return getDataTasks.size();
-}
-
-uint256 Peer::GetLastSentBundleHash() const {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
-    return lastSentBundleHash;
-}
-
-void Peer::SetLastSentBundleHash(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    lastSentBundleHash = h;
-}
-
-uint256 Peer::GetLastSentInvHash() const {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
-    return lastSentInvHash;
-}
-
-void Peer::SetLastSentInvHash(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    lastSentInvHash = h;
-}
-
-uint256 Peer::GetLastGetInvBegin() const {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
-    return lastGetInvBegin;
-}
-
-void Peer::SetLastGetInvBegin(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    lastGetInvBegin = h;
-}
-
-uint256 Peer::GetLastGetInvEnd() const {
-    std::shared_lock<std::shared_mutex> reader(sync_lock);
-    return lastGetInvEnd;
-}
-
-void Peer::SetLastGetInvEnd(const uint256& h) {
-    std::unique_lock<std::shared_mutex> writer(sync_lock);
-    lastGetInvEnd = h;
-}
-
-size_t Peer::GetLastGetInvLength() const {
-    return lastGetInvLength.load();
-}
-
-void Peer::SetLastGetInvLength(const size_t& l) {
-    lastGetInvLength = l;
-}
 void Peer::SendMessage(unique_message_t&& message) {
     connection_->SendMessage(std::move(message));
 }
@@ -480,4 +340,38 @@ void Peer::SendLocalAddress() {
     std::vector<NetAddress> addresses{NetAddress(localAddress, CONFIG->GetBindPort())};
     SendMessage(std::make_unique<AddressMessage>(std::move(addresses)));
     spdlog::info("send local address {} to {}", localAddress.ToString(), address.ToString());
+}
+
+void Peer::StartSync() {
+    if (isSeed) {
+        return;
+    }
+
+    if (isSyncing) {
+        return;
+    }
+
+    isSyncing = true;
+    DAG->RequestInv(uint256(), 5, weak_peer_.lock());
+}
+
+bool Peer::IsSyncTimeout() {
+    if (getDataTasks.IsTimeout()) {
+        return true;
+    }
+
+    std::shared_lock<std::shared_mutex> reader(inv_task_mutex_);
+    for (auto& task : getInvsTasks) {
+        if (task.second->IsTimeout()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Peer::Disconnect() {
+    connection_->Disconnect();
+    for (auto& task : getDataTasks.GetTasks()) {
+        DAG->EraseDownloading(task->hash);
+    }
 }

@@ -2,9 +2,7 @@
 #include "caterpillar.h"
 #include "peer_manager.h"
 
-DAGManager::DAGManager()
-    : verifyThread_(1), syncPool_(1), storagePool_(1), isBatchSynching(false), syncingPeer(nullptr), isStoring(false),
-      isVerifying(false) {
+DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1), isStoring(false), isVerifying(false) {
     milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
 
@@ -29,60 +27,38 @@ bool DAGManager::Init() {
 
 void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer) {
     syncPool_.Execute([peer = std::move(peer), fromHash = std::move(fromHash), length, this]() {
-        if (peer->isSeed) {
-            return;
-        }
-
-        if (isBatchSynching.load() && peer != syncingPeer) {
-            spdlog::debug("Sync ABORTED: syncing with peer {} which is not this peer {}",
-                          syncingPeer->address.ToString(), peer->address.ToString());
-            return;
-        }
-
-        StartBatchSync(peer);
-
         std::vector<uint256> locator = ConstructLocator(fromHash, length, peer);
         if (locator.empty()) {
             spdlog::debug("RequestInv return: locator is null");
             return;
         }
 
-        if (!downloading.empty()) {
-            SPDLOG_INFO("Downloading is not empty. Clearing.");
-            downloading.clear();
-        }
+        peer->SetLastGetInvEnd(fromHash);
+        peer->SetLastGetInvLength(length);
 
-        if (!preDownloading.Empty()) {
-            SPDLOG_INFO("PreDownloading is not empty. Clearing.");
-            preDownloading.Clear();
-        }
-
-        GetInvTask task{};
-        task.SetPeer(peer);
+        auto task = std::make_shared<GetInvTask>(sync_task_timeout);
         peer->AddPendingGetInvTask(task);
-        peer->SendMessage(std::make_unique<GetInv>(locator, task.id));
+        peer->SendMessage(std::make_unique<GetInv>(locator, task->nonce));
     });
 }
 
-void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv) {
-    syncPool_.Execute([inv = std::move(inv), this]() {
+void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer) {
+    syncPool_.Execute([inv = std::move(inv), peer, this]() {
         auto& result = inv->hashes;
         if (result.empty()) {
             spdlog::info("Received an empty inv, which means we have reached the same height as the peer's {}.",
-                         syncingPeer->address.ToString());
-            GetDataTask task(GetDataTask::PENDING_SET);
-            task.SetPeer(syncingPeer);
-            syncingPeer->AddPendingGetDataTask(task);
-            auto pending_request = std::make_unique<GetData>(task.type);
-            pending_request->AddPendingSetNonce(task.id);
-            syncingPeer->SendMessage(std::move(pending_request));
-            spdlog::trace("Synching peer to complete {}", syncingPeer->address.ToString());
-            CompleteBatchSync();
+                         peer->address.ToString());
+            auto task = std::make_shared<GetDataTask>(GetDataTask::PENDING_SET, sync_task_timeout);
+            peer->AddPendingGetDataTask(task);
+            auto pending_request = std::make_unique<GetData>(task->type);
+            pending_request->AddPendingSetNonce(task->nonce);
+            peer->SendMessage(std::move(pending_request));
+            peer->isHigher = false;
         } else if (result.size() == 1 && result.at(0) == GENESIS.GetHash()) {
-            RequestInv(syncingPeer->GetLastGetInvEnd(), 2 * syncingPeer->GetLastGetInvLength(), syncingPeer);
+            RequestInv(peer->GetLastGetInvEnd(), 2 * peer->GetLastGetInvLength(), peer);
             spdlog::debug("We are probably on a fork... sending a larger locator.");
         } else {
-            BatchSync(result, syncingPeer);
+            RequestData(result, peer);
         }
     });
 }
@@ -148,30 +124,6 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
     });
 }
 
-std::optional<GetDataTask> DAGManager::RequestData(const uint256& h, const PeerPtr& peer) {
-    if (downloading.contains(h)) {
-        spdlog::debug("Duplicated GetData request: {}", std::to_string(h));
-        return {};
-    }
-
-    if (CAT->Exists(h)) {
-        spdlog::debug("ABORT GetData request for existing hash: {}", std::to_string(h));
-        return {};
-    }
-
-    GetDataTask task(GetDataTask::LEVEL_SET);
-    task.SetPeer(peer);
-    return std::optional<GetDataTask>(task);
-}
-
-void DAGManager::CallbackRequestData(std::vector<ConstBlockPtr>& blocks) {
-    spdlog::debug("Add {} blocks through CallbackRequestData.", blocks.size());
-    for (auto& b : blocks) {
-        AddNewBlock(b, syncingPeer);
-    }
-    blocks.clear();
-}
-
 void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) const {
     peer->SendMessage(std::make_unique<Bundle>(GetBestChain().GetPendingBlocks(), nonce));
 }
@@ -203,98 +155,44 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
     }
 }
 
-void DAGManager::BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
-    std::vector<uint256> finalHashes;
-    std::vector<GetDataTask> finalTasks;
-    finalHashes.reserve(requests.size());
-    finalTasks.reserve(requests.size());
-
-    if (!preDownloading.Empty()) {
-        // We will continue to send out the remaning hashes in preDownloading,
-        // which are left last time this method is called, because the GetData
-        // size exceeds the limit
-        spdlog::debug("Sending another round of getDataTasks. preDownloading size = {}", preDownloading.Size());
-        preDownloading.DrainTo(finalHashes, maxGetDataSize);
-        for (const auto& h : finalHashes) {
-            finalTasks.push_back(*RequestData(h, requestFrom));
-        }
-    } else {
-        for (auto& h : requests) {
-            auto task = RequestData(h, requestFrom);
-            if (!task) {
-                continue;
-            }
-
-            if (finalHashes.size() < maxGetDataSize) {
-                finalHashes.push_back(h);
-                finalTasks.push_back(*task);
-            } else {
-                preDownloading.Put(h);
-            }
-        }
-
-        requests.clear();
-
-        if (finalHashes.empty()) {
-            // Force the downloading queue to check and remove existing hashes
-            UpdateDownloadingQueue(Hash::GetZeroHash());
-            return;
-        }
-    }
-
-    // To avoid piling up too many level sets in memory
-    while (storagePool_.GetTaskSize() > storagePool_.GetThreadSize() * 2) {
-        std::this_thread::yield();
-    }
-
+void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
     auto message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
+    for (auto& h : requests) {
+        if (downloading.contains(h) || CAT->Exists(h)) {
+            continue;
+        }
 
-    auto hIter = finalHashes.begin();
-    auto tIter = finalTasks.begin();
-    while (hIter != finalHashes.end() && tIter != finalTasks.end()) {
-        requestFrom->AddPendingGetDataTask(*tIter);
-        message->AddItem(*hIter, tIter->id);
-        downloading.insert(*hIter);
-        ++hIter;
-        ++tIter;
+        auto task = std::make_shared<GetDataTask>(GetDataTask::LEVEL_SET, h, sync_task_timeout);
+        message->AddItem(h, task->nonce);
+        requestFrom->AddPendingGetDataTask(task);
+        downloading.insert(h);
+
+        if (message->hashes.size() >= maxGetDataSize) {
+            requestFrom->SendMessage(std::move(message));
+            message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
+        }
     }
-    requestFrom->SendMessage(std::move(message));
+
+    if (!message->hashes.empty()) {
+        requestFrom->SendMessage(std::move(message));
+    }
 }
 
 std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr& peer) {
-    std::vector<uint256> locator;
     const RecordPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetState(fromHash);
-    uint256 startMilestoneHash     = startMilestone->cblock->GetHash();
-
-    // Did we already make this request? If so, abort.
-    if (spdlog::default_logger()->level() <= spdlog::level::level_enum::debug) {
-        if ((peer->GetLastGetInvBegin().IsNull() ? GENESIS.GetHash() : peer->GetLastGetInvBegin()) ==
-                startMilestoneHash &&
-            peer->GetLastGetInvLength() == length) {
-            spdlog::debug("ConstructLocator({}, {}): duplicated request.", std::to_string(startMilestoneHash), length);
-        }
-        spdlog::debug("{}: downloadMilestones({}) current head = {}", peer->address.ToString(), length,
-                      std::to_string(startMilestoneHash));
+    if (!startMilestone) {
+        return {};
     }
 
-    locator = TraverseMilestoneBackward(*startMilestone, length);
-
-    peer->SetLastGetInvBegin(locator.front());
-    peer->SetLastGetInvLength(length);
-    peer->SetLastGetInvEnd(locator.back());
-    spdlog::debug("Constructed locator: \n   from   {}\n   to     {}\n   length {}", std::to_string(locator.front()),
-                  std::to_string(locator.back()), locator.size());
-
-    return locator;
+    return TraverseMilestoneBackward(startMilestone->height, length);
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(const NodeRecord& cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(size_t cursorHeight, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
 
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
-    size_t cursorHeight      = cursor.snapshot->height;
 
     // If the cursor height is within the cache range,
     // traverse the best chain cache.
@@ -366,48 +264,7 @@ bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
         CAT->EnableOBC();
     }
 
-    if (downloading.empty()) {
-        // GetInv for synchronization
-        if (syncingPeer) {
-            if (!preDownloading.Empty()) {
-                std::vector<uint256> empty;
-                BatchSync(empty, syncingPeer);
-            } else {
-                spdlog::info("Starting another run of synchronization. Current time - head time = {} s",
-                             now - headTime);
-                RequestInv(uint256(), 5, syncingPeer);
-            }
-        } else if (isBatchSynching.load()) {
-            spdlog::error("EXIT: syncingPeer is null when isBatchSynching = {}", isBatchSynching);
-            CompleteBatchSync();
-        }
-    }
     return contains;
-}
-
-void DAGManager::StartBatchSync(const PeerPtr& peer) {
-    bool flag = false;
-    if (isBatchSynching.compare_exchange_strong(flag, true)) {
-        spdlog::info("We are behind our peers... start batch sync with peer {}.", peer->address.ToString());
-        syncingPeer = peer;
-    }
-}
-
-void DAGManager::CompleteBatchSync() {
-    bool flag = true;
-    if (isBatchSynching.compare_exchange_strong(flag, false)) {
-        spdlog::info("Batch sync with {} completed.", syncingPeer->address.ToString());
-        syncingPeer = nullptr;
-    }
-}
-
-void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
-    if (peer == syncingPeer) {
-        downloading.clear();
-        preDownloading.Clear();
-        syncPool_.Abort();
-        CompleteBatchSync();
-    }
 }
 
 /////////////////////////////////////
@@ -457,8 +314,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // Abort and send GetBlock requests.
             CAT->AddBlockToOBC(blk, mask());
 
-            if (peer && !isBatchSynching.load()) {
-                RequestInv(uint256(), 5, std::move(peer));
+            if (peer) {
+                peer->StartSync();
             }
 
             return;

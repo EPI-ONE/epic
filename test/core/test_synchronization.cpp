@@ -91,6 +91,8 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     peer_server->ProcessMessage(message.second);
 
     /**Start the synchronization as the block requester*/
+    peer_server->StartSync();
+    usleep(50000);
     ASSERT_TRUE(client.ReceiveMessage(message));
     ASSERT_EQ(message.second->GetType(), NetMessage::GET_INV);
     GetInv* getInv = dynamic_cast<GetInv*>(message.second.get());
@@ -157,6 +159,9 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     usleep(50000);
     CAT->Wait();
     DAG->Wait();
+
+    peer_server->StartSync();
+    usleep(50000);
 
     // the last GetInv to ensure that local node has downloaded enough blocks
     ASSERT_EQ(peer_server->GetInvTaskSize(), 1);

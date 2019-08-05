@@ -30,6 +30,8 @@ void PeerManager::Start() {
     } else {
         ConnectTo(connect_);
     }
+
+    initialSyncTask_ = std::thread(std::bind(&PeerManager::InitialSync, this));
 }
 
 void PeerManager::Stop() {
@@ -47,6 +49,10 @@ void PeerManager::Stop() {
 
     if (openConnectionTask_.joinable()) {
         openConnectionTask_.join();
+    }
+
+    if (initialSyncTask_.joinable()) {
+        initialSyncTask_.join();
     }
 
     DisconnectAllPeer();
@@ -151,6 +157,9 @@ void PeerManager::HandleMessage() {
     while (!interrupt_) {
         connection_message_t msg;
         if (connectionManager_->ReceiveMessage(msg)) {
+            if (initial_sync_ && msg.second->GetType() == NetMessage::BLOCK) {
+                continue;
+            }
             auto msg_from = GetPeer(msg.first);
             if (msg_from && msg_from->IsVaild()) {
                 msg_from->ProcessMessage(msg.second);
@@ -204,13 +213,23 @@ void PeerManager::OpenConnection() {
 
 void PeerManager::CheckTimeout() {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
+    uint64_t now = time(nullptr);
     for (auto it = peerMap_.begin(); it != peerMap_.end();) {
         std::shared_ptr<Peer> peer = it->second;
+
+        if (!peer->IsVaild()) {
+            peerMap_.erase(it++);
+            continue;
+        }
+
         if (peer->isFullyConnected) {
             // check ping timeout
-            if (peer->GetLastPingTime() > peer->GetLastPongTime() + kPingWaitTimeout ||
-                peer->GetNPingFailed() > kMaxPingFailures) {
+            if (peer->GetLastPingTime() + kPingWaitTimeout < now || peer->GetNPingFailed() > kMaxPingFailures) {
                 spdlog::info("[NET:disconnect]: fully connected peer {} ping timeout", peer->address.ToString());
+                peer->Disconnect();
+                peerMap_.erase(it++);
+            } else if (peer->IsSyncTimeout()) {
+                spdlog::info("[NET:disconnect]: fully connected peer {} sync timeout", peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
             } else {
@@ -218,13 +237,35 @@ void PeerManager::CheckTimeout() {
             }
         } else {
             // check version timeout
-            if (peer->connected_time + kConnectionSetupTimeout < (uint64_t) time(nullptr)) {
+            if (peer->connected_time + kConnectionSetupTimeout < now) {
                 spdlog::info("[NET:disconnect]: non-fully connected peer {} version handshake timeout",
                              peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
             } else {
                 it++;
+            }
+        }
+    }
+}
+
+void PeerManager::InitialSync() {
+    while (!interrupt_) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto now = time(nullptr);
+        if (DAG->GetMilestoneHead()->cblock->GetTime() >= now - 10) {
+            initial_sync_ = false;
+            spdlog::info("Initial sync finished");
+            break;
+        }
+
+        if (!initial_sync_peer_ || !initial_sync_peer_->IsVaild() || !initial_sync_peer_->isHigher) {
+            initial_sync_peer_ = GetSyncPeer();
+        }
+
+        if (initial_sync_peer_) {
+            if (DAG->IsDownloadingEmpty()) {
+                initial_sync_peer_->StartSync();
             }
         }
     }
@@ -307,4 +348,16 @@ void PeerManager::InitScheduleTask() {
             it.second->SendPing();
         }
     });
+}
+
+PeerPtr PeerManager::GetSyncPeer() {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+
+    for (auto& peer : peerMap_) {
+        if (peer.second->IsVaild() && peer.second->isFullyConnected && peer.second->isHigher) {
+            return peer.second;
+        }
+    }
+
+    return nullptr;
 }
