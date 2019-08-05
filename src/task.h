@@ -1,48 +1,138 @@
 #ifndef __SRC_TASK_H_
 #define __SRC_TASK_H_
 
+#include "sync_messages.h"
 #include <atomic>
+#include <chrono>
 #include <memory>
+#include <unordered_map>
 
 static uint32_t GetNewNonce() {
     static std::atomic_uint_fast32_t nonce_ = 0;
     return nonce_.fetch_add(1, std::memory_order_relaxed);
 }
 
-class Peer;
 class Task {
 public:
-    explicit Task() : id(GetNewNonce()), timeout(0), peer_() {}
-
-    // explict requires copy constructor of peer to increase the ref of shared_prt<Peer>
-    void SetPeer(const std::shared_ptr<Peer>& peer) {
-        peer_ = peer;
+    Task(uint32_t timeout) : nonce(GetNewNonce()) {
+        timeout_ = std::chrono::steady_clock::now() + std::chrono::seconds(timeout);
     }
 
-    std::shared_ptr<Peer> GetPeer() const {
-        return peer_.lock();
+    bool IsTimeout() {
+        if (completed_) {
+            return false;
+        }
+        return std::chrono::steady_clock::now() > timeout_;
     }
 
-    uint32_t id;
+    void Complete() {
+        completed_ = true;
+    }
 
-    uint64_t timeout;
+    uint32_t nonce;
 
 private:
-    std::weak_ptr<Peer> peer_;
+    std::chrono::time_point<std::chrono::steady_clock> timeout_; // in seconds
+    std::atomic_bool completed_ = false;
 };
 
 class GetInvTask : public Task {
 public:
-    explicit GetInvTask() : Task() {}
+    GetInvTask(uint32_t timeout) : Task(timeout) {}
 };
 
 class GetDataTask : public Task {
 public:
     enum GetDataType { LEVEL_SET = 1, PENDING_SET };
 
-    explicit GetDataTask(GetDataType type_) : Task(), type(type_) {}
+    GetDataTask(GetDataType t, uint256& h, uint32_t timeout) : Task(timeout), type(t), hash(h) {}
+    GetDataTask(GetDataType t, uint32_t timeout) : Task(timeout), type(t) {}
 
     GetDataType type;
+    std::shared_ptr<GetDataTask> next = nullptr;
+    std::shared_ptr<Bundle> bundle    = nullptr;
+    uint256 hash;
+};
+
+class GetDataTaskManager {
+public:
+    void Push_back(std::shared_ptr<GetDataTask> task) {
+        std::unique_lock<std::shared_mutex> writer(mutex_);
+        if (tasks_.empty()) {
+            head_ = task;
+            tail_ = task;
+        } else {
+            tail_->next = task;
+            tail_       = task;
+        }
+        tasks_.insert_or_assign(task->nonce, task);
+    }
+
+    std::shared_ptr<GetDataTask>& Front() {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        return head_;
+    }
+
+    void Pop_front() {
+        std::unique_lock<std::shared_mutex> writer(mutex_);
+        tasks_.erase(head_->nonce);
+
+        if (head_ == tail_) {
+            head_ = nullptr;
+            tail_ = nullptr;
+        } else {
+            head_ = head_->next;
+        }
+    }
+
+    bool Empty() {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        return tasks_.empty();
+    }
+
+    size_t Size() {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        return tasks_.size();
+    }
+
+    bool IsTimeout() {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        for (auto& t : tasks_) {
+            if (t.second->IsTimeout()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool CompleteTask(std::shared_ptr<Bundle> bundle) {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        auto task = tasks_.find(bundle->nonce);
+        if (task != tasks_.end()) {
+            task->second->bundle = bundle;
+            task->second->Complete();
+            return true;
+        }
+        return false;
+    }
+
+    std::vector<std::shared_ptr<GetDataTask>> GetTasks() {
+        std::shared_lock<std::shared_mutex> reader(mutex_);
+        auto result = std::vector<std::shared_ptr<GetDataTask>>();
+        for (auto& task : tasks_) {
+            if (task.second->type == GetDataTask::LEVEL_SET) {
+                result.push_back(task.second);
+            }
+        }
+        return result;
+    }
+
+private:
+    std::shared_mutex mutex_;
+    std::unordered_map<uint32_t, std::shared_ptr<GetDataTask>> tasks_;
+    std::shared_ptr<GetDataTask> head_ = nullptr;
+    std::shared_ptr<GetDataTask> tail_ = nullptr;
 };
 
 #endif // ifndef __SRC_TASK_H_

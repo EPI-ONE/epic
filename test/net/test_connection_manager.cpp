@@ -135,7 +135,7 @@ TEST_F(TestConnectionManager, SendAndReceive) {
 
     usleep(50000);
 
-    size_t size    = MAX_MESSAGE_LENGTH / 32 - 32;
+    size_t size    = 4 * 1024 * 1024 / 32;
     uint32_t nonce = 0x55555555;
     uint256 h      = uintS<256>(std::string(64, 'a'));
     std::vector<uint256> data(size, h);

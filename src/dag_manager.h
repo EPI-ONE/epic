@@ -32,11 +32,9 @@ public:
      * sending queue according to the BlockLocator constructed by peer.
      */
     void RequestInv(uint256 fromHash, const size_t& len, PeerPtr peer);
-    void CallbackRequestInv(std::unique_ptr<Inv> inv);
+    void CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer);
 
-    /** Called by batchSync to create a GetDataTask for a given hash. */
-    std::optional<GetDataTask> RequestData(const uint256& hash, const PeerPtr& peer);
-    void CallbackRequestData(std::vector<ConstBlockPtr>&);
+    std::shared_ptr<GetDataTask> RequestData(const uint256& hash);
 
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void RespondRequestInv(std::vector<uint256>&, uint32_t, PeerPtr);
@@ -44,8 +42,6 @@ public:
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void RespondRequestLVS(const std::vector<uint256>&, const std::vector<uint32_t>&, PeerPtr);
     void RespondRequestPending(uint32_t, const PeerPtr&) const;
-
-    void DisconnectPeerSync(const PeerPtr&);
 
     /////////////////////////////// Verification /////////////////////////////////////
 
@@ -72,7 +68,7 @@ public:
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
+    std::vector<uint256> TraverseMilestoneBackward(size_t cursorHeight, size_t) const;
     std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
 
     // Checkout states either in different chain or in db
@@ -95,6 +91,13 @@ public:
      * Actions to be performed by wallet when a level set is confirmed
      */
     void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
+    bool IsDownloadingEmpty() {
+        return downloading.empty();
+    }
+
+    void EraseDownloading(uint256& h) {
+        downloading.erase(h);
+    }
 
     /**
      * Blocks the main thread from going forward
@@ -106,16 +109,11 @@ public:
 private:
     const uint8_t maxGetDataSize    = 5;
     const time_t obcEnableThreshold = 300;
+    uint32_t sync_task_timeout      = 30; // in seconds
 
     ThreadPool verifyThread_;
     ThreadPool syncPool_;
     ThreadPool storagePool_;
-
-    /** Indicator of whether we are synching with some peer. */
-    std::atomic<bool> isBatchSynching;
-
-    /** The peer we are synching with. Null if isBatchSynching is false. */
-    PeerPtr syncingPeer;
 
     /** Indicator of whether we are storing level sets to CAT. */
     std::atomic<bool> isStoring;
@@ -128,12 +126,6 @@ private:
      * Should be thread-safe.
      */
     ConcurrentHashSet<uint256> downloading;
-
-    /**
-     * A list of tasks we've prepared to deliver to a Peer.
-     * Should be thread-safe.
-     */
-    BlockingQueue<uint256> preDownloading;
 
     /**
      * A list of milestone chains, with first element being
@@ -154,19 +146,12 @@ private:
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 
     /**
-     * Methods are called when the synchronization status is changed:
-     * on to off and off to on.
-     */
-    void StartBatchSync(const PeerPtr&);
-    void CompleteBatchSync();
-
-    /**
      * Start a new thread and create a list of GetData tasks that is either added
      * to preDownloading (if it's not empty) or a peer's task queue. If preDownloading
      * is not empty, drain certain amount of tasks from preDownloading to peer's task queue.
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
-    void BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom);
+    void RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom);
 
     /**
      * Removes a verified ms hash from the downloading queue, and start another
@@ -174,8 +159,6 @@ private:
      * Returns whether the hash is removed successfully.
      */
     bool UpdateDownloadingQueue(const uint256&);
-    void AddToDownloadingQueue(const uint256&);
-    void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
     void DeleteFork();

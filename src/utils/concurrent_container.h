@@ -368,6 +368,17 @@ public:
         base::c.pop_front();
     }
 
+    void drain_to(std::vector<T>& dest, size_t n) {
+        WRITER_LOCK(base::mutex_)
+        n = std::min(n, base::c.size());
+
+        for (auto i = 0; i < n; ++i) {
+            dest.emplace_back();
+            dest.back() = std::move(base::c.front());
+            base::c.pop_front();
+        }
+    }
+
     // Hide invalid functions from base class
     template <class... Args>
     std::pair<iterator, bool> emplace(Args&&... args)       = delete;

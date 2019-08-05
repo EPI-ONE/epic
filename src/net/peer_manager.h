@@ -150,11 +150,14 @@ private:
      */
     void ScheduleTask();
 
+    void InitialSync();
+
     void CheckTimeout();
 
-    void BroadcastMessage();
-
     void InitScheduleTask();
+
+    PeerPtr GetSyncPeer();
+
     /*
      * default network parameter based on the protocol
      */
@@ -190,9 +193,6 @@ private:
      * current local network status
      */
 
-    // last time of sending local address
-    long lastSendLocalAddressTime{0};
-
     Scheduler scheduler_;
 
     /*
@@ -224,6 +224,12 @@ private:
 
     // do some periodical tasks
     std::thread scheduleTask_;
+
+    std::thread initialSyncTask_;
+
+    std::atomic_bool initial_sync_ = true;
+
+    PeerPtr initial_sync_peer_ = nullptr;
 
     std::string connect_;
 };

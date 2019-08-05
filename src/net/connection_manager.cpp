@@ -243,7 +243,7 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         header.checksum = header.magic + header.type + header.length;
 
         if (header.length + MESSAGE_HEADER_LENGTH > MAX_MESSAGE_LENGTH) {
-            spdlog::info("[net]ignore send message which length {} exceeds max bytes {}",
+            spdlog::info("[net] ignore send message which length {} exceeds max bytes {}",
                          header.length + MESSAGE_HEADER_LENGTH, MAX_MESSAGE_LENGTH);
             return;
         }
