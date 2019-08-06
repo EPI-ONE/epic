@@ -68,7 +68,7 @@ public:
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    std::vector<uint256> TraverseMilestoneBackward(size_t cursorHeight, size_t) const;
+    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
     std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
 
     // Checkout states either in different chain or in db

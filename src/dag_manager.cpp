@@ -184,15 +184,20 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
         return {};
     }
 
-    return TraverseMilestoneBackward(startMilestone->height, length);
+    return TraverseMilestoneBackward(*startMilestone, length);
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(size_t cursorHeight, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(const NodeRecord& cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
 
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
+    size_t cursorHeight      = GetHeight(cursor.cblock->GetHash());
+
+    if (cursorHeight > GetBestMilestoneHeight()) {
+        return result;
+    }
 
     // If the cursor height is within the cache range,
     // traverse the best chain cache.
@@ -221,7 +226,11 @@ std::vector<uint256> DAGManager::TraverseMilestoneForward(const NodeRecord& curs
 
     const auto& bestChain    = milestoneChains.best();
     size_t leastHeightCached = bestChain->GetLeastHeightCached();
-    size_t cursorHeight      = cursor.snapshot->height + 1;
+    size_t cursorHeight      = GetHeight(cursor.cblock->GetHash()) + 1;
+
+    if (cursorHeight == 0) {
+        return result;
+    }
 
     // If the cursor height is less than the least height in cache, traverse DB.
     while (cursorHeight <= CAT->GetHeadHeight() && result.size() < length) {
