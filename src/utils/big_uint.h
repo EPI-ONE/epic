@@ -24,7 +24,7 @@ protected:
     uint8_t data[WIDTH];
 
 public:
-    base_blob() {
+    base_blob() noexcept {
         memset(data, 0, sizeof(data));
     }
 

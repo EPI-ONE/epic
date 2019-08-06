@@ -50,7 +50,6 @@ public:
     arith_uint256 initialMsTarget;
 
     size_t cacheStatesSize;
-    size_t cacheStatesToDelete;
 
     size_t blockCapacity;
 

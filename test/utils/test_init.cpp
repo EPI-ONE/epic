@@ -39,7 +39,7 @@ TEST_F(TestInit, test_init_dag) {
 
     ASSERT_TRUE(DAG->Init());
     ASSERT_TRUE(DAG->GetBestChain().GetStates().empty());
-    ASSERT_EQ(DAG->GetBestMilestoneHeight(), GetParams().cacheStatesToDelete);
+    ASSERT_EQ(DAG->GetBestMilestoneHeight(), 0);
 
     EpicTestEnvironment::TearDownDAG(dir);
 }

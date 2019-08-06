@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <shared_mutex>
 #include <unordered_map>
 
 static uint32_t GetNewNonce() {
@@ -56,7 +57,7 @@ public:
 
 class GetDataTaskManager {
 public:
-    void Push_back(std::shared_ptr<GetDataTask> task) {
+    void Push(std::shared_ptr<GetDataTask> task) {
         std::unique_lock<std::shared_mutex> writer(mutex_);
         if (tasks_.empty()) {
             head_ = task;
@@ -73,7 +74,7 @@ public:
         return head_;
     }
 
-    void Pop_front() {
+    void Pop() {
         std::unique_lock<std::shared_mutex> writer(mutex_);
         tasks_.erase(head_->nonce);
 

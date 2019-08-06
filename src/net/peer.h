@@ -63,7 +63,7 @@ public:
     size_t GetInvTaskSize();
 
     void AddPendingGetDataTask(std::shared_ptr<GetDataTask> task) {
-        getDataTasks.Push_back(task);
+        getDataTasks.Push(task);
     }
 
     size_t GetDataTaskSize() {
@@ -112,11 +112,6 @@ public:
 
     void StartSync();
 
-    void CompleteSync() {
-        isSyncing = false;
-        isHigher  = false;
-    }
-
     bool IsSyncTimeout();
 
     /*
@@ -139,9 +134,11 @@ public:
     // ack
     std::atomic_bool isFullyConnected = false;
 
-    std::atomic_bool isHigher = false;
+    std::atomic_bool isSyncAvailable = false;
 
     std::atomic_bool isSyncing = false;
+
+    std::atomic_uint64_t last_bundle_ms_time = 0;
 
 private:
     /*
@@ -233,8 +230,8 @@ private:
      */
 
     // last sending ping time and last receiving pong time
-    std::atomic_uint64_t lastPingTime = time(nullptr);
-    std::atomic_uint64_t lastPongTime = time(nullptr);
+    std::atomic_uint64_t lastPingTime;
+    std::atomic_uint64_t lastPongTime;
 
     // last sending nonce
     std::atomic_uint64_t lastNonce;

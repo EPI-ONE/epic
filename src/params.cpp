@@ -23,9 +23,8 @@ static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 // coefficient of taking additional reward for milestone
-static constexpr uint32_t REWARD_COEFFICIENT   = 50;
-static constexpr size_t CACHE_STATES           = 100;
-static constexpr size_t CACHE_STATES_TO_DELETE = 20;
+static constexpr uint32_t REWARD_COEFFICIENT = 50;
+static constexpr size_t CACHE_STATES         = 100;
 // capacity of transactions in a block
 static constexpr size_t BLK_CAPACITY = 128;
 
@@ -78,7 +77,6 @@ MainNetParams::MainNetParams() {
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
-    cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
 
@@ -112,7 +110,6 @@ TestNetParams::TestNetParams() {
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
-    cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
 
@@ -146,7 +143,6 @@ UnitTestParams::UnitTestParams() {
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;
     cacheStatesSize      = 25;
-    cacheStatesToDelete  = 5;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
 

@@ -1,6 +1,7 @@
 #include <atomic>
 #include <connection_manager.h>
 #include <gtest/gtest.h>
+#include <random>
 
 #include "message_header.h"
 #include "sync_messages.h"
@@ -24,6 +25,30 @@ public:
     void TearDown() {
         server.Stop();
         client.Stop();
+    }
+
+    uint16_t GetFreePort() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<uint16_t> dis(20000, 60000);
+
+        int ret       = -1;
+        uint16_t port = 0;
+
+        while (ret != 0) {
+            port   = dis(gen);
+            int fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            struct sockaddr_in sockaddr;
+            sockaddr.sin_family      = AF_INET;
+            sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+            sockaddr.sin_port        = htonl(port);
+
+            ret = bind(fd, (struct sockaddr*) &sockaddr, sizeof(sockaddr));
+            close(fd);
+        }
+
+        spdlog::info("get free port = {}", port);
+        return port;
     }
 
     void TestNewConnectionCallback(shared_connection_t handle) {
@@ -50,9 +75,10 @@ TEST_F(TestConnectionManager, Listen) {
     server.RegisterNewConnectionCallback(
         std::bind(&TestConnectionManager::TestNewConnectionCallback, this, std::placeholders::_1));
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(12345));
-    ASSERT_TRUE(client.Connect(0x7f000001, 12345));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
 
@@ -65,8 +91,9 @@ TEST_F(TestConnectionManager, Listen) {
 }
 
 TEST_F(TestConnectionManager, Listen_fail) {
-    ASSERT_TRUE(server.Listen(43210));
-    EXPECT_FALSE(client.Listen(43210));
+    uint16_t port = GetFreePort();
+    ASSERT_TRUE(server.Listen(port));
+    EXPECT_FALSE(client.Listen(port));
 }
 
 TEST_F(TestConnectionManager, Connect) {
@@ -75,14 +102,15 @@ TEST_F(TestConnectionManager, Connect) {
 
     test_connect_inbound = true;
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(7890));
-    ASSERT_TRUE(client.Connect(0x7f000001, 7890));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
     EXPECT_EQ(test_connect_run, true);
     EXPECT_EQ(test_connect_inbound, false);
-    EXPECT_EQ(test_address, "127.0.0.1:7890");
+    EXPECT_EQ(test_address, "127.0.0.1:" + std::to_string(port));
     EXPECT_EQ(client.GetInboundNum(), 0);
     EXPECT_EQ(client.GetOutboundNum(), 1);
     EXPECT_EQ(client.GetConnectionNum(), 1);
@@ -98,9 +126,10 @@ TEST_F(TestConnectionManager, Disconnect) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(27877));
-    ASSERT_TRUE(client.Connect(0x7f000001, 27877));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
     EXPECT_EQ(test_connect_run, true);
@@ -129,9 +158,10 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(51001));
-    ASSERT_TRUE(client.Connect(0x7f000001, 51001));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
 
@@ -164,9 +194,10 @@ TEST_F(TestConnectionManager, SendAndReceiveOnlyHeader) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(51010));
-    ASSERT_TRUE(client.Connect(0x7f000001, 51010));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
 
@@ -187,9 +218,10 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
     client.RegisterDeleteConnectionCallBack(
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(51020));
-    ASSERT_TRUE(client.Connect(0x7f000001, 51020));
+    ASSERT_TRUE(server.Listen(port));
+    ASSERT_TRUE(client.Connect(0x7f000001, port));
 
     usleep(50000);
 
@@ -224,8 +256,9 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 }
 
 TEST_F(TestConnectionManager, MultiClient) {
+    uint16_t port = GetFreePort();
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(51030));
+    ASSERT_TRUE(server.Listen(port));
 
     int client_num = 3;
     ConnectionManager client[client_num];
@@ -234,7 +267,7 @@ TEST_F(TestConnectionManager, MultiClient) {
         client[i].RegisterNewConnectionCallback(
             std::bind(&TestConnectionManager::TestMultiClientNewCallback, this, std::placeholders::_1));
         client[i].Start();
-        ASSERT_TRUE(client[i].Connect(0x7f000001, 51030));
+        ASSERT_TRUE(client[i].Connect(0x7f000001, port));
     }
 
     usleep(50000);

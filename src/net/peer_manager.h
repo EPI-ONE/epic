@@ -189,6 +189,10 @@ private:
     // max number of ping failures
     const static size_t kMaxPingFailures = 3;
 
+    constexpr static uint32_t kSyncTimeThreshold = 60;
+
+    constexpr static uint32_t kCheckSyncInterval = 180;
+
     /*
      * current local network status
      */

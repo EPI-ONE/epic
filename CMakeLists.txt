@@ -211,6 +211,10 @@ endif()
 target_link_libraries(epiccore protobuf::libprotobuf)
 target_link_libraries(epiccore gRPC::grpc++_reflection)
 
+if (NOT CMAKE_HOST_APPLE)
+    target_link_libraries(epiccore atomic)
+endif ()
+
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)
 

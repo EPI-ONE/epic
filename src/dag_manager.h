@@ -34,8 +34,6 @@ public:
     void RequestInv(uint256 fromHash, const size_t& len, PeerPtr peer);
     void CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer);
 
-    std::shared_ptr<GetDataTask> RequestData(const uint256& hash);
-
     /** Called by Peer and sets a Bundle as the callback to the task. */
     void RespondRequestInv(std::vector<uint256>&, uint32_t, PeerPtr);
 
@@ -107,16 +105,14 @@ public:
     void Wait();
 
 private:
-    const uint8_t maxGetDataSize    = 5;
-    const time_t obcEnableThreshold = 300;
-    uint32_t sync_task_timeout      = 30; // in seconds
+    const uint8_t maxGetDataSize      = 5;
+    const time_t obcEnableThreshold   = 300;
+    const uint32_t sync_task_timeout  = 180; // in seconds
+    const uint32_t max_get_inv_length = 1000;
 
     ThreadPool verifyThread_;
     ThreadPool syncPool_;
     ThreadPool storagePool_;
-
-    /** Indicator of whether we are storing level sets to CAT. */
-    std::atomic<bool> isStoring;
 
     /** Indicator of whether the DAG manager is doing off-line verification */
     std::atomic<bool> isVerifying;
@@ -192,9 +188,9 @@ private:
      * Returns the number of chain states that can be flushed into db
      * zero if no chain states need to be flushed
      */
-    size_t FlushTrigger();
+    void FlushTrigger();
 
-    void FlushToCAT(size_t); // flush the oldest chain states
+    void FlushToCAT(ChainStatePtr); // flush the oldest chain states
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
