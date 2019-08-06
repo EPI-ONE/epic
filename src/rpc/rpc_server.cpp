@@ -105,14 +105,70 @@ grpc::Status CommanderRPCServiceImpl::StopMiner(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
-grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
-                                               const CreateTxRequest* request,
-                                               CreateTxResponse* reply) {
+grpc::Status CommanderRPCServiceImpl::CreateRandomTx(grpc::ServerContext* context,
+                                                     const CreateRandomTxRequest* request,
+                                                     CreateRandomTxResponse* reply) {
     if (!WALLET) {
         reply->set_result("Wallet has not been started");
     } else {
         WALLET->CreateRandomTx(request->size());
         reply->set_result("Now wallet is creating tx");
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
+                                               const CreateTxRequest* request,
+                                               CreateTxResponse* reply) {
+    std::vector<std::pair<Coin, CKeyID>> outputs;
+    if (!WALLET) {
+        reply->set_txinfo("Wallet has not been started");
+    } else if (request->outputs().empty()) {
+        reply->set_txinfo("Please specify at least one output");
+    } else {
+        for (auto& output : request->outputs()) {
+            Coin coin(output.money());
+            auto address = DecodeAddress(output.address());
+            if (!address) {
+                reply->set_txinfo("Wrong address: " + output.address());
+                return grpc::Status::OK;
+            } else {
+                outputs.emplace_back(std::make_pair(coin, *address));
+            }
+        }
+        auto tx = WALLET->CreateTxAndSend(outputs, request->fee());
+        if (!tx) {
+            reply->set_txinfo("failed to create tx, please check if you have enough balance");
+        } else {
+            reply->set_txinfo(std::to_string(*tx));
+        }
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* context,
+                                                     const GenerateNewKeyRequest* request,
+                                                     GenerateNewKeyResponse* reply) {
+    if (!WALLET) {
+        reply->set_address("Wallet has not been started");
+    } else {
+        auto key     = WALLET->CreateNewKey(false);
+        auto pubkey  = key.GetPubKey();
+        auto address = pubkey.GetID();
+        reply->set_address(EncodeAddress(address));
+        reply->set_privatekey(EncodeSecret(key));
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context,
+                                                 const GetBalanceRequest* request,
+                                                 GetBalanceResponse* reply) {
+    if (!WALLET) {
+        reply->set_coin("Wallet has not been started");
+    } else {
+        auto balance = WALLET->GetBalance();
+        reply->set_coin(std::to_string(balance.GetValue()));
     }
     return grpc::Status::OK;
 }

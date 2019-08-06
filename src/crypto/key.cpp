@@ -170,7 +170,7 @@ void GetRandBytes(CPrivKey& buf) {
     uint_fast8_t j;
 
     for (std::size_t i = 0; i < buf.size(); i++) {
-        j = i % 8;
+        j = i & 0x7;
         if (j == 0) {
             while (!_rdrand64_step(&x))
                 ;

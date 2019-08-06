@@ -149,15 +149,62 @@ std::optional<bool> RPCClient::StopMiner() {
     return reply.success();
 }
 
-std::optional<std::string> RPCClient::CreateTx(size_t size) {
-    CreateTxRequest request;
-    CreateTxResponse response;
+std::optional<std::string> RPCClient::CreateRandomTx(size_t size) {
+    CreateRandomTxRequest request;
+    CreateRandomTxResponse response;
     grpc::ClientContext context;
     request.set_size(size);
-    auto status = commander_stub_->CreateTx(&context, request, &response);
+    auto status = commander_stub_->CreateRandomTx(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
     return response.result();
+}
+
+RPCClient::option_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outpus,
+                                             uint64_t fee) {
+    CreateTxRequest request;
+    CreateTxResponse response;
+    grpc::ClientContext context;
+
+    request.set_fee(fee);
+    for (auto& output : outpus) {
+        auto rpc_output = request.add_outputs();
+        rpc_output->set_address(output.second);
+        rpc_output->set_money(output.first);
+    }
+    auto status = commander_stub_->CreateTx(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.txinfo();
+}
+
+RPCClient::option_string RPCClient::GetBalance() {
+    GetBalanceRequest request;
+    GetBalanceResponse response;
+    grpc::ClientContext context;
+
+    auto status = commander_stub_->GetBalance(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.coin();
+}
+
+RPCClient::option_string RPCClient::GenerateNewKey() {
+    GenerateNewKeyRequest request;
+    GenerateNewKeyResponse response;
+    grpc::ClientContext context;
+
+    auto status = commander_stub_->GenerateNewKey(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+
+    return "Ckey = " + response.privatekey() + '\n' + "Address = " + response.address() + '\n';
 }

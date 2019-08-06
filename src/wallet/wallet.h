@@ -44,10 +44,11 @@ public:
 
     void ImportKey(CKey& key, CPubKey& pubKey);
 
-    CKeyID CreateNewKey(bool compressed);
+    CKey CreateNewKey(bool compressed);
     ConstTxPtr CreateFirstRegistration(const CKeyID&);
     ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
     ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
+    ConstTxPtr CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
 
     void CreateRandomTx(size_t size);
 

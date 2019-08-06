@@ -149,15 +149,15 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
     }
 }
 
-CKeyID Wallet::CreateNewKey(bool compressed) {
+CKey Wallet::CreateNewKey(bool compressed) {
     CKey privkey{};
     privkey.MakeNewKey(compressed);
     CPubKey pubkey = privkey.GetPubKey();
     auto addr      = pubkey.GetID();
 
     walletStore_.StoreKeys(addr, privkey);
-    keyBook.emplace(addr, std::pair{std::move(privkey), pubkey});
-    return addr;
+    keyBook.emplace(addr, std::pair{privkey, pubkey});
+    return privkey;
 }
 
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {
@@ -191,7 +191,7 @@ ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
 ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
     auto totalCost = std::accumulate(outputs.begin(), outputs.end(), Coin{0},
                                      [](Coin prev, auto pair) { return prev + pair.first; });
-    totalCost      = totalCost + (fee == 0 ? MIN_FEE : fee);
+    totalCost      = totalCost + (fee < MIN_FEE ? MIN_FEE : fee);
     if (totalCost > totalBalance_) {
         spdlog::warn("[Wallet] too much money that we can't afford");
         return nullptr;
@@ -286,7 +286,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             if (stopFlag_) {
                 return;
             }
-            auto addr = CreateNewKey(false);
+            auto addr = CreateNewKey(false).GetPubKey().GetID();
             if (!hasSentFirstRegistration_) {
                 auto reg = CreateFirstRegistration(addr);
                 spdlog::info("[Wallet] Created first registration {}, index = {}", std::to_string(reg->GetHash()), i);
@@ -341,6 +341,12 @@ const CKeyID Wallet::GetLastRedemAddress() const {
 void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     Wallet::lastRedemAddress_ = lastRedemAddress;
+}
+
+ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
+    auto tx = CreateTx(outputs, fee);
+    SendTxToMemPool(tx);
+    return tx;
 }
 
 std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content) {

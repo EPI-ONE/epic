@@ -91,6 +91,8 @@ aux_source_directory(${SUPPORT_DIR} SUPPORT_SRCS)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
 aux_source_directory(${INTERFACE_DIR} INTERFACE_SRCS)
 aux_source_directory(${WALLET_DIR} WALLET_SRCS)
+aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
+
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
 include_directories(src

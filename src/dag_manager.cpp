@@ -413,7 +413,6 @@ void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
 /////////////////////////////////////
 // End of synchronization methods
 //
-int counter = 0;
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         if (*blk == GENESIS) {
@@ -497,6 +496,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         // TODO: erase transaction from mempool
         if (blk->HasTransaction()) {
+            static uint32_t counter = 0;
             spdlog::debug("verifying tx {} , index = {}", blk->GetTransaction()->GetHash().to_substr(), counter++);
         }
         AddBlockToPending(blk);
