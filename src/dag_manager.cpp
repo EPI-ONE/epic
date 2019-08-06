@@ -2,7 +2,7 @@
 #include "caterpillar.h"
 #include "peer_manager.h"
 
-DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1), isStoring(false), isVerifying(false) {
+DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1), isVerifying(false) {
     milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
 
@@ -33,8 +33,8 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
             return;
         }
 
-        peer->SetLastGetInvEnd(fromHash);
-        peer->SetLastGetInvLength(length);
+        peer->SetLastGetInvEnd(locator.back());
+        peer->SetLastGetInvLength(locator.size());
 
         auto task = std::make_shared<GetInvTask>(sync_task_timeout);
         peer->AddPendingGetInvTask(task);
@@ -43,7 +43,7 @@ void DAGManager::RequestInv(uint256 fromHash, const size_t& length, PeerPtr peer
 }
 
 void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer) {
-    syncPool_.Execute([inv = std::move(inv), peer, this]() {
+    syncPool_.Execute([inv = std::move(inv), peer = std::move(peer), this]() {
         auto& result = inv->hashes;
         if (result.empty()) {
             spdlog::info("Received an empty inv, which means we have reached the same height as the peer's {}.",
@@ -53,9 +53,18 @@ void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer) {
             auto pending_request = std::make_unique<GetData>(task->type);
             pending_request->AddPendingSetNonce(task->nonce);
             peer->SendMessage(std::move(pending_request));
-            peer->isHigher = false;
         } else if (result.size() == 1 && result.at(0) == GENESIS.GetHash()) {
-            RequestInv(peer->GetLastGetInvEnd(), 2 * peer->GetLastGetInvLength(), peer);
+            if (peer->GetLastGetInvEnd() == GENESIS.GetHash()) {
+                spdlog::info("peer {} response fork to genesis hash request", peer->address.ToString());
+                peer->Disconnect();
+                return;
+            }
+
+            size_t length = 2 * peer->GetLastGetInvLength();
+            if (length >= max_get_inv_length) {
+                length = max_get_inv_length;
+            }
+            RequestInv(peer->GetLastGetInvEnd(), length, peer);
             spdlog::debug("We are probably on a fork... sending a larger locator.");
         } else {
             RequestData(result, peer);
@@ -422,17 +431,15 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
+                spdlog::debug("update main chain MS block {} pre MS {}", block->GetHash().to_substr(),
+                              block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
-                if (!isStoring.load()) {
-                    if (size_t level = FlushTrigger()) {
-                        isStoring = true;
-                        DeleteFork();
-                        FlushToCAT(level);
-                    }
-                }
+                DeleteFork();
+                FlushTrigger();
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
+                spdlog::debug("A fork created which points to MS block {} pre MS {}", block->GetHash().to_substr(),
+                              block->GetMilestoneHash().to_substr());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -460,13 +467,18 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
                 // new milestone on fork
-                spdlog::debug("A fork grows to height {}", (*chainIt)->GetChainHead()->height);
+                spdlog::debug("A fork grows MS block {} pre MS {}", block->GetHash().to_substr(),
+                              block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
-                milestoneChains.update_best(chainIt);
+                if (milestoneChains.update_best(chainIt)) {
+                    spdlog::debug("switch best chain: head = {}",
+                                  milestoneChains.best()->GetChainHead()->GetMilestoneHash().to_substr());
+                }
                 return;
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {}", block->GetHash().to_substr());
+                spdlog::debug("A fork created which points to MS block {} pre MS {}", block->GetHash().to_substr(),
+                              block->GetMilestoneHash().to_substr());
                 auto new_fork = std::make_unique<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -489,7 +501,10 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
 }
 
 void DAGManager::DeleteFork() {
-    const auto& states   = GetBestChain().GetStates();
+    const auto& states = GetBestChain().GetStates();
+    if (states.size() <= GetParams().deleteForkThreshold) {
+        return;
+    }
     auto targetChainWork = (*(states.end() - GetParams().deleteForkThreshold))->chainwork;
     for (auto chain_it = milestoneChains.begin(); chain_it != milestoneChains.end();) {
         if (*chain_it == milestoneChains.best()) {
@@ -538,10 +553,10 @@ void DAGManager::Wait() {
     }
 }
 
-size_t DAGManager::FlushTrigger() {
+void DAGManager::FlushTrigger() {
     const auto& bestChain = milestoneChains.best();
-    if (bestChain->GetStates().size() < GetParams().cacheStatesSize) {
-        return 0;
+    if (bestChain->GetStates().size() <= GetParams().cacheStatesSize) {
+        return;
     }
     std::vector<ConcurrentQueue<ChainStatePtr>::const_iterator> forks;
     forks.reserve(milestoneChains.size() - 1);
@@ -552,47 +567,56 @@ size_t DAGManager::FlushTrigger() {
         forks.emplace_back(chain->GetStates().begin());
     }
 
-    auto cursor   = bestChain->GetStates().begin();
-    size_t dupcnt = 0;
-    for (bool flag = true; flag && dupcnt < GetParams().cacheStatesToDelete; dupcnt++) {
+    auto cursor = bestChain->GetStates().begin();
+    for (int i = 0;
+         i < bestChain->GetStates().size() - GetParams().cacheStatesSize && cursor != bestChain->GetStates().end();
+         i++, cursor++) {
+        if ((*cursor)->isStoraged) {
+            for (auto& fork_it : forks) {
+                fork_it++;
+            }
+            continue;
+        }
+
         for (auto& fork_it : forks) {
             if (*cursor != *fork_it) {
-                flag = false;
-                break;
+                return;
             }
             fork_it++;
         }
-        cursor++;
+
+        FlushToCAT(*cursor);
     }
 
-    return dupcnt;
+    return;
 }
 
-void DAGManager::FlushToCAT(size_t level) {
+void DAGManager::FlushToCAT(ChainStatePtr chain_state) {
     // first store data to CAT
-    auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(level);
+    auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(chain_state);
+    chain_state->isStoraged                      = true;
 
-    spdlog::trace("flushing at current height {}", GetBestMilestoneHeight());
+    spdlog::debug("flushing at height {}", chain_state->height);
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         std::vector<RecordPtr> blocksToListener;
         blocksToListener.reserve(recToStore.size());
 
-        for (auto& lvsRec : recToStore) {
-            std::swap(lvsRec.front(), lvsRec.back());
-            const auto& ms = *lvsRec.front().lock();
 
-            CAT->StoreLevelSet(lvsRec);
-            CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
+        std::swap(recToStore.front(), recToStore.back());
+        const auto& ms = *recToStore.front().lock();
 
-            std::swap(lvsRec.front(), lvsRec.back());
-            for (auto& rec : lvsRec) {
-                blocksToListener.emplace_back(rec.lock());
-                CAT->UnCache((*rec.lock()).cblock->GetHash());
-            }
-            globalStates_.erase(ms.cblock->GetHash());
+        CAT->StoreLevelSet(recToStore);
+        CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
+
+        std::swap(recToStore.front(), recToStore.back());
+        for (auto& rec : recToStore) {
+            blocksToListener.emplace_back(rec.lock());
+            CAT->UnCache((*rec.lock()).cblock->GetHash());
         }
+        globalStates_.erase(ms.cblock->GetHash());
+
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             CAT->AddUTXO(utxoKey, utxoPtr);
         }
@@ -606,18 +630,13 @@ void DAGManager::FlushToCAT(size_t level) {
         }
 
         // then remove chain states from chains
-        size_t totalRecNum = 0;
-        std::for_each(recToStore.begin(), recToStore.end(),
-                      [&totalRecNum](const auto& lvs) { totalRecNum += lvs.size(); });
         std::vector<uint256> recHashes{};
-        recHashes.reserve(totalRecNum);
+        recHashes.reserve(recToStore.size());
         std::unordered_set<uint256> utxoCreated{};
         utxoCreated.reserve(utxoToStore.size());
 
-        for (auto& lvsRec : recToStore) {
-            for (auto& rec : lvsRec) {
-                recHashes.emplace_back((*rec.lock()).cblock->GetHash());
-            }
+        for (auto& rec : recToStore) {
+            recHashes.emplace_back((*rec.lock()).cblock->GetHash());
         }
 
         for (const auto& [key, value] : utxoToStore) {
@@ -626,13 +645,11 @@ void DAGManager::FlushToCAT(size_t level) {
 
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
 
-        verifyThread_.Execute(
-            [=, recHashes = std::move(recHashes), txocToRemove = std::move(txocToRemove), level = level]() {
-                for (auto& chain : milestoneChains) {
-                    chain->PopOldest(recHashes, txocToRemove, level);
-                }
-                isStoring = false;
-            });
+        verifyThread_.Execute([=, recHashes = std::move(recHashes), txocToRemove = std::move(txocToRemove)]() {
+            for (auto& chain : milestoneChains) {
+                chain->PopOldest(recHashes, txocToRemove);
+            }
+        });
     });
 }
 

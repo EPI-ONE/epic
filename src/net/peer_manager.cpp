@@ -62,9 +62,11 @@ void PeerManager::Stop() {
 
 bool PeerManager::Init(std::unique_ptr<Config>& config) {
     if (!Bind(config->GetBindAddress())) {
+        spdlog::warn("bind ip [{}] failed", config->GetBindAddress());
         return false;
     }
     if (!Listen(config->GetBindPort())) {
+        spdlog::warn("listen port {} failed", config->GetBindPort());
         return false;
     }
 
@@ -253,18 +255,35 @@ void PeerManager::InitialSync() {
     while (!interrupt_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         auto now = time(nullptr);
-        if (DAG->GetMilestoneHead()->cblock->GetTime() >= now - 10) {
-            initial_sync_ = false;
+        if (DAG->GetMilestoneHead()->cblock->GetTime() >= now - kSyncTimeThreshold) {
+            initial_sync_      = false;
+            initial_sync_peer_ = nullptr;
             spdlog::info("Initial sync finished");
             break;
         }
 
-        if (!initial_sync_peer_ || !initial_sync_peer_->IsVaild() || !initial_sync_peer_->isHigher) {
+        if (!initial_sync_peer_ || !initial_sync_peer_->IsVaild()) {
             initial_sync_peer_ = GetSyncPeer();
         }
 
         if (initial_sync_peer_) {
+            // check initial sync peer timeout
+            static auto next = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
+            static uint64_t old_last_bundle_ms_time = 0;
+            if (std::chrono::steady_clock::now() > next) {
+                next = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
+                if (initial_sync_peer_->last_bundle_ms_time == old_last_bundle_ms_time) {
+                    initial_sync_peer_->Disconnect();
+                    continue;
+                } else {
+                    old_last_bundle_ms_time = initial_sync_peer_->last_bundle_ms_time;
+                }
+            }
+
             if (DAG->IsDownloadingEmpty()) {
+                if (initial_sync_peer_->last_bundle_ms_time == old_last_bundle_ms_time) {
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
                 initial_sync_peer_->StartSync();
             }
         }
@@ -354,7 +373,7 @@ PeerPtr PeerManager::GetSyncPeer() {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
 
     for (auto& peer : peerMap_) {
-        if (peer.second->IsVaild() && peer.second->isFullyConnected && peer.second->isHigher) {
+        if (peer.second->IsVaild() && peer.second->isFullyConnected && peer.second->isSyncAvailable) {
             return peer.second;
         }
     }

@@ -106,23 +106,27 @@ public:
         c.reserve(n);
     }
 
-    void update_best(const_iterator pos) {
+    bool update_best(const_iterator pos) {
         WRITER_LOCK(mutex_)
         if (comp(c[m], *pos)) {
             c[m]->ismainchain_ = false;
             m                  = std::distance(c.cbegin(), pos);
             c[m]->ismainchain_ = true;
+            return true;
         }
+        return false;
     }
 
 private:
     mutable std::shared_mutex mutex_;
-    void update_best(const value_type& v, size_type i) {
+    bool update_best(const value_type& v, size_type i) {
         if (comp(c[m], v)) {
             c[m]->ismainchain_ = false;
             m                  = i;
             c[m]->ismainchain_ = true;
+            return true;
         }
+        return false;
     }
 };
 

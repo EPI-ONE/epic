@@ -126,7 +126,7 @@ int Init(int argc, char* argv[]) {
 
     CAT = std::make_unique<Caterpillar>(CONFIG->GetDBPath());
 
-    if (CONFIG->IsStartWithNewDB()) {
+    if (!CAT->DBExists(GENESIS.GetHash())) {
         // put genesis block into cat
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
         CAT->StoreLevelSet(genesisLvs);

@@ -227,7 +227,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     constexpr size_t FLUSHED = 10;
     const size_t HEIGHT      = GetParams().cacheStatesSize + FLUSHED;
     TestRawChain chain;
-    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, HEIGHT - 1);
+    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, HEIGHT);
 
     for (size_t i = 0; i < chain.size(); i++) {
         if (i > GetParams().cacheStatesSize) {
@@ -265,7 +265,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 }
 
 TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
-    const size_t HEIGHT    = GetParams().cacheStatesSize - 1;
+    const size_t HEIGHT    = GetParams().cacheStatesSize + 5;
     constexpr size_t hfork = 15;
     auto [chain1, vMsRec]  = fac.CreateRawChain(GENESIS_RECORD, HEIGHT);
 
@@ -281,9 +281,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
                 DAG->AddNewBlock(blkptr, nullptr);
             }
         }
-        if (i == 2) {
-            usleep(100000);
-        }
+        usleep(50000);
     }
     usleep(50000);
 
@@ -292,11 +290,11 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
 
     // here we set less or equal as $chain[1] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
-    ASSERT_EQ(CAT->GetHeadHeight(), GetParams().cacheStatesToDelete);
+    ASSERT_EQ(DAG->GetBestChain().GetStates().size(), GetParams().cacheStatesSize);
 
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();
-    for (uint64_t height = 1; height < GetParams().cacheStatesToDelete; height++) {
+    for (uint64_t height = 1; height < chains[0].size() - GetParams().cacheStatesSize; height++) {
         auto lvs = CAT->GetLevelSetBlksAt(height);
         ASSERT_GT(lvs.size(), 0);
 

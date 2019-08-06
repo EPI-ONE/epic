@@ -366,7 +366,7 @@ void Caterpillar::UnCache(const uint256& blkHash) {
 }
 
 bool Caterpillar::DBExists(const uint256& blkHash) const {
-    return dbStore_.Exists(blkHash) || blkHash == GENESIS.GetHash();
+    return dbStore_.Exists(blkHash);
 }
 
 bool Caterpillar::DAGExists(const uint256& blkHash) const {

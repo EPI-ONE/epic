@@ -497,7 +497,7 @@ RecordPtr Chain::GetMsRecordCache(const uint256& msHash) const {
     return nullptr;
 }
 
-void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove, size_t level) {
+void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove) {
     // remove records
     for (const auto& lvsh : recToRemove) {
         recordHistory_.erase(lvsh);
@@ -507,25 +507,13 @@ void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocT
     ledger_.Remove(txocToRemove);
 
     // remove states
-    for (size_t i = 0; i < level; i++) {
-        states_.pop_front();
-    }
+    states_.pop_front();
 }
 
-std::tuple<std::vector<std::vector<RecordWPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
-Chain::GetDataToCAT(size_t level) {
-    std::vector<std::vector<RecordWPtr>> result_rec{};
-    result_rec.reserve(level);
-    TXOC result_txoc{};
-
-    // traverse from the oldest chain state in memory
-    for (auto cs_it = states_.begin(); cs_it < states_.begin() + level && cs_it != states_.end(); cs_it++) {
-        result_rec.emplace_back((*cs_it)->GetLevelSet());
-
-        // get all of the TXOC and merge them in advance to save space
-        auto txoc = (*cs_it)->GetTXOC();
-        result_txoc.Merge(std::move(txoc));
-    }
+std::tuple<std::vector<RecordWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+Chain::GetDataToCAT(ChainStatePtr chain_state) {
+    std::vector<RecordWPtr> result_rec = chain_state->GetLevelSet();
+    TXOC result_txoc                   = chain_state->GetTXOC();
 
     std::unordered_map<uint256, UTXOPtr> result_created{};
     for (const auto& key_created : result_txoc.GetCreated()) {

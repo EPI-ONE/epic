@@ -22,6 +22,7 @@ public:
     arith_uint256 blockTarget;
     uint64_t hashRate;
     uint32_t lastUpdateTime = 0;
+    bool isStoraged         = false;
 
     // Incremental change of the last registration block on each peer chain,
     // whose elements are pairs consisting of:

@@ -5,8 +5,8 @@
 #include "peer_manager.h"
 
 Peer::Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager)
-    : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(0),
-      lastPongTime(0), nPingFailed(0), addressManager_(addressManager), connection_(connection) {}
+    : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(time(nullptr)),
+      lastPongTime(time(nullptr)), nPingFailed(0), addressManager_(addressManager), connection_(connection) {}
 
 Peer::~Peer() {
     delete versionMessage;
@@ -126,7 +126,7 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
                  versionMessage->current_height);
 
     if (versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
-        isHigher = true;
+        isSyncAvailable = true;
     }
 
     // send version message if peer is inbound
@@ -284,6 +284,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
     while (getDataTasks.Front() && getDataTasks.Front()->bundle) {
         auto& front = getDataTasks.Front();
         if (front->type == GetDataTask::LEVEL_SET) {
+            last_bundle_ms_time = front->bundle->blocks.front()->GetTime();
             std::swap(front->bundle->blocks.front(), front->bundle->blocks.back());
             for (auto& block : front->bundle->blocks) {
                 DAG->AddNewBlock(block, weak_peer_.lock());
@@ -296,10 +297,11 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
             spdlog::info("receive pending set");
         }
 
-        getDataTasks.Pop_front();
+        getDataTasks.Pop();
     }
 
     if (getDataTasks.Empty()) {
+        spdlog::info("Syncing finished");
         isSyncing = false;
     }
 }
@@ -351,6 +353,7 @@ void Peer::StartSync() {
         return;
     }
 
+    spdlog::info("Syncing start");
     isSyncing = true;
     DAG->RequestInv(uint256(), 5, weak_peer_.lock());
 }

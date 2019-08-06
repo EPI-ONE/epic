@@ -10,6 +10,11 @@ std::size_t OrphanBlocksContainer::Size() const {
     return block_dep_map_.size();
 }
 
+size_t OrphanBlocksContainer::DependencySize() const {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    return lose_ends_.size();
+}
+
 bool OrphanBlocksContainer::IsEmpty() const {
     return this->Size() == 0;
 }
@@ -23,6 +28,9 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     if (missing_mask == 0) {
         return;
     }
+
+    // insert new dependency into block_dep_map_
+    std::unique_lock<std::shared_mutex> writer(mutex_);
 
     // construct new dependency for the new block
     obc_dep_ptr dep = std::make_shared<obc_dep>();
@@ -45,8 +53,6 @@ void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing
     };
 
     // insert new dependency into block_dep_map_
-    std::unique_lock<std::shared_mutex> writer(mutex_);
-
     block_dep_map_.insert_or_assign(block->GetHash(), dep);
 
     if (missing_mask & M_MISSING) {

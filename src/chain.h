@@ -112,9 +112,9 @@ public:
     /**
      * Removes oldest chain state as well as corresponding data
      */
-    void PopOldest(const std::vector<uint256>&, const TXOC&, size_t);
-    std::tuple<std::vector<std::vector<RecordWPtr>>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
-        GetDataToCAT(size_t);
+    void PopOldest(const std::vector<uint256>&, const TXOC&);
+    std::tuple<std::vector<RecordWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>> GetDataToCAT(
+        ChainStatePtr);
 
     bool IsMilestone(const uint256&) const;
     bool IsTxFitsLedger(const ConstTxPtr& tx) const;

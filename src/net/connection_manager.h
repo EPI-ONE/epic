@@ -144,10 +144,10 @@ private:
     std::atomic_size_t checksum_error_packages_ = 0;
 
     ThreadPool serialize_pool_;
-    uint32_t serialize_pool_size_ = 4;
+    uint32_t serialize_pool_size_ = 1;
 
     ThreadPool deserialize_pool_;
-    uint32_t deserialize_pool_size_ = 2;
+    uint32_t deserialize_pool_size_ = 1;
 
     void WriteOneMessage_(shared_connection_t connection, unique_message_t& message);
 
