@@ -413,7 +413,6 @@ void DAGManager::DisconnectPeerSync(const PeerPtr& peer) {
 /////////////////////////////////////
 // End of synchronization methods
 //
-
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         if (*blk == GENESIS) {
@@ -496,7 +495,10 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         }
 
         // TODO: erase transaction from mempool
-
+        if (blk->HasTransaction()) {
+            static uint32_t counter = 0;
+            spdlog::debug("verifying tx {} , index = {}", blk->GetTransaction()->GetHash().to_substr(), counter++);
+        }
         AddBlockToPending(blk);
         CAT->ReleaseBlocks(blk->GetHash());
     });
@@ -654,7 +656,8 @@ RecordPtr DAGManager::GetState(const uint256& msHash) const {
         if (prec && prec->snapshot) {
             return prec;
         } else {
-            // cannot happen
+            // cannot happen for in-dag workflow
+            // may return nullptr when rpc is requesting some non-existing states
             return nullptr;
         }
     }
@@ -715,6 +718,9 @@ void DAGManager::FlushToCAT(size_t level) {
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
+        std::vector<RecordPtr> blocksToListener;
+        blocksToListener.reserve(recToStore.size());
+
         for (auto& lvsRec : recToStore) {
             std::swap(lvsRec.front(), lvsRec.back());
             const auto& ms = *lvsRec.front().lock();
@@ -722,7 +728,9 @@ void DAGManager::FlushToCAT(size_t level) {
             CAT->StoreLevelSet(lvsRec);
             CAT->UpdatePrevRedemHashes(ms.snapshot->regChange);
 
+            std::swap(lvsRec.front(), lvsRec.back());
             for (auto& rec : lvsRec) {
+                blocksToListener.emplace_back(rec.lock());
                 CAT->UnCache((*rec.lock()).cblock->GetHash());
             }
             globalStates_.erase(ms.cblock->GetHash());
@@ -732,6 +740,11 @@ void DAGManager::FlushToCAT(size_t level) {
         }
         for (const auto& utxoKey : utxoToRemove) {
             CAT->RemoveUTXO(utxoKey);
+        }
+
+        // notify the listener
+        if (onLvsConfirmedListener) {
+            onLvsConfirmedListener->OnLvsConfirmed(std::move(blocksToListener), utxoToStore, utxoToRemove);
         }
 
         // then remove chain states from chains
@@ -864,4 +877,8 @@ bool DAGManager::ExistsNode(const uint256& h) const {
         }
     }
     return false;
+}
+
+void DAGManager::RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener) {
+    onLvsConfirmedListener = listener;
 }

@@ -22,11 +22,13 @@ void DeleteDir(const std::string& dirpath);
 struct FilePos;
 class FileReader;
 class FileWriter;
+class FileModifier;
 
 namespace std {
 std::string to_string(const FilePos&);
 std::string to_string(FileReader&);
 std::string to_string(FileWriter&);
+std::string to_string(FileModifier&);
 } // namespace std
 
 namespace file {

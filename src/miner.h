@@ -26,10 +26,6 @@ public:
         return selfChainHead;
     }
 
-    inline CKey GetFirstKey() const {
-        return firstRegKey;
-    }
-
 private:
     std::thread runner_;
     ThreadPool solverPool_;
@@ -39,7 +35,6 @@ private:
 
     ConstBlockPtr selfChainHead = nullptr;
     Cumulator distanceCal;
-    CKey firstRegKey;
 
     uint256 SelectTip();
 };

@@ -83,3 +83,9 @@ std::string std::to_string(FileWriter& fwriter) {
     s += strprintf("Writing file %s at position %i.", fwriter.GetFileName(), fwriter.GetOffset());
     return s;
 }
+
+std::string std::to_string(FileModifier& fmodifier) {
+    std::string s;
+    s += strprintf("Modifying file %s at position %i.", fmodifier.GetFileName(), fmodifier.GetOffset());
+    return s;
+}

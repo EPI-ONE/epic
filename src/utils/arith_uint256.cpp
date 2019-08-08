@@ -241,4 +241,8 @@ arith_uint256 UintToArith256(const uint256& a) {
     return b;
 }
 
+bool PartitionCmp(const arith_uint256& a, const arith_uint256& b) {
+    return (a << 32) < b;
+}
+
 #endif // BITCOIN_ARITH_UINT256_CPP__

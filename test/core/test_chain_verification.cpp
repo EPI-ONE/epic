@@ -8,7 +8,7 @@
 
 class TestChainVerification : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
+    TestFactory fac          = EpicTestEnvironment::GetFactory();
     const std::string prefix = "test_validation/";
 
     void SetUp() override {
@@ -126,7 +126,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
         Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
             Transaction redeem{};
-            redeem.AddSignedInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig)
+            redeem.AddInput(TxInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig))
                 .AddOutput(0, addr);
             ASSERT_TRUE(redeem.IsRegistration());
             blk.AddTransaction(redeem);
@@ -181,12 +181,13 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             }
         } else {
             if (i > 0 && !isMilestone[i]) {
-                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + 1);
+                ASSERT_TRUE(recs[i]->cumulativeReward == recs[i - 1]->cumulativeReward + GetParams().reward);
             } else if (i == 0) {
-                ASSERT_TRUE(recs[i]->cumulativeReward == 1);
+                ASSERT_TRUE(recs[i]->cumulativeReward == GetParams().reward);
             } else {
                 ASSERT_TRUE(recs[i]->cumulativeReward ==
-                            recs[i - 1]->cumulativeReward + recs[i]->snapshot->GetLevelSet().size());
+                            recs[i - 1]->cumulativeReward +
+                                GetParams().reward * recs[i]->snapshot->GetLevelSet().size());
             }
         }
         if (isMilestone[i]) {
@@ -202,7 +203,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     Coin valueIn{4}, valueOut1{2}, valueOut2{1};
     // prepare keys and signature
-    auto key     = DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
+    auto key     = *DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
     auto addr    = key.GetPubKey().GetID();
     auto hashMsg = uint256S("4de04506f44155e2a59d2e8af4e6e15e9f50f5f0b1dc7a0742021799981180c2");
     std::vector<unsigned char> sig;
@@ -241,7 +242,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     // construct another block
     Transaction tx{};
-    tx.AddSignedInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig)
+    tx.AddInput(TxInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig))
         .AddOutput(valueOut1, addr)
         .AddOutput(valueOut2, addr);
     Block b3{GetParams().version, ghash, b2hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
@@ -270,7 +271,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ConstBlockPtr forkblk;
     ChainStatePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
-        recs.emplace_back(fac.CreateConsecutiveRecordPtr());
+        recs.emplace_back(fac.CreateConsecutiveRecordPtr(fac.NextTime()));
         dqcs.push_back(fac.CreateChainStatePtr(dqcs.back(), recs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5

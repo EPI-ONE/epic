@@ -23,8 +23,8 @@ static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 // coefficient of taking additional reward for milestone
-static constexpr uint32_t REWARD_COEFFICIENT = 50;
-static constexpr size_t CACHE_STATES = 100;
+static constexpr uint32_t REWARD_COEFFICIENT   = 50;
+static constexpr size_t CACHE_STATES           = 100;
 static constexpr size_t CACHE_STATES_TO_DELETE = 20;
 
 const Block& Params::GetGenesis() const {
@@ -76,7 +76,7 @@ MainNetParams::MainNetParams() {
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
-    deleteForkThreshold = 5;
+    deleteForkThreshold  = 5;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -128,14 +128,14 @@ TestNetParams::TestNetParams() {
 
 UnitTestParams::UnitTestParams() {
     version              = 100;
-    targetTimespan       = 9;
+    targetTimespan       = 99;
     timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 1;
+    reward               = 10;
     msRewardCoefficient  = 1;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);

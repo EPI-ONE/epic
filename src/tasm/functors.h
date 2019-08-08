@@ -3,7 +3,6 @@
 
 #include <array>
 #include <functional>
-#include <unistd.h>
 
 #include "pubkey.h"
 
@@ -38,4 +37,5 @@ static const std::array<instruction, 256> functors = {
 
         return ip + 2;
     })};
-#endif
+
+#endif // __FUNCTOR_H__

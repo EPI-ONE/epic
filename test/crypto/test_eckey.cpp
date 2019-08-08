@@ -59,7 +59,7 @@ TEST_F(TestECKey, key_workflow_test) {
 
     // encoding and decoding
     std::string strSeckey = EncodeSecret(seckey);
-    CKey decodeSeckey     = DecodeSecret(strSeckey);
+    CKey decodeSeckey     = *DecodeSecret(strSeckey);
     ASSERT_EQ(seckey, decodeSeckey);
     std::string strAddr = EncodeAddress(pubkey.GetID());
     auto decodeAddr     = DecodeAddress(strAddr);
@@ -80,10 +80,10 @@ TEST_F(TestECKey, key_workflow_test) {
 }
 
 TEST_F(TestECKey, key_regular_test) {
-    CKey key1  = DecodeSecret(testStrSeckey1);
-    CKey key2  = DecodeSecret(testStrSeckey2);
-    CKey key1C = DecodeSecret(testStrSeckey1C);
-    CKey key2C = DecodeSecret(testStrSeckey2C);
+    CKey key1  = *DecodeSecret(testStrSeckey1);
+    CKey key2  = *DecodeSecret(testStrSeckey2);
+    CKey key1C = *DecodeSecret(testStrSeckey1C);
+    CKey key2C = *DecodeSecret(testStrSeckey2C);
     ASSERT_TRUE(key1.IsValid() && !key1.IsCompressed());
     ASSERT_TRUE(key2.IsValid() && !key2.IsCompressed());
     ASSERT_TRUE(key1C.IsValid() && key1C.IsCompressed());

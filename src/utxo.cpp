@@ -40,6 +40,10 @@ void TXOC::Merge(TXOC txoc) {
     increment_.Merge(std::move(txoc.increment_));
 }
 
+bool TXOC::Empty() {
+    return increment_.GetCreated().empty() && increment_.GetRemoved().empty();
+}
+
 TXOC CreateTXOCFromInvalid(const Block& invalid) {
     const size_t nOuts = invalid.GetTransaction()->GetOutputs().size();
     std::unordered_set<uint256> invalidUTXO;
@@ -132,8 +136,7 @@ void ChainLedger::Rollback(const TXOC& txoc) {
 std::string std::to_string(const UTXO& utxo) {
     std::string s;
     s += "UTXO { \n";
-    s += strprintf("   outpoint: %s:%s\n", std::to_string(utxo.GetContainingBlkHash()), utxo.index_);
-    s += "   " + std::to_string(utxo.output_);
+    s += "   " + std::to_string(utxo.output_) + "with index " + std::to_string(utxo.index_);
     s += "   }";
     return s;
 }
@@ -148,5 +151,43 @@ std::string std::to_string(const TXOC& txoc) {
         s += std::to_string(utxo) + "\n";
     }
     s += "   }";
+    return s;
+}
+
+std::string std::to_string(const ChainLedger& ledger) {
+    std::string s;
+    s += "Ledger { \n";
+
+    s += strprintf("   pending utxo size: %i", ledger.pending_.size());
+    if (!ledger.pending_.empty()) {
+        s += "  {\n";
+        for (const auto& ledgerPair : ledger.pending_) {
+            s += std::to_string(*ledgerPair.second);
+            s += "\n";
+        }
+        s += "   }\n";
+    }
+
+    s += strprintf("   confirmed utxo size: %i", ledger.confirmed_.size());
+    if (!ledger.confirmed_.empty()) {
+        s += "  {\n";
+        for (const auto& ledgerPair : ledger.confirmed_) {
+            s += std::to_string(*ledgerPair.second);
+            s += "\n";
+        }
+        s += "   }\n";
+    }
+
+    s += strprintf("   removed utxo size: %i", ledger.removed_.size());
+    if (!ledger.removed_.empty()) {
+        s += "  {\n";
+        for (const auto& ledgerPair : ledger.removed_) {
+            s += std::to_string(*ledgerPair.second);
+            s += "\n";
+        }
+        s += "   }\n";
+    }
+
+    s += "\n }";
     return s;
 }

@@ -18,8 +18,8 @@ public:
     uint256 bHash;
     uint32_t index;
 
-    TxOutPoint() : index(UNCONNECTED) {}
-    TxOutPoint(uint256 fromBlock, const uint32_t index) : bHash(std::move(fromBlock)), index(index) {}
+    TxOutPoint() : bHash(Hash::GetZeroHash()), index(UNCONNECTED) {}
+    TxOutPoint(const uint256& fromBlock, uint32_t index) : bHash(fromBlock), index(index) {}
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
         return out1.index == out2.index && out1.bHash == out2.bHash;
@@ -51,12 +51,18 @@ public:
     Tasm::Listing listingContent;
 
     TxInput() = default;
+    TxInput(const TxOutPoint& outpointToprev, Tasm::Listing listing)
+        : outpoint(outpointToprev), listingContent(std::move(listing)) {}
+    TxInput(const uint256& fromBlock, uint32_t index, Tasm::Listing listing)
+        : outpoint(fromBlock, index), listingContent(std::move(listing)) {}
 
-    explicit TxInput(const TxOutPoint& outpoint, const Tasm::Listing& listingContent = Tasm::Listing());
+    TxInput(const TxOutPoint& outpoint,
+            const CPubKey& pubkey,
+            const uint256& hashMsg,
+            const std::vector<unsigned char>& sig)
+        : TxInput(outpoint, Tasm::Listing{VStream(pubkey, sig, hashMsg)}) {}
 
-    TxInput(const uint256& fromBlock, uint32_t index, const Tasm::Listing& listingContent = Tasm::Listing());
-
-    TxInput(const Tasm::Listing& script);
+    explicit TxInput(Tasm::Listing listing) : outpoint(), listingContent(std::move(listing)) {}
 
     bool IsRegistration() const;
 
@@ -108,7 +114,7 @@ public:
     }
 
 private:
-    const Transaction* parentTx_;
+    const Transaction* parentTx_{nullptr};
 };
 
 class Transaction {
@@ -122,6 +128,7 @@ public:
      */
     Transaction(const Transaction& tx);
     Transaction(Transaction&&) noexcept;
+    explicit Transaction(VStream&);
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */
@@ -137,10 +144,6 @@ public:
     void SetParents();
 
     Transaction& AddInput(TxInput&& input);
-    Transaction& AddSignedInput(const TxOutPoint& outpoint,
-                                const CPubKey& pubkey,
-                                const uint256& hashMsg,
-                                const std::vector<unsigned char>& sig);
     Transaction& AddOutput(TxOutput&& output);
     Transaction& AddOutput(uint64_t, const CKeyID&);
     Transaction& AddOutput(const Coin&, const CKeyID&);

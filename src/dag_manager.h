@@ -7,6 +7,7 @@
 #include "chains.h"
 #include "concurrent_container.h"
 #include "consensus.h"
+#include "dag_service.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
@@ -74,6 +75,8 @@ public:
         return milestoneChains;
     }
 
+    void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
+
     /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks
@@ -123,6 +126,11 @@ private:
      * Stores RecordPtr of all verified milestones on all branches as a cache
      */
     ConcurrentHashMap<uint256, RecordPtr> globalStates_;
+
+    /**
+     * Listener that triggers when a levelset is confirmed
+     */
+    OnLvsConfirmedListener onLvsConfirmedListener;
 
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 

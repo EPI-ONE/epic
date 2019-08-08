@@ -13,6 +13,7 @@ public:
     TestFactory fac;
     std::string prefix = "test_rpc/";
     static std::string adr;
+    const uint256 double0hash = Hash::GetDoubleZeroHash();
 
     static void SetUpTestCase() {
         adr = "0.0.0.0:3778";
@@ -40,13 +41,16 @@ std::string TestRPCServer::adr = "";
 TEST_F(TestRPCServer, GetBlock) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
-    auto g        = std::make_shared<NodeRecord>(GENESIS_RECORD);
-    auto req_hash = std::to_string(g->cblock->GetHash());
+    auto req_hash = std::to_string(GENESIS_RECORD.cblock->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
-    auto expected = HashToRPCHash(g->cblock->GetHash());
-    EXPECT_EQ(res.value().block_hash().hash(), expected->hash());
+    auto expected = HashToRPCHash(GENESIS_RECORD.cblock->GetHash());
+    ASSERT_EQ(res.value().block_hash().hash(), expected->hash());
     delete expected;
+
+    auto res_fake = client.GetBlock(std::to_string(double0hash));
+    ASSERT_TRUE(res_fake.has_value());
+    ASSERT_TRUE(res_fake->block_hash().hash() == rpc::Block().default_instance().block_hash().hash());
 }
 
 TEST_F(TestRPCServer, GetLevelSetAndItsSize) {

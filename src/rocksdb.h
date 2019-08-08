@@ -7,37 +7,12 @@
 #include <vector>
 
 #include "consensus.h"
+#include "db_wrapper.h"
 #include "file_utils.h"
-#include "rocksdb/db.h"
-#include "rocksdb/options.h"
-#include "rocksdb/slice.h"
 
-static const std::vector<std::string> COLUMN_NAMES = {
-    rocksdb::kDefaultColumnFamilyName, // (key) block hash
-                                       // (value) {height, blk offset, ms offset}
-                                       // Note: offsets are relative to the offsets of
-                                       // the milestone contained in the same level set
-
-    "ms", // (key) level set height
-          // (value) {blk FilePos, rec FilePos}
-
-    "utxo", // (key) outpoint hash ^ outpoint index
-            // (value) utxo
-
-    "reg", // (key) hash of peer chain head
-           // (value) hash of the last registration block on this peer chain
-
-    "info" // Stores necessary info to recover the system,
-           // e.g., lastest ms head in db
-};
-
-class RocksDBStore {
+class RocksDBStore : public DBWrapper {
 public:
-    RocksDBStore()                    = delete;
-    RocksDBStore(const RocksDBStore&) = delete;
     explicit RocksDBStore(std::string dbPath);
-
-    ~RocksDBStore();
 
     bool Exists(const uint256&) const;
     size_t GetHeight(const uint256&) const;
@@ -95,21 +70,11 @@ public:
     V GetInfo(const std::string&) const;
 
 private:
-    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
-    rocksdb::DB* db_;
-    std::string dbpath_;
-
-    void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles);
-
     uint256 GetMsHashAt(const uint64_t& height) const;
     std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
 
     bool WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
     bool DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
-
-    std::string Get(const std::string& column, const rocksdb::Slice& key) const;
-    std::string Get(const std::string& column, const std::string& key) const;
-    bool Delete(const std::string& column, std::string&& key) const;
 
     template <typename K, typename H, typename P1, typename P2>
     bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;

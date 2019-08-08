@@ -8,17 +8,36 @@ enum : uint8_t {
     LOG_INIT_FAILURE,
     PARAMS_INIT_FAILURE,
 };
+class UnconnectedException : public std::exception {};
+
+RPCClient CreateClient(std::string ip, uint16_t port) {
+    return RPCClient(grpc::CreateChannel(ip + ":" + std::to_string(port), grpc::InsecureChannelCredentials()));
+}
 
 int main(int argc, char** argv) {
     std::string command;
+    std::string arg_value;
     uint16_t rpc_port;
     // clang-format off
     cxxopts::Options options("epicc", "epic client");
-    options.positional_help("COMMAND. available commands: status, start-miner, stop-miner, stop").show_positional_help();
+    options.positional_help("COMMAND. available commands: \n"
+                            "1. status \n"
+                            "2. start-miner \n"
+                            "3. stop-miner \n"
+                            "4. stop \n"
+                            "5. create-randomtx, args = size: uint64(the size of transactions you want to create) \n"
+                            "6. generate-newkey \n"
+                            "7. get-balance \n"
+                            "8. create-tx args = fee : uint64(optional, default to be 1), outputValue1 : uint64, "
+                                                "outputAddr1 : string, outputValue2 : uint64, outputAddr2 : string ...")
+                            .show_positional_help();
 
+    std::vector<std::string> more_args;
     options
     .add_options("command")
     ("command", "Command", cxxopts::value<std::string>(command)->default_value(""))
+    ("value","Value",cxxopts::value<std::string>(arg_value)->default_value(""))
+    ("more_value","more argruments",cxxopts::value<std::vector<std::string>>(more_args))
     ;
 
     options.add_options()
@@ -27,7 +46,8 @@ int main(int argc, char** argv) {
     ("rpc-port", "client rpc port which is used to connect to the server", cxxopts::value<uint16_t>(rpc_port)->default_value("3777"))
     ;
 
-    options.parse_positional({"command"});
+
+    options.parse_positional({"command" ,"value","more_value"});
     // clang-format on
     try {
         auto parsed_options = options.parse(argc, argv);
@@ -35,42 +55,92 @@ int main(int argc, char** argv) {
             std::cout << options.help() << std::endl;
             return NORMAL_EXIT;
         }
+        auto client = CreateClient("0.0.0.0", rpc_port);
 
         if (command == "status") {
-            RPCClient client(
-                grpc::CreateChannel("0.0.0.0:" + std::to_string(rpc_port), grpc::InsecureChannelCredentials()));
             auto r = client.Status();
             if (r.has_value()) {
                 std::cout << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING") << std::endl;
                 std::cout << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
             } else {
-                std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
+                throw UnconnectedException();
             }
         } else if (command == "stop") {
-            RPCClient client(
-                grpc::CreateChannel("0.0.0.0:" + std::to_string(rpc_port), grpc::InsecureChannelCredentials()));
             if (client.Stop()) {
                 std::cout << "OK";
             } else {
-                std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
+                throw UnconnectedException();
             }
         } else if (command == "start-miner") {
-            RPCClient client(
-                grpc::CreateChannel("0.0.0.0:" + std::to_string(rpc_port), grpc::InsecureChannelCredentials()));
             auto r = client.StartMiner();
             if (r.has_value()) {
                 std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
             } else {
-                std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
+                throw UnconnectedException();
             }
         } else if (command == "stop-miner") {
-            RPCClient client(
-                grpc::CreateChannel("0.0.0.0:" + std::to_string(rpc_port), grpc::InsecureChannelCredentials()));
             auto r = client.StopMiner();
             if (r.has_value()) {
                 std::cout << ((*r) ? "OK" : "FAIL: Miner is already stopped") << std::endl;
             } else {
-                std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
+                throw UnconnectedException();
+            }
+        } else if (command == "create-randomtx") {
+            size_t size = 0;
+            if (!arg_value.empty()) {
+                size = std::stoi(arg_value);
+            }
+            auto r = client.CreateRandomTx(size);
+            if (r.has_value()) {
+                std::cout << *r << std::endl;
+            } else {
+                throw UnconnectedException();
+            }
+        } else if (command == "get-balance") {
+            auto r = client.GetBalance();
+            if (r) {
+                std::cout << (*r) << std::endl;
+            } else {
+                throw UnconnectedException();
+            }
+        } else if (command == "generate-newkey") {
+            auto r = client.GenerateNewKey();
+            if (r) {
+                std::cout << (*r) << std::endl;
+            } else {
+                throw UnconnectedException();
+            }
+        } else if (command == "create-tx") {
+            std::vector<std::pair<uint64_t, std::string>> outputs;
+            uint64_t fee;
+
+            if (more_args.empty()) {
+                std::cout << "please specify at least one output";
+                return PARAMS_INIT_FAILURE;
+            }
+
+            if (more_args.size() % 2 == 0) {
+                fee = std::stoi(arg_value);
+                std::cout << "You have specified the transaction fee = " + arg_value << std::endl;
+                for (int i = 0, j = i + 1; j < more_args.size(); i = i + 2, j = j + 2) {
+                    outputs.emplace_back(std::make_pair(std::stoi(more_args[i]), more_args[j]));
+                }
+            } else {
+                fee = 0;
+                std::cout << "You didn't specify the transaction fee, will use default fee" << std::endl;
+                for (int i = 1, j = i + 1; i <= more_args.size(); i = i + 2, j = j + 2) {
+                    if (i == 1) {
+                        outputs.emplace_back(std::make_pair(std::stoi(arg_value), more_args[0]));
+                    } else {
+                        outputs.emplace_back(std::make_pair(std::stoi(more_args[i]), more_args[j]));
+                    }
+                }
+            }
+            auto r = client.CreateTx(outputs, fee);
+            if (r) {
+                std::cout << (*r) << std::endl;
+            } else {
+                throw UnconnectedException();
             }
         } else {
             std::cout << options.help() << std::endl;
@@ -81,6 +151,8 @@ int main(int argc, char** argv) {
         std::cout << options.help() << std::endl;
         std::cerr << "error parsing options: " << e.what() << std::endl;
         exit(COMMANDLINE_INIT_FAILURE);
+    } catch (UnconnectedException& e) {
+        std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
     }
     return NORMAL_EXIT;
 }

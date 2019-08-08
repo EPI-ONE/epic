@@ -5,22 +5,6 @@ using Listing = Tasm::Listing;
 /*
  * TxInput class START
  */
-
-TxInput::TxInput(const TxOutPoint& outpointToPrev, const Tasm::Listing& listingData) {
-    outpoint       = outpointToPrev;
-    listingContent = listingData;
-}
-
-TxInput::TxInput(const uint256& fromBlockHash, uint32_t indexNum, const Tasm::Listing& listingData) {
-    outpoint       = TxOutPoint(fromBlockHash, indexNum);
-    listingContent = listingData;
-}
-
-TxInput::TxInput(const Tasm::Listing& listingData) {
-    outpoint       = TxOutPoint(Hash::GetZeroHash(), UNCONNECTED);
-    listingContent = listingData;
-}
-
 bool TxInput::IsRegistration() const {
     return outpoint.index == UNCONNECTED;
 }
@@ -86,8 +70,14 @@ Transaction::Transaction(Transaction&& tx) noexcept
     SetParents();
 }
 
+Transaction::Transaction(VStream& vs) {
+    vs >> *this;
+    FinalizeHash();
+    SetParents();
+}
+
 Transaction::Transaction(const CKeyID& addr) {
-    AddInput(TxInput{Listing{}}).AddOutput(Coin{}, addr);
+    AddInput(TxInput{}).AddOutput(Coin{}, addr);
     FinalizeHash();
 }
 
@@ -107,15 +97,6 @@ Transaction& Transaction::AddInput(TxInput&& txin) {
     return *this;
 }
 
-Transaction& Transaction::AddSignedInput(const TxOutPoint& outpoint,
-                                         const CPubKey& pubkey,
-                                         const uint256& hashMsg,
-                                         const std::vector<unsigned char>& sig) {
-    VStream indata{pubkey, sig, hashMsg};
-    AddInput(TxInput{outpoint, Tasm::Listing{indata}});
-    return *this;
-}
-
 Transaction& Transaction::AddOutput(TxOutput&& txout) {
     hash_.SetNull();
     txout.SetParent(this);
@@ -129,7 +110,8 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 }
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
-    VStream vstream{EncodeAddress(addr)};
+    VStream vstream;
+    vstream << EncodeAddress(addr);
     return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, std::move(vstream)}});
 }
 

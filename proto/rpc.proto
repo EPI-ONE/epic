@@ -83,6 +83,10 @@ service CommanderRPC {
     rpc Stop (StopRequest) returns (StopResponse);
     rpc StartMiner (StartMinerRequest) returns (StartMinerResponse);
     rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
+    rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
+    rpc GenerateNewKey(GenerateNewKeyRequest) returns (GenerateNewKeyResponse);
+    rpc GetBalance(GetBalanceRequest) returns(GetBalanceResponse);
+    rpc CreateTx(CreateTxRequest) returns(CreateTxResponse);
 }
 
 message StopRequest {}
@@ -106,4 +110,40 @@ message StatusRequest {}
 message StatusResponse {
     bool isMinerRunning = 1;
     Hash latestMSHash = 2;
+}
+
+message CreateRandomTxRequest{
+    uint64 size = 1;
+}
+
+message CreateRandomTxResponse{
+    string result = 1;
+}
+
+message GenerateNewKeyRequest{}
+
+message GenerateNewKeyResponse{
+    string privateKey = 1;
+    string pubKey = 2;
+    string address = 3;
+}
+
+message GetBalanceRequest{}
+
+message GetBalanceResponse{
+    string coin = 1;
+}
+
+message Output{
+    string address = 1;
+    uint64 money = 2;
+}
+
+message CreateTxRequest{
+    uint64 fee =1;
+    repeated Output outputs=2;
+}
+
+message CreateTxResponse{
+    string txInfo = 1;
 }

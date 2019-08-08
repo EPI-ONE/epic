@@ -1,9 +1,7 @@
 #ifndef __SRC_RPC_SERVER_H__
 #define __SRC_RPC_SERVER_H__
 
-#include <grpc++/grpc++.h>
-#include <rpc.grpc.pb.h>
-#include <rpc.pb.h>
+
 #include <rpc_tools.h>
 #include <thread>
 
@@ -11,29 +9,10 @@
 #include "init.h"
 #include "miner.h"
 #include "net_address.h"
+#include "rpc_header.h"
 #include "spdlog.h"
+#include "wallet.h"
 
-using rpc::BasicBlockExplorerRPC;
-using rpc::GetBlockRequest;
-using rpc::GetBlockResponse;
-using rpc::GetLatestMilestoneRequest;
-using rpc::GetLatestMilestoneResponse;
-using rpc::GetLevelSetRequest;
-using rpc::GetLevelSetResponse;
-using rpc::GetLevelSetSizeRequest;
-using rpc::GetLevelSetSizeResponse;
-using rpc::GetNewMilestoneSinceRequest;
-using rpc::GetNewMilestoneSinceResponse;
-
-using rpc::CommanderRPC;
-using rpc::StartMinerRequest;
-using rpc::StartMinerResponse;
-using rpc::StatusRequest;
-using rpc::StatusResponse;
-using rpc::StopMinerRequest;
-using rpc::StopMinerResponse;
-using rpc::StopRequest;
-using rpc::StopResponse;
 
 class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Service {
     grpc::Status GetBlock(grpc::ServerContext* context,
@@ -69,6 +48,22 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     grpc::Status StopMiner(grpc::ServerContext* context,
                            const StopMinerRequest* request,
                            StopMinerResponse* reply) override;
+
+    grpc::Status CreateRandomTx(grpc::ServerContext* context,
+                                const CreateRandomTxRequest* request,
+                                CreateRandomTxResponse* reply) override;
+
+    grpc::Status CreateTx(grpc::ServerContext* context,
+                          const CreateTxRequest* request,
+                          CreateTxResponse* reply) override;
+
+    grpc::Status GenerateNewKey(grpc::ServerContext* context,
+                                const GenerateNewKeyRequest* request,
+                                GenerateNewKeyResponse* reply) override;
+
+    grpc::Status GetBalance(grpc::ServerContext* context,
+                            const GetBalanceRequest* request,
+                            GetBalanceResponse* reply) override;
 };
 
 class RPCServer {

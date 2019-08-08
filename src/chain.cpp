@@ -49,7 +49,7 @@ void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
         return;
     }
     for (const auto& u : utxos) {
-        pendingUTXOs_.emplace(u->GetKey(), u);
+        ledger_.AddToPending(u);
     }
 }
 
@@ -161,7 +161,7 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     nodeHandler.key() = b.cblock->GetHash();
     cumulatorMap_.insert(std::move(nodeHandler));
 
-    return dist <= allowed;
+    return PartitionCmp(dist, allowed);
 }
 
 RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
@@ -194,9 +194,11 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
             if (auto update = Validate(*rec, state->regChange)) {
                 rec->validity = NodeRecord::VALID;
                 // update ledger in chain for future reference
-                ledger_.Update(*update);
-                // take notes in chain state; will be used when flushing this state from memory to CAT
-                state->UpdateTXOC(std::move(*update));
+                if (!update->Empty()) {
+                    ledger_.Update(*update);
+                    // take notes in chain state; will be used when flushing this state from memory to CAT
+                    state->UpdateTXOC(std::move(*update));
+                }
             } else {
                 rec->validity = NodeRecord::INVALID;
                 TXOC invalid  = CreateTXOCFromInvalid(*(rec->cblock));
@@ -264,8 +266,9 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
+    auto prevBlock = GetRecord(record.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter
-    if (!(vout.value <= prevReg->cumulativeReward)) {
+    if (!(vout.value <= prevBlock->cumulativeReward)) {
         spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
         return {};
     }
@@ -410,7 +413,6 @@ Chain::GetDataToCAT(size_t level) {
     for (const auto& key_created : result_txoc.GetCreated()) {
         result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
-
     return {result_rec, result_created, result_txoc.GetSpent()};
 }
 

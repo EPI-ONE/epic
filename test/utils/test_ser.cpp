@@ -50,9 +50,10 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
 
     // serialize on address
     std::string strAddr = EncodeAddress(pubkey.GetID());
-    vstream << strAddr;
+    VStream vs;
+    vs << strAddr;
     std::string deserAddr;
-    vstream >> deserAddr;
+    vs >> deserAddr;
     ASSERT_EQ(strAddr, deserAddr);
     auto decodeDeserAddr = DecodeAddress(deserAddr);
     ASSERT_EQ(pubkey.GetID(), *decodeDeserAddr);

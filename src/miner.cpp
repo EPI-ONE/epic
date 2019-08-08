@@ -106,22 +106,36 @@ void Miner::Run() {
             }
 
             if (!selfChainHead) {
+                auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
+                if (!firstRegTx) {
+                    spdlog::warn("Can't get the first registration tx, keep waiting...");
+                    while (!firstRegTx) {
+                        std::this_thread::yield();
+                        firstRegTx = MEMPOOL->GetRedemptionTx(true);
+                    }
+                }
+                spdlog::info("Get first registration, start mining");
                 prevHash = GENESIS.GetHash();
-                firstRegKey.MakeNewKey(true);
-                b.AddTransaction(Transaction(firstRegKey.GetPubKey().GetID()));
+                b.AddTransaction(std::move(firstRegTx));
             } else {
                 prevHash = selfChainHead->GetHash();
                 if (distanceCal.Full()) {
                     auto timeInterval = distanceCal.TimeSpan();
                     double percentage =
                         distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
-                    if (counter % 128 == 0) {
+                    if (counter % 2000 == 0) {
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }
-
-                    b.AddTransaction(MEMPOOL->GetTransaction(
-                        prevHash, (uint64_t)((GetParams().maxTarget / GetParams().sortitionCoefficient).getdouble() *
-                                             percentage)));
+                    auto tx = MEMPOOL->GetRedemptionTx(false);
+                    if (!tx) {
+                        auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
+                                       GetParams().sortitionCoefficient *
+                                       (GetParams().maxTarget / (head->snapshot->hashRate + 1));
+                        tx = MEMPOOL->ExtractTransaction(prevHash, allowed);
+                    }
+                    if (tx) {
+                        b.AddTransaction(std::move(tx));
+                    }
                 }
             }
 
@@ -142,7 +156,9 @@ void Miner::Run() {
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);
-            PEERMAN->RelayBlock(bPtr, nullptr);
+            if (PEERMAN) {
+                PEERMAN->RelayBlock(bPtr, nullptr);
+            }
             distanceCal.Add(bPtr, true);
             selfChainHead = bPtr;
             DAG->AddNewBlock(bPtr, nullptr);

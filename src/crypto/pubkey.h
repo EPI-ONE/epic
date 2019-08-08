@@ -32,6 +32,12 @@ public:
     CKeyID() : uint160() {}
     explicit CKeyID(const uint160& in) : uint160(in) {}
 };
+template <>
+struct std::hash<CKeyID> {
+    size_t operator()(const CKeyID& key) const {
+        return key.GetUint64(0);
+    }
+};
 
 typedef uint256 ChainCode;
 

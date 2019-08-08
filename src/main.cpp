@@ -1,5 +1,3 @@
-#include "caterpillar.h"
-#include "dag_manager.h"
 #include "init.h"
 
 int main(int argc, char** argv) {

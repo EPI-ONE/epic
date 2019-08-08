@@ -8,7 +8,11 @@ class TestMiner : public testing::Test {
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG("test_miner/");
         PEERMAN = std::make_unique<PeerManager>();
+        CKey key;
+        key.MakeNewKey(false);
+        auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
         MEMPOOL = std::make_unique<MemPool>();
+        MEMPOOL->PushRedemptionTx(tx);
     }
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG("test_miner/");
@@ -54,8 +58,6 @@ TEST_F(TestMiner, Run) {
     DAG->Stop();
 
     ASSERT_TRUE(m.GetSelfChainHead());
-    ASSERT_TRUE(m.GetFirstKey().IsValid());
-
     ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     ASSERT_TRUE(DAG->GetChains().size() == 1);
 }
