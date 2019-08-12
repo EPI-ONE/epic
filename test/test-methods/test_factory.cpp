@@ -45,7 +45,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
-        tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, Listing(std::vector<unsigned char>(i))));
+        tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, i % maxPos, Listing(std::vector<unsigned char>(i))));
     }
 
     for (int i = 0; i < numTxOutput; ++i) {
@@ -56,21 +56,11 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 }
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
-    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(),
-                    timeGenerator.NextTime(), GetParams().maxTarget.GetCompact(), 0);
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), uint256(),
+                    timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
 
-    if (numTxInput || numTxOutput) {
-        Transaction tx;
-        int maxPos = (numGenerator.GetRand() % 128) + 1;
-        for (int i = 0; i < numTxInput; ++i) {
-            tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, Listing(std::vector<unsigned char>(i))));
-        }
-
-        for (int i = 0; i < numTxOutput; ++i) {
-            tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
-        }
-
-        b.AddTransaction(tx);
+    if (numTxInput && numTxOutput) {
+        b.AddTransaction(CreateTx(numTxInput, numTxOutput));
     }
 
     b.CalculateOptimalEncodingSize();
@@ -108,9 +98,9 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
     }
 
     if (GetRand() % 2) {
-        rec.validity = NodeRecord::VALID;
+        rec.validity.push_back(NodeRecord::VALID);
     } else {
-        rec.validity = NodeRecord::INVALID;
+        rec.validity.push_back(NodeRecord::INVALID);
     }
 
     return rec;
@@ -170,7 +160,8 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
 
         // Special transaction on the first registration block
         if (b.GetPrevHash() == GENESIS.GetHash()) {
-            b.AddTransaction(Transaction{CreateKeyPair().second.GetID()});
+            Transaction tx = Transaction{CreateKeyPair().second.GetID()};
+            b.AddTransaction(tx);
         }
         b.CalculateOptimalEncodingSize();
         b.Solve();

@@ -9,7 +9,7 @@
 #include <fstream>
 
 using namespace rocksdb;
-using utxo_map = ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>>;
+using utxo_map = ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>>;
 
 enum { UNSPENT = 0, PENDING = 1, SPENT = 2 };
 const std::string kKeyBook    = kDefaultColumnFamilyName;
@@ -136,11 +136,15 @@ ConcurrentHashMap<CKeyID, CKey> WalletStore::GetAllKey() {
     return result;
 }
 
-bool WalletStore::StoreUTXO(
-    const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin, uint8_t category) {
+bool WalletStore::StoreUTXO(const uint256& utxokey,
+                            const CKeyID& addr,
+                            uint32_t txIndex,
+                            uint32_t outputIndex,
+                            uint64_t coin,
+                            uint8_t category) {
     VStream key{utxokey};
     VStream value;
-    value << EncodeAddress(addr) << outputIndex << coin;
+    value << EncodeAddress(addr) << txIndex << outputIndex << coin;
 
     return put(db_, handleMap_.at(utxoStr.at(category)), key, value);
 }
@@ -151,6 +155,7 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         uint256 utxokey;
         CKeyID addr;
+        uint32_t txIndex;
         uint32_t outputIndex;
         uint64_t coinvalue;
         try {
@@ -158,7 +163,7 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
             VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
             std::string addrstr;
             key >> utxokey;
-            value >> addrstr >> outputIndex >> coinvalue;
+            value >> addrstr >> txIndex >> outputIndex >> coinvalue;
             if (auto oAddr = DecodeAddress(addrstr)) {
                 addr = *oAddr;
             }
@@ -166,7 +171,7 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
             std::cout << e.what();
             std::cout << "err utxo\n";
         }
-        result.emplace(utxokey, std::make_tuple(addr, outputIndex, coinvalue));
+        result.emplace(utxokey, std::make_tuple(addr, txIndex, outputIndex, coinvalue));
     }
     assert(iter->status().ok());
     delete iter;
@@ -174,23 +179,26 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
     return result;
 }
 
-bool WalletStore::StoreUnspent(const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin) {
-    return StoreUTXO(utxokey, addr, outputIndex, coin, UNSPENT);
+bool WalletStore::StoreUnspent(
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, UNSPENT);
 }
-bool WalletStore::StorePending(const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin) {
-    return StoreUTXO(utxokey, addr, outputIndex, coin, PENDING);
+bool WalletStore::StorePending(
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, PENDING);
 }
-bool WalletStore::StoreSpent(const uint256& utxokey, const CKeyID& addr, uint32_t outputIndex, uint64_t coin) {
-    return StoreUTXO(utxokey, addr, outputIndex, coin, SPENT);
+bool WalletStore::StoreSpent(
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, SPENT);
 }
 
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> WalletStore::GetAllUnspent() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllUnspent() {
     return GetAllUTXO(UNSPENT);
 }
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> WalletStore::GetAllPending() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllPending() {
     return GetAllUTXO(PENDING);
 }
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint64_t>> WalletStore::GetAllSpent() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllSpent() {
     return GetAllUTXO(SPENT);
 }
 

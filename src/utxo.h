@@ -21,9 +21,12 @@ string to_string(const ChainLedger&);
  */
 class UTXO {
 public:
-    UTXO(const TxOutput& output, uint32_t index) : output_(output), index_(index) {}
+    UTXO(const TxOutput& output, uint32_t txIdx, uint32_t outIdx)
+        : output_(output), txIndex_(txIdx), outIndex_(outIdx) {}
+
     UTXO(const UTXO&) = default;
-    explicit UTXO(VStream& s) : index_(-1) {
+
+    explicit UTXO(VStream& s) : txIndex_(-1), outIndex_(-1) {
         s >> output_;
     }
 
@@ -45,8 +48,8 @@ public:
         return output_;
     }
 
-    uint32_t GetIndex() const {
-        return index_;
+    std::pair<uint32_t, uint32_t> GetIndices() const {
+        return std::make_pair(txIndex_, outIndex_);
     }
 
     uint256 GetContainingBlkHash() const;
@@ -64,7 +67,8 @@ public:
 
 private:
     TxOutput output_;
-    uint32_t index_;
+    uint32_t txIndex_;
+    uint32_t outIndex_;
 };
 
 
@@ -95,7 +99,7 @@ public:
         : increment_(std::move(created), std::move(spent)) {}
 
     void AddToCreated(const UTXOPtr&);
-    void AddToCreated(const uint256&, uint32_t);
+    void AddToCreated(const uint256&, uint32_t, uint32_t);
     void AddToSpent(const TxInput&);
     void Merge(TXOC txoc);
 
@@ -144,5 +148,5 @@ private:
     friend std::string std::to_string(const ChainLedger&);
 };
 
-TXOC CreateTXOCFromInvalid(const Block&);
+TXOC CreateTXOCFromInvalid(const Transaction&, uint32_t txIndex);
 #endif /* ifndef __SRC_UTXO_H__ */

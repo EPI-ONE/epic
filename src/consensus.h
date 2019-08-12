@@ -150,8 +150,8 @@ public:
 
     uint64_t height = 0;
 
-    Coin cumulativeReward;
-    Coin fee;
+    Coin cumulativeReward     = 0;
+    Coin fee                  = 0;
     uint64_t minerChainHeight = 0;
 
     uint8_t isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
@@ -160,7 +160,7 @@ public:
     bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
 
-    uint8_t validity = Validity::UNKNOWN;
+    std::vector<uint8_t> validity;
 
     NodeRecord();
     NodeRecord(const NodeRecord&) = default;

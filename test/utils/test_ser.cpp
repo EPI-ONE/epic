@@ -60,7 +60,7 @@ TEST_F(TestSer, SerializeEqDeserializePublicKey) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTxOutPoint) {
-    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    TxOutPoint outpoint = TxOutPoint(rand1, 1, 1);
     VStream sinput;
     sinput << outpoint;
     std::string s = sinput.str();
@@ -96,7 +96,7 @@ TEST_F(TestSer, SerializeEqDeserializeListing) {
 
 
 TEST_F(TestSer, SerializeEqDeserializeTxInput) {
-    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    TxOutPoint outpoint = TxOutPoint(rand1, 1, 1);
     TxInput input       = TxInput(outpoint, randomBytes);
     VStream sinput;
     sinput << input;
@@ -141,7 +141,7 @@ TEST_F(TestSer, SerializeEqDeserializeTxOutput) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeTransaction) {
-    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    TxOutPoint outpoint = TxOutPoint(rand1, 1, 1);
     Transaction tx      = Transaction();
 
     tx.AddInput(TxInput(outpoint, Listing(randomBytes)));
@@ -159,7 +159,7 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 
     ASSERT_EQ(s, soutput.str());
 
-    Transaction txx(tx);
+    Transaction txx(std::move(tx));
     std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
     VStream vs;
     vs << ot;
@@ -171,14 +171,15 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {
-    Block block = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
+    Block block = Block(1, rand1, zeros, rand2, zeros, time(nullptr), 1, 1);
 
     // Add tx to block
-    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    TxOutPoint outpoint = TxOutPoint(rand1, 1, 1);
     Transaction tx      = Transaction();
 
     tx.AddInput(TxInput(outpoint, Listing(randomBytes)));
     tx.AddOutput(TxOutput(100, Listing(randomBytes)));
+    tx.FinalizeHash();
     block.AddTransaction(tx);
     block.FinalizeHash();
 
@@ -197,7 +198,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     ASSERT_EQ(VStream(block1).size(), block1.GetOptimalEncodingSize());
 
     // Check parent pointers
-    const Transaction* ptrTx = &(*block1.GetTransaction());
+    const Transaction* ptrTx = &(*block1.GetTransactions()[0]);
     ASSERT_EQ(&block1, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         ASSERT_EQ(ptrTx, input.GetParentTx());
@@ -209,7 +210,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     Block block2(soutput);
 
     // check parent pointers
-    ptrTx = &*block2.GetTransaction();
+    ptrTx = &*block2.GetTransactions()[0];
     ASSERT_EQ(&block2, ptrTx->GetParentBlock());
     for (const TxInput& input : ptrTx->GetInputs()) {
         ASSERT_EQ(ptrTx, input.GetParentTx());
@@ -223,13 +224,14 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
 }
 
 TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
-    Block blk = Block(1, rand1, zeros, rand2, time(nullptr), 1, 1);
+    Block blk = Block(1, rand1, zeros, rand2, zeros, time(nullptr), 1, 1);
 
     // Add a tx into the block
-    TxOutPoint outpoint = TxOutPoint(rand1, 1);
+    TxOutPoint outpoint = TxOutPoint(rand1, 1, 1);
     Transaction tx      = Transaction();
     tx.AddInput(TxInput(outpoint, randomBytes));
     tx.AddOutput(TxOutput(100, randomBytes));
+    tx.FinalizeHash();
     blk.AddTransaction(tx);
     blk.FinalizeHash();
 

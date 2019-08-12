@@ -7,10 +7,10 @@
 
 #include "block.h"
 
-uint256 RPCHashToHash(const rpc::Hash&);
+uint256 ToHash(const rpc::Hash&);
 
-rpc::Hash* HashToRPCHash(const uint256&);
+rpc::Hash* ToRPCHash(const uint256&);
 
-rpc::Block* BlockToRPCBlock(const Block&);
+rpc::Block* ToRPCBlock(const Block&);
 
 #endif //__SRC_RPC_TOOLS_H__

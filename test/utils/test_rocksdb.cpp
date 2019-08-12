@@ -120,8 +120,8 @@ TEST_F(TestRocksDB, batch_insertion) {
 
 TEST_F(TestRocksDB, utxo) {
     auto index   = fac.GetRand() % 100;
-    auto block   = fac.CreateBlock(0, 100);
-    UTXOPtr utxo = std::make_shared<UTXO>(block.GetTransaction()->GetOutputs()[index], index);
+    auto block   = fac.CreateBlock(1, 100);
+    UTXOPtr utxo = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[index], 0, index);
     auto key     = utxo->GetKey();
     ASSERT_TRUE(db->WriteUTXO(key, utxo));
 

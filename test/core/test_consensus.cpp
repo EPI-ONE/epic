@@ -27,7 +27,7 @@ TEST_F(TestConsensus, SyntaxChecking) {
 
     // Create a random block with bad difficulty target
     Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
-                        time(nullptr), 1, 1);
+                        fac.CreateRandomHash(), time(nullptr), 1, 1);
     EXPECT_FALSE(block.Verify());
 }
 

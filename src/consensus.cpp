@@ -71,17 +71,32 @@ ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, s
 ////////////////
 // NodeRecord
 //
-NodeRecord::NodeRecord() : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {}
+NodeRecord::NodeRecord() : minerChainHeight(0), optimalStorageSize_(0) {}
 
-NodeRecord::NodeRecord(const ConstBlockPtr& blk)
-    : cblock(blk), minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {}
-
-NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {
-    cblock = std::make_shared<Block>(blk);
+NodeRecord::NodeRecord(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
+    auto n = cblock->GetTransactions().size();
+    if (n > 0) {
+        validity.resize(n);
+        memset(&validity[0], UNKNOWN, n);
+    }
 }
 
-NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), validity(UNKNOWN), optimalStorageSize_(0) {
+NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), optimalStorageSize_(0) {
+    cblock = std::make_shared<Block>(blk);
+    auto n = cblock->GetTransactions().size();
+    if (n > 0) {
+        validity.resize(n);
+        memset(&validity[0], UNKNOWN, n);
+    }
+}
+
+NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), optimalStorageSize_(0) {
     cblock = std::make_shared<Block>(std::move(blk));
+    auto n = cblock->GetTransactions().size();
+    if (n > 0) {
+        validity.resize(n);
+        memset(&validity[0], UNKNOWN, n);
+    }
 }
 
 NodeRecord::NodeRecord(VStream& s) {
@@ -94,17 +109,16 @@ void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
 }
 
 void NodeRecord::UpdateReward(const Coin& prevReward) {
-    assert(validity != Validity::UNKNOWN);
-    // cumulate reward without fee; default for blocks except first registration
+    // cumulative reward without fee; default for blocks except first registration
     cumulativeReward = prevReward + GetParams().reward;
 
-    if (cblock->HasTransaction() && validity != Validity::INVALID) {
+    if (cblock->HasTransaction()) {
         if (cblock->IsRegistration()) {
             // remaining reward = last cumulative reward - redemption amount
-            cumulativeReward -= cblock->GetTransaction()->GetOutputs()[0].value;
-        } else { // for normal valid transaction
-            cumulativeReward += fee;
+            cumulativeReward -= cblock->GetTransactions()[0]->GetOutputs()[0].value;
         }
+
+        cumulativeReward += fee;
     }
 
     // update reward of miletone
@@ -119,12 +133,12 @@ size_t NodeRecord::GetOptimalStorageSize() {
         return optimalStorageSize_;
     }
 
-    optimalStorageSize_ += GetSizeOfVarInt(height)                        // block height
-                           + GetSizeOfVarInt(cumulativeReward.GetValue()) // reward
-                           + GetSizeOfVarInt(minerChainHeight)            // miner chain height
-                           + 1                                            // validity
-                           + 1                                            // RedemptionStatus
-                           + 1;                                           // MilestoneStatus
+    optimalStorageSize_ += GetSizeOfVarInt(height)                                         // block height
+                           + GetSizeOfVarInt(cumulativeReward.GetValue())                  // reward
+                           + GetSizeOfVarInt(minerChainHeight)                             // miner chain height
+                           + ::GetSizeOfCompactSize(validity.size()) + validity.size() * 1 // validity
+                           + 1                                                             // RedemptionStatus
+                           + 1;                                                            // MilestoneStatus
 
     // ChainState
     if (snapshot != nullptr) {
@@ -163,7 +177,7 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
     }
 
     if (rec.cblock) {
-        s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx));
+        s += strprintf("   contained%s \n", std::to_string(*(rec.cblock), showtx, rec.validity));
     }
 
     s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
@@ -171,8 +185,5 @@ std::string std::to_string(const NodeRecord& rec, bool showtx) {
 
     const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
     s += strprintf("   redemption status: %s \n", enumRedeemption[rec.isRedeemed]);
-
-    const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
-    s += strprintf("   transaction status: %s \n }", enumName[rec.validity]);
     return s;
 }

@@ -17,33 +17,36 @@ class Transaction;
 /**
  * Computation methods of keys for searching UTXO in maps or in DB: hash ^ index
  */
-uint256 ComputeUTXOKey(const uint256& hash, uint32_t index);
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t txIdx, uint32_t outIdx);
 
 class TxOutPoint {
 public:
     uint256 bHash;
-    uint32_t index;
+    uint32_t txIndex;
+    uint32_t outIndex;
 
-    TxOutPoint() : bHash(Hash::GetZeroHash()), index(UNCONNECTED) {}
-    TxOutPoint(const uint256& fromBlock, uint32_t index) : bHash(fromBlock), index(index) {}
+    TxOutPoint() : bHash(Hash::GetZeroHash()), txIndex(UNCONNECTED), outIndex(UNCONNECTED) {}
+    TxOutPoint(const uint256& fromBlock, uint32_t index1, uint32_t index2)
+        : bHash(fromBlock), txIndex(index1), outIndex(index2) {}
 
     friend bool operator==(const TxOutPoint& out1, const TxOutPoint& out2) {
-        return out1.index == out2.index && out1.bHash == out2.bHash;
+        return out1.txIndex == out2.txIndex && out1.outIndex == out2.outIndex && out1.bHash == out2.bHash;
     }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(bHash);
-        READWRITE(index);
+        READWRITE(txIndex);
+        READWRITE(outIndex);
     }
 
     uint64_t HashCode() const {
-        return bHash.GetCheapHash() ^ index;
+        return txIndex ^ outIndex ^ bHash.GetCheapHash();
     }
 
     uint256 GetOutKey() const {
-        return ComputeUTXOKey(bHash, index);
+        return ComputeUTXOKey(bHash, txIndex, outIndex);
     }
 };
 
@@ -63,8 +66,8 @@ public:
     TxInput() = default;
     TxInput(const TxOutPoint& outpointToprev, Tasm::Listing listing)
         : outpoint(outpointToprev), listingContent(std::move(listing)) {}
-    TxInput(const uint256& fromBlock, uint32_t index, Tasm::Listing listing)
-        : outpoint(fromBlock, index), listingContent(std::move(listing)) {}
+    TxInput(const uint256& fromBlock, uint32_t txIdx, uint32_t outIdx, Tasm::Listing listing)
+        : outpoint(fromBlock, txIdx, outIdx), listingContent(std::move(listing)) {}
 
     TxInput(const TxOutPoint& outpoint,
             const CPubKey& pubkey,
@@ -78,7 +81,7 @@ public:
 
     bool IsFirstRegistration() const;
 
-    void SetParent(const Transaction* const tx);
+    void SetParent(const Transaction* const tx) const;
 
     const Transaction* GetParentTx() const;
 
@@ -94,7 +97,7 @@ public:
     }
 
 private:
-    const Transaction* parentTx_;
+    mutable const Transaction* parentTx_;
 };
 
 class TxOutput {
@@ -108,7 +111,7 @@ public:
 
     TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData);
 
-    void SetParent(const Transaction* const tx);
+    void SetParent(const Transaction* const tx) const;
 
     const Transaction* GetParentTx() const;
 
@@ -124,7 +127,7 @@ public:
     }
 
 private:
-    const Transaction* parentTx_{nullptr};
+    mutable const Transaction* parentTx_{nullptr};
 };
 
 class Transaction : public NetMessage {
@@ -133,16 +136,23 @@ public:
      * constructor of an empty transcation
      */
     Transaction() = default;
+
     /**
      * copy and move constructor with computing hash and setting parent block
      */
     Transaction(const Transaction& tx);
     Transaction(Transaction&&) noexcept;
-    explicit Transaction(VStream&);
+
     /**
      * constructor of first registration where $addr is the address to redeem in the future
      */
     explicit Transaction(const CKeyID& addr);
+    explicit Transaction(CKeyID& addr);
+
+    template <typename Stream>
+    explicit Transaction(Stream& vs) {
+        ::Deserialize(vs, *this);
+    }
 
     Transaction& operator=(const Transaction&) = default;
     Transaction& operator=(Transaction&&) = default;
@@ -151,7 +161,7 @@ public:
         return inputs_.empty() && outputs_.empty();
     }
 
-    void SetParents();
+    void SetParents() const;
 
     Transaction& AddInput(TxInput&& input);
     Transaction& AddOutput(TxOutput&& output);
@@ -170,7 +180,7 @@ public:
     bool IsRegistration() const;
     bool IsFirstRegistration() const;
 
-    void SetParent(const Block* const blk);
+    void SetParent(const Block* const blk) const;
     const Block* GetParentBlock() const;
 
     uint64_t HashCode() const;
@@ -181,6 +191,10 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(inputs_);
         READWRITE(outputs_);
+        if (ser_action.ForRead()) {
+            FinalizeHash();
+            SetParents();
+        }
     }
 
     friend bool operator==(const Transaction& a, const Transaction& b) {
@@ -192,7 +206,7 @@ private:
     std::vector<TxOutput> outputs_;
 
     uint256 hash_;
-    const Block* parentBlock_;
+    mutable const Block* parentBlock_;
 };
 
 typedef std::shared_ptr<const Transaction> ConstTxPtr;

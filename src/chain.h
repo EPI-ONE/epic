@@ -161,14 +161,14 @@ private:
      * and update its NR info
      * Returns TXOC of the single block
      */
-    std::optional<TXOC> Validate(NodeRecord& record, RegChange&);
+    void Validate(NodeRecord& record, RegChange&, TXOC& valid, TXOC& invalid);
 
     // offline verification for transactions
-    std::optional<TXOC> ValidateRedemption(NodeRecord& record, RegChange&);
-    std::optional<TXOC> ValidateTx(NodeRecord& record);
-    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
+    std::optional<TXOC> ValidateRedemption(NodeRecord&, RegChange&);
+    TXOC ValidateTxns(NodeRecord&);
+    void CheckTxPartition(NodeRecord&, const arith_uint256&);
 
-    Coin GetPrevReward(const NodeRecord& rec) {
+    inline Coin GetPrevReward(const NodeRecord& rec) {
         return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
 

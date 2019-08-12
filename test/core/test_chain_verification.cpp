@@ -43,12 +43,17 @@ public:
         return c->ValidateRedemption(record, regChange);
     }
 
-    std::optional<TXOC> ValidateTx(Chain* c, NodeRecord& record) {
-        return c->ValidateTx(record);
+    TXOC ValidateTx(Chain* c, NodeRecord& record) {
+        return c->ValidateTxns(record);
     }
 
-    bool IsValidDistance(Chain* c, const NodeRecord& rec, const arith_uint256& msHashRate) {
-        return c->IsValidDistance(rec, msHashRate);
+    bool IsValidDistance(Chain* c, NodeRecord& rec, const arith_uint256& msHashRate) {
+        c->CheckTxPartition(rec, msHashRate);
+        if (rec.validity[0] == NodeRecord::Validity::INVALID) {
+            return false;
+        }
+
+        return true;
     }
 
     RecordPtr GetRecord(Chain* c, const uint256& h) {
@@ -65,12 +70,12 @@ TEST_F(TestChainVerification, chain_with_genesis) {
 
 TEST_F(TestChainVerification, UTXO) {
     Block b     = fac.CreateBlock(1, 67);
-    UTXO utxo   = UTXO(b.GetTransaction()->GetOutputs()[66], 66);
+    UTXO utxo   = UTXO(b.GetTransactions()[0]->GetOutputs()[66], 0, 66);
     uint256 key = utxo.GetKey();
 
     arith_uint256 bHash = UintToArith256(b.GetHash());
-    arith_uint256 index = arith_uint256("0x4200000000000000000000000000000000000000000000000000000000");
-    EXPECT_EQ(ArithToUint256(bHash ^ index), key);
+    arith_uint256 index = arith_uint256("0x42000000000000000000000000000000000000000000000000");
+    EXPECT_EQ(ArithToUint256(bHash ^ 0 ^ index), key);
 }
 
 TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
@@ -110,7 +115,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 
     // construct first registration
     const auto& ghash = GENESIS.GetHash();
-    Block b1{1, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+    Block b1{1, ghash, ghash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
     ASSERT_TRUE(b1.IsFirstRegistration());
@@ -123,12 +128,13 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     auto prevRedHash = b1hash;
     auto prevMs      = GENESIS_RECORD.snapshot;
     for (size_t i = 0; i < HEIGHT; i++) {
-        Block blk{1, ghash, prevHash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+        Block blk{1, ghash, prevHash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
             Transaction redeem{};
-            redeem.AddInput(TxInput(TxOutPoint{prevRedHash, UNCONNECTED}, keypair.second, hashMsg, sig))
+            redeem.AddInput(TxInput(TxOutPoint{prevRedHash, UNCONNECTED, UNCONNECTED}, keypair.second, hashMsg, sig))
                 .AddOutput(0, addr);
             ASSERT_TRUE(redeem.IsRegistration());
+            redeem.FinalizeHash();
             blk.AddTransaction(redeem);
         }
 
@@ -217,23 +223,27 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     TxOutput output{valueIn, outputListing};
 
     uint32_t t = time(nullptr);
-    Block b1{GetParams().version, ghash, ghash, ghash, t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b1{
+        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     Transaction tx1{};
-    b1.AddTransaction(tx1.AddOutput(std::move(output)));
+    tx1.AddOutput(std::move(output));
+    tx1.FinalizeHash();
+    b1.AddTransaction(tx1);
     b1.Solve();
     ASSERT_NE(b1.GetChainWork(), 0);
     auto rec1              = std::make_shared<NodeRecord>(std::move(b1));
     rec1->minerChainHeight = 1;
     const auto& b1hash     = rec1->cblock->GetHash();
 
-    auto putxo = std::make_shared<UTXO>(rec1->cblock->GetTransaction()->GetOutputs()[0], 0);
+    auto putxo = std::make_shared<UTXO>(rec1->cblock->GetTransactions()[0]->GetOutputs()[0], 0, 0);
     ChainLedger ledger{
         std::unordered_map<uint256, UTXOPtr>{}, {{putxo->GetKey(), putxo}}, std::unordered_map<uint256, UTXOPtr>{}};
     AddToLedger(&c, std::move(ledger));
     AddToHistory(&c, rec1);
 
     // construct an empty block
-    Block b2{GetParams().version, ghash, b1hash, ghash, t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b2{
+        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
     b2.Solve();
     NodeRecord rec2{std::move(b2)};
     rec2.minerChainHeight = 2;
@@ -242,24 +252,32 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     // construct another block
     Transaction tx{};
-    tx.AddInput(TxInput(TxOutPoint{b1hash, 0}, key.GetPubKey(), hashMsg, sig))
+    tx.AddInput(TxInput(TxOutPoint{b1hash, 0, 0}, key.GetPubKey(), hashMsg, sig))
         .AddOutput(valueOut1, addr)
-        .AddOutput(valueOut2, addr);
-    Block b3{GetParams().version, ghash, b2hash, ghash, t + 1, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+        .AddOutput(valueOut2, addr)
+        .FinalizeHash();
+    Block b3{GetParams().version,
+             ghash,
+             b2hash,
+             ghash,
+             uint256(),
+             t + 1,
+             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             0};
     b3.AddTransaction(tx);
     b3.Solve();
     NodeRecord rec3{std::move(b3)};
     rec3.minerChainHeight = 3;
 
     auto txoc{ValidateTx(&c, rec3)};
-    ASSERT_TRUE(bool(txoc));
+    ASSERT_FALSE(txoc.Empty());
 
-    auto& spent   = txoc->GetSpent();
-    auto spentKey = ComputeUTXOKey(b1hash, 0);
+    auto& spent   = txoc.GetSpent();
+    auto spentKey = ComputeUTXOKey(b1hash, 0, 0);
     ASSERT_EQ(spent.size(), 1);
     ASSERT_EQ(spent.count(spentKey), 1);
 
-    auto& created = txoc->GetCreated();
+    auto& created = txoc.GetCreated();
     ASSERT_EQ(created.size(), 2);
     ASSERT_EQ(rec3.fee, valueIn - valueOut1 - valueOut2);
 }
@@ -290,7 +308,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
-TEST_F(TestChainVerification, ValidDistance) {
+TEST_F(TestChainVerification, InvalidDistance) {
     // Test for block with valid distance has been done in the above test case VerifyTx.
     // Here we only test for malicious blocks.
 
@@ -298,8 +316,14 @@ TEST_F(TestChainVerification, ValidDistance) {
 
     // Block with transaction but minerChainHeight not reached sortitionThreshold
     auto ghash = GENESIS.GetHash();
-    Block b1{
-        GetParams().version, ghash, ghash, ghash, fac.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+    Block b1{GetParams().version,
+             ghash,
+             ghash,
+             ghash,
+             uint256(),
+             fac.NextTime(),
+             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             0};
     NodeRecord rec1{b1};
     rec1.minerChainHeight = 1;
     AddToHistory(&c, std::make_shared<NodeRecord>(rec1));
@@ -308,6 +332,7 @@ TEST_F(TestChainVerification, ValidDistance) {
              ghash,
              b1.GetHash(),
              ghash,
+             uint256(),
              fac.NextTime(),
              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
              0};
@@ -323,6 +348,7 @@ TEST_F(TestChainVerification, ValidDistance) {
              ghash,
              b2.GetHash(),
              ghash,
+             uint256(),
              fac.NextTime(),
              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
              0};

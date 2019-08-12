@@ -1,8 +1,8 @@
 #include "chain.h"
 #include "caterpillar.h"
+#include "mempool.h"
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
-#include "mempool.h"
 
 ////////////////////
 // Chain
@@ -121,9 +121,11 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     return result;
 }
 
-bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrate) {
+void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
     if (b.minerChainHeight <= GetParams().sortitionThreshold) {
-        return !(b.cblock->HasTransaction());
+        if (b.cblock->HasTransaction()) {
+            memset(&b.validity[0], NodeRecord::Validity::INVALID, b.validity.size());
+        }
     }
 
     auto search = cumulatorMap_.find(b.cblock->GetPrevHash());
@@ -147,9 +149,6 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
         cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
     }
 
-    // Distance of the transaction hash and previous block hash
-    auto dist = UintToArith256(b.cblock->GetTxHash()) ^ UintToArith256(b.cblock->GetPrevHash());
-
     auto nodeHandler = cumulatorMap_.extract(b.cblock->GetPrevHash());
     Cumulator& cum   = nodeHandler.mapped();
 
@@ -157,12 +156,26 @@ bool Chain::IsValidDistance(const NodeRecord& b, const arith_uint256& ms_hashrat
     auto allowed = (cum.Sum() / (cum.TimeSpan() + 1)) / GetParams().sortitionCoefficient *
                    (GetParams().maxTarget / (ms_hashrate + 1));
 
+    // Distances of the transaction hashes and previous block hash
+    const auto& txns = b.cblock->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        if (b.validity[i]) {
+            continue;
+        }
+
+        auto dist = UintToArith256(txns[i]->GetHash()) ^ UintToArith256(b.cblock->GetPrevHash());
+
+        if (!PartitionCmp(dist, allowed)) {
+            b.validity[i] = NodeRecord::Validity::INVALID;
+            spdlog::info("Transaction distance exceeds its allowed distance! [{}]",
+                         std::to_string(b.cblock->GetHash()));
+        }
+    }
+
     // Update key for the cumulator
     cum.Add(b.cblock, true);
     nodeHandler.key() = b.cblock->GetHash();
     cumulatorMap_.insert(std::move(nodeHandler));
-
-    return PartitionCmp(dist, allowed);
 }
 
 RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
@@ -192,22 +205,27 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
             state->regChange.Create(blkHash, blkHash);
             rec->minerChainHeight = 1;
         } else {
-            if (auto update = Validate(*rec, state->regChange)) {
-                rec->validity = NodeRecord::VALID;
-                // update ledger in chain for future reference
-                if (!update->Empty()) {
-                    ledger_.Update(*update);
-                    // take notes in chain state; will be used when flushing this state from memory to CAT
-                    state->UpdateTXOC(std::move(*update));
-                }
-            } else {
-                rec->validity = NodeRecord::INVALID;
-                TXOC invalid  = CreateTXOCFromInvalid(*(rec->cblock));
-                // remove utxo of the block from pending to removed
-                ledger_.Invalidate(invalid);
-                // still take notes in chain state
-                state->UpdateTXOC(std::move(invalid));
+            TXOC validTXOC, invalidTXOC;
+            Validate(*rec, state->regChange, validTXOC, invalidTXOC);
+
+            // update ledger in chain for future reference
+            if (!validTXOC.Empty()) {
+                ledger_.Update(validTXOC);
+                // take notes in chain state; will be used when flushing this state from memory to CAT
+                state->UpdateTXOC(std::move(validTXOC));
             }
+
+            if (!invalidTXOC.Empty()) {
+                // remove utxo of the block from pending to removed
+                ledger_.Invalidate(invalidTXOC);
+                // still take notes in chain state
+                state->UpdateTXOC(std::move(invalidTXOC));
+            }
+
+            for (const auto& v : rec->validity) {
+                assert(v);
+            }
+
             rec->UpdateReward(GetPrevReward(*rec));
         }
         rec->height = state->height;
@@ -218,8 +236,7 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     return recs.back();
 }
 
-int counter = 0;
-std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
+void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, TXOC& invalidTXOC) {
     spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
     const auto& pblock = record.cblock;
     std::optional<TXOC> result;
@@ -237,22 +254,37 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
 
     // then verify its transaction and return the updating UTXO
     if (pblock->HasTransaction()) {
-        spdlog::debug("verifying tx {} , index = {}", pblock->GetTransaction()->GetHash().to_substr(), counter++);
         if (pblock->IsRegistration()) {
             result = ValidateRedemption(record, regChange);
-        } else {
-            result = ValidateTx(record);
-            // notify mempool to erase transaction from network synchronization
-            if (pblock->source == Block::Source::NETWORK) {
-                MEMPOOL->ReleaseTxFromConfirmed(*(pblock->GetTransaction()), bool(result));
+            if (result) {
+                record.validity[0] = NodeRecord::Validity::VALID;
+                validTXOC.Merge(*result);
+            } else {
+                record.validity[0] = NodeRecord::Validity::INVALID;
+                invalidTXOC.Merge(CreateTXOCFromInvalid(*record.cblock->GetTransactions()[0], 0));
             }
         }
-    } else {
-        // regarded as a valid transaction but not updating ledger
-        result = std::make_optional<TXOC>();
-    }
 
-    return result;
+        // check partition
+        RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+        assert(prevMs);
+        CheckTxPartition(record, prevMs->snapshot->hashRate);
+
+        // check utxo
+        auto valid = ValidateTxns(record);
+        validTXOC.Merge(std::move(valid));
+
+        // invalidate transactions with UNKNOWN status
+        const auto& txns = record.cblock->GetTransactions();
+        for (size_t i = 0; i < txns.size(); ++i) {
+            if (!record.validity[i]) { // if UNKNOWN
+                record.validity[i] = NodeRecord::Validity::INVALID;
+                invalidTXOC.Merge(CreateTXOCFromInvalid(*txns[i], i));
+            }
+
+            MEMPOOL->ReleaseTxFromConfirmed(txns[i], record.validity[i] == NodeRecord::Validity::VALID);
+        }
+    }
 }
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& regChange) {
@@ -269,7 +301,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
         return {};
     }
 
-    const auto& redem = record.cblock->GetTransaction();
+    const auto& redem = record.cblock->GetTransactions().at(0);
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
@@ -280,7 +312,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
         return {};
     }
 
-    if (!VerifyInOut(vin, prevReg->cblock->GetTransaction()->GetOutputs()[0].listingContent)) {
+    if (!VerifyInOut(vin, prevReg->cblock->GetTransactions().at(0)->GetOutputs()[0].listingContent)) {
         spdlog::info("Singature failed! [{}]", hashstr);
         return {};
     }
@@ -294,72 +326,76 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     regChange.Remove(blkHash, oldRH);
     regChange.Create(blkHash, blkHash);
 
-    return TXOC{{ComputeUTXOKey(record.cblock->GetHash(), 0)}, {}};
+    return TXOC{{ComputeUTXOKey(record.cblock->GetHash(), 0, 0)}, {}};
 }
 
-std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
-    spdlog::trace("Validating tx {}", record.cblock->GetHash().to_substr());
+TXOC Chain::ValidateTxns(NodeRecord& record) {
+    const auto& blkHash = record.cblock->GetHash();
+    spdlog::trace("Validating transactions in block {}", blkHash.to_substr());
 
-    const auto& tx      = record.cblock->GetTransaction();
-    const auto& hashstr = std::to_string(record.cblock->GetHash());
+    TXOC validTXOC{};
 
-    // check Transaction distance
-    RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
-    assert(prevMs);
-    if (!IsValidDistance(record, prevMs->snapshot->hashRate)) {
-        spdlog::info("Transaction distance exceeds its allowed distance! [{}]",
-                     std::to_string(record.cblock->GetHash()));
-        return {};
-    }
-
-    // update TXOC
-    Coin valueIn{};
-    Coin valueOut{};
-    TXOC txoc{};
-    std::vector<Tasm::Listing> prevOutListing{};
-    prevOutListing.reserve(tx->GetInputs().size());
-
-    // check previous vouts that are used in this transaction and compute total value in along the way
-    for (const auto& vin : tx->GetInputs()) {
-        const TxOutPoint& outpoint = vin.outpoint;
-        // this ensures that $prevOut has not been spent yet
-        auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.index));
-
-        if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint),
-                         hashstr);
-            return {};
+    const auto& txns = record.cblock->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        if (record.validity[i]) { // if !UNKNWON
+            continue;
         }
-        valueIn += prevOut->GetOutput().value;
 
-        prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
-        txoc.AddToSpent(vin);
-    }
+        const auto& tx = txns[i];
+        // update TXOC
+        Coin valueIn{};
+        Coin valueOut{};
+        TXOC txoc{};
+        std::vector<Tasm::Listing> prevOutListing{};
+        prevOutListing.reserve(tx->GetInputs().size());
 
-    // get key of new UTXO and compute total value out
-    for (size_t i = 0; i < tx->GetOutputs().size(); i++) {
-        valueOut += tx->GetOutputs()[i].value;
-        txoc.AddToCreated(record.cblock->GetHash(), i);
-    }
+        // check previous vouts that are used in this transaction and compute total value in along the way
+        for (const auto& vin : tx->GetInputs()) {
+            const TxOutPoint& outpoint = vin.outpoint;
+            // this ensures that $prevOut has not been spent yet
+            auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex));
 
-    // check total amount of value in and value out and take a note of fee received
-    Coin fee = valueIn - valueOut;
-    if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
-        spdlog::info("Transaction input value goes out of range! [{}]", hashstr);
-        return {};
-    }
-    record.fee = fee;
+            if (!prevOut) {
+                spdlog::info("Attempting to spend a non-existent or spent output {} in tx {} [{}]",
+                             std::to_string(outpoint), std::to_string(tx->GetHash()), std::to_string(blkHash));
+                continue;
+            }
+            valueIn += prevOut->GetOutput().value;
 
-    // verify transaction input one by one
-    auto itprevOut = prevOutListing.cbegin();
-    for (const auto& input : tx->GetInputs()) {
-        if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Singature failed! [{}]", hashstr);
-            return {};
+            prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
+            txoc.AddToSpent(vin);
         }
-        itprevOut++;
+
+        // get key of new UTXO and compute total value out
+        for (size_t j = 0; j < tx->GetOutputs().size(); ++j) {
+            valueOut += tx->GetOutputs()[j].value;
+            txoc.AddToCreated(blkHash, i, j);
+        }
+
+        // check total amount of value in and value out and take a note of fee received
+        Coin fee = valueIn - valueOut;
+        if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
+            spdlog::info("Transaction {} input value goes out of range! [{}]", std::to_string(tx->GetHash()),
+                         std::to_string(blkHash));
+            continue;
+        }
+
+        // verify transaction input one by one
+        auto itprevOut = prevOutListing.cbegin();
+        for (const auto& input : tx->GetInputs()) {
+            if (!VerifyInOut(input, *itprevOut)) {
+                spdlog::info("Singature failed in tx {}! [{}]", std::to_string(tx->GetHash()), std::to_string(blkHash));
+                continue;
+            }
+            itprevOut++;
+        }
+
+        record.fee += fee;
+        validTXOC.Merge(std::move(txoc));
+        record.validity[i] = NodeRecord::Validity::VALID;
     }
-    return std::make_optional<TXOC>(std::move(txoc));
+
+    return validTXOC;
 }
 
 RecordPtr Chain::GetRecord(const uint256& blkHash) const {

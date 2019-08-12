@@ -3,11 +3,11 @@
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
                                                         const GetBlockRequest* request,
                                                         GetBlockResponse* reply) {
-    auto record   = DAG->GetState(RPCHashToHash(request->hash()));
+    auto record   = DAG->GetState(ToHash(request->hash()));
     if (!record) {
         return grpc::Status::OK;
     }
-    rpc::Block* b = BlockToRPCBlock(*(record->cblock));
+    rpc::Block* b = ToRPCBlock(*(record->cblock));
     reply->set_allocated_block(b);
     return grpc::Status::OK;
 }
@@ -15,13 +15,13 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* con
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* context,
                                                            const GetLevelSetRequest* request,
                                                            GetLevelSetResponse* reply) {
-    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
+    auto ls = DAG->GetMainChainLevelSet(ToHash(request->hash()));
     if (ls.empty()) {
         return grpc::Status::OK;
     }
     for (auto localBlock : ls) {
         auto newBlock   = reply->add_blocks();
-        auto blockValue = BlockToRPCBlock(*localBlock);
+        auto blockValue = ToRPCBlock(*localBlock);
         *newBlock       = *blockValue;
         delete blockValue;
     }
@@ -31,7 +31,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerContext* context,
                                                                const GetLevelSetSizeRequest* request,
                                                                GetLevelSetSizeResponse* reply) {
-    auto ls = DAG->GetMainChainLevelSet(RPCHashToHash(request->hash()));
+    auto ls = DAG->GetMainChainLevelSet(ToHash(request->hash()));
     reply->set_size(ls.size());
     return grpc::Status::OK;
 }
@@ -39,7 +39,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerConte
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
                                                                     const GetNewMilestoneSinceRequest* request,
                                                                     GetNewMilestoneSinceResponse* reply) {
-    auto record           = DAG->GetState(RPCHashToHash(request->hash()));
+    auto record           = DAG->GetState(ToHash(request->hash()));
     if (!record) {
         return grpc::Status::OK;
     }
@@ -47,7 +47,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::Server
     for (size_t i = 0; i < milestone_hashes.size(); ++i) {
         auto rec        = DAG->GetState(milestone_hashes[i]);
         auto newBlock   = reply->add_blocks();
-        auto blockValue = BlockToRPCBlock(*(rec->cblock));
+        auto blockValue = ToRPCBlock(*(rec->cblock));
         *newBlock       = *blockValue;
         delete blockValue;
     }
@@ -58,7 +58,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerCo
                                                                   const GetLatestMilestoneRequest* request,
                                                                   GetLatestMilestoneResponse* reply) {
     auto record   = DAG->GetMilestoneHead();
-    rpc::Block* b = BlockToRPCBlock(*(record->cblock));
+    rpc::Block* b = ToRPCBlock(*(record->cblock));
     reply->set_allocated_milestone(b);
     return grpc::Status::OK;
 }
@@ -67,7 +67,7 @@ grpc::Status CommanderRPCServiceImpl::Status(grpc::ServerContext* context,
                                              const StatusRequest* request,
                                              StatusResponse* reply) {
     auto latestMS     = DAG->GetMilestoneHead();
-    auto latestMSHash = HashToRPCHash(latestMS->cblock->GetHash());
+    auto latestMSHash = ToRPCHash(latestMS->cblock->GetHash());
     reply->set_allocated_latestmshash(latestMSHash);
     reply->set_isminerrunning(MINER->IsRunning());
 

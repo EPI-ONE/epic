@@ -532,11 +532,12 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
     // Extract utxos from outputs and pass their pointers to chains
     std::vector<UTXOPtr> utxos;
-    if (block->HasTransaction()) {
-        auto& outs = block->GetTransaction()->GetOutputs();
+    const auto& txns = block->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        auto& outs = txns[i]->GetOutputs();
         utxos.reserve(outs.size());
-        for (size_t i = 0; i < outs.size(); ++i) {
-            utxos.emplace_back(std::make_shared<UTXO>(outs[i], i));
+        for (size_t j = 0; j < outs.size(); ++j) {
+            utxos.emplace_back(std::make_shared<UTXO>(outs[j], i, j));
         }
     }
 

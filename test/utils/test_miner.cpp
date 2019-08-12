@@ -5,9 +5,13 @@
 #include "utilstrencodings.h"
 
 class TestMiner : public testing::Test {
+    void SetUp() override {}
+    void TearDown() override {}
+
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
-    void SetUp() override {
+
+    static void SetUpEnv() {
         EpicTestEnvironment::SetUpDAG("test_miner/");
 
         CKey key;
@@ -17,7 +21,8 @@ public:
         MEMPOOL = std::make_unique<MemPool>();
         MEMPOOL->PushRedemptionTx(tx);
     }
-    void TearDown() override {
+
+    static void TearDownEnv() {
         EpicTestEnvironment::TearDownDAG("test_miner/");
         MEMPOOL.reset();
     }
@@ -48,6 +53,8 @@ TEST_F(TestMiner, SolveCuckaroo) {
 }
 
 TEST_F(TestMiner, Run) {
+    SetUpEnv();
+
     Miner m(2);
     m.Run();
     usleep(500000);
@@ -58,9 +65,13 @@ TEST_F(TestMiner, Run) {
     ASSERT_TRUE(m.GetSelfChainHead());
     ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     ASSERT_TRUE(DAG->GetChains().size() == 1);
+
+    TearDownEnv();
 }
 
 TEST_F(TestMiner, Restart) {
+    SetUpEnv();
+
     Miner m(2);
     m.Run();
     usleep(100000);
@@ -85,6 +96,8 @@ TEST_F(TestMiner, Restart) {
     }
 
     ASSERT_EQ(*cursor, *selfChainHead);
+
+    TearDownEnv();
 }
 
 TEST_F(TestMiner, MineGenesis) {
@@ -94,7 +107,7 @@ TEST_F(TestMiner, MineGenesis) {
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
 
-    Block genesisBlock{100};
+    Block genesisBlock{1};
     Transaction tx;
 
     // Construct a script containing the difficulty bits and the following
@@ -113,7 +126,7 @@ TEST_F(TestMiner, MineGenesis) {
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     genesisBlock.AddTransaction(tx);
-    genesisBlock.SetDifficultyTarget(0x1f00ffffL);
+    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
     genesisBlock.SetTime(1559859000L);
     genesisBlock.SetNonce(0);
     genesisBlock.FinalizeHash();
@@ -134,11 +147,11 @@ TEST_F(TestMiner, MineGenesis) {
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    genesisBlock.SetNonce(251319); // UnitTest
-    // genesisBlock.SetNonce(29897782); // TestNet
-    // genesisBlock.SetNonce(1701609359); // MainNet
+    // genesisBlock.SetNonce(88981); // UnitTest
+    // genesisBlock.SetNonce(6187482); // TestNet
+    // genesisBlock.SetNonce(255364577); // MainNet
 
     genesisBlock.FinalizeHash();
 
-    EXPECT_TRUE(GENESIS.Verify());
+    // EXPECT_TRUE(GENESIS.Verify());
 }

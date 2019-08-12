@@ -33,7 +33,7 @@ public:
     bool Erase(const ConstTxPtr& value);
     bool IsEmpty() const;
 
-    /** 
+    /**
      * processes transactions received from other nodes(memory pool)
      */
     bool ReceiveTx(const ConstTxPtr& tx);
@@ -42,11 +42,11 @@ public:
      *  removes all conflicting transactions if this transaction is valid,
      *  otherwise simply remove it
      */
-    void ReleaseTxFromConfirmed(const Transaction& tx, bool valid);
+    void ReleaseTxFromConfirmed(const ConstTxPtr& tx, bool valid);
 
     std::size_t Size() const;
 
-    /** 
+    /**
      * retrives the first transaction from the pool that has
      * a sortition distance less than the given threshold
      */

@@ -11,12 +11,12 @@
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // exact number of size of a block without counting transaction
-static constexpr std::size_t HEADER_SIZE = 112;
+static constexpr std::size_t HEADER_SIZE = 144;
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 
 namespace std {
-string to_string(const Block& b, bool showtx = true);
+string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validity = {});
 } // namespace std
 
 class Block : public NetMessage {
@@ -31,11 +31,12 @@ public:
           uint256 milestoneHash,
           uint256 prevBlockHash,
           uint256 tipBlockHash,
+          uint256 merkle,
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce)
         : NetMessage(BLOCK), version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+          tipBlockHash_(tipBlockHash), merkleRoot_(merkle), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
         CalculateOptimalEncodingSize();
     }
 
@@ -48,6 +49,7 @@ public:
     uint256 GetMilestoneHash() const;
     uint256 GetPrevHash() const;
     uint256 GetTipHash() const;
+    uint256 GetMerkleRoot() const;
     uint32_t GetDifficultyTarget() const;
     uint32_t GetTime() const;
     uint32_t GetNonce() const;
@@ -62,14 +64,14 @@ public:
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
     bool HasTransaction() const;
-    const std::optional<Transaction>& GetTransaction() const;
+    const std::vector<ConstTxPtr>& GetTransactions() const;
+
+    std::vector<uint256> GetTxHashes() const;
+    uint256 ComputeMerkleRoot(bool* mutated = nullptr) const;
 
     const uint256& GetHash() const;
     void CalculateHash();
     void FinalizeHash();
-
-    const uint256& FinalizeTxHash();
-    const uint256& GetTxHash() const;
 
     size_t CalculateOptimalEncodingSize();
     size_t GetOptimalEncodingSize() const;
@@ -134,10 +136,11 @@ public:
         READWRITE(milestoneBlockHash_);
         READWRITE(prevBlockHash_);
         READWRITE(tipBlockHash_);
+        READWRITE(merkleRoot_);
         READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
-        READWRITE(transaction_);
+        READWRITE(transactions_);
         if (ser_action.ForRead()) {
             SetParents();
             FinalizeHash();
@@ -157,18 +160,21 @@ public:
         return !(*this == another);
     }
 
-    friend std::string std::to_string(const Block& b, bool showtx);
+    friend std::string std::to_string(const Block& b, bool showtx, std::vector<uint8_t> validity);
 
 protected:
     uint256 hash_;
+
+private:
     uint32_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
+    uint256 merkleRoot_;
     uint32_t time_;
     uint32_t diffTarget_;
     uint32_t nonce_;
-    std::optional<Transaction> transaction_;
+    std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
 
@@ -176,6 +182,8 @@ public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
     Source source = UNKNOWN;
 };
+
+extern uint256 ComputeMerkleRoot(std::vector<uint256> hashes, bool* mutated = nullptr);
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;
 extern Block GENESIS;

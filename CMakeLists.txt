@@ -153,15 +153,15 @@ include_directories(test
     )
 
 set(TEST_CODE
-        ${TEST_RPC_SRCS}
-        ${TEST_NET_SRCS}
-        ${TEST_UTILS_SRCS}
-        ${TEST_TASM_SRCS}
-        ${TEST_CRYPTO_SRCS}
-        ${TEST_CORE_SRCS}
-        ${TEST_SUPPORT_SRCS}
-        ${TEST_METHODS_SRCS}
-        )
+    ${TEST_RPC_SRCS}
+    ${TEST_NET_SRCS}
+    ${TEST_UTILS_SRCS}
+    ${TEST_TASM_SRCS}
+    ${TEST_CRYPTO_SRCS}
+    ${TEST_CORE_SRCS}
+    ${TEST_SUPPORT_SRCS}
+    ${TEST_METHODS_SRCS}
+    )
 set(TEST_MAIN test/main.cpp)
 
 add_library(epiccore STATIC ${SRC_CODE})

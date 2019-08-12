@@ -41,25 +41,22 @@ bool MemPool::ReceiveTx(const ConstTxPtr& tx) {
 
     // note that we allow transactions that have double spending with other tx in mempool
     // check the transaction is not from no spent TXOs
-    if (!DAG->GetBestChain().IsTxFitsLedger(tx))  {
+    if (!DAG->GetBestChain().IsTxFitsLedger(tx)) {
         return false;
     }
 
     return Insert(tx);
 }
 
-void MemPool::ReleaseTxFromConfirmed(const Transaction& tx, bool valid) {
+void MemPool::ReleaseTxFromConfirmed(const ConstTxPtr& tx, bool valid) {
     // first erase this transaction
-    {
-        auto tmptx = std::make_shared<const Transaction>(tx);
-        Erase(tmptx);
-    }
+    Erase(tx);
     if (!valid) {
         return;
     }
 
     // then prepare inputs data for searching
-    auto& inputs = tx.GetInputs();
+    auto& inputs = tx->GetInputs();
     std::unordered_set<uint256> fromTXOs;
     fromTXOs.reserve(inputs.size());
     for (const auto& input : inputs) {

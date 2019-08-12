@@ -20,9 +20,10 @@ class Wallet : public OnLvsConfirmedInterface {
 private:
     using UTXOKey     = uint256;
     using TxHash      = uint256;
+    using TxIndex     = uint32_t;
     using OutputIndex = uint32_t;
-    using utxo_info   = std::pair<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>>;
-    enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
+    using utxo_info   = std::pair<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>>;
+    enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
     Wallet(std::string walletPath, uint32_t period)
@@ -77,7 +78,7 @@ public:
     }
 
 private:
-    ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>> unspent, pending;
+    ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingRedemption;
     ConcurrentHashMap<CKeyID, std::pair<CKey, CPubKey>> keyBook;

@@ -2,6 +2,7 @@
 #define EPIC_TOML_SPECIFACATION_H
 #include "consensus.h"
 #include "cpptoml.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -21,7 +22,8 @@ auto TxInputToToml(const TxInput& input) {
 
     // output point
     root->insert("output_point_hash", std::to_string(input.outpoint.bHash));
-    root->insert("output_point_index", input.outpoint.index);
+    root->insert("output_point_txIndex", input.outpoint.txIndex);
+    root->insert("output_point_outputIndex", input.outpoint.outIndex);
 
     // TODO signature, msg, pubkey
 
@@ -71,7 +73,7 @@ auto TxToToml(const Transaction& tx) {
     return root;
 }
 
-auto BlockToToml(ConstBlockPtr& block) {
+auto BlockToToml(ConstBlockPtr& block, const std::vector<uint8_t>& validity) {
     auto root = cpptoml::make_table();
     // block hash
     root->insert("block_hash", std::to_string(block->GetHash()));
@@ -87,8 +89,10 @@ auto BlockToToml(ConstBlockPtr& block) {
     root->insert("time", block->GetTime());
 
     // tx
-    if (block->HasTransaction()) {
-        root->insert("transaction", TxToToml(*block->GetTransaction()));
+    const auto& txns = block->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        root->insert("transaction", TxToToml(*txns[i]));
+        root->insert("status", validity[i] == 0 ? "UNKNOWN" : validity[i] == 1 ? "VALID" : "INVALID");
     }
 
     return root;
@@ -98,7 +102,6 @@ auto RecordToToml(const RecordPtr& record) {
     auto root = cpptoml::make_table();
 
     root->insert("height", record->height);
-    root->insert("validity", record->validity == 0 ? "unknown" : record->validity == 1 ? "VALID" : "INVALID");
     root->insert("cumulative_reward", record->cumulativeReward.GetValue());
     //    root->insert("fee", record->fee.GetValue());
     root->insert("is_milestone", record->isMilestone);
@@ -123,7 +126,7 @@ auto RecordToToml(const RecordPtr& record) {
     }
 
     // block
-    root->insert("block", BlockToToml(record->cblock));
+    root->insert("block", BlockToToml(record->cblock, record->validity));
     return root;
 }
 

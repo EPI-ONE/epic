@@ -44,7 +44,7 @@ TEST_F(TestRPCServer, GetBlock) {
     auto req_hash = std::to_string(GENESIS_RECORD.cblock->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
-    auto expected = HashToRPCHash(GENESIS_RECORD.cblock->GetHash());
+    auto expected = ToRPCHash(GENESIS_RECORD.cblock->GetHash());
     ASSERT_EQ(res.value().block_hash().hash(), expected->hash());
     delete expected;
 
@@ -82,7 +82,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     auto req_hash = std::to_string(lvs[0]->cblock->GetHash());
     auto res_set  = client.GetLevelSet(req_hash);
     ASSERT_TRUE(res_set.has_value());
-    auto expected = HashToRPCHash(lvs[0]->cblock->GetHash());
+    auto expected = ToRPCHash(lvs[0]->cblock->GetHash());
     EXPECT_EQ(res_set.value()[0].block_hash().hash(), expected->hash());
     delete expected;
 }
