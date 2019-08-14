@@ -1,70 +1,62 @@
 # epic
 
-### Installing Dependencies
+[![Linux/Mac Build Status](https://travis-ci.org/epi-one/epic.svg?branch=master)](https://travis-ci.org/epi-one/epic)
 
-#### google test v1.8.1
+Epic is a pow chain that achives an order of magnitude improvement on the throughput without sacrificing the security and decentralization.
 
-   Refer to link: https://github.com/google/googletest
-#### spdlog v1.3.1
-   - We only use header file and you can refer to it via https://github.com/gabime/spdlog
-   - You should create your own config.toml and put it in the bin dir, if you don't create config.toml, the program will use the default_config.toml
-#### libevent
-   We specify the libevent version 2.1.11 for building a stable base network. You need to download the source code and compile it.  https://github.com/libevent/libevent/archive/release-2.1.11-stable.zip
+## Design
 
- ```shell
-  $ mkdir build && cd build
-  $ cmake ..
-  $ make
-  $ make install
- ```
-#### libsecp256k1
-   This is a stand-alone library in the bitcoin-core project. Please clone the source code and compile it.
+The design of this chain is based on the [paper](https://arxiv.org/abs/1901.02755). 
 
-  ```shell
-   $ git clone https://github.com/bitcoin-core/secp256k1.git
-   $ cd secp256k1
-   $ ./autogen.sh
-   $ ./configure --enable-module-recovery=yes
-   $ make
-   $ ./tests
-   $ sudo make install
-  ```
-   Please note that on *Mac OSX* you will have to install `gmp` via brew as `libsecp256k1` depends on it.
-   ```
-   brew install gmp
-   ```
+## Implementation
 
-#### rocksdb
-* For MacOS, it's as simple as `brew install rocksdb`.
-* For Linux, please refer to the link https://github.com/facebook/rocksdb/blob/master/INSTALL.md
+The implementation of this peoject is written in C++ 17.
 
-#### gRPC and protobuf
+- C/C++ compilier and library
+    - `gcc` version 7 or up on Linux
+    - Apple LLVM version 10.0.1 (clang-1001.0.46.4) provided by XCode
 
-```shell
-   $ git clone -b $(curl -L https://grpc.io/release) https://github.com/grpc/grpc
-   $ cd grpc
-   $ git submodule update --init
-   $ make
-   $ sudo make install
-   $ cd third_party/protobuf
-   $ sudo make install
+- `cmake` version 3.14 or up
+
+- (Recommended) `clang` version 5 or up as an alternative (or better) compiler.
+  Note: the llvm `libc++` lacks support of some C++ 17, thus still need the `gcc` (or Mac clang) library.
+
+Builds on several esisting projects:
+
+- Our source code has inculded the code from existing projects:
+    - [bitcoin](https://github.com/bitcoin/bitcoin) and several pieces of code it uses, some of which with our own modification.
+    - [cxxopts v2.0.0](https://github.com/jarro2783/cxxopts)
+    - [cpptoml v0.1.1](https://github.com/skystrife/cpptoml)
+    - [spdlog v1.3.1](https://github.com/gabime/spdlog): header file only. You may customize how to use it by editing the default [config.toml](./config.toml) file.
+
+- The following need to be installed on your system:
+    - `openssl` version 1.1.1c
+    - `libsecp256k1`
+    - `libevent` version 2.1.11
+    - `RocksDB` version 6.2.2
+    - `protobuf` version 3.7.1
+    - `gRPC` version 1.20.0
+    - `GoogleTest` version 1.8.1
+
+We test this project on Ubuntu (18.04), CentOS (7.6) and MacOS X (10.14.6). See [INSTALL.md](./INSTALL.md) for detailed installation instructions.
+
+## Compile and run
+
+```bash
+git clone https://github.com/epi-one/epic/
+cd epic && mkdir build && cd build
+# Debug mode by default
+cmake ..  
+# Release mode
+# cmake -DCAMKE_BUILD_TYPE=Release ..
+make -j
+# you may run the following test
+../bin/epictest
+# runing a node
+../bin/epic
 ```
 
-
-------
-
-### Building the Project
-
-```shell
-    $ mkdir build && cd build
-    $ cmake ..
-    $ make
-    $ cd ..
-    $ ./bin/epictest           # Run unit tests
-    $ ./bin/epic [FLAGS]       # Run daemon
-    $ ./bin/epicc [COMMAND]    # Send RPC commands to daemon
-```
-#### GPU mining
+### GPU mining
 
    The project is enabled with CPU mining by default, if no CUDA installation found on the system.
    It compiles the CUDA code with NVCC if CUDA is found, and GPU mining is then enabled automatically.
