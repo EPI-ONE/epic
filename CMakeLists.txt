@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11.1)
+cmake_minimum_required(VERSION 3.14)
 project(epic)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -229,11 +229,10 @@ if (UNITTEST_COVERAGE)
 endif()
 
 # add test
+enable_testing()
 gtest_add_tests(
-    TARGET epictest
-    TEST_SUFFIX .noArgs
-    TEST_LIST noArgsTests
-    )
+        TARGET epictest
+)
 
 # install
 install(TARGETS epic DESTINATION bin)
