@@ -11,7 +11,7 @@
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // exact number of size of a block without counting transaction
-static constexpr std::size_t HEADER_SIZE = 144;
+static constexpr std::size_t HEADER_SIZE = 110;
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 
@@ -24,10 +24,10 @@ public:
     Block();
     Block(const Block&);
     Block(Block&&) noexcept;
-    explicit Block(uint32_t versionNum);
+    explicit Block(uint16_t versionNum);
     explicit Block(VStream&);
 
-    Block(uint32_t version,
+    Block(uint16_t version,
           uint256 milestoneHash,
           uint256 prevBlockHash,
           uint256 tipBlockHash,
@@ -46,6 +46,7 @@ public:
     bool IsNull() const;
     void UnCache();
 
+    uint16_t GetVersion() const;
     uint256 GetMilestoneHash() const;
     uint256 GetPrevHash() const;
     uint256 GetTipHash() const;
@@ -137,7 +138,6 @@ public:
         READWRITE(milestoneBlockHash_);
         READWRITE(prevBlockHash_);
         READWRITE(tipBlockHash_);
-        READWRITE(merkleRoot_);
         READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
@@ -167,7 +167,7 @@ protected:
     uint256 hash_;
 
 private:
-    uint32_t version_;
+    uint16_t version_;
     uint256 milestoneBlockHash_;
     uint256 prevBlockHash_;
     uint256 tipBlockHash_;
@@ -178,6 +178,7 @@ private:
     std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
+    bool mutated                = false;
 
 public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };

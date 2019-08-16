@@ -107,7 +107,9 @@ TEST_F(TestMiner, MineGenesis) {
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
 
-    Block genesisBlock{1};
+    std::vector<uint16_t> versions     = {100, 10, 1};
+    std::vector<uint32_t> difficulties = {0x1f00ffffL, 0x1e00ffffL, 0x1d00ffffL};
+
     Transaction tx;
 
     // Construct a script containing the difficulty bits and the following
@@ -125,12 +127,17 @@ TEST_F(TestMiner, MineGenesis) {
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
-    genesisBlock.AddTransaction(tx);
-    genesisBlock.SetDifficultyTarget(0x1d00ffffL);
-    genesisBlock.SetTime(1559859000L);
-    genesisBlock.SetNonce(0);
-    genesisBlock.FinalizeHash();
-    genesisBlock.CalculateOptimalEncodingSize();
+    std::vector<Block> genesisBlocks;
+    for (int i = 0; i < versions.size(); ++i) {
+        Block b{versions[i]};
+        b.AddTransaction(tx);
+        b.SetDifficultyTarget(difficulties[i]);
+        b.SetTime(1559859000L);
+        b.SetNonce(0);
+        b.FinalizeHash();
+        b.CalculateOptimalEncodingSize();
+        genesisBlocks.emplace_back(std::move(b));
+    }
 
     /////////////////////////////////////////////////////////////////////
     // Uncomment the following lines to mine
@@ -138,20 +145,25 @@ TEST_F(TestMiner, MineGenesis) {
     // int numThreads = 44;
     // Miner m(numThreads);
     // m.Start();
+    // for (auto& genesisBlock : genesisBlocks) {
     // m.Solve(genesisBlock);
-    // m.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
-    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) <<
-    // std::endl; EXPECT_TRUE(genesisBlock.Verify());
+    // std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
+    //<< HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
+    // EXPECT_TRUE(genesisBlock.CheckPOW());
+    //}
+    // m.Stop();
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    // genesisBlock.SetNonce(88981); // UnitTest
-    // genesisBlock.SetNonce(6187482); // TestNet
-    // genesisBlock.SetNonce(255364577); // MainNet
+    genesisBlocks[0].SetNonce(15649);     // UnitTest
+    genesisBlocks[1].SetNonce(37692687);  // TestNet
+    genesisBlocks[2].SetNonce(984142618); // MainNet
 
-    genesisBlock.FinalizeHash();
+    for (auto& genesisBlock : genesisBlocks) {
+        genesisBlock.FinalizeHash();
+    }
 
-    // EXPECT_TRUE(GENESIS.Verify());
+    EXPECT_TRUE(GENESIS.Verify());
 }

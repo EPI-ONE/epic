@@ -23,7 +23,7 @@ Block::Block(Block&& b) noexcept
     SetParents();
 }
 
-Block::Block(uint32_t versionNum) : Block() {
+Block::Block(uint16_t versionNum) : Block() {
     version_            = versionNum;
     milestoneBlockHash_ = Hash::GetZeroHash();
     prevBlockHash_      = Hash::GetZeroHash();
@@ -51,6 +51,10 @@ void Block::SetNull() {
 
 bool Block::IsNull() const {
     return time_ == 0;
+}
+
+uint16_t Block::GetVersion() const {
+    return version_;
 }
 
 uint256 Block::GetMilestoneHash() const {
@@ -95,6 +99,13 @@ bool Block::Verify() const {
         return false;
     }
 
+    // check for duplicated transactions
+    spdlog::trace("Block::Verify mutation {}", hash_.to_substr());
+    if (mutated) {
+        spdlog::info("Block contains duplicated transactions in a merkle tree branch. [{}]", std::to_string(hash_));
+        return false;
+    }
+
     // check pow
     spdlog::trace("Block::Verify pow {}", hash_.to_substr());
     if (!CheckPOW()) {
@@ -108,18 +119,6 @@ bool Block::Verify() const {
         time_t t = time_;
         spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", std::string(ctime(&t)),
                      time_, std::string(ctime(&allowedTime)), allowedTime, std::to_string(hash_));
-        return false;
-    }
-
-    // check for merkle root
-    bool mutated;
-    uint256 root = ComputeMerkleRoot(&mutated);
-    if (merkleRoot_ != root) {
-        spdlog::info("Block contains invalid merkle root. [{}]", std::to_string(hash_));
-        return false;
-    }
-    if (mutated) {
-        spdlog::info("Block contains duplicated transactions in a merkle tree branch. [{}]", std::to_string(hash_));
         return false;
     }
 
@@ -159,7 +158,7 @@ bool Block::Verify() const {
 
 void Block::AddTransaction(const Transaction& tx) {
     assert(!tx.GetHash().IsNull());
-    // Invalidate cached hash to force recompute
+    // Invalidate cached hash to force recomputation
     UnCache();
     auto tx_ptr = std::make_shared<Transaction>(tx);
     tx_ptr->SetParent(this);
@@ -239,7 +238,7 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     if (HasTransaction() && merkleRoot_.IsNull()) {
-        merkleRoot_ = ComputeMerkleRoot();
+        merkleRoot_ = ComputeMerkleRoot(&mutated);
     }
 
     VStream s;
@@ -256,6 +255,8 @@ std::vector<uint256> Block::GetTxHashes() const {
     for (const auto& tx : transactions_) {
         leaves.emplace_back(tx->GetHash());
     }
+
+    std::sort(leaves.begin(), leaves.end());
 
     return leaves;
 }
@@ -350,7 +351,6 @@ void Block::Solve() {
         }
         nonce_++;
         CalculateHash();
-        std::cout << nonce_ << " " << std::to_string(hash_) << std::endl;
     }
 }
 

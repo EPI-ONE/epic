@@ -61,7 +61,7 @@ rpc::Block* ToRPCBlock(const Block& b) {
     auto block_hash = ToRPCHash(b.GetHash());
     rpcb->set_allocated_block_hash(block_hash);
     // uint32 version = 2;
-    // TODO rpcb.set_version(b.GetVersion());
+    rpcb->set_version(b.GetVersion());
     // Hash milestoneBlockHash = 3;
     auto milestoneBlockHash = ToRPCHash(b.GetMilestoneHash());
     rpcb->set_allocated_milestoneblockhash(milestoneBlockHash);
