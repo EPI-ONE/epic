@@ -63,6 +63,7 @@ public:
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
+    void AddTransactions(std::vector<ConstTxPtr>);
     bool HasTransaction() const;
     const std::vector<ConstTxPtr>& GetTransactions() const;
 

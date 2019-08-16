@@ -191,16 +191,16 @@ void Miner::Run() {
                     if (counter % 2000 == 0) {
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }
+
                     auto tx = MEMPOOL->GetRedemptionTx(false);
-                    if (!tx) {
-                        auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
-                                       GetParams().sortitionCoefficient *
-                                       (GetParams().maxTarget / (head->snapshot->hashRate + 1));
-                        tx = MEMPOOL->ExtractTransaction(prevHash, allowed);
-                    }
                     if (tx) {
                         b.AddTransaction(std::move(tx));
                     }
+
+                    auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
+                                   GetParams().sortitionCoefficient *
+                                   (GetParams().maxTarget / (head->snapshot->hashRate + 1));
+                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed));
                 }
             }
 

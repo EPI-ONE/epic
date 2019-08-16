@@ -159,7 +159,7 @@ bool Block::Verify() const {
 
 void Block::AddTransaction(const Transaction& tx) {
     assert(!tx.GetHash().IsNull());
-    // Invalidate cached hash to force recomputation
+    // Invalidate cached hash to force recompute
     UnCache();
     auto tx_ptr = std::make_shared<Transaction>(tx);
     tx_ptr->SetParent(this);
@@ -175,8 +175,18 @@ void Block::AddTransaction(ConstTxPtr tx) {
 
     UnCache();
     tx->SetParent(this);
-    tx->SetParents();
     transactions_.emplace_back(std::move(tx));
+    CalculateOptimalEncodingSize();
+}
+
+void Block::AddTransactions(std::vector<ConstTxPtr> txns) {
+    UnCache();
+    for (const auto& tx : txns) {
+        assert(!tx->GetHash().IsNull());
+        tx->SetParent(this);
+    }
+    transactions_.insert(transactions_.end(), std::make_move_iterator(txns.begin()),
+                         std::make_move_iterator(txns.end()));
     CalculateOptimalEncodingSize();
 }
 

@@ -56,7 +56,7 @@ TEST_F(TestMemPool, simple_get_and_set) {
     EXPECT_EQ(pool.Size(), 2);
 }
 
-TEST_F(TestMemPool, get_transaction_test) {
+TEST_F(TestMemPool, ExtractTransactions) {
     MemPool pool;
 
     /* hash used to simulate block */
@@ -71,17 +71,15 @@ TEST_F(TestMemPool, get_transaction_test) {
 
     /* = */
     arith_uint256 threshold = (UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(blkHash)) << 32;
-    ASSERT_FALSE(pool.GetTransaction(blkHash, threshold));
+    ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
     /* > */
     threshold--;
-    ASSERT_FALSE(pool.GetTransaction(blkHash, threshold));
+    ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
     /* < */
     threshold += 2;
-    ASSERT_TRUE(pool.GetTransaction(blkHash, threshold));
-
-    ASSERT_TRUE(pool.ExtractTransaction(blkHash, threshold));
+    ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 1);
     ASSERT_TRUE(pool.IsEmpty());
 }
 
@@ -94,7 +92,8 @@ TEST_F(TestMemPool, receive_and_release) {
     auto [hashMsg2, sig2]  = fac.CreateSig(privkey);
     auto addr              = pubkey.GetID();
 
-    Block blkTemplate{GetParams().version, ghash, ghash, ghash, fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
+    Block blkTemplate{
+        GetParams().version, ghash, ghash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     auto firstReg = std::make_shared<const Transaction>(addr);
     Block b1      = blkTemplate;
     b1.AddTransaction(firstReg);
@@ -118,7 +117,7 @@ TEST_F(TestMemPool, receive_and_release) {
     DAG->Wait();
 
     Transaction redeem{};
-    redeem.AddInput(TxInput{TxOutPoint{b1hash, UNCONNECTED}, pubkey, hashMsg, sig}).AddOutput(10, addr);
+    redeem.AddInput(TxInput{TxOutPoint{b1hash, UNCONNECTED, UNCONNECTED}, pubkey, hashMsg, sig}).AddOutput(10, addr);
     auto redemption = std::make_shared<const Transaction>(std::move(redeem));
 
     Block b2 = blkTemplate;
@@ -150,11 +149,11 @@ TEST_F(TestMemPool, receive_and_release) {
     Transaction tx_normal_3{};
     Transaction tx_conflict{};
 
-    tx_reg.AddInput(TxInput{TxOutPoint{b2hash, UNCONNECTED}, pubkey, hashMsg, sig}).AddOutput(1, addr);
-    tx_normal_1.AddInput(TxInput{TxOutPoint{b2hash, 0}, pubkey, hashMsg, sig}).AddOutput(5, newAddr);
-    tx_normal_2.AddInput(TxInput{TxOutPoint{b2hash, 0}, pubkey, hashMsg, sig}).AddOutput(10, newAddr);
-    tx_normal_3.AddInput(TxInput{TxOutPoint{b2hash, 0}, pubkey, hashMsg2, sig2}).AddOutput(10, newAddr);
-    tx_conflict.AddInput(TxInput{TxOutPoint{b1hash, 0}, pubkey, hashMsg, sig}).AddOutput(3, newAddr);
+    tx_reg.AddInput(TxInput{TxOutPoint{b2hash, UNCONNECTED, UNCONNECTED}, pubkey, hashMsg, sig}).AddOutput(1, addr);
+    tx_normal_1.AddInput(TxInput{TxOutPoint{b2hash, 0, 0}, pubkey, hashMsg, sig}).AddOutput(5, newAddr);
+    tx_normal_2.AddInput(TxInput{TxOutPoint{b2hash, 0, 0}, pubkey, hashMsg, sig}).AddOutput(10, newAddr);
+    tx_normal_3.AddInput(TxInput{TxOutPoint{b2hash, 0, 0}, pubkey, hashMsg2, sig2}).AddOutput(10, newAddr);
+    tx_conflict.AddInput(TxInput{TxOutPoint{b1hash, 0, 0}, pubkey, hashMsg, sig}).AddOutput(3, newAddr);
 
 
     auto ptx_reg      = std::make_shared<const Transaction>(std::move(tx_reg));
@@ -175,10 +174,10 @@ TEST_F(TestMemPool, receive_and_release) {
     ASSERT_TRUE(pool.ReceiveTx(ptx_normal_3));
     ASSERT_EQ(pool.Size(), 3);
 
-    pool.ReleaseTxFromConfirmed(*ptx_normal_3, false);
+    pool.ReleaseTxFromConfirmed(ptx_normal_3, false);
     ASSERT_EQ(pool.Size(), 2);
 
-    pool.ReleaseTxFromConfirmed(*ptx_normal_1, true);
+    pool.ReleaseTxFromConfirmed(ptx_normal_1, true);
     ASSERT_TRUE(pool.IsEmpty());
 
     EpicTestEnvironment::TearDownDAG(dir);

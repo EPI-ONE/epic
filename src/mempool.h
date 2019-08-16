@@ -28,9 +28,10 @@ public:
     /**
      * basic operations for memory pool
      */
-    bool Insert(ConstTxPtr value);
-    bool Contains(const ConstTxPtr& value) const;
-    bool Erase(const ConstTxPtr& value);
+    bool Insert(ConstTxPtr);
+    bool Contains(const ConstTxPtr&) const;
+    bool Erase(const ConstTxPtr&);
+    void Erase(const std::vector<ConstTxPtr>&);
     bool IsEmpty() const;
 
     /**
@@ -47,12 +48,10 @@ public:
     std::size_t Size() const;
 
     /**
-     * retrives the first transaction from the pool that has
-     * a sortition distance less than the given threshold
+     * retrives the transactions from the pool that has
+     * sortition distances less than the given threshold
      */
-    ConstTxPtr GetTransaction(const uint256&, const arith_uint256& threshold);
-
-    ConstTxPtr ExtractTransaction(const uint256&, const arith_uint256& threashold);
+    std::vector<ConstTxPtr> ExtractTransactions(const uint256&, const arith_uint256& threshold, size_t limit = -1);
 
     void PushRedemptionTx(ConstTxPtr redemption);
 

@@ -24,13 +24,20 @@ bool MemPool::Erase(const ConstTxPtr& value) {
     return false;
 }
 
+void MemPool::Erase(const std::vector<ConstTxPtr>& values) {
+    WRITER_LOCK(mutex_)
+    for (const auto& v : values) {
+        mempool_.erase(v);
+    }
+}
+
 std::size_t MemPool::Size() const {
     READER_LOCK(mutex_)
     return mempool_.size();
 }
 
 bool MemPool::IsEmpty() const {
-    return this->Size() == 0;
+    return Size() == 0;
 }
 
 bool MemPool::ReceiveTx(const ConstTxPtr& tx) {
@@ -81,24 +88,27 @@ void MemPool::ReleaseTxFromConfirmed(const ConstTxPtr& tx, bool valid) {
     }
 }
 
-ConstTxPtr MemPool::GetTransaction(const uint256& blockHash, const arith_uint256& threshold) {
-    arith_uint256 base_hash = UintToArith256(blockHash);
-    READER_LOCK(mutex_)
+std::vector<ConstTxPtr> MemPool::ExtractTransactions(const uint256& blkHash,
+                                                     const arith_uint256& threshold,
+                                                     size_t limit) {
+    arith_uint256 base_hash = UintToArith256(blkHash);
+    WRITER_LOCK(mutex_)
 
-    for (const auto& tx : mempool_) {
-        auto distance = base_hash ^ UintToArith256(tx->GetHash());
+    std::vector<ConstTxPtr> result;
+    for (auto it = mempool_.begin(); it != mempool_.end();) {
+        if (result.size() == limit) {
+            return result;
+        }
+        auto distance = base_hash ^ UintToArith256((*it)->GetHash());
         if (PartitionCmp(distance, threshold)) {
-            return tx;
+            result.emplace_back(*it);
+            it = mempool_.erase(it);
+        } else {
+            ++it;
         }
     }
 
-    return nullptr;
-}
-
-ConstTxPtr MemPool::ExtractTransaction(const uint256& blkHash, const arith_uint256& threashold) {
-    auto txptr = GetTransaction(blkHash, threashold);
-    Erase(txptr);
-    return txptr;
+    return result;
 }
 
 void MemPool::PushRedemptionTx(ConstTxPtr redemption) {
