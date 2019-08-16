@@ -88,8 +88,8 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     constexpr size_t HEIGHT = 30;
     std::array<RecordPtr, HEIGHT> recs;
     std::array<uint256, HEIGHT> hashes;
-    std::array<bool, HEIGHT> isRedemption;
-    std::array<bool, HEIGHT> isMilestone;
+    std::array<bool, HEIGHT> isRedemption{};
+    std::array<bool, HEIGHT> isMilestone{};
     isRedemption.fill(false);
     isMilestone.fill(false);
 

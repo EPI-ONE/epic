@@ -643,12 +643,12 @@ void DAGManager::DeleteFork() {
     }
 }
 
-RecordPtr DAGManager::GetState(const uint256& msHash) const {
+RecordPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
         return search->second;
     } else {
-        auto prec = CAT->GetRecord(msHash);
+        auto prec = CAT->GetRecord(msHash, withBlock);
         if (prec && prec->snapshot) {
             return prec;
         } else {
@@ -819,11 +819,8 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        auto recs = CAT->GetLevelSetAt(height);
-        lvs.reserve(recs.size());
-        for (auto& b : recs) {
-            lvs.emplace_back(std::move(b));
-        }
+        auto recs = CAT->GetLevelSetBlksAt(height);
+        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
     } else {
         auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
         lvs.reserve(recs.size());
@@ -837,6 +834,28 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
 
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& blockHash) const {
     return GetMainChainLevelSet(GetHeight(blockHash));
+}
+
+std::vector<RecordPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool withBlock) const {
+    std::vector<RecordPtr> lvs;
+    size_t leastHeightCached = GetBestChain().GetLeastHeightCached();
+
+    auto height = GetHeight(blockHash);
+    if (height < leastHeightCached) {
+        auto recs = CAT->GetLevelSetRecsAt(height, withBlock);
+        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+    } else {
+        auto state = GetState(blockHash);
+        if (state) {
+            auto recs = state->snapshot->GetLevelSet();
+            lvs.reserve(recs.size());
+            for (auto& rwp : recs) {
+                lvs.push_back(rwp.lock());
+            }
+        }
+    }
+
+    return lvs;
 }
 
 VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {

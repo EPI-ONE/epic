@@ -129,9 +129,9 @@ bool Block::Verify() const {
 
     // verify content of the block
     spdlog::trace("Block::Verify number of txns {}", hash_.to_substr());
-    if (transactions_.size() > GetParams().txnsCapacity) {
-        spdlog::info("Block with {} transactions larger than capacity ({}]) [{}]", transactions_.size(),
-                     GetParams().txnsCapacity, std::to_string(hash_));
+    if (transactions_.size() > GetParams().blockCapacity) {
+        spdlog::info("Block with {} transactions larger than its capacity ({}]) [{}]", transactions_.size(),
+                     GetParams().blockCapacity, std::to_string(hash_));
     }
 
     spdlog::trace("Block::Verify content {}", hash_.to_substr());
@@ -334,7 +334,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
     target.SetCompact(diffTarget_);
 
     if (target <= 0 || target > GetParams().maxTarget) {
-        throw "Bad difficulty target: " + std::to_string(target);
+        throw std::runtime_error("Bad difficulty target: " + std::to_string(target));
     }
 
     return target;
@@ -349,8 +349,8 @@ bool Block::CheckPOW() const {
     arith_uint256 target;
     try {
         target = GetTargetAsInteger();
-    } catch (const std::string& s) {
-        spdlog::info(s);
+    } catch (const std::exception& s) {
+        spdlog::info(s.what());
         return false;
     }
 

@@ -164,7 +164,7 @@ void Miner::Run() {
             auto head = DAG->GetMilestoneHead();
 
             if (!head) {
-                spdlog::error("Cannot get milestone head. Did you init with new DB?");
+                spdlog::error("Cannot get milestone head. Did you init with new DB (with flag \"-N\")?");
                 enabled_ = false;
                 spdlog::info("Miner stopped.");
                 return;
@@ -179,7 +179,7 @@ void Miner::Run() {
                         firstRegTx = MEMPOOL->GetRedemptionTx(true);
                     }
                 }
-                spdlog::info("Get first registration, start mining");
+                spdlog::info("Got the first registration. Start mining.");
                 prevHash = GENESIS.GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
@@ -187,7 +187,7 @@ void Miner::Run() {
                 if (distanceCal.Full()) {
                     auto timeInterval = distanceCal.TimeSpan();
                     double percentage =
-                        distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
+                        distanceCal.Sum().GetDouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
                     if (counter % 2000 == 0) {
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }

@@ -26,8 +26,8 @@ static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 static constexpr uint32_t REWARD_COEFFICIENT   = 50;
 static constexpr size_t CACHE_STATES           = 100;
 static constexpr size_t CACHE_STATES_TO_DELETE = 20;
-// capacity of transactions
-static constexpr size_t TXNS_CAPACITY = 128;
+// capacity of transactions in a block
+static constexpr size_t BLK_CAPACITY = 128;
 
 const Block& Params::GetGenesis() const {
     return *genesis_;
@@ -44,16 +44,17 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
-    genesis_       = std::make_unique<Block>(genesisBlock);
-    genesisRecord_ = std::make_shared<NodeRecord>(genesisBlock);
+    genesis_                    = std::make_unique<Block>(genesisBlock);
+    genesisRecord_              = std::make_shared<NodeRecord>(genesisBlock);
+    genesisRecord_->validity[0] = NodeRecord::VALID;
 
     arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
     arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
-    static auto genesisState = std::make_shared<ChainState>(0, chainwork, genesisBlock.GetTime(), msTarget, blockTarget,
-                                                            hashRate, std::vector<RecordWPtr>{genesisRecord_});
+    static auto genesisState = std::make_shared<ChainState>(
+        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<RecordWPtr>{genesisRecord_});
 
     genesisRecord_->LinkChainState(genesisState);
 }
@@ -79,7 +80,7 @@ MainNetParams::MainNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
-    txnsCapacity         = TXNS_CAPACITY;
+    blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -113,7 +114,7 @@ TestNetParams::TestNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
-    txnsCapacity         = TXNS_CAPACITY;
+    blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -147,7 +148,7 @@ UnitTestParams::UnitTestParams() {
     cacheStatesSize      = 25;
     cacheStatesToDelete  = 5;
     deleteForkThreshold  = 10;
-    txnsCapacity         = TXNS_CAPACITY;
+    blockCapacity        = 10;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]

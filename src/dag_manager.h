@@ -47,6 +47,7 @@ public:
     void DisconnectPeerSync(const PeerPtr&);
 
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+    std::vector<RecordPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
 
     /**
      * Starting from the given hash, traverses the main milestone chain
@@ -63,7 +64,7 @@ public:
     void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
 
     // Checkout states either in different chain or in db
-    RecordPtr GetState(const uint256&) const;
+    RecordPtr GetState(const uint256&, bool withBlock = true) const;
 
     Chain& GetBestChain() const;
 

@@ -89,8 +89,8 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
     if (GetRand() % 2) {
         // Link a ms instance
         auto cs =
-            std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(), arith_uint256(GetRand()),
-                                         arith_uint256(GetRand()), GetRand(), std::vector<RecordWPtr>{});
+            std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), arith_uint256(GetRand()),
+                                         arith_uint256(GetRand()), GetRand(), NextTime(), std::vector<RecordWPtr>{});
         rec.LinkChainState(cs);
 
         if (GetRand() % 2) {
@@ -133,24 +133,24 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
     return CreateNextChainState(previous, *pRec, std::vector<RecordWPtr>{pRec});
 }
 
-std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const NodeRecord& startMs,
-                                                                        size_t height,
-                                                                        bool tx) {
-    NodeRecord lastMs       = startMs;
-    ConstBlockPtr prevBlock = startMs.cblock;
+std::tuple<TestChain, std::vector<RecordPtr>> TestFactory::CreateChain(const RecordPtr& startMs,
+                                                                       size_t height,
+                                                                       bool tx) {
+    RecordPtr lastMs        = startMs;
+    ConstBlockPtr prevBlock = startMs->cblock;
 
     TestChain testChain{{}};
-    std::vector<NodeRecord> vMs;
+    std::vector<RecordPtr> vMs;
     vMs.reserve(height);
 
     size_t count = 1;
-    TimeGenerator timeg{startMs.cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
+    TimeGenerator timeg{startMs->cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
         Block b{GetParams().version};
         if (tx) {
             b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
         }
-        b.SetMilestoneHash(lastMs.cblock->GetHash());
+        b.SetMilestoneHash(lastMs->cblock->GetHash());
         b.SetPrevHash(prevBlock->GetHash());
         if (testChain.size() == 1) {
             b.SetTipHash(GENESIS.GetHash());
@@ -158,7 +158,7 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
             b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->GetHash());
         }
         b.SetTime(timeg.NextTime());
-        b.SetDifficultyTarget(lastMs.snapshot->blockTarget.GetCompact());
+        b.SetDifficultyTarget(lastMs->snapshot->blockTarget.GetCompact());
 
         // Special transaction on the first registration block
         if (b.GetPrevHash() == GENESIS.GetHash()) {
@@ -171,9 +171,9 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
         ConstBlockPtr blkptr   = std::make_shared<const Block>(std::move(b));
         bool make_new_levelset = false;
 
-        if (CheckMsPOW(blkptr, lastMs.snapshot)) {
-            NodeRecord node{blkptr};
-            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<RecordWPtr>{});
+        if (CheckMsPOW(blkptr, lastMs->snapshot)) {
+            RecordPtr node   = std::make_shared<NodeRecord>(blkptr);
+            ChainStatePtr cs = CreateNextChainState(lastMs->snapshot, *node, std::vector<RecordWPtr>{node});
             vMs.emplace_back(std::move(node));
             lastMs = vMs.back();
             count++;
@@ -189,4 +189,10 @@ std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const No
         }
     }
     return {testChain, vMs};
+}
+
+std::tuple<TestChain, std::vector<RecordPtr>> TestFactory::CreateChain(const NodeRecord& startMs,
+                                                                       size_t height,
+                                                                       bool tx) {
+    return CreateChain(std::make_shared<NodeRecord>(startMs), height, tx);
 }

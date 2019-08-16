@@ -64,9 +64,12 @@ public:
     RecordPtr CreateConsecutiveRecordPtr(uint32_t);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& hashes);
-    std::tuple<TestChain, std::vector<NodeRecord>> CreateChain(const NodeRecord& startMs,
+    std::tuple<TestChain, std::vector<RecordPtr>> CreateChain(const RecordPtr& startMs,
                                                                size_t height,
                                                                bool tx = false);
+    std::tuple<TestChain, std::vector<RecordPtr>> CreateChain(const NodeRecord& startMs,
+                                                              size_t height,
+                                                              bool tx = false);
 
     void PrintChain(const TestChain& chain) {
         std::cout << "{ " << std::endl;

@@ -126,7 +126,7 @@ bool base_uint<BITS>::EqualTo(uint64_t b) const {
 }
 
 template <unsigned int BITS>
-double base_uint<BITS>::getdouble() const {
+double base_uint<BITS>::GetDouble() const {
     double ret  = 0.0;
     double fact = 1.0;
     for (int i = 0; i < WIDTH; i++) {
@@ -179,7 +179,7 @@ template base_uint<256>& base_uint<256>::operator*=(const base_uint<256>& b);
 template base_uint<256>& base_uint<256>::operator/=(const base_uint<256>& b);
 template int base_uint<256>::CompareTo(const base_uint<256>&) const;
 template bool base_uint<256>::EqualTo(uint64_t) const;
-template double base_uint<256>::getdouble() const;
+template double base_uint<256>::GetDouble() const;
 template std::string base_uint<256>::GetHex() const;
 template std::string std::to_string(const base_uint<256>& uint);
 template void base_uint<256>::SetHex(const char*);

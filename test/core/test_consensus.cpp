@@ -45,6 +45,7 @@ TEST_F(TestConsensus, SyntaxChecking) {
     for (int i = 0; i < 5; ++i) {
         block2.AddTransaction(fac.CreateTx(2, 3));
     }
+
     block2.AddTransaction(*block2.GetTransactions()[2]);
     block2.Solve();
     EXPECT_FALSE(block2.Verify());
@@ -80,18 +81,30 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
+    time_t timeRec = GENESIS.GetTime();
+
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec   = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
+        auto rec = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
+
+        timeRec = rec->cblock->GetTime();
+
+        // Generate some valid txns
+        auto s = (i - 1) % GetParams().blockCapacity + 1;
+        rec->validity.resize(s);
+        memset(rec->validity.data(), NodeRecord::VALID, s);
+
         arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (arrayMs[i]->IsDiffTransition()) {
-            ASSERT_NE(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
+            ASSERT_TRUE(arrayMs[i - 1]->lastUpdateTime < arrayMs[i]->lastUpdateTime);
+
         } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
-        }
-        if (i > GetParams().interval + 3) {
-            ASSERT_NE(0, arrayMs[i - 1]->hashRate);
+
+            if (!arrayMs[i - 1]->IsDiffTransition()) {
+                ASSERT_TRUE(arrayMs[i - 1]->GetTxnsCounter() <= arrayMs[i]->GetTxnsCounter());
+            }
         }
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
@@ -145,7 +158,7 @@ TEST_F(TestConsensus, AddForks) {
     constexpr int n_branches   = 5;
 
     std::vector<TestChain> branches;
-    std::vector<std::vector<NodeRecord>> branches_rec;
+    std::vector<std::vector<RecordPtr>> branches_rec;
     branches.reserve(n_branches);
     branches.reserve(n_branches);
 
@@ -209,7 +222,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     auto chain_it = chain.cbegin();
     auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < FLUSHED; height++) {
-        auto lvs = CAT->GetLevelSetAt(height);
+        auto lvs = CAT->GetLevelSetBlksAt(height);
         ASSERT_GT(lvs.size(), 0);
 
         std::swap(lvs.front(), lvs.back());
@@ -260,7 +273,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();
     for (uint64_t height = 1; height < GetParams().cacheStatesToDelete; height++) {
-        auto lvs = CAT->GetLevelSetAt(height);
+        auto lvs = CAT->GetLevelSetBlksAt(height);
         ASSERT_GT(lvs.size(), 0);
 
         std::swap(lvs.front(), lvs.back());

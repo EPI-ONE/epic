@@ -241,8 +241,8 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.cumulativeReward = 10;
 
     // Link the chain state
-    auto pstate = std::make_shared<ChainState>(100, arith_uint256(0), fac.NextTime(), arith_uint256(0X3E8),
-                                               arith_uint256(0X3E8), 100000, std::vector<RecordWPtr>{});
+    auto pstate = std::make_shared<ChainState>(100, arith_uint256(0), arith_uint256(0X3E8), arith_uint256(0X3E8),
+                                               100000, fac.NextTime(), std::vector<RecordWPtr>{});
     block.LinkChainState(pstate);
 
     // Make it a fake milestone

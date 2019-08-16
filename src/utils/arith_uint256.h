@@ -74,7 +74,7 @@ public:
         return ret;
     }
 
-    double getdouble() const;
+    double GetDouble() const;
 
     base_uint& operator=(uint64_t b) {
         pn[0] = (unsigned int) b;
@@ -299,6 +299,16 @@ public:
             return;
         }
         memset(pn, 0, 32 - bytes);
+    }
+
+    size_t LeadingZeros() {
+        size_t counter  = 0;
+        arith_uint256 n = arith_uint256(1) << (sizeof(uint32_t) * WIDTH * 8 - 1);
+        while ((*this & n) == 0 && n != 0) {
+            n >>= 1;
+            counter++;
+        }
+        return counter;
     }
 
     friend uint256 ArithToUint256(const arith_uint256&);

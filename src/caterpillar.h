@@ -22,13 +22,13 @@ public:
      * DB API for other modules
      */
     RecordPtr GetMilestoneAt(size_t height) const;
-    StoredRecord GetRecord(const uint256&) const;
+    RecordPtr GetRecord(const uint256&, bool withBlock = true) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
     ConstBlockPtr FindBlock(const uint256&) const;
-    std::vector<ConstBlockPtr> GetLevelSetAt(size_t height) const;
-    VStream GetRawLevelSetAt(size_t height) const;
-    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2) const;
-    std::vector<RecordPtr> GetLevelSetWithRecAt(size_t height) const;
+    VStream GetRawLevelSetAt(size_t height, file::FileType = file::FileType::BLK) const;
+    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2, file::FileType = file::FileType::BLK) const;
+    std::vector<ConstBlockPtr> GetLevelSetBlksAt(size_t height) const;
+    std::vector<RecordPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     bool SaveHeadHeight(uint64_t height) const;
@@ -133,7 +133,7 @@ private:
     void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
-    StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&) const;
+    StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
     FilePos& NextFile(FilePos&) const;
 };
 
