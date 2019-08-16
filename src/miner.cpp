@@ -82,12 +82,12 @@ void Miner::SolveCuckaroo(Block& b) {
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
-            SolverParams params = this->params;
+            SolverParams _params = this->params;
             Block blk(b);
             blk.SetNonce(i);
 
-            params.device   = i;
-            ctx_q[i]        = CreateSolverCtx(&params);
+            _params.device  = i;
+            ctx_q[i]        = CreateSolverCtx(&_params);
             const auto& ctx = ctx_q[i];
 
             while (final_nonce.load() == 0 && enabled_.load()) {
