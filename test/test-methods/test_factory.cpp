@@ -55,12 +55,14 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     return tx;
 }
 
-Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
+Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
     Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), uint256(),
                     timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
 
     if (numTxInput && numTxOutput) {
-        b.AddTransaction(CreateTx(numTxInput, numTxOutput));
+        for (int i = 0; i < maxTxns; ++i) {
+            b.AddTransaction(CreateTx(numTxInput, numTxOutput));
+        }
     }
 
     b.CalculateOptimalEncodingSize();
@@ -74,8 +76,8 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     }
 }
 
-ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool finalize) {
-    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize));
+ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize, maxTxns));
 }
 
 NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
@@ -106,8 +108,8 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
     return rec;
 }
 
-RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool finalize) {
-    return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize)));
+RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize, maxTxns)));
 }
 
 RecordPtr TestFactory::CreateConsecutiveRecordPtr(uint32_t timeToset) {

@@ -57,10 +57,10 @@ public:
     Transaction CreateReg();
     Transaction CreateTx(int numTxInput, int numTxOutput);
 
-    Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
-    ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
+    Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
+    ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
     NodeRecord CreateNodeRecord(ConstBlockPtr b);
-    RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false);
+    RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
     RecordPtr CreateConsecutiveRecordPtr(uint32_t);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& hashes);

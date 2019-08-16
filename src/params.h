@@ -52,6 +52,8 @@ public:
     size_t cacheStatesSize;
     size_t cacheStatesToDelete;
 
+    size_t txnsCapacity;
+
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     const Block& GetGenesis() const;
     const NodeRecord& GetGenesisRecord() const;

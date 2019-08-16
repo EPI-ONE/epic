@@ -104,16 +104,16 @@ bool Block::Verify() const {
         assert(merkleRoot_.IsNull());
     }
 
+    // check pow
+    spdlog::trace("Block::Verify pow {}", hash_.to_substr());
+    if (!CheckPOW()) {
+        return false;
+    }
+
     // check for duplicated transactions
     spdlog::trace("Block::Verify mutation {}", hash_.to_substr());
     if (mutated) {
         spdlog::info("Block contains duplicated transactions in a merkle tree branch. [{}]", std::to_string(hash_));
-        return false;
-    }
-
-    // check pow
-    spdlog::trace("Block::Verify pow {}", hash_.to_substr());
-    if (!CheckPOW()) {
         return false;
     }
 
@@ -128,6 +128,12 @@ bool Block::Verify() const {
     }
 
     // verify content of the block
+    spdlog::trace("Block::Verify number of txns {}", hash_.to_substr());
+    if (transactions_.size() > GetParams().txnsCapacity) {
+        spdlog::info("Block with {} transactions larger than capacity ({}]) [{}]", transactions_.size(),
+                     GetParams().txnsCapacity, std::to_string(hash_));
+    }
+
     spdlog::trace("Block::Verify content {}", hash_.to_substr());
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         spdlog::info("Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
@@ -135,10 +141,17 @@ bool Block::Verify() const {
     }
 
     if (HasTransaction()) {
+        std::unordered_set<uint256> txhashes;
         for (const auto& tx : transactions_) {
             if (!tx->Verify()) {
                 return false;
             }
+            txhashes.insert(tx->GetHash());
+        }
+
+        if (txhashes.size() != transactions_.size()) {
+            spdlog::info("Block contains duplicated transactions. [{}]", std::to_string(hash_));
+            return false;
         }
     }
 

@@ -26,6 +26,8 @@ static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 static constexpr uint32_t REWARD_COEFFICIENT   = 50;
 static constexpr size_t CACHE_STATES           = 100;
 static constexpr size_t CACHE_STATES_TO_DELETE = 20;
+// capacity of transactions
+static constexpr size_t TXNS_CAPACITY = 128;
 
 const Block& Params::GetGenesis() const {
     return *genesis_;
@@ -77,6 +79,7 @@ MainNetParams::MainNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
+    txnsCapacity         = TXNS_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -110,6 +113,7 @@ TestNetParams::TestNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
+    txnsCapacity         = TXNS_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -143,6 +147,7 @@ UnitTestParams::UnitTestParams() {
     cacheStatesSize      = 25;
     cacheStatesToDelete  = 5;
     deleteForkThreshold  = 10;
+    txnsCapacity         = TXNS_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]

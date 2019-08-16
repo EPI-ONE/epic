@@ -25,11 +25,29 @@ TEST_F(TestConsensus, SyntaxChecking) {
     Block b = GENESIS;
     EXPECT_TRUE(b.Verify());
 
-    // Create a random block with bad difficulty target
+    // Bad difficulty target
     Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
                         uint256(), time(nullptr), 1, 1);
     block.FinalizeHash();
     EXPECT_FALSE(block.Verify());
+
+    // Duplicated txns in a merkle tree branch
+    Block block1 = fac.CreateBlock();
+    auto tx      = fac.CreateTx(1, 1);
+    tx.FinalizeHash();
+    block1.AddTransaction(tx);
+    block1.AddTransaction(tx);
+    block1.Solve();
+    EXPECT_FALSE(block1.Verify());
+
+    // Duplicated txns
+    Block block2 = fac.CreateBlock(1, 1);
+    for (int i = 0; i < 5; ++i) {
+        block2.AddTransaction(fac.CreateTx(2, 3));
+    }
+    block2.AddTransaction(*block2.GetTransactions()[2]);
+    block2.Solve();
+    EXPECT_FALSE(block2.Verify());
 }
 
 TEST_F(TestConsensus, MerkleRoot) {
