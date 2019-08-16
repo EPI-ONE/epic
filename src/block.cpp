@@ -88,6 +88,7 @@ void Block::SetTipHash(const uint256& hash) {
 void Block::UnCache() {
     optimalEncodingSize_ = 0;
     hash_.SetNull();
+    merkleRoot_.SetNull();
 }
 
 bool Block::Verify() const {
@@ -97,6 +98,10 @@ bool Block::Verify() const {
         spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
                      std::to_string(hash_));
         return false;
+    }
+
+    if (!HasTransaction()) {
+        assert(merkleRoot_.IsNull());
     }
 
     // check for duplicated transactions
@@ -195,6 +200,10 @@ bool Block::HasTransaction() const {
 
 const std::vector<ConstTxPtr>& Block::GetTransactions() const {
     return transactions_;
+};
+
+std::vector<ConstTxPtr> Block::GetTransactions() {
+    return transactions_;
 }
 
 void Block::SetDifficultyTarget(uint32_t target) {
@@ -215,6 +224,7 @@ uint32_t Block::GetTime() const {
 
 void Block::SetNonce(uint32_t nonce) {
     hash_.SetNull();
+    merkleRoot_.SetNull();
     nonce_ = nonce;
 }
 
@@ -255,8 +265,6 @@ std::vector<uint256> Block::GetTxHashes() const {
     for (const auto& tx : transactions_) {
         leaves.emplace_back(tx->GetHash());
     }
-
-    std::sort(leaves.begin(), leaves.end());
 
     return leaves;
 }

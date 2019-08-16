@@ -27,8 +27,31 @@ TEST_F(TestConsensus, SyntaxChecking) {
 
     // Create a random block with bad difficulty target
     Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
-                        fac.CreateRandomHash(), time(nullptr), 1, 1);
+                        uint256(), time(nullptr), 1, 1);
+    block.FinalizeHash();
     EXPECT_FALSE(block.Verify());
+}
+
+TEST_F(TestConsensus, MerkleRoot) {
+    // Check that the merkle root (and thus the hash) is different
+    // with different transaction orders
+    Block block1 = fac.CreateBlock();
+    auto block2  = block1;
+
+    for (int i = 0; i < 10; ++i) {
+        block1.AddTransaction(fac.CreateTx(2, 3));
+    }
+    block1.Solve();
+
+    auto txns = block1.GetTransactions();
+    txns[0].swap(txns[5]);
+    block2.AddTransactions(txns);
+
+    EXPECT_NE(block1.GetTransactions(), block2.GetTransactions());
+
+    block2.Solve();
+
+    EXPECT_NE(block1, block2);
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
