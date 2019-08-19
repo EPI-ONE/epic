@@ -69,8 +69,9 @@ public:
     std::vector<uint256> GetPendingHashes() const;
     ConstBlockPtr GetRandomTip() const;
 
-    RecordPtr GetMsRecordCache(const uint256&);
+    RecordPtr GetRecordCache(const uint256&) const;
     RecordPtr GetRecord(const uint256&) const;
+    RecordPtr GetMsRecordCache(const uint256&) const;
 
     /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);

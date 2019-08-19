@@ -808,7 +808,7 @@ RecordPtr DAGManager::GetMainChainRecord(const uint256& blkHash) const {
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {
-    auto rec = GetBestChain().GetRecord(blockHash);
+    auto rec = GetBestChain().GetRecordCache(blockHash);
     if (rec) {
         return rec->height;
     }

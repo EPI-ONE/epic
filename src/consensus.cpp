@@ -36,7 +36,7 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
     static const double alpha = 0.2; // smoothing parameter for exponential moving average
 
     if (!lastUpdateTime) {
-        // Traverse back until the last difficulty update point to recover
+        // Traverse back to the last difficulty update point to recover
         // necessary info for updating difficulty.
         // Although the traversal is expensive, it happens only once when
         // constructing the first new milestone after restarting the daemon.

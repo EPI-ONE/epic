@@ -280,18 +280,20 @@ void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, 
                 record.validity[0] = NodeRecord::Validity::INVALID;
                 invalidTXOC.Merge(CreateTXOCFromInvalid(*record.cblock->GetTransactions()[0], 0));
             }
-        }
+        } // by now, registrations (validity[0]) must != UNKNOWN (either VALID or INVALID)
 
         // check partition
+        // txns with invalid distance will have validity == INVALID, and others are left unchanged
         RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
         assert(prevMs);
         CheckTxPartition(record, prevMs->snapshot->hashRate);
 
         // check utxo
+        // txns with valid utxo will have validity == VALID, and others are left unchanged
         auto valid = ValidateTxns(record);
         validTXOC.Merge(std::move(valid));
 
-        // invalidate transactions with UNKNOWN status
+        // invalidate transactions that still have validity == UNKNOWN
         const auto& txns = record.cblock->GetTransactions();
         for (size_t i = 0; i < txns.size(); ++i) {
             if (!record.validity[i]) { // if UNKNOWN
@@ -354,7 +356,9 @@ TXOC Chain::ValidateTxns(NodeRecord& record) {
 
     const auto& txns = record.cblock->GetTransactions();
     for (size_t i = 0; i < txns.size(); ++i) {
-        if (record.validity[i]) { // if !UNKNWON
+        if (record.validity[i]) { // if not UNKNWON
+            // Skipping, because this txn is either redemption
+            // or has been marked invalid by CheckTxPartition
             continue;
         }
 
@@ -415,23 +419,31 @@ TXOC Chain::ValidateTxns(NodeRecord& record) {
     return validTXOC;
 }
 
-RecordPtr Chain::GetRecord(const uint256& blkHash) const {
+RecordPtr Chain::GetRecordCache(const uint256& blkHash) const {
     auto result = verifying_.find(blkHash);
     if (result == verifying_.end()) {
         result = recordHistory_.find(blkHash);
         if (result == recordHistory_.end()) {
-            auto rec = CAT->GetRecord(blkHash);
-            if (rec) {
-                rec->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
-            }
-
-            return rec;
+            return nullptr;
         }
     }
+
     return result->second;
 }
 
-RecordPtr Chain::GetMsRecordCache(const uint256& msHash) {
+RecordPtr Chain::GetRecord(const uint256& blkHash) const {
+    auto result = GetRecordCache(blkHash);
+    if (!result) {
+        result = CAT->GetRecord(blkHash);
+        if (result) {
+            result->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
+        }
+    }
+
+    return result;
+}
+
+RecordPtr Chain::GetMsRecordCache(const uint256& msHash) const {
     auto entry = recordHistory_.find(msHash);
     if (entry != recordHistory_.end() && entry->second->isMilestone) {
         return entry->second;
