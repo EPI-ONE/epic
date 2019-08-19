@@ -518,12 +518,14 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) 
 
     assert(milestoneChains.size() > 0);
     assert(milestoneChains.best());
-    if (GetBestMilestoneHeight() > ms->height &&
-        (GetBestMilestoneHeight() - ms->height) > GetParams().cacheStatesSize) {
-        spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height,
-                     GetBestMilestoneHeight(), std::to_string(blk->GetHash()));
+
+    auto bestHeight = GetBestMilestoneHeight();
+    if (bestHeight > ms->height && (bestHeight - ms->height) > GetParams().cacheStatesSize) {
+        spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height, bestHeight,
+                     std::to_string(blk->GetHash()));
         return false;
     }
+
     return true;
 }
 

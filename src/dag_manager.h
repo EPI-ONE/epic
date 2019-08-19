@@ -25,6 +25,8 @@ public:
      */
     bool Init();
 
+    /////////////////////////////// Synchronization /////////////////////////////////////
+
     /**
      * Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
      * and syncingPeer is not null. This adds the GetBlocksMessage to Peer’s message
@@ -46,6 +48,19 @@ public:
 
     void DisconnectPeerSync(const PeerPtr&);
 
+    /////////////////////////////// Verification /////////////////////////////////////
+
+    /*
+     * Submits tasks to a single thread in which it checks its syntax.
+     * If the block passes the checking, add them to pendings in dag_manager.
+     * Returns true only if the new block is successfully submitted to pendings.
+     */
+    void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
+    void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
+
+    /////////////////////////////// Data API /////////////////////////////////////
+
+    RecordPtr GetMainChainRecord(const uint256&) const;
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
     std::vector<RecordPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
 
@@ -56,27 +71,17 @@ public:
     std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
     std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
 
-    /*
-     * Submits tasks to a single thread in which it checks its syntax.
-     * If the block passes the checking, add them to pendings in dag_manager.
-     * Returns true only if the new block is successfully submitted to pendings.
-     */
-    void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
-
     // Checkout states either in different chain or in db
     RecordPtr GetState(const uint256&, bool withBlock = true) const;
-
     Chain& GetBestChain() const;
-
     size_t GetBestMilestoneHeight() const;
-
     RecordPtr GetMilestoneHead() const;
 
     const Chains& GetChains() const {
         return milestoneChains;
     }
 
-    void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
+    /////////////////////////////// Mics. /////////////////////////////////////
 
     /**
      * Blocks the main thread from going forward
@@ -151,15 +156,12 @@ private:
     void BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom);
 
     /**
-     * TODO:
      * Removes a verified ms hash from the downloading queue, and start another
      * round of batch sync when the downloading queue is empty.
      * Returns whether the hash is removed successfully.
      */
     bool UpdateDownloadingQueue(const uint256&);
-
     void AddToDownloadingQueue(const uint256&);
-
     void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
@@ -179,12 +181,9 @@ private:
 
     size_t GetHeight(const uint256&) const;
 
-    RecordPtr GetMainChainRecord(const uint256&) const;
-
     std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
 
     VStream GetMainChainRawLevelSet(size_t height) const;
-
     VStream GetMainChainRawLevelSet(const uint256&) const;
 
     bool ExistsNode(const uint256&) const;

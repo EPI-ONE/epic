@@ -147,10 +147,12 @@ ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, s
 NodeRecord::NodeRecord() : minerChainHeight(0), optimalStorageSize_(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
-    auto n = cblock->GetTransactions().size();
-    if (n > 0) {
-        validity.resize(n);
-        memset(&validity[0], UNKNOWN, n);
+    if (cblock) {
+        auto n = cblock->GetTransactions().size();
+        if (n > 0) {
+            validity.resize(n);
+            memset(&validity[0], UNKNOWN, n);
+        }
     }
 }
 

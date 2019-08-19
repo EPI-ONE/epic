@@ -77,6 +77,7 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     CAT->SetFileCapacities(8000, 2);
 
     std::vector<RecordPtr> blocks;
+    std::vector<std::vector<RecordPtr>> levelsets;
 
     constexpr int nLvs = 20;
 
@@ -107,22 +108,64 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
         }
 
         ASSERT_TRUE(CAT->StoreLevelSet(lvs));
+        levelsets.emplace_back(std::move(lvs));
     }
 
     // Inspect inserted records
     for (size_t i = 0; i < blocks.size(); ++i) {
-        auto blk = CAT->GetRecord(blocks[i]->cblock->GetHash());
-        ASSERT_NE(blk->cblock, nullptr);
-        ASSERT_EQ(*blocks[i], *blk);
+        const auto& h = blocks[i]->cblock->GetHash();
+
+        // without cblock
+        auto rec = CAT->GetRecord(h, false);
+        ASSERT_TRUE(rec);
+        ASSERT_FALSE(rec->cblock);
+        ASSERT_EQ(*blocks[i], *rec);
+
+        // with cblock
+        auto rec_blk = CAT->GetRecord(h);
+        ASSERT_TRUE(rec_blk->cblock);
+        ASSERT_EQ(*blocks[i], *rec_blk);
     }
 
-    // Recover level sets in batch
-    auto vs = CAT->GetRawLevelSetBetween(0, nLvs - 1);
-    ASSERT_FALSE(vs.empty());
+    // Recover level sets in blocks in batch
+    auto vs_blks = CAT->GetRawLevelSetBetween(0, nLvs - 1);
+    ASSERT_FALSE(vs_blks.empty());
 
     for (size_t i = 0; i < blocks.size(); ++i) {
-        Block recovered(vs);
-        ASSERT_EQ(*blocks[i]->cblock, recovered);
+        Block recovered_blk(vs_blks);
+        ASSERT_EQ(*blocks[i]->cblock, recovered_blk);
+    }
+
+    // Recover level sets in recs in batch
+    auto vs_recs = CAT->GetRawLevelSetBetween(0, nLvs - 1, file::FileType::REC);
+    ASSERT_FALSE(vs_recs.empty());
+
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        NodeRecord recovered_rec(vs_recs);
+        ASSERT_EQ(*blocks[i], recovered_rec);
+    }
+
+    // Recover single level set
+    const auto& lvs = levelsets.back();
+    auto height     = lvs.front()->height;
+
+    auto recovered_blks      = CAT->GetLevelSetBlksAt(height);
+    auto recovered_recs_blks = CAT->GetLevelSetRecsAt(height);
+    auto recovered_recs      = CAT->GetLevelSetRecsAt(height, false);
+
+    ASSERT_EQ(recovered_blks.size(), lvs.size());
+    ASSERT_EQ(recovered_recs_blks.size(), lvs.size());
+    ASSERT_EQ(recovered_recs.size(), lvs.size());
+
+    ASSERT_TRUE(recovered_recs_blks[0]->snapshot);
+    ASSERT_FALSE(recovered_recs_blks[0]->snapshot->GetLevelSet().empty());
+    ASSERT_TRUE(recovered_recs_blks[0]->snapshot->GetLevelSet()[0].lock());
+
+    for (size_t i = 0; i < lvs.size(); ++i) {
+        ASSERT_TRUE(recovered_recs_blks[i]->cblock);
+        ASSERT_EQ(*lvs[i]->cblock, *recovered_blks[i]);
+        ASSERT_EQ(*lvs[i], *recovered_recs_blks[i]);
+        ASSERT_EQ(*lvs[i], *recovered_recs[i]);
     }
 
     // update records

@@ -3,7 +3,7 @@
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
                                                         const GetBlockRequest* request,
                                                         GetBlockResponse* reply) {
-    auto record   = DAG->GetState(ToHash(request->hash()));
+    auto record = DAG->GetMainChainRecord(ToHash(request->hash()));
     if (!record) {
         return grpc::Status::OK;
     }
@@ -39,7 +39,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerConte
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
                                                                     const GetNewMilestoneSinceRequest* request,
                                                                     GetNewMilestoneSinceResponse* reply) {
-    auto record           = DAG->GetState(ToHash(request->hash()));
+    auto record = DAG->GetState(ToHash(request->hash()));
     if (!record) {
         return grpc::Status::OK;
     }

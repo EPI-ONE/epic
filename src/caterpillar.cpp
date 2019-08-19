@@ -98,6 +98,12 @@ std::vector<RecordPtr> Caterpillar::GetLevelSetRecsAt(size_t height, bool withBl
         result.emplace_back(std::make_shared<NodeRecord>(vs));
     }
 
+    assert(!result.empty());
+    const auto& ms = result[0];
+    for (const auto& b : result) {
+        ms->snapshot->PushBlkToLvs(b);
+    }
+
     // Get cblocks
     if (withBlock) {
         auto levelSetBlocks = GetLevelSetBlksAt(height);

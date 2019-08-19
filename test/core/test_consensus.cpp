@@ -97,13 +97,13 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (arrayMs[i]->IsDiffTransition()) {
-            ASSERT_TRUE(arrayMs[i - 1]->lastUpdateTime < arrayMs[i]->lastUpdateTime);
+            ASSERT_LT(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
 
         } else if (i > 1 && ((i + 1) % GetParams().timeInterval) != 1) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
 
             if (!arrayMs[i - 1]->IsDiffTransition()) {
-                ASSERT_TRUE(arrayMs[i - 1]->GetTxnsCounter() <= arrayMs[i]->GetTxnsCounter());
+                ASSERT_LE(arrayMs[i - 1]->GetTxnsCounter(), arrayMs[i]->GetTxnsCounter());
             }
         }
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);

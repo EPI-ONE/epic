@@ -202,7 +202,7 @@ public:
                 ChainState cs{};
                 ::Deserialize(s, cs);
                 snapshot = std::make_shared<ChainState>(std::move(cs));
-                if (snapshot->IsDiffTransition()) {
+                if (snapshot->IsDiffTransition() && cblock) {
                     snapshot->lastUpdateTime = cblock->GetTime();
                 }
             }
