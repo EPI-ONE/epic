@@ -124,7 +124,24 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
     if (b.minerChainHeight <= GetParams().sortitionThreshold) {
         if (b.cblock->HasTransaction()) {
-            memset(&b.validity[0], NodeRecord::Validity::INVALID, b.validity.size());
+            if (b.cblock->IsRegistration()) {
+                if (b.cblock->GetTransactionSize() > 1) { // reg and has more than one txns
+                    memset(&b.validity[1], NodeRecord::Validity::INVALID, b.validity.size() - 1);
+                    spdlog::info("Does not reach height of partition threshold but contains transactions other than "
+                                 "registration [{}]",
+                                 std::to_string(b.cblock->GetHash()));
+                    return;
+                } else { // reg and has only one txn
+                    return;
+                }
+            } else { // not reg and has txns
+                memset(&b.validity[0], NodeRecord::Validity::INVALID, b.validity.size());
+                spdlog::info("Does not reach height of partition threshold but contains non-reg transactions [{}]",
+                             std::to_string(b.cblock->GetHash()));
+                return;
+            }
+        } else { // does not have txns
+            return;
         }
     }
 

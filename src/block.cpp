@@ -219,6 +219,10 @@ std::vector<ConstTxPtr> Block::GetTransactions() {
     return transactions_;
 }
 
+size_t Block::GetTransactionSize() const {
+    return transactions_.size();
+}
+
 void Block::SetDifficultyTarget(uint32_t target) {
     diffTarget_ = target;
 }

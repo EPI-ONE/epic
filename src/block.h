@@ -68,6 +68,7 @@ public:
     bool HasTransaction() const;
     const std::vector<ConstTxPtr>& GetTransactions() const;
     std::vector<ConstTxPtr> GetTransactions();
+    size_t GetTransactionSize() const;
 
     std::vector<uint256> GetTxHashes() const;
     uint256 ComputeMerkleRoot(bool* mutated = nullptr) const;

@@ -49,8 +49,10 @@ public:
 
     bool IsValidDistance(Chain* c, NodeRecord& rec, const arith_uint256& msHashRate) {
         c->CheckTxPartition(rec, msHashRate);
-        if (rec.validity[0] == NodeRecord::Validity::INVALID) {
-            return false;
+        for (size_t i = 0; i < rec.validity.size(); ++i) {
+            if (rec.validity[i] == NodeRecord::Validity::INVALID) {
+                return false;
+            }
         }
 
         return true;
@@ -308,26 +310,58 @@ TEST_F(TestChainVerification, ChainForking) {
     ASSERT_EQ(*split, *fork.GetChainHead());
 }
 
-TEST_F(TestChainVerification, InvalidDistance) {
-    // Test for block with valid distance has been done in the above test case VerifyTx.
-    // Here we only test for malicious blocks.
-
+TEST_F(TestChainVerification, CheckPartition) {
     Chain c{};
-
-    // Block with transaction but minerChainHeight not reached sortitionThreshold
     auto ghash = GENESIS.GetHash();
+
+    // Invalid registration block containing more than one txns
+    Block reg_inv{GetParams().version,
+                  ghash,
+                  ghash,
+                  ghash,
+                  uint256(),
+                  fac.NextTime(),
+                  GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+                  0};
+    reg_inv.AddTransaction(Transaction(CKeyID()));
+    reg_inv.AddTransaction(fac.CreateTx(1, 1));
+    NodeRecord reg_inv_rec{reg_inv};
+    reg_inv_rec.minerChainHeight = 1;
+    EXPECT_FALSE(IsValidDistance(&c, reg_inv_rec, GENESIS_RECORD.snapshot->hashRate));
+
+    // Valid registration block
+    Block reg{GetParams().version,
+              ghash,
+              ghash,
+              ghash,
+              uint256(),
+              fac.NextTime(),
+              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+              0};
+    reg.AddTransaction(Transaction(CKeyID()));
+    NodeRecord reg_rec{reg};
+    reg_rec.minerChainHeight = 1;
+    AddToHistory(&c, std::make_shared<NodeRecord>(reg_rec));
+    EXPECT_TRUE(IsValidDistance(&c, reg_rec, GENESIS_RECORD.snapshot->hashRate));
+
+    // Malicious blocks
+    // Block with transaction but minerChainHeight not reached sortitionThreshold
     Block b1{GetParams().version,
              ghash,
-             ghash,
+             reg.GetHash(),
              ghash,
              uint256(),
              fac.NextTime(),
              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
              0};
+    Transaction tx = fac.CreateTx(1, 1);
+    b1.AddTransaction(tx);
     NodeRecord rec1{b1};
-    rec1.minerChainHeight = 1;
+    rec1.minerChainHeight = 2;
     AddToHistory(&c, std::make_shared<NodeRecord>(rec1));
+    EXPECT_FALSE(IsValidDistance(&c, rec1, GENESIS_RECORD.snapshot->hashRate));
 
+    // Block with invalid distance
     Block b2{GetParams().version,
              ghash,
              b1.GetHash(),
@@ -336,25 +370,9 @@ TEST_F(TestChainVerification, InvalidDistance) {
              fac.NextTime(),
              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
              0};
-    Transaction tx = fac.CreateTx(1, 1);
-    b2.AddTransaction(tx);
-    NodeRecord rec2{b2};
-    rec2.minerChainHeight = 2;
-    AddToHistory(&c, std::make_shared<NodeRecord>(rec2));
-    EXPECT_FALSE(IsValidDistance(&c, rec2, GENESIS_RECORD.snapshot->hashRate));
-
-    // Block with invalid distance
-    Block b3{GetParams().version,
-             ghash,
-             b2.GetHash(),
-             ghash,
-             uint256(),
-             fac.NextTime(),
-             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
-             0};
     Transaction tx1 = fac.CreateTx(1, 1);
-    b3.AddTransaction(tx1);
-    NodeRecord rec3{b3};
-    rec3.minerChainHeight = 3;
-    EXPECT_FALSE(IsValidDistance(&c, rec3, 1000000000));
+    b2.AddTransaction(tx1);
+    NodeRecord rec2{b2};
+    rec2.minerChainHeight = 3;
+    EXPECT_FALSE(IsValidDistance(&c, rec2, 1000000000));
 }

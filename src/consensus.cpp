@@ -148,7 +148,7 @@ NodeRecord::NodeRecord() : minerChainHeight(0), optimalStorageSize_(0) {}
 
 NodeRecord::NodeRecord(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
     if (cblock) {
-        auto n = cblock->GetTransactions().size();
+        auto n = cblock->GetTransactionSize();
         if (n > 0) {
             validity.resize(n);
             memset(&validity[0], UNKNOWN, n);
@@ -158,7 +158,7 @@ NodeRecord::NodeRecord(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight
 
 NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), optimalStorageSize_(0) {
     cblock = std::make_shared<Block>(blk);
-    auto n = cblock->GetTransactions().size();
+    auto n = cblock->GetTransactionSize();
     if (n > 0) {
         validity.resize(n);
         memset(&validity[0], UNKNOWN, n);
@@ -167,7 +167,7 @@ NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), optimalStorageSi
 
 NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), optimalStorageSize_(0) {
     cblock = std::make_shared<Block>(std::move(blk));
-    auto n = cblock->GetTransactions().size();
+    auto n = cblock->GetTransactionSize();
     if (n > 0) {
         validity.resize(n);
         memset(&validity[0], UNKNOWN, n);

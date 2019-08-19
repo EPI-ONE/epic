@@ -178,14 +178,14 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2, file:
 
     std::optional<FilePos> leftPos = {}, rightPos = {};
 
-    if (fType == file::FileType::BLK) { // level set of NodeRecord
+    if (fType == file::FileType::BLK) {
         if (left) {
             leftPos = left->first;
         }
         if (right) {
             rightPos = right->first;
         }
-    } else if (fType == file::FileType::REC) { // level set of Block
+    } else if (fType == file::FileType::REC) {
         if (left) {
             leftPos = left->second;
         }
@@ -193,7 +193,7 @@ VStream Caterpillar::GetRawLevelSetBetween(size_t height1, size_t height2, file:
             rightPos = right->second;
         }
     } else {
-        spdlog::error("Wrong argument: the third argument can only be file::FileType::BLK or file::FileType::REC.");
+        spdlog::error("Wrong argument: the third argument can only be either file::FileType::BLK or file::FileType::REC.");
         return {};
     }
 
