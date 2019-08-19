@@ -81,12 +81,8 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     arrayMs[0] = GENESIS_RECORD.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
-    time_t timeRec = GENESIS.GetTime();
-
     for (size_t i = 1; i < HEIGHT; i++) {
         auto rec = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
-
-        timeRec = rec->cblock->GetTime();
 
         // Generate some valid txns
         auto s = (i - 1) % GetParams().blockCapacity + 1;

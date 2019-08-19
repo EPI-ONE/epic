@@ -33,8 +33,6 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
         return (NodeRecord::INVALID * validity.size() - sum) / (NodeRecord::INVALID - NodeRecord::VALID);
     };
 
-    static const double alpha = 0.2; // smoothing parameter for exponential moving average
-
     if (!lastUpdateTime) {
         // Traverse back to the last difficulty update point to recover
         // necessary info for updating difficulty.
@@ -78,13 +76,14 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
         nBlkCounter_ += lvs_.size();
     }
 
+    // Exponential moving average
+    static const double alpha = 0.8; // smoothing parameter
+    hashRate =
+        hashRate * alpha + ((height - 1) % GetParams().interval + 1) * GetMsDifficulty() / timespan * (1 - alpha);
+
     if (!IsDiffTransition()) {
-        hashRate = ((height + 1) % GetParams().interval) * GetMsDifficulty() / timespan;
         return;
     }
-
-    // Exponential moving average
-    hashRate = hashRate * alpha + GetParams().interval * GetMsDifficulty() / timespan * (1 - alpha);
 
     milestoneTarget = milestoneTarget / targetTimespan * timespan;
     milestoneTarget.Round(sizeof(uint32_t));
