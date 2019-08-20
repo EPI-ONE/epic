@@ -4,8 +4,6 @@
 #include "file_utils.h"
 #include "test_env.h"
 
-#include <fstream>
-#include <iostream>
 #include <string>
 
 class TestFileStorage : public testing::Test {
@@ -18,8 +16,7 @@ public:
     }
 
     void TearDown() override {
-        std::string cmd = "rm -r " + prefix;
-        system(cmd.c_str());
+        EpicTestEnvironment::TearDownDAG(prefix);
     }
 };
 
@@ -71,9 +68,7 @@ TEST_F(TestFileStorage, basic_read_write) {
 }
 
 TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
-    std::ostringstream os;
-    os << time(nullptr);
-    CAT = std::make_unique<Caterpillar>(prefix + os.str());
+    EpicTestEnvironment::SetUpDAG(prefix);
     CAT->SetFileCapacities(8000, 2);
 
     std::vector<RecordPtr> blocks;
@@ -82,24 +77,24 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     constexpr int nLvs = 20;
 
     // Consturct level sets
-    for (int i = 0; i < nLvs; ++i) {
+    for (int i = 1; i <= nLvs; ++i) {
         int size = fac.GetRand() % 10;
 
         std::vector<RecordPtr> lvs;
         lvs.reserve(size);
 
         // Construct milestone
-        auto ms = fac.CreateRecordPtr(1, 1, true);
-        fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, ms);
-        ms->isMilestone      = true;
-        ms->snapshot->height = i;
-        ms->height           = i;
+        auto ms      = fac.CreateRecordPtr(1, 1, true);
+        auto prev_ms = levelsets.empty() ? GENESIS_RECORD : *levelsets.back()[0];
+        fac.CreateChainStatePtr(prev_ms.snapshot, ms);
+        ms->isMilestone = true;
+        ms->height      = i;
 
         lvs.push_back(ms);
         blocks.push_back(ms);
 
         // Construct blocks in the level set
-        for (int i = 1; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
             auto b         = fac.CreateRecordPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
             b->isMilestone = false;
             b->height      = ms->height;
@@ -112,37 +107,37 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     }
 
     // Inspect inserted records
-    for (size_t i = 0; i < blocks.size(); ++i) {
-        const auto& h = blocks[i]->cblock->GetHash();
+    for (auto& block : blocks) {
+        const auto& h = block->cblock->GetHash();
 
         // without cblock
         auto rec = CAT->GetRecord(h, false);
         ASSERT_TRUE(rec);
         ASSERT_FALSE(rec->cblock);
-        ASSERT_EQ(*blocks[i], *rec);
+        ASSERT_EQ(*block, *rec);
 
         // with cblock
         auto rec_blk = CAT->GetRecord(h);
         ASSERT_TRUE(rec_blk->cblock);
-        ASSERT_EQ(*blocks[i], *rec_blk);
+        ASSERT_EQ(*block, *rec_blk);
     }
 
     // Recover level sets in blocks in batch
-    auto vs_blks = CAT->GetRawLevelSetBetween(0, nLvs - 1);
+    auto vs_blks = CAT->GetRawLevelSetBetween(1, nLvs);
     ASSERT_FALSE(vs_blks.empty());
 
-    for (size_t i = 0; i < blocks.size(); ++i) {
+    for (auto& block : blocks) {
         Block recovered_blk(vs_blks);
-        ASSERT_EQ(*blocks[i]->cblock, recovered_blk);
+        ASSERT_EQ(*block->cblock, recovered_blk);
     }
 
     // Recover level sets in recs in batch
-    auto vs_recs = CAT->GetRawLevelSetBetween(0, nLvs - 1, file::FileType::REC);
+    auto vs_recs = CAT->GetRawLevelSetBetween(1, nLvs, file::FileType::REC);
     ASSERT_FALSE(vs_recs.empty());
 
-    for (size_t i = 0; i < blocks.size(); ++i) {
+    for (auto& block : blocks) {
         NodeRecord recovered_rec(vs_recs);
-        ASSERT_EQ(*blocks[i], recovered_rec);
+        ASSERT_EQ(*block, recovered_rec);
     }
 
     // Recover single level set
@@ -177,5 +172,4 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     }
     auto newout = CAT->GetRecord(blocks[0]->cblock->GetHash());
     EXPECT_EQ(copyRec, *newout);
-    CAT.reset();
 }

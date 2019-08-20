@@ -115,7 +115,8 @@ public:
         return chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
                hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
-               blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
+               blockTarget.GetCompact()     == rhs.blockTarget.GetCompact() &&
+               (!lastUpdateTime || !rhs.lastUpdateTime) ? true : lastUpdateTime == rhs.lastUpdateTime;
         // clang-format on
     }
 

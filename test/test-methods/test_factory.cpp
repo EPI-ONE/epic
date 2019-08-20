@@ -87,19 +87,6 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
     rec.cumulativeReward = Coin(GetRand());
 
     if (GetRand() % 2) {
-        // Link a ms instance
-        auto cs =
-            std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), arith_uint256(GetRand()),
-                                         arith_uint256(GetRand()), GetRand(), NextTime(), std::vector<RecordWPtr>{});
-        rec.LinkChainState(cs);
-
-        if (GetRand() % 2) {
-            // Make it a fake milestone
-            rec.isMilestone = false;
-        }
-    }
-
-    if (GetRand() % 2) {
         rec.validity.push_back(NodeRecord::VALID);
     } else {
         rec.validity.push_back(NodeRecord::INVALID);
