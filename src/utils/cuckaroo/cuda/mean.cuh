@@ -20,7 +20,7 @@ extern inline int gpuAssert(cudaError_t code, char* file, int line, bool abort =
     int device_id;
     cudaGetDevice(&device_id);
     if (code != cudaSuccess) {
-        spdlog::info("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+        spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
 
         cudaDeviceReset();
         if (abort)

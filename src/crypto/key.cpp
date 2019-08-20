@@ -5,10 +5,10 @@
 
 #include "key.h"
 #include "base58.h"
+#include "big_uint.h"
 #include "cleanse.h"
 #include "common.h"
 #include "hash.h"
-#include "uint256.h"
 
 #include <climits>
 #include <cmath>

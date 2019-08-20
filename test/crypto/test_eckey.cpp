@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "base58.h"
+#include "big_uint.h"
 #include "hash.h"
 #include "key.h"
 #include "tinyformat.h"
-#include "uint256.h"
 #include "utilstrencodings.h"
 
 class TestECKey : public testing::Test {

@@ -1,10 +1,10 @@
 #ifndef __SRC_CRYPTO_HASH__
 #define __SRC_CRYPTO_HASH__
 
+#include "big_uint.h"
 #include "blake2b.h"
 #include "sha256.h"
 #include "stream.h"
-#include "uint256.h"
 
 #include <vector>
 
@@ -12,13 +12,13 @@
  * R: number of hashing rounds:
  * 1 = single hash
  * 2 = double hash */
-template <std::size_t R, typename T>
-inline uint256 HashSHA2(const T* pin, size_t inlen) {
+template <std::size_t R>
+inline uint256 HashSHA2(const void* pin, size_t inlen) {
     static const unsigned char emptyByte[0] = {};
     uint256 result;
     CSHA256 sha;
 
-    sha.Write((pin == pin + inlen) ? emptyByte : (const unsigned char*) pin, inlen);
+    sha.Write(inlen ? (const unsigned char*) pin : emptyByte, inlen);
     sha.Finalize((unsigned char*) &result);
 
 #pragma clang loop unroll_count(R)
@@ -38,8 +38,8 @@ uint256 HashSHA2(const VStream& data) {
 
 /* Compute the 160-bit hash an object
  * NOTE: R means the same as with uint256 Hash */
-template <std::size_t R, typename T>
-inline uint160 Hash160(const T* pin, size_t inlen) {
+template <std::size_t R>
+inline uint160 Hash160(const void* pin, size_t inlen) {
     return HashSHA2<R>(pin, inlen).GetUint160();
 }
 
@@ -54,8 +54,8 @@ const uint256& GetDoubleZeroHash();
 static constexpr uint32_t SIZE = 32;
 } // namespace Hash
 
-template <unsigned int OUTPUT_SIZE, typename T>
-inline base_blob<OUTPUT_SIZE> HashBLAKE2(const T* pin, size_t inlen) {
+template <unsigned int OUTPUT_SIZE>
+inline base_blob<OUTPUT_SIZE> HashBLAKE2(const void* pin, size_t inlen) {
     base_blob<OUTPUT_SIZE> result;
     HashBLAKE2((char*) pin, inlen, result.begin(), OUTPUT_SIZE / 8);
     return result;

@@ -3,7 +3,7 @@
 
 #include <unordered_set>
 
-#include "uint256.h"
+#include "big_uint.h"
 
 template <typename T>
 class Increment {

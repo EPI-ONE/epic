@@ -7,10 +7,10 @@
 #ifndef BITCOIN_KEY_H
 #define BITCOIN_KEY_H
 
+#include "big_uint.h"
 #include "pubkey.h"
 #include "secure.h"
 #include "serialize.h"
-#include "uint256.h"
 
 #include <optional>
 #include <stdexcept>

@@ -35,12 +35,12 @@ TEST_F(TestHash, SHA256) {
     EXPECT_EQ(expected, result);
 
     // single hash
-    uint256 hash1   = HashSHA2<1>(data);
+    uint256 hash1     = HashSHA2<1>(data);
     uint256 expected1 = uintS<256>("d76982e0bbffbd17ad548d2217c8c9eb0eabe1bd82db5e6afcbe64efc6da6db9");
     EXPECT_EQ(expected1, hash1);
 
     // double hash
-    uint256 hash2   = HashSHA2<2>(data);
+    uint256 hash2     = HashSHA2<2>(data);
     uint256 expected2 = uintS<256>("083ba4e5288fd3140213a5dca517b9b0a8d1bf2084c59bc88e5eb6fbe15a89e5");
     EXPECT_EQ(expected2, hash2);
 }

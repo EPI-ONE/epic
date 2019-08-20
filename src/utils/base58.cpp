@@ -4,8 +4,8 @@
 
 #include "base58.h"
 
+#include "big_uint.h"
 #include "hash.h"
-#include "uint256.h"
 #include "utilstrencodings.h"
 
 #include <cassert>

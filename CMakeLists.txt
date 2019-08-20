@@ -171,7 +171,6 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
 
     # cmake flags
     set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    string(APPEND CMAKE_CXX_FLAGS_DEBUG ${EXTRA_CUDA_DEBUG_FLAGS})
 
     # nvcc flags
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)
