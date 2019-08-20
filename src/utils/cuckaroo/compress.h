@@ -48,8 +48,7 @@ public:
     }
 
     ~compressor() {
-        if (!sharedmem)
-            delete[] nodes;
+        delete[] nodes;
     }
 
     uint64_t bytes() {

@@ -94,6 +94,8 @@ public:
             delete[] links;
         }
         delete[] sols;
+        delete compressu;
+        delete compressv;
     }
 
     // total size of new-operated data, excludes sols and visited bitmap of maxEdges bits

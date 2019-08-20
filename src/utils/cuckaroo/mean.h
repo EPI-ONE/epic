@@ -634,6 +634,10 @@ public:
             return nullptr;
         return newobj;
     }
+
+    void operator delete(void* ptr) noexcept {
+        free(ptr);
+    }
 #endif
 
     void setheader(const VStream& header);

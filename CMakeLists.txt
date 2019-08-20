@@ -10,8 +10,7 @@ add_compile_options(-Wall -Wthread-safety)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(DEFAULT_DEBUG_FLAGS "-O0 -g -fstandalone-debug -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS_DEBUG ${DEFAULT_DEBUG_FLAGS})
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "-pthread -march=native $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -172,13 +171,10 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
 
     # cmake flags
     set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-    set(EXTRA_CUDA_DEBUG_FLAGS " -asan-force-dynamic-shadow=true")
     string(APPEND CMAKE_CXX_FLAGS_DEBUG ${EXTRA_CUDA_DEBUG_FLAGS})
 
     # nvcc flags
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)
-    list(APPEND CUDA_NVCC_FLAGS_RELEASE -O3)
-    list(APPEND CUDA_NVCC_FLAGS_DEBUG -G)
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_35,code=sm_35) # default
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_52,code=sm_52) # maxwell
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_60,code=sm_60) # pascal
@@ -188,10 +184,9 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     file(GLOB sources "${CUDA_DIR}/*.cu")
     file(GLOB headers "${CUDA_DIR}/*.cuh")
     cuda_add_library(epiccuda STATIC ${sources} ${headers})
+    target_compile_options(epiccuda PRIVATE -asan-force-dynamic-shadow=true)
     set_target_properties(epiccuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     target_link_libraries(epiccore epiccuda)
-
-    set(CMAKE_CXX_FLAGS_DEBUG ${DEFAULT_DEBUG_FLAGS})
 else()
     message(STATUS "No CUDA support. Using CPU miner.")
 endif()
