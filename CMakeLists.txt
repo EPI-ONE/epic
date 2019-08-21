@@ -10,7 +10,11 @@ add_compile_options(-Wall -Wthread-safety)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug ")
+option(ADDRESS_DETECT  "sanitizer flag" ON)
+if (ADDRESS-DETECT)
+    STRING(APPEND CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -fno-omit-frame-pointer")
+endif()
 set(CMAKE_CXX_FLAGS "-pthread -march=native $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
