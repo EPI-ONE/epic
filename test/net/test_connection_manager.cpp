@@ -99,8 +99,8 @@ TEST_F(TestConnectionManager, Disconnect) {
         std::bind(&TestConnectionManager::TestDisconnectCallback, this, std::placeholders::_1));
 
     ASSERT_TRUE(server.Bind(0x7f000001));
-    ASSERT_TRUE(server.Listen(51234));
-    ASSERT_TRUE(client.Connect(0x7f000001, 51234));
+    ASSERT_TRUE(server.Listen(27877));
+    ASSERT_TRUE(client.Connect(0x7f000001, 27877));
 
     usleep(50000);
     EXPECT_EQ(test_connect_run, true);

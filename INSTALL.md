@@ -64,7 +64,7 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
 
     ```bash
     sudo yum install llvm-toolset-7 
-    scl enable llvm-toolset-7
+    scl enable llvm-toolset-7 bash
     ```
 
 3. (Optional) for `libsecp256k1`
@@ -158,7 +158,7 @@ brew install openssl@1.1
 export OPENSSL_ROOT_DIR="/usr/local/Cellar/openssl@1.1/1.1.1c"
 ```
 
-For recent version, you need to install it from source on linux.On CentOS you can just try your local openssl first
+For recent version, you need to install it from source on linux.
 
 ```bash
 git clone -b OpenSSL_1_1_1c https://github.com/openssl/openssl.git
@@ -178,7 +178,7 @@ make -j && sudo make install
 #### libevent
 
 ```bash
-git clone -b release-2.1.8-stable --single-branch https://github.com/libevent/libevent.git
+git clone -b release-2.1.11-stable --single-branch https://github.com/libevent/libevent.git
 cd libevent
 mkdir build && cd build
 cmake ..
@@ -203,7 +203,7 @@ make -j && sudo make install
 `protobuf` version 3.7.0 can be installed simply via brew on Mac
 
 ```bash
-brew install protobuf
+brew install protobuf@3.7
 ```
 
 For recent version, you need to install it from srouce on linux. 

@@ -1,6 +1,7 @@
 # epic
 
-[![Linux/Mac Build Status](https://travis-ci.org/epi-one/epic.svg?branch=master)](https://travis-ci.org/epi-one/epic)
+[![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
+[![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=travis-190&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
 
 Epic is a pow chain that achives an order of magnitude improvement on the throughput without sacrificing the security and decentralization.
 
@@ -28,7 +29,7 @@ Builds on several esisting projects:
     - [cxxopts v2.0.0](https://github.com/jarro2783/cxxopts)
     - [cpptoml v0.1.1](https://github.com/skystrife/cpptoml)
     - [spdlog v1.3.1](https://github.com/gabime/spdlog): header file only. You may customize how to use it by editing the default [config.toml](./config.toml) file.
-
+********
 - The following need to be installed on your system:
     - `openssl` version 1.1.1c
     - `libsecp256k1`
@@ -58,13 +59,13 @@ make -j
 
 ### GPU mining
 
-   The project is enabled with CPU mining by default, if no CUDA installation found on the system.
-   It compiles the CUDA code with NVCC if CUDA is found, and GPU mining is then enabled automatically.
-   To disable GPU mining at all, add the flag `-DEPIC_ENABLE_CUDA=OFF` to the `cmake` command before compiling the codes.
+The project is enabled with CPU mining by default, if no CUDA installation found on the system.
+It compiles the CUDA code with NVCC if CUDA is found, and GPU mining is then enabled automatically.
+To disable GPU mining at all, add the flag `-DEPIC_ENABLE_CUDA=OFF` to the `cmake` command before compiling the codes.
 
-   If you are experiencing the following runtime error: `GPUassert(2): out of memory <EPIC PATH>/src/miner.h 32` while you do have adequate GPU memory, set the following shell environment variable:
+If you are experiencing the following runtime error: `GPUassert(2): out of memory <EPIC PATH>/src/miner.h 32` while you do have adequate GPU memory, set the following shell environment variable:
 
 
 ``` shell
-    $ export ASAN_OPTIONS="protect_shadow_gap=0"
+$ export ASAN_OPTIONS="protect_shadow_gap=0"
 ```

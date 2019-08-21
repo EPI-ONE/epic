@@ -1,0 +1,112 @@
+language: cpp
+sudo: required
+
+compiler:
+  - clang
+
+env:
+  - BUILD_LIB_LPATH=$HOME/build-l-lib  BUILD_LIB_MPATH=$HOME/build-m-lib EPIC_PATH=$HOME/build/EPI-ONE/epic
+
+branches:
+  only:
+    - master
+
+matrix:
+  allow_failures:
+    - os: osx
+
+  include:
+    - os: linux
+      dist: bionic
+      addons:
+        apt:
+          sources:
+            - ubuntu-tool-chain-r-test
+          packages:
+            - autoconf
+            - libtool
+            - pkg-config
+            - lcov
+            - llvm
+      cache:
+        directories:
+          - $BUILD_LIB_LPATH
+      before_install:
+        - ls
+        - clang -v
+        - pwd
+        - sudo ln -s /usr/local/clang-7.0.0/bin/clang++ /usr/bin/clang++
+        - sudo ln -s /usr/local/clang-7.0.0/bin/clang /usr/bin/clang
+        - echo $BUILD_LIB_LPATH
+        - echo $EPIC_PATH
+        - cd $BUILD_LIB_LPATH
+      after_success:
+        - gcov --version
+        - cd $EPIC_PATH
+        - pip install --user cpp-coveralls
+        - coveralls --help
+        - coveralls --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/spdlog/.*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
+        - rm ~/.ssh/id_rsa
+        - openssl aes-256-cbc -K $encrypted_be909093e248_key -iv $encrypted_be909093e248_iv -in id_rsa.enc -out 123 -d
+        - cp 123 ~/.ssh/id_rsa
+        - chmod 600 ~/.ssh/id_rsa
+        - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB021.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && git checkout travis-190 && ./ci/deploy-build.sh"
+        - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB024.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && git checkout travis-190 && ./ci/deploy-build.sh"
+        - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB028.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && git checkout travis-190 && ./ci/deploy-build.sh"
+
+
+    - os: osx
+      osx_image: xcode11
+      addons:
+        homebrew:
+          packages:
+            - autoconf
+            - automake
+            - libtool
+            - llvm
+      cache:
+        directories:
+         - $BUILD_LIB_MPATH
+      before_install:
+        - export PATH="/usr/local/opt/llvm/bin:$PATH"
+        - export LDFLAGS="-L/usr/local/opt/llvm/lib"
+        - export CXXFLAGS="-I/usr/local/opt/llvm/include"
+        - export CC=clang && export CXX=clang++ &&  CXX_FOR_BUILD=clang++ && CC_FOR_BUILD=clang
+        - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+        - export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+        - sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+        - cd $BUILD_LIB_MPATH
+
+install:
+  - clang -v
+  - pwd
+  - ls /usr/local/lib
+  - ls
+  - $EPIC_PATH/ci/install-cmake.sh
+  - export PATH="/usr/local/bin:$PATH"
+  - cmake --version
+  - which cmake
+  - $EPIC_PATH/ci/install-openssl.sh
+  - $EPIC_PATH/ci/install-secp256k1.sh
+  - $EPIC_PATH/ci/install-libevent.sh
+  - $EPIC_PATH/ci/install-googletest.sh
+  - $EPIC_PATH/ci/install-protobuf.sh
+  - $EPIC_PATH/ci/install-grpc.sh
+  - $EPIC_PATH/ci/install-rocksdb.sh
+  - ls
+
+script:
+  - ls /usr/local/lib
+  - ls -a
+  - cd $EPIC_PATH
+  - pwd
+  - mkdir build && cd build
+  - cmake --version
+  - which cmake
+  - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
+  - make -j2
+  - ./../bin/epictest --gtest_filter="-TestTrimmer*:TestMiner.SolveCuckaroo*"
+
+notifications:
+  slack:
+    secure: TchXC9ZSZht2ViUBPNuWzXMtWWizPTEKckDApPHsU6WyidrsPcwBZ8YsEaTafzHrVTrQNq57PPw9K1+BHKHBbCrlx8iz4w78Bv7yEmoaVN7RyM5fvkVVVFhrcGdbG2nM3FdBdwxnikwtqFa6TC/RfszJZ9RV14Ry70y9AkEKRbTAJMiiTWhzf5BA2TUzSAHFF5ApC3ePTi+EGV8284QTe9kqrWQgHZvaG1M6GEk34+eDAxQfK8dBMiYi5bpP7ZdkU3273N9niFaDgrB8SLhRVg6pdbTjo6U/ktEJvh1knqZU97JhCNHZrW0hgucFEOHZz2tkMfVbYm83x7AKFGvMYvWKK4AibwFkutZN1aFkMBRP6qxUR4W2bFCogWsDgEy2QFowHzPwYRthaCD2hfQFYIzvPBAYbP76faWrq0SlD/9GXBHIvx17GBUHd87HNMa5vjhRq6zTM+q8cDM/MbBqmJSXPYWVAA91jGHPe+d6CPCGtTKL2cW4QtrxRhoKb6JrqctT/ULwGQwsf1XpvIy9MiZ7unYqG7Z2Z1KfpKzH9Xqyye0W6OKZD7SUrfoGDIbNF1q3gLc+Anh95or7gClM2RW4CSXGal30S5uhx9sJjoNZylkJk4gKQlPRkLyxIR2JYGUk4zdhEri0ajRRDhMSuGoXLpHrH53VZ2+4OsimlcE=
