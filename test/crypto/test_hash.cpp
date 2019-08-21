@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "hash.h"
-#include "mean.h"
 #include "sha256.h"
 #include "stream.h"
 

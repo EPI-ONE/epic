@@ -69,3 +69,10 @@
    The project is enabled with CPU mining by default, if no CUDA installation found on the system.
    It compiles the CUDA code with NVCC if CUDA is found, and GPU mining is then enabled automatically.
    To disable GPU mining at all, add the flag `-DEPIC_ENABLE_CUDA=OFF` to the `cmake` command before compiling the codes.
+
+   If you are experiencing the following runtime error: `GPUassert(2): out of memory <EPIC PATH>/src/miner.h 32` while you do have adequate GPU memory, set the following shell environment variable:
+
+
+``` shell
+    $ export ASAN_OPTIONS="protect_shadow_gap=0"
+```
