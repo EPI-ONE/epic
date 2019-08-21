@@ -1,9 +1,9 @@
 #include "wallet_store.h"
+#include "big_uint.h"
 #include "file_utils.h"
 #include "key.h"
 #include "stream.h"
 #include "transaction.h"
-#include "uint256.h"
 
 //#include <cstdio>
 #include <fstream>

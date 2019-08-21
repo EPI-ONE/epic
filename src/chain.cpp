@@ -287,7 +287,7 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     regChange.Remove(blkHash, oldRH);
     regChange.Create(blkHash, blkHash);
 
-    return TXOC{{XOR(record.cblock->GetHash(), 0)}, {}};
+    return TXOC{{ComputeUTXOKey(record.cblock->GetHash(), 0)}, {}};
 }
 
 std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
@@ -316,7 +316,7 @@ std::optional<TXOC> Chain::ValidateTx(NodeRecord& record) {
     for (const auto& vin : tx->GetInputs()) {
         const TxOutPoint& outpoint = vin.outpoint;
         // this ensures that $prevOut has not been spent yet
-        auto prevOut = ledger_.FindSpendable(XOR(outpoint.bHash, outpoint.index));
+        auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.index));
 
         if (!prevOut) {
             spdlog::info("Attempting to spend a non-existent or spent output {} [{}]", std::to_string(outpoint),

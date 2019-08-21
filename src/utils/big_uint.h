@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "common.h"
-#include "stream.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template <unsigned int BITS>
@@ -131,8 +130,8 @@ class uint256 : public base_blob<256> {
 public:
     using base_blob::base_blob;
 
-    explicit uint256(VStream& vs) {
-        Deserialize(vs);
+    uint256(const base_blob<256>& b) {
+        memcpy(data, b.begin(), WIDTH);
     }
 
     /** A cheap hash function that just returns 64 bits from the result, it can
@@ -158,8 +157,9 @@ public:
  * This is a separate function because the constructor uint256(const char*) can
  * result in dangerously catching uint256(0).
  */
-inline uint256 uint256S(const char* str) {
-    uint256 rv;
+template <unsigned int BITS>
+inline base_blob<BITS> uintS(const char* str) {
+    base_blob<BITS> rv;
     rv.SetHex(str);
     return rv;
 }
@@ -169,8 +169,9 @@ inline uint256 uint256S(const char* str) {
  * &str) can result in dangerously catching uint256(0) via std::string(const
  * char*).
  */
-inline uint256 uint256S(const std::string& str) {
-    uint256 rv;
+template <unsigned int BITS>
+inline base_blob<BITS> uintS(const std::string& str) {
+    base_blob<BITS> rv;
     rv.SetHex(str);
     return rv;
 }
@@ -180,6 +181,19 @@ template <>
 struct std::hash<uint256> {
     size_t operator()(const uint256& x) const {
         return x.GetCheapHash();
+    }
+};
+
+class uint512 : public base_blob<512> {
+public:
+    using base_blob::base_blob;
+
+    uint512(const base_blob<512>& b) {
+        memcpy(data, b.begin(), WIDTH);
+    }
+
+    std::string to_substr() const {
+        return GetHex().substr(0, 16);
     }
 };
 

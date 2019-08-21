@@ -7,8 +7,8 @@
 #define BITCOIN_ARITH_UINT256_CPP__
 
 #include "arith_uint256.h"
+#include "big_uint.h"
 #include "common.h"
-#include "uint256.h"
 #include "utilstrencodings.h"
 
 template <unsigned int BITS>
@@ -143,7 +143,7 @@ std::string base_uint<BITS>::GetHex() const {
 
 template <unsigned int BITS>
 void base_uint<BITS>::SetHex(const char* psz) {
-    *this = UintToArith256(uint256S(psz));
+    *this = UintToArith256(uintS<256>(psz));
 }
 
 template <unsigned int BITS>

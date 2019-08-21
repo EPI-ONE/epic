@@ -205,7 +205,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     // prepare keys and signature
     auto key     = *DecodeSecret("KySymVGpRJzSKonDu21bSL5QVhXUhH1iU5VFKfXFuAB4w1R9ZiTx");
     auto addr    = key.GetPubKey().GetID();
-    auto hashMsg = uint256S("4de04506f44155e2a59d2e8af4e6e15e9f50f5f0b1dc7a0742021799981180c2");
+    auto hashMsg = uintS<256>("4de04506f44155e2a59d2e8af4e6e15e9f50f5f0b1dc7a0742021799981180c2");
     std::vector<unsigned char> sig;
     key.Sign(hashMsg, sig);
 
@@ -255,7 +255,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     ASSERT_TRUE(bool(txoc));
 
     auto& spent   = txoc->GetSpent();
-    auto spentKey = XOR(b1hash, 0);
+    auto spentKey = ComputeUTXOKey(b1hash, 0);
     ASSERT_EQ(spent.size(), 1);
     ASSERT_EQ(spent.count(spentKey), 1);
 

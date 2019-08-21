@@ -75,7 +75,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         new_block.CalculateHash();
         new_block.SetParents();
         auto outputPoint = new_block.GetTransaction()->GetInputs()[0].outpoint;
-        auto stxokey     = XOR(outputPoint.bHash, outputPoint.index);
+        auto stxokey     = ComputeUTXOKey(outputPoint.bHash, outputPoint.index);
         ASSERT_EQ(stxokey, utxo->GetKey());
 
         std::unordered_map<uint256, UTXOPtr> utxos;

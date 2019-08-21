@@ -117,7 +117,7 @@ Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
 
 void Transaction::FinalizeHash() {
     if (hash_.IsNull()) {
-        hash_ = Hash<1>(VStream(*this));
+        hash_ = HashSHA2<1>(VStream(*this));
     }
 }
 

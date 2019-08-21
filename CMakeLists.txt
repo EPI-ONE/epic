@@ -81,6 +81,8 @@ set(INTERFACE_DIR src/interfaces)
 set(WALLET_DIR src/wallet)
 set(CORE_DIR src)
 set(TOOLS_DIR src/tools)
+set(CUCKAROO_DIR src/utils/cuckaroo)
+set(CUDA_DIR ${CUCKAROO_DIR}/cuda)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
@@ -91,7 +93,7 @@ aux_source_directory(${SUPPORT_DIR} SUPPORT_SRCS)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
 aux_source_directory(${INTERFACE_DIR} INTERFACE_SRCS)
 aux_source_directory(${WALLET_DIR} WALLET_SRCS)
-aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
+aux_source_directory(${CUCKAROO_DIR} CUCKAROO_SRCS)
 
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
@@ -108,6 +110,8 @@ include_directories(src
         ${SUPPORT_DIR}
         ${INTERFACE_DIR}
         ${WALLET_DIR}
+        ${CUCKAROO_DIR}
+        ${CUDA_DIR}
         )
 
 set(SRC_CODE
@@ -122,13 +126,14 @@ set(SRC_CODE
         ${SUPPORT_SRCS}
         ${INTERFACE_SRCS}
         ${WALLET_SRCS}
+        ${CUCKAROO_SRCS}
         )
 
 set(SRC_MAIN src/main.cpp)
 set(SRC_CLIENT_MAIN src/epicc/main.cpp)
 
 # test codes
-set(TEST_METHODS_SRCS test/test-methods)
+set(TEST_METHODS_DIR test/test-methods)
 
 aux_source_directory(test/rpc TEST_RPC_SRCS)
 aux_source_directory(test/net TEST_NET_SRCS)
@@ -137,10 +142,10 @@ aux_source_directory(test/tasm TEST_TASM_SRCS)
 aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 aux_source_directory(test/core TEST_CORE_SRCS)
 aux_source_directory(test/support TEST_SUPPORT_SRCS)
-aux_source_directory(test/test-methods TEST_METHODS_SRCS)
+aux_source_directory(${TEST_METHODS_DIR} TEST_METHODS_SRCS)
 
 include_directories(test
-    ${TEST_METHODS_SRCS}
+    ${TEST_METHODS_DIR}
     )
 
 set(TEST_CODE
@@ -157,18 +162,43 @@ set(TEST_MAIN test/main.cpp)
 
 add_library(epiccore STATIC ${SRC_CODE})
 
-# generate executable
-add_executable(epic  ${SRC_MAIN})
+# Cuda
+option(EPIC_ENABLE_CUDA "Enable GPU mining when possible" ON)
+find_package(CUDA)
+if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
+    enable_language(CUDA)
+    add_compile_definitions(__CUDA_ENABLED__)
 
-add_executable(epicc  ${SRC_CLIENT_MAIN}
-        ${RPC_DIR}/rpc_client.cpp
-        ${PROTO_SRCS}
-        ${GRPC_SRCS}
-        )
+    # cmake flags
+    set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+
+    # nvcc flags
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)
+    list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_35,code=sm_35) # default
+    list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_52,code=sm_52) # maxwell
+    list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_60,code=sm_60) # pascal
+    list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_70,code=sm_70) # volta
+
+    # link
+    file(GLOB sources "${CUDA_DIR}/*.cu")
+    file(GLOB headers "${CUDA_DIR}/*.cuh")
+    cuda_add_library(epiccuda STATIC ${sources} ${headers})
+    set_target_properties(epiccuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+    target_link_libraries(epiccore epiccuda)
+else()
+    message(STATUS "No CUDA support. Using CPU miner.")
+endif()
+
+add_executable(epic ${SRC_MAIN})
+add_executable(epicc ${SRC_CLIENT_MAIN}
+    ${RPC_DIR}/rpc_client.cpp
+    ${PROTO_SRCS}
+    ${GRPC_SRCS}
+    )
 target_link_libraries(epicc protobuf::libprotobuf)
 target_link_libraries(epicc gRPC::grpc++_reflection)
 
-add_executable(epictest ${TEST_MAIN}  ${TEST_CODE})
+add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
 
 target_link_libraries(epiccore ${LIBEVENT_LIBRARIES})
 target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
@@ -178,7 +208,6 @@ if (GMP_FOUND)
 endif()
 target_link_libraries(epiccore protobuf::libprotobuf)
 target_link_libraries(epiccore gRPC::grpc++_reflection)
-
 
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)
@@ -197,14 +226,14 @@ if (UNITTEST_COVERAGE)
     target_compile_options(epiccore PUBLIC --coverage)
     target_link_options(epictest PUBLIC --coverage)
     target_link_options(epiccore PUBLIC --coverage)
-endif ()
+endif()
 
 # add test
 gtest_add_tests(
-        TARGET epictest
-        TEST_SUFFIX .noArgs
-        TEST_LIST noArgsTests
-)
+    TARGET epictest
+    TEST_SUFFIX .noArgs
+    TEST_LIST noArgsTests
+    )
 
 # install
 install(TARGETS epic DESTINATION bin)

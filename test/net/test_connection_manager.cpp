@@ -4,7 +4,6 @@
 
 #include "message_header.h"
 #include "sync_messages.h"
-#include "uint256.h"
 
 class TestConnectionManager : public testing::Test {
 public:
@@ -138,7 +137,7 @@ TEST_F(TestConnectionManager, SendAndReceive) {
 
     size_t size    = MAX_MESSAGE_LENGTH / 32 - 32;
     uint32_t nonce = 0x55555555;
-    uint256 h      = uint256S(std::string(64, 'a'));
+    uint256 h      = uintS<256>(std::string(64, 'a'));
     std::vector<uint256> data(size, h);
     test_connect_handle->SendMessage(std::make_unique<Inv>(data, nonce));
 
@@ -199,7 +198,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 
     for (int i = 0; i < num; i++) {
         uint32_t nonce = 0x55555555 + i;
-        uint256 h      = uint256S(std::string(64, 'a' + i));
+        uint256 h      = uintS<256>(std::string(64, 'a' + i));
         std::vector<uint256> data(size, h);
 
         test_connect_handle->SendMessage(std::make_unique<Inv>(data, nonce));
@@ -210,7 +209,7 @@ TEST_F(TestConnectionManager, SendAndReceiveMultiMessages) {
 
     for (int i = 0; i < num; i++) {
         uint32_t nonce = 0x55555555 + i;
-        uint256 h      = uint256S(std::string(64, 'a' + i));
+        uint256 h      = uintS<256>(std::string(64, 'a' + i));
         ASSERT_TRUE(server.ReceiveMessage(receive_message));
         Inv* msg = dynamic_cast<Inv*>(receive_message.second.get());
         ASSERT_TRUE(msg != nullptr);
@@ -247,7 +246,7 @@ TEST_F(TestConnectionManager, MultiClient) {
 
     for (int i = 0; i < client_num; i++) {
         uint32_t nonce = 0x55555555 + i;
-        uint256 h      = uint256S(std::string(64, 'a' + i));
+        uint256 h      = uintS<256>(std::string(64, 'a' + i));
         std::vector<uint256> data(size, h);
         handle_vector.at(i)->SendMessage(std::make_unique<Inv>(data, nonce));
         usleep(50000);
@@ -255,7 +254,7 @@ TEST_F(TestConnectionManager, MultiClient) {
 
     for (int i = 0; i < client_num; i++) {
         uint32_t nonce = 0x55555555 + i;
-        uint256 h      = uint256S(std::string(64, 'a' + i));
+        uint256 h      = uintS<256>(std::string(64, 'a' + i));
         connection_message_t receive_message;
         ASSERT_TRUE(server.ReceiveMessage(receive_message));
         Inv* msg = dynamic_cast<Inv*>(receive_message.second.get());

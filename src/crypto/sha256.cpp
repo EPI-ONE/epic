@@ -555,7 +555,6 @@ bool SelfTest() {
     return true;
 }
 
-
 #if defined(USE_ASM) && (defined(__x86_64__) || defined(__amd64__) || defined(__i386__))
 // We can't use cpuid.h's __get_cpuid as it does not support subleafs.
 void inline cpuid(uint32_t leaf, uint32_t subleaf, uint32_t& a, uint32_t& b, uint32_t& c, uint32_t& d) {

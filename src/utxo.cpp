@@ -1,7 +1,7 @@
 #include "utxo.h"
 #include "caterpillar.h"
 
-uint256 XOR(const uint256& hash, uint32_t index) {
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t index) {
     return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
 }
 
@@ -13,7 +13,7 @@ uint256 UTXO::GetContainingBlkHash() const {
 }
 
 uint256 UTXO::GetKey() const {
-    return XOR(GetContainingBlkHash(), index_);
+    return ComputeUTXOKey(GetContainingBlkHash(), index_);
 }
 
 uint64_t UTXO::HashCode() const {
@@ -28,12 +28,12 @@ void TXOC::AddToCreated(const UTXOPtr& putxo) {
 }
 
 void TXOC::AddToCreated(const uint256& blkHash, uint32_t index) {
-    increment_.Create(XOR(blkHash, index));
+    increment_.Create(ComputeUTXOKey(blkHash, index));
 }
 
 void TXOC::AddToSpent(const TxInput& input) {
     auto& outpoint = input.outpoint;
-    increment_.Remove(XOR(outpoint.bHash, outpoint.index));
+    increment_.Remove(ComputeUTXOKey(outpoint.bHash, outpoint.index));
 }
 
 void TXOC::Merge(TXOC txoc) {
@@ -50,7 +50,7 @@ TXOC CreateTXOCFromInvalid(const Block& invalid) {
     invalidUTXO.reserve(nOuts);
 
     for (size_t i = 0; i < nOuts; i++) {
-        invalidUTXO.emplace(XOR(invalid.GetHash(), i));
+        invalidUTXO.emplace(ComputeUTXOKey(invalid.GetHash(), i));
     }
     return TXOC{{}, std::move(invalidUTXO)};
 }

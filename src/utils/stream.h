@@ -9,7 +9,7 @@
 #include <cstring>
 
 #include "serialize.h"
-#include "support/zeroafterfree.h"
+#include "zeroafterfree.h"
 
 // Byte-vector that sets contents to 0's before deallocation.
 typedef std::vector<char, zero_after_free_allocator<char>> byte_vector;

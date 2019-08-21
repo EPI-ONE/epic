@@ -31,7 +31,7 @@ public:
     static void SetUpTestCase() {
         CONFIG = std::make_unique<Config>();
         CONFIG->SetDBPath("testSync/");
-        spdlog::set_level(spdlog::level::debug);
+        SetLogLevel(SPDLOG_LEVEL_DEBUG);
 
         EpicTestEnvironment::SetUpDAG(CONFIG->GetDBPath());
 
@@ -42,6 +42,7 @@ public:
     static void TearDownTestCase() {
         EpicTestEnvironment::TearDownDAG(CONFIG->GetDBPath());
         CONFIG.reset();
+        ResetLogLevel();
     }
 
     void SetUp() {

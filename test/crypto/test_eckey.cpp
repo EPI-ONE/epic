@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "base58.h"
+#include "big_uint.h"
 #include "hash.h"
 #include "key.h"
 #include "tinyformat.h"
-#include "uint256.h"
 #include "utilstrencodings.h"
 
 class TestECKey : public testing::Test {
@@ -48,7 +48,7 @@ TEST_F(TestECKey, key_workflow_test) {
     ASSERT_EQ(seckey, seckeyDup);
 
     // signing
-    uint256 hashMsg = Hash<1>(randstr.cbegin(), randstr.cend());
+    uint256 hashMsg = HashSHA2<1>(&randstr, randstr.size());
     std::vector<unsigned char> detsig;
     ASSERT_TRUE(seckey.Sign(hashMsg, detsig));
 
@@ -116,7 +116,7 @@ TEST_F(TestECKey, key_regular_test) {
 
     for (int n = 0; n < 10; n++) {
         std::string strMsg = strprintf("EPIC secret number %i: 42", n);
-        uint256 hashMsg    = Hash<1>(strMsg.begin(), strMsg.end());
+        uint256 hashMsg    = HashSHA2<1>(&strMsg, strMsg.size());
 
         // normal signature
         std::vector<unsigned char> sign1, sign2, sign1C, sign2C;
@@ -170,7 +170,7 @@ TEST_F(TestECKey, key_regular_test) {
     // test deterministic signing
     std::vector<unsigned char> detsig, detsigc;
     std::string strMsg = "Very deterministic message";
-    uint256 hashMsg    = Hash<1>(strMsg.begin(), strMsg.end());
+    uint256 hashMsg    = HashSHA2<1>(&strMsg, strMsg.size());
     ASSERT_TRUE(key1.Sign(hashMsg, detsig));
     ASSERT_TRUE(key1C.Sign(hashMsg, detsigc));
     ASSERT_EQ(detsig, detsigc);

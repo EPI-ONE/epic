@@ -218,7 +218,7 @@ void Block::CalculateHash() {
     VStream s;
     s << version_ << milestoneBlockHash_ << prevBlockHash_ << tipBlockHash_ << time_ << diffTarget_ << nonce_
       << FinalizeTxHash();
-    hash_ = Hash<1>(s);
+    hash_ = HashSHA2<1>(s);
 }
 
 const uint256& Block::FinalizeTxHash() {
