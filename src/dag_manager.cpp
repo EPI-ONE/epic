@@ -825,6 +825,8 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
         lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
     } else {
         auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+        std::swap(recs.front(), recs.back());
+
         lvs.reserve(recs.size());
         for (auto& rwp : recs) {
             lvs.push_back((*rwp.lock()).cblock);

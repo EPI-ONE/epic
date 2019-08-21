@@ -58,10 +58,16 @@ public:
     void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
     void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
 
-    /////////////////////////////// Data API /////////////////////////////////////
+    //////////////////////// APIs for retriving data from DAG ////////////////////////
 
+    // The following two methods searches on main chain ONLY.
     RecordPtr GetMainChainRecord(const uint256&) const;
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+
+    /**
+     * Returns the level set of the milestone with the given hash.
+     * Also searches on forked branches.
+     */
     std::vector<RecordPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
 
     /**
@@ -73,6 +79,7 @@ public:
 
     // Checkout states either in different chain or in db
     RecordPtr GetState(const uint256&, bool withBlock = true) const;
+
     Chain& GetBestChain() const;
     size_t GetBestMilestoneHeight() const;
     RecordPtr GetMilestoneHead() const;

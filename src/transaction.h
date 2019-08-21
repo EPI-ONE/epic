@@ -149,6 +149,12 @@ public:
     explicit Transaction(const CKeyID& addr);
     explicit Transaction(CKeyID& addr);
 
+    Transaction(std::vector<TxInput> inputs, std::vector<TxOutput> outputs)
+        : inputs_(std::move(inputs)), outputs_(std::move(outputs)) {
+        SetParents();
+        FinalizeHash();
+    }
+
     template <typename Stream>
     explicit Transaction(Stream& vs) {
         ::Deserialize(vs, *this);

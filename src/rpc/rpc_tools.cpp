@@ -28,7 +28,6 @@ std::unique_ptr<rpc::Output> ToRPCOutput(const TxOutput& output) {
 
 std::unique_ptr<rpc::Transaction> ToRPCTx(const Transaction& tx) {
     auto rpctx = std::make_unique<rpc::Transaction>();
-    rpctx->set_allocated_transaction_hash(ToRPCHash(tx.GetHash()));
     for (const auto& in : tx.GetInputs()) {
         auto inptr = rpctx->add_inputs();
         *inptr     = *ToRPCInput(in);
@@ -39,6 +38,41 @@ std::unique_ptr<rpc::Transaction> ToRPCTx(const Transaction& tx) {
         *outptr     = *ToRPCOutput(out);
     }
     return rpctx;
+}
+
+TxOutPoint ToOutPoint(const rpc::Outpoint& rop) {
+    return TxOutPoint(ToHash(rop.fromblock()), rop.txidx(), rop.outidx());
+}
+
+std::vector<TxInput> ToInputs(const ::google::protobuf::RepeatedPtrField<::rpc::Input>& rins) {
+    std::vector<TxInput> inputs;
+    for (const auto& in : rins) {
+        Tasm::Listing l;
+        VStream vs(in.listing().data(), in.listing().data() + in.listing().size());
+        vs >> l;
+        inputs.emplace_back(ToOutPoint(in.outpoint()), l);
+    }
+    return inputs;
+}
+
+std::vector<TxOutput> ToOutputs(const ::google::protobuf::RepeatedPtrField<::rpc::Output>& routs) {
+    std::vector<TxOutput> outputs;
+    for (const auto& out : routs) {
+        Tasm::Listing l;
+        VStream vs(out.address().data(), out.address().data() + out.address().size());
+        vs >> l;
+        outputs.emplace_back(out.money(), l);
+    }
+    return outputs;
+}
+
+std::vector<ConstTxPtr> ToTxns(const ::google::protobuf::RepeatedPtrField<::rpc::Transaction>& rtxns) {
+    std::vector<ConstTxPtr> txns;
+    for (const auto& t : rtxns) {
+        txns.emplace_back(std::make_shared<const Transaction>(ToInputs(t.inputs()), ToOutputs(t.outputs())));
+    }
+
+    return txns;
 }
 
 ////////////////// End of internal methods ////////////////////////
@@ -57,9 +91,6 @@ rpc::Hash* ToRPCHash(const uint256& h) {
 rpc::Block* ToRPCBlock(const Block& b) {
     // message Block
     auto rpcb = new rpc::Block();
-    // Hash block_hash = 1;
-    auto block_hash = ToRPCHash(b.GetHash());
-    rpcb->set_allocated_block_hash(block_hash);
     // uint32 version = 2;
     rpcb->set_version(b.GetVersion());
     // Hash milestoneBlockHash = 3;
@@ -67,12 +98,10 @@ rpc::Block* ToRPCBlock(const Block& b) {
     rpcb->set_allocated_milestoneblockhash(milestoneBlockHash);
     // Hash prevBlockHash = 4;
     auto prevBlockHash = ToRPCHash(b.GetPrevHash());
-    rpcb->set_allocated_milestoneblockhash(prevBlockHash);
+    rpcb->set_allocated_prevblockhash(prevBlockHash);
     // Hash tipBlockHash = 5;
     auto tipBlockHash = ToRPCHash(b.GetTipHash());
     rpcb->set_allocated_tipblockhash(tipBlockHash);
-    auto merkleRoot = ToRPCHash(b.GetMerkleRoot());
-    rpcb->set_allocated_merkleroot(merkleRoot);
     // uint32 diffTarget = 6;
     rpcb->set_difftarget(b.GetDifficultyTarget());
     // uint32 nonce = 7;
@@ -89,4 +118,12 @@ rpc::Block* ToRPCBlock(const Block& b) {
     }
 
     return rpcb;
+}
+
+Block ToBlock(const rpc::Block& rb) {
+    Block blk(rb.version(), ToHash(rb.milestoneblockhash()), ToHash(rb.prevblockhash()), ToHash(rb.tipblockhash()),
+              uint256(), rb.time(), rb.difftarget(), rb.nonce());
+    blk.AddTransactions(ToTxns(rb.transactions()));
+    blk.FinalizeHash();
+    return blk;
 }

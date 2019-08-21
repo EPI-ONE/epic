@@ -13,4 +13,6 @@ rpc::Hash* ToRPCHash(const uint256&);
 
 rpc::Block* ToRPCBlock(const Block&);
 
+Block ToBlock(const rpc::Block&);
+
 #endif //__SRC_RPC_TOOLS_H__

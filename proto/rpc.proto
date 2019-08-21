@@ -23,22 +23,19 @@ message Output{
 }
 
 message Transaction {
-    Hash transaction_hash = 1;
-    repeated Input inputs = 3;
-    repeated Output outputs = 4;
+    repeated Input inputs = 1;
+    repeated Output outputs = 2;
 }
 
 message Block {
-  Hash block_hash = 1;
-  uint32 version = 2;
-  Hash milestoneBlockHash = 3;
-  Hash prevBlockHash = 4;
-  Hash tipBlockHash = 5;
-  Hash merkleRoot = 6;
-  uint32 diffTarget = 7;
-  uint32 nonce = 8;
-  uint64 time = 9;
-  repeated Transaction transactions = 10;
+  uint32 version = 1;
+  Hash milestoneBlockHash = 2;
+  Hash prevBlockHash = 3;
+  Hash tipBlockHash = 4;
+  uint32 diffTarget = 5;
+  uint32 nonce = 6;
+  uint64 time = 7;
+  repeated Transaction transactions = 8;
 }
 
 service BasicBlockExplorerRPC {
