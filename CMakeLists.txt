@@ -38,7 +38,7 @@ find_package(GTest 1.8.1 EXACT REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 #libevent
-find_package(Libevent 2.1.8 EXACT REQUIRED)
+find_package(Libevent 2.1.11 EXACT REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 # rocksdb
@@ -200,7 +200,7 @@ target_link_libraries(epicc gRPC::grpc++_reflection)
 
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
 
-target_link_libraries(epiccore ${LIBEVENT_LIBRARIES})
+target_link_libraries(epiccore ${LIBEVENT_SHARED_LIBRARIES})
 target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
 target_link_libraries(epiccore ${Secp256k1_LIBRARY})
 if (GMP_FOUND)
