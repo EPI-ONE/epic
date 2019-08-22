@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <random>
+#include <string>
 
 #include "caterpillar.h"
+#include "consensus.h"
 #include "key.h"
 #include "test_env.h"
 
@@ -104,6 +106,36 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         }
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
+
+    auto chain = fac.CreateChain(GENESIS_RECORD, 100);
+    std::vector<RecordPtr> mses;
+    for (const auto& lvs : chain) {
+        // zero out some of the lastUpdateTime to check
+        // if they can be successfully recovered
+        auto ms                      = lvs.back();
+        ms->snapshot->lastUpdateTime = 0;
+        mses.emplace_back(std::move(ms));
+
+        for (const auto& b : lvs) {
+            DAG->AddNewBlock(b->cblock, nullptr);
+        }
+    }
+
+    usleep(50000);
+    DAG->Wait();
+
+    for (size_t i = 0; i < mses.size(); ++i) {
+        if (mses[i]->height > 5) {
+            auto lvs          = mses[i]->snapshot->GetLevelSet();
+            auto recovered_ms = CreateNextChainState(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
+            auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
+            if (*expected_cs != *recovered_ms) {
+                std::cout << "expected " << std::to_string(*expected_cs) << std::endl;
+                std::cout << "recovered " << std::to_string(*recovered_ms) << std::endl;
+            }
+            ASSERT_EQ(*expected_cs, *recovered_ms);
+        }
+    }
 }
 
 TEST_F(TestConsensus, AddNewBlocks) {
@@ -112,10 +144,10 @@ TEST_F(TestConsensus, AddNewBlocks) {
     //
     // Construct a fully connected and syntatical valid random graph
 
-    std::vector<ConstBlockPtr> blocks;
+    std::vector<RecordPtr> blocks;
     while (blocks.size() <= 2) {
-        auto [chain, placeholder] = fac.CreateChain(GENESIS_RECORD, 2);
-        blocks                    = std::move(chain.back());
+        auto chain = fac.CreateChain(GENESIS_RECORD, 1);
+        blocks     = std::move(chain.back());
         blocks.pop_back(); // remove milestone such that all blocks will stay in pending
     }
 
@@ -130,8 +162,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     //
     CAT->EnableOBC();
 
-    for (auto& blockptr : blocks) {
-        DAG->AddNewBlock(blockptr, nullptr);
+    for (auto& rec : blocks) {
+        DAG->AddNewBlock(rec->cblock, nullptr);
     }
 
     usleep(50000);
@@ -139,7 +171,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     DAG->Stop();
 
     for (const auto& blk : blocks) {
-        auto bhash = blk->GetHash();
+        auto bhash = blk->cblock->GetHash();
         ASSERT_TRUE(CAT->DAGExists(bhash));
         auto blkCache = CAT->GetBlockCache(bhash);
         ASSERT_TRUE(blkCache);
@@ -153,12 +185,12 @@ TEST_F(TestConsensus, AddForks) {
     constexpr int chain_length = 5;
     constexpr int n_branches   = 5;
 
-    std::vector<TestChain> branches;
+    std::vector<TestRawChain> branches;
     std::vector<std::vector<RecordPtr>> branches_rec;
     branches.reserve(n_branches);
     branches.reserve(n_branches);
 
-    auto [chain, vMsRec] = fac.CreateChain(GENESIS_RECORD, chain_length);
+    auto [chain, vMsRec] = fac.CreateRawChain(GENESIS_RECORD, chain_length);
     // fac.PrintChain(chain);
     branches.emplace_back(std::move(chain));
     branches_rec.emplace_back(std::move(vMsRec));
@@ -168,7 +200,7 @@ TEST_F(TestConsensus, AddForks) {
         auto& picked_chain    = branches_rec[fac.GetRand() % branches_rec.size()];
         auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 3)];
 
-        auto [chain, vMsRec] = fac.CreateChain(new_split_point, chain_length);
+        auto [chain, vMsRec] = fac.CreateRawChain(new_split_point, chain_length);
         // fac.PrintChain(chain);
 
         branches.emplace_back(std::move(chain));
@@ -197,8 +229,8 @@ TEST_F(TestConsensus, AddForks) {
 TEST_F(TestConsensus, flush_single_chain_to_cat) {
     constexpr size_t FLUSHED = 10;
     const size_t HEIGHT      = GetParams().cacheStatesSize + FLUSHED;
-    TestChain chain;
-    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, HEIGHT);
+    TestRawChain chain;
+    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, HEIGHT - 1);
 
     for (size_t i = 0; i < chain.size(); i++) {
         if (i > GetParams().cacheStatesSize) {
@@ -238,16 +270,15 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     const size_t HEIGHT    = GetParams().cacheStatesSize - 1;
     constexpr size_t hfork = 15;
-    auto [chain1, vMsRec]  = fac.CreateChain(GENESIS_RECORD, HEIGHT);
+    auto [chain1, vMsRec]  = fac.CreateRawChain(GENESIS_RECORD, HEIGHT);
 
-    std::array<TestChain, 4> chains;
+    std::array<TestRawChain, 3> chains;
     chains[0]                        = std::move(chain1);
-    std::tie(chains[1], std::ignore) = fac.CreateChain(vMsRec[1], 1);
-    std::tie(chains[2], std::ignore) = fac.CreateChain(vMsRec[hfork], HEIGHT - hfork + 5);
-    std::tie(chains[3], std::ignore) = fac.CreateChain(vMsRec.back(), 5);
+    std::tie(chains[1], std::ignore) = fac.CreateRawChain(vMsRec[hfork], HEIGHT - hfork + 5);
+    std::tie(chains[2], std::ignore) = fac.CreateRawChain(vMsRec.back(), 5);
 
     // add blocks in a carefully assigned sequence
-    for (int i : {0, 1, 2, 3}) {
+    for (int i : {0, 1, 2}) {
         for (size_t j = 0; j < chains[i].size(); j++) {
             for (auto& blkptr : chains[i][j]) {
                 DAG->AddNewBlock(blkptr, nullptr);
@@ -262,7 +293,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     CAT->Wait();
     DAG->Wait();
 
-    // here we set less or equal as $chain[2] might be deleted with a small probability
+    // here we set less or equal as $chain[1] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
     ASSERT_EQ(CAT->GetHeadHeight(), GetParams().cacheStatesToDelete);
 

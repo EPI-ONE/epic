@@ -88,37 +88,45 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
     milestoneTarget = milestoneTarget / targetTimespan * timespan;
     milestoneTarget.Round(sizeof(uint32_t));
 
-    static const uint32_t nTxnsCap = GetParams().targetTPS * GetParams().targetTimespan;
+    if (milestoneTarget > GetParams().maxTarget) {
+        milestoneTarget = GetParams().maxTarget;
+        blockTarget     = milestoneTarget;
+    } else {
+        static const uint32_t nTxnsCap = GetParams().targetTPS * GetParams().targetTimespan;
 
-    nTxnsCounter_ = std::min(nTxnsCounter_, nTxnsCap);
+        nTxnsCounter_ = std::min(nTxnsCounter_, nTxnsCap);
 
-    // If the average number of txns per block is larger than 95% of the block capacity,
-    // we increases the estimation of the actual number of txn arrivals by a factor of 1.1
-    // to take into consideration the lost txns due to the limited block capacity.
-    if (nTxnsCounter_ / nBlkCounter_ > GetParams().blockCapacity * 0.95) {
-        nTxnsCounter_ *= 1.1;
-    }
+        // If the average number of txns per block is larger than 95% of the block capacity,
+        // we increases the estimation of the actual number of txn arrivals by a factor of 1.1
+        // to take into consideration the lost txns due to the limited block capacity.
+        if (nTxnsCounter_ / nBlkCounter_ > GetParams().blockCapacity * 0.95) {
+            nTxnsCounter_ *= 1.1;
+        }
 
-    // We will calculate blockTarget by
-    //
-    //    milestoneTarget / GetParams().blockCapacity * nTxnsCounter_,
-    //
-    // but the multiplier nTxnsCounter_ may cause blockTarget overflow,
-    // and thus we limit its value to the largest possible value
-    // that will not cause blockTarget overflow.
+        // We will calculate blockTarget by
+        //
+        //    milestoneTarget / GetParams().blockCapacity * nTxnsCounter_,
+        //
+        // but the multiplier nTxnsCounter_ may cause blockTarget overflow,
+        // and thus we limit its value to the largest possible value
+        // that will not cause blockTarget overflow.
 
-    blockTarget = milestoneTarget / GetParams().blockCapacity;
+        if (nTxnsCounter_ <= GetParams().blockCapacity) {
+            blockTarget = milestoneTarget;
+        } else {
+            blockTarget = milestoneTarget / GetParams().blockCapacity;
 
-    uint32_t limit = 1 << blockTarget.LeadingZeros();
-    nTxnsCounter_  = std::min(nTxnsCounter_, limit);
-    nTxnsCounter_  = std::max(nTxnsCounter_, (uint32_t) 1);
+            uint32_t limit = 1 << blockTarget.LeadingZeros();
+            nTxnsCounter_  = std::min(nTxnsCounter_, limit);
+            nTxnsCounter_  = std::max(nTxnsCounter_, (uint32_t) 1);
 
-    blockTarget *= nTxnsCounter_;
-    blockTarget.Round(sizeof(uint32_t));
+            blockTarget *= nTxnsCounter_;
+            blockTarget.Round(sizeof(uint32_t));
+        }
 
-    if (blockTarget > GetParams().maxTarget) {
-        // in case that it is not difficult in this round
-        blockTarget = GetParams().maxTarget;
+        if (blockTarget > GetParams().maxTarget) {
+            blockTarget = GetParams().maxTarget;
+        }
     }
 
     lastUpdateTime = blockUpdateTime;

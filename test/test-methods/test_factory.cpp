@@ -1,4 +1,6 @@
 #include "test_factory.h"
+#include <cstring>
+#include <memory>
 
 std::string TestFactory::GetRandomString(size_t len) {
     static const char alph[] = "0123456789"
@@ -120,29 +122,28 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
     return CreateNextChainState(previous, *pRec, std::vector<RecordWPtr>{pRec});
 }
 
-std::tuple<TestChain, std::vector<RecordPtr>> TestFactory::CreateChain(const RecordPtr& startMs,
-                                                                       size_t height,
-                                                                       bool tx) {
-    RecordPtr lastMs        = startMs;
-    ConstBlockPtr prevBlock = startMs->cblock;
+TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool tx) {
+    assert(height);
+    RecordPtr lastMs    = startMs;
+    RecordPtr prevBlock = startMs;
 
     TestChain testChain{{}};
-    std::vector<RecordPtr> vMs;
-    vMs.reserve(height);
 
-    size_t count = 1;
+    size_t count = 0;
     TimeGenerator timeg{startMs->cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
         Block b{GetParams().version};
         if (tx) {
-            b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
+            for (int i = 0; i < GetRand() % 10; ++i) {
+                b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
+            }
         }
         b.SetMilestoneHash(lastMs->cblock->GetHash());
-        b.SetPrevHash(prevBlock->GetHash());
+        b.SetPrevHash(prevBlock->cblock->GetHash());
         if (testChain.size() == 1) {
             b.SetTipHash(GENESIS.GetHash());
         } else {
-            b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->GetHash());
+            b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->cblock->GetHash());
         }
         b.SetTime(timeg.NextTime());
         b.SetDifficultyTarget(lastMs->snapshot->blockTarget.GetCompact());
@@ -155,31 +156,68 @@ std::tuple<TestChain, std::vector<RecordPtr>> TestFactory::CreateChain(const Rec
         b.CalculateOptimalEncodingSize();
         b.Solve();
 
-        ConstBlockPtr blkptr   = std::make_shared<const Block>(std::move(b));
-        bool make_new_levelset = false;
+        ConstBlockPtr blkptr = std::make_shared<const Block>(std::move(b));
+        RecordPtr node       = std::make_shared<NodeRecord>(blkptr);
+
+        // Set proper info in node
+        node->height           = lastMs->height + 1;
+        node->minerChainHeight = prevBlock->minerChainHeight + 1;
+        node->validity.resize(blkptr->GetTransactionSize());
+        memset(node->validity.data(), NodeRecord::Validity::VALID, blkptr->GetTransactionSize());
+
+        prevBlock = node;
+        testChain.back().emplace_back(node);
 
         if (CheckMsPOW(blkptr, lastMs->snapshot)) {
-            RecordPtr node   = std::make_shared<NodeRecord>(blkptr);
-            ChainStatePtr cs = CreateNextChainState(lastMs->snapshot, *node, std::vector<RecordWPtr>{node});
-            vMs.emplace_back(std::move(node));
-            lastMs = vMs.back();
-            count++;
-            if (count < height) {
-                make_new_levelset = true;
+            // Prepare the lvs of the milestone
+            std::vector<RecordWPtr> lvs;
+            const auto& lvs_recs = testChain.back();
+            lvs.reserve(lvs_recs.size());
+            std::transform(lvs_recs.begin(), lvs_recs.end(), std::back_inserter(lvs),
+                           [](RecordPtr p) -> RecordWPtr { return RecordWPtr(p); });
+
+            CreateNextChainState(lastMs->snapshot, *node, std::move(lvs));
+            lastMs = std::move(node);
+
+            if (count++ < height - 1) {
+                testChain.emplace_back();
             }
         }
-
-        prevBlock = blkptr;
-        testChain.back().emplace_back(std::move(blkptr));
-        if (make_new_levelset) {
-            testChain.emplace_back();
-        }
     }
-    return {testChain, vMs};
+    // PrintChain(testChain);
+    return testChain;
 }
 
-std::tuple<TestChain, std::vector<RecordPtr>> TestFactory::CreateChain(const NodeRecord& startMs,
-                                                                       size_t height,
-                                                                       bool tx) {
+TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
     return CreateChain(std::make_shared<NodeRecord>(startMs), height, tx);
+}
+
+std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const RecordPtr& startMs,
+                                                                             size_t height,
+                                                                             bool tx) {
+    auto chain = CreateChain(startMs, height, tx);
+
+    TestRawChain rawChain;
+    rawChain.reserve(chain.size());
+    std::vector<RecordPtr> milestons;
+    milestons.reserve(chain.size());
+
+    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetRecs lvs) {
+        // extract milestone
+        milestons.emplace_back(lvs.back());
+
+        // convert each block from RecordPtr to ConstBlockPtr
+        LevelSetBlks rawLvs;
+        rawLvs.reserve(lvs.size());
+        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](RecordPtr rec) { return rec->cblock; });
+        return rawLvs;
+    });
+
+    return {rawChain, milestons};
+}
+
+std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const NodeRecord& startMs,
+                                                                             size_t height,
+                                                                             bool tx) {
+    return CreateRawChain(std::make_shared<NodeRecord>(startMs), height, tx);
 }

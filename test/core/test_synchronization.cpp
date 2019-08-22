@@ -66,8 +66,8 @@ public:
 TEST_F(TestSync, test_basic_sync_workflow) {
     // create a new chain
     constexpr long testChainHeight = 5;
-    TestChain chain;
-    std::tie(chain, std::ignore) = fac.CreateChain(GENESIS_RECORD, testChainHeight);
+    TestRawChain chain;
+    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, testChainHeight);
 
     ASSERT_TRUE(server.Bind(0x7f000001));
     ASSERT_TRUE(server.Listen(12121));
@@ -123,7 +123,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     GetData* getData = dynamic_cast<GetData*>(message.second.get());
 
     // check GetData message
-    ASSERT_EQ(getData->hashes.size(), testChainHeight - 1);
+    ASSERT_EQ(getData->hashes.size(), testChainHeight);
     for (int i = 0; i < testChainHeight - 1; i++) {
         ASSERT_EQ(getData->hashes[i], chain[i][chain[i].size() - 1]->GetHash());
     }
@@ -213,7 +213,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // check Inv nonce
     ASSERT_EQ(inv1->nonce, nonce);
     // check Inv hash size
-    ASSERT_EQ(inv1->hashes.size(), testChainHeight - 1);
+    ASSERT_EQ(inv1->hashes.size(), testChainHeight);
 
     // receive GetData
     client_connection->SendMessage(std::move(getData_Cmp));
@@ -229,7 +229,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     for (auto& levelSet : chain) {
         ms_hash.insert(levelSet[0]->GetHash());
     }
-    for (int i = 0; i < testChainHeight - 1; i++) {
+    for (int i = 0; i < testChainHeight; i++) {
         ASSERT_TRUE(client.ReceiveMessage(message));
         ASSERT_EQ(message.second->GetType(), NetMessage::BUNDLE);
         Bundle* bundle = dynamic_cast<Bundle*>(message.second.get());

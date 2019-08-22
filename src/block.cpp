@@ -336,11 +336,6 @@ arith_uint256 Block::GetChainWork() const {
 arith_uint256 Block::GetTargetAsInteger() const {
     arith_uint256 target{};
     target.SetCompact(diffTarget_);
-
-    if (target <= 0 || target > GetParams().maxTarget) {
-        throw std::runtime_error("Bad difficulty target: " + std::to_string(target));
-    }
-
     return target;
 }
 
@@ -350,11 +345,9 @@ bool Block::CheckPOW() const {
         return false;
     }
 
-    arith_uint256 target;
-    try {
-        target = GetTargetAsInteger();
-    } catch (const std::exception& s) {
-        spdlog::info(s.what());
+    arith_uint256 target = GetTargetAsInteger();
+    if (target <= 0 || target > GetParams().maxTarget) {
+        spdlog::info("Bad difficulty target: " + std::to_string(target));
         return false;
     }
 

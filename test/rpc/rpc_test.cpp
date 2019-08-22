@@ -52,7 +52,7 @@ TEST_F(TestRPCServer, GetBlock) {
     auto res_fake = client.GetBlock(std::to_string(double0hash));
     ASSERT_TRUE(res_fake.has_value());
 
-    auto blk_fake = ToBlock(*res_fake);
+    auto blk_fake    = ToBlock(*res_fake);
     auto blk_default = ToBlock(rpc::Block().default_instance());
     ASSERT_EQ(blk_fake, blk_default);
 }
@@ -95,11 +95,11 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
 
 TEST_F(TestRPCServer, GetLatestMilestone) {
     int size       = 5;
-    auto chain     = std::get<0>(fac.CreateChain(GENESIS_RECORD, size));
+    auto chain     = fac.CreateChain(GENESIS_RECORD, size);
     auto latest_ms = chain.back().back();
     for (auto lvs : chain) {
         for (auto elem : lvs) {
-            DAG->AddNewBlock(elem, nullptr);
+            DAG->AddNewBlock(elem->cblock, nullptr);
         }
     }
 
@@ -112,7 +112,7 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
     ASSERT_TRUE(res.has_value());
 
     auto res_blk = ToBlock(*res);
-    EXPECT_EQ(res_blk, *latest_ms);
+    EXPECT_EQ(res_blk, *latest_ms->cblock);
 }
 
 TEST_F(TestRPCServer, GetNewMilestoneSince) {

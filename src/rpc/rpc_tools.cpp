@@ -78,7 +78,7 @@ std::vector<ConstTxPtr> ToTxns(const ::google::protobuf::RepeatedPtrField<::rpc:
 ////////////////// End of internal methods ////////////////////////
 
 uint256 ToHash(const rpc::Hash& h) {
-    uint256 result = uint256S(h.hash());
+    uint256 result = uintS<256>(h.hash());
     return result;
 }
 

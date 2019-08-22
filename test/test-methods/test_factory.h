@@ -10,8 +10,10 @@
 
 #include <random>
 
-using LevelSet  = std::vector<ConstBlockPtr>;
-using TestChain = std::vector<LevelSet>;
+using LevelSetBlks = std::vector<ConstBlockPtr>;
+using TestRawChain = std::vector<LevelSetBlks>;
+using LevelSetRecs = std::vector<RecordPtr>;
+using TestChain    = std::vector<LevelSetRecs>;
 
 class NumberGenerator {
 public:
@@ -64,22 +66,24 @@ public:
     RecordPtr CreateConsecutiveRecordPtr(uint32_t);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
     ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& hashes);
-    std::tuple<TestChain, std::vector<RecordPtr>> CreateChain(const RecordPtr& startMs,
-                                                               size_t height,
-                                                               bool tx = false);
-    std::tuple<TestChain, std::vector<RecordPtr>> CreateChain(const NodeRecord& startMs,
-                                                              size_t height,
-                                                              bool tx = false);
+    std::tuple<TestRawChain, std::vector<RecordPtr>> CreateRawChain(const RecordPtr& startMs,
+                                                                    size_t height,
+                                                                    bool tx = false);
+    std::tuple<TestRawChain, std::vector<RecordPtr>> CreateRawChain(const NodeRecord& startMs,
+                                                                    size_t height,
+                                                                    bool tx = false);
+    TestChain CreateChain(const RecordPtr& startMs, size_t height, bool tx = false);
+    TestChain CreateChain(const NodeRecord& startMs, size_t height, bool tx = false);
 
     void PrintChain(const TestChain& chain) {
         std::cout << "{ " << std::endl;
-        for (size_t i = 0; i < chain.size(); i++) {
-            std::cout << "   Height " << i << std::endl;
-            for (auto& block : chain[i]) {
-                std::cout << "   hash = " << block->GetHash().to_substr();
-                std::cout << ", prev = " << block->GetPrevHash().to_substr();
-                std::cout << ", milestone = " << block->GetMilestoneHash().to_substr();
-                std::cout << ", tip = " << block->GetTipHash().to_substr();
+        for (const auto& lvs : chain) {
+            std::cout << "   Height " << lvs.front()->height << std::endl;
+            for (auto& block : lvs) {
+                std::cout << "   hash = " << block->cblock->GetHash().to_substr();
+                std::cout << ", prev = " << block->cblock->GetPrevHash().to_substr();
+                std::cout << ", milestone = " << block->cblock->GetMilestoneHash().to_substr();
+                std::cout << ", tip = " << block->cblock->GetTipHash().to_substr();
                 std::cout << std::endl;
             }
         }
