@@ -86,11 +86,21 @@ bool ThreadPool::IsIdle() const {
     return task_queue_.Empty();
 }
 
-void ThreadPool::Abort() {
+void ThreadPool::ClearAndDisableTasks() {
     task_queue_enabled_ = false;
     if (!task_queue_.Empty()) {
         task_queue_.Clear();
     }
+}
+
+void ThreadPool::Abort() {
+    ClearAndDisableTasks();
+
+    task_queue_enabled_ = false;
+    if (!task_queue_.Empty()) {
+        task_queue_.Clear();
+    }
+
 
     while (!IsIdle()) {
         std::this_thread::yield();

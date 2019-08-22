@@ -68,6 +68,7 @@
     } while (0)
 
 #ifdef __AVX2__
+#define NSIPHASH 8
 
 // 4-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
 void siphash24x4(const siphash_keys* keys, const uint64_t* indices, uint64_t* hashes);
@@ -79,6 +80,7 @@ void siphash24x8(const siphash_keys* keys, const uint64_t* indices, uint64_t* ha
 void siphash24x16(const siphash_keys* keys, const uint64_t* indices, uint64_t* hashes);
 
 #elif defined __SSE2__
+#define NSIPHASH 4
 
 // 2-way sipHash-2-4 specialized to precomputed key and 8 byte nonces
 void siphash24x2(const siphash_keys* keys, const uint64_t* indices, uint64_t* hashes);
@@ -92,7 +94,7 @@ void siphash24x4(const siphash_keys* keys, const uint64_t* indices, uint64_t* ha
 // currently 1, 2, 4, 8 are supported, but
 // more than 1 requires the use of sse2 or avx2
 // more than 4 requires the use of avx2
-#define NSIPHASH 8
+#define NSIPHASH 1
 #endif
 
 void siphash24xN(const siphash_keys* keys, const uint64_t* indices, uint64_t* hashes);

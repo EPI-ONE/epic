@@ -65,6 +65,8 @@ public:
 
     bool IsIdle() const;
 
+    void ClearAndDisableTasks();
+
     void Abort();
 
     /**
