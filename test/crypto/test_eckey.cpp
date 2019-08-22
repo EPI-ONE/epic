@@ -170,7 +170,7 @@ TEST_F(TestECKey, key_regular_test) {
     // test deterministic signing
     std::vector<unsigned char> detsig, detsigc;
     std::string strMsg = "Very deterministic message";
-    uint256 hashMsg    = HashSHA2<1>(&strMsg, strMsg.size());
+    uint256 hashMsg    = HashSHA2<1>(strMsg.data(), strMsg.size());
     ASSERT_TRUE(key1.Sign(hashMsg, detsig));
     ASSERT_TRUE(key1C.Sign(hashMsg, detsigc));
     ASSERT_EQ(detsig, detsigc);

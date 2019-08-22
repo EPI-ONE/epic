@@ -84,7 +84,7 @@ void Miner::SolveCuckaroo(Block& b) {
         solverPool_.Execute([&, i]() {
             SolverParams _params = this->params;
             Block blk(b);
-            blk.SetNonce(i);
+            blk.SetNonce(i + 1);
 
             _params.device  = i;
             ctx_q[i]        = CreateSolverCtx(&_params);
@@ -123,6 +123,7 @@ void Miner::SolveCuckaroo(Block& b) {
     }
 
     // Abort unfinished tasks
+    solverPool_.ClearAndDisableTasks();
     for (const auto& ctx : ctx_q) {
         StopSolver(ctx);
     }
