@@ -156,6 +156,7 @@ TEST_F(TestMemPool, receive_and_release) {
     tx_normal_3.AddInput(TxInput{TxOutPoint{b2hash, 0}, pubkey, hashMsg2, sig2}).AddOutput(10, newAddr);
     tx_conflict.AddInput(TxInput{TxOutPoint{b1hash, 0}, pubkey, hashMsg, sig}).AddOutput(3, newAddr);
 
+
     auto ptx_reg      = std::make_shared<const Transaction>(std::move(tx_reg));
     auto ptx_normal_1 = std::make_shared<const Transaction>(std::move(tx_normal_1));
     auto ptx_normal_2 = std::make_shared<const Transaction>(std::move(tx_normal_2));
@@ -164,9 +165,13 @@ TEST_F(TestMemPool, receive_and_release) {
 
     MemPool pool;
     ASSERT_FALSE(pool.ReceiveTx(ptx_reg));
+    ASSERT_EQ(pool.Size(), 0);
     ASSERT_FALSE(pool.ReceiveTx(ptx_conflict));
+    ASSERT_EQ(pool.Size(), 0);
     ASSERT_TRUE(pool.ReceiveTx(ptx_normal_1));
+    ASSERT_EQ(pool.Size(), 1);
     ASSERT_TRUE(pool.ReceiveTx(ptx_normal_2));
+    ASSERT_EQ(pool.Size(), 2);
     ASSERT_TRUE(pool.ReceiveTx(ptx_normal_3));
     ASSERT_EQ(pool.Size(), 3);
 

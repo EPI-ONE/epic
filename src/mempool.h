@@ -69,4 +69,5 @@ private:
 };
 
 extern std::unique_ptr<MemPool> MEMPOOL;
-#endif
+
+#endif // __SRC_MEMPOOL_H__

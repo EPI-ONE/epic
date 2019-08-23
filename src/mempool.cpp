@@ -45,8 +45,7 @@ bool MemPool::ReceiveTx(const ConstTxPtr& tx) {
         return false;
     }
 
-    Insert(tx);
-    return true;
+    return Insert(tx);
 }
 
 void MemPool::ReleaseTxFromConfirmed(const Transaction& tx, bool valid) {
