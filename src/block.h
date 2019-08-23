@@ -64,7 +64,7 @@ public:
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
-    void AddTransactions(std::vector<ConstTxPtr>);
+    void AddTransactions(std::vector<ConstTxPtr>&&);
     bool HasTransaction() const;
     const std::vector<ConstTxPtr>& GetTransactions() const;
     std::vector<ConstTxPtr> GetTransactions();
@@ -186,8 +186,6 @@ public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
     Source source = UNKNOWN;
 };
-
-extern uint256 ComputeMerkleRoot(std::vector<uint256> hashes, bool* mutated = nullptr);
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;
 extern Block GENESIS;

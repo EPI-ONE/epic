@@ -66,7 +66,7 @@ TEST_F(TestConsensus, MerkleRoot) {
 
     auto txns = block1.GetTransactions();
     txns[0].swap(txns[5]);
-    block2.AddTransactions(txns);
+    block2.AddTransactions(std::move(txns));
 
     EXPECT_NE(block1.GetTransactions(), block2.GetTransactions());
 
@@ -86,7 +86,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     for (size_t i = 1; i < HEIGHT; i++) {
         auto rec = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
 
-        // Generate some valid txns
+        // Generate some "valid" txns
         auto s = (i - 1) % GetParams().blockCapacity + 1;
         rec->validity.resize(s);
         memset(rec->validity.data(), NodeRecord::VALID, s);
@@ -107,7 +107,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
 
-    auto chain = fac.CreateChain(GENESIS_RECORD, 100);
+    auto chain = fac.CreateChain(GENESIS_RECORD, HEIGHT);
     std::vector<RecordPtr> mses;
     for (const auto& lvs : chain) {
         // zero out some of the lastUpdateTime to check
@@ -129,10 +129,6 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
             auto lvs          = mses[i]->snapshot->GetLevelSet();
             auto recovered_ms = CreateNextChainState(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
             auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
-            if (*expected_cs != *recovered_ms) {
-                std::cout << "expected " << std::to_string(*expected_cs) << std::endl;
-                std::cout << "recovered " << std::to_string(*recovered_ms) << std::endl;
-            }
             ASSERT_EQ(*expected_cs, *recovered_ms);
         }
     }

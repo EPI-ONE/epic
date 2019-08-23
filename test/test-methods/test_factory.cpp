@@ -133,11 +133,6 @@ TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool
     TimeGenerator timeg{startMs->cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
         Block b{GetParams().version};
-        if (tx) {
-            for (int i = 0; i < GetRand() % 10; ++i) {
-                b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
-            }
-        }
         b.SetMilestoneHash(lastMs->cblock->GetHash());
         b.SetPrevHash(prevBlock->cblock->GetHash());
         if (testChain.size() == 1) {
@@ -152,6 +147,10 @@ TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool
         if (b.GetPrevHash() == GENESIS.GetHash()) {
             Transaction tx = Transaction{CreateKeyPair().second.GetID()};
             b.AddTransaction(tx);
+        } else if (tx) {
+            for (int i = 0; i < GetRand() % 10; ++i) {
+                b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
+            }
         }
         b.CalculateOptimalEncodingSize();
         b.Solve();
