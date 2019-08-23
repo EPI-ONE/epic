@@ -147,16 +147,6 @@ bool Transaction::Verify() const {
         outpoints.emplace(input.outpoint);
     }
 
-    // check sum of outputs does not exceed maximal allowed money
-    Coin valueOut{0};
-    for (const auto& output : outputs_) {
-        valueOut += output.value;
-        if (valueOut > GetParams().maxMoney) {
-            spdlog::info("Transaction {} total output value exceeds maximal allow money", hash_.to_substr());
-            return false;
-        }
-    }
-
     return true;
 }
 

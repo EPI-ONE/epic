@@ -67,6 +67,7 @@ void MemPool::ReleaseTxFromConfirmed(const Transaction& tx, bool valid) {
     }
 
     // finally erase conflicting transactions
+    WRITER_LOCK(mutex_)
     for (auto iter = mempool_.cbegin(); iter != mempool_.cend();) {
         bool flag = false;
         for (const auto& input : (*iter)->GetInputs()) {
@@ -76,7 +77,6 @@ void MemPool::ReleaseTxFromConfirmed(const Transaction& tx, bool valid) {
             }
         }
         if (flag) {
-            WRITER_LOCK(mutex_)
             iter = mempool_.erase(iter);
         } else {
             iter++;
