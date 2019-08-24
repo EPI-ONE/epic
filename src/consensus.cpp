@@ -24,13 +24,9 @@ ChainState::ChainState(VStream& payload) {
 void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
     auto sumTxns = [&](const RecordWPtr& recPtr) -> uint32_t {
         const std::vector<uint8_t>& validity = (*recPtr.lock()).validity;
-        // Let n1 be the number of NodeRecord::VALID in validity,
-        // and n2 be the number of NodeRecord::INVALID.
-        // Then we can solve for n1 by
-        //    n1 + n2 = validity.size() and
-        //    n1 * NodeRecord::VALID + n2 * NodeRecord::INVALID = sum(validity).
-        size_t sum = std::accumulate(validity.begin(), validity.end(), 0);
-        return (NodeRecord::INVALID * validity.size() - sum) / (NodeRecord::INVALID - NodeRecord::VALID);
+        return std::accumulate(validity.begin(), validity.end(), 0, [](const size_t& sum, const uint8_t& v) {
+            return sum + (v & NodeRecord::Validity::VALID);
+        });
     };
 
     if (!lastUpdateTime) {

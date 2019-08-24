@@ -354,8 +354,7 @@ TEST_F(TestChainVerification, CheckPartition) {
              fac.NextTime(),
              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
              0};
-    Transaction tx = fac.CreateTx(1, 1);
-    b1.AddTransaction(tx);
+    b1.AddTransaction(fac.CreateTx(1, 1));
     NodeRecord rec1{b1};
     rec1.minerChainHeight = 2;
     AddToHistory(&c, std::make_shared<NodeRecord>(rec1));

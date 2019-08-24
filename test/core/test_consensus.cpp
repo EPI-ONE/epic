@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <gtest/gtest.h>
 #include <random>
 #include <string>
@@ -101,7 +102,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
             ASSERT_EQ(arrayMs[i - 1]->lastUpdateTime, arrayMs[i]->lastUpdateTime);
 
             if (!arrayMs[i - 1]->IsDiffTransition()) {
-                ASSERT_LE(arrayMs[i - 1]->GetTxnsCounter(), arrayMs[i]->GetTxnsCounter());
+                ASSERT_EQ(arrayMs[i]->GetTxnsCounter(), arrayMs[i - 1]->GetTxnsCounter() + s);
             }
         }
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
