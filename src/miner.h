@@ -44,11 +44,11 @@ public:
     void SolveCuckaroo(Block&);
     void Run();
 
-    inline bool IsRunning() {
+    bool IsRunning() {
         return enabled_.load();
     }
 
-    inline ConstBlockPtr GetSelfChainHead() const {
+    ConstBlockPtr GetSelfChainHead() const {
         return selfChainHead;
     }
 

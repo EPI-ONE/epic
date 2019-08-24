@@ -214,6 +214,9 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
             rec->isRedeemed     = NodeRecord::NOT_YET_REDEEMED;
             state->regChange.Create(blkHash, blkHash);
             rec->minerChainHeight = 1;
+            rec->validity[0]      = NodeRecord::Validity::VALID;
+            // Invalidate any txns other than the first registration in this block
+            memset(&rec->validity[1], NodeRecord::Validity::INVALID, rec->validity.size() - 1);
         } else {
             TXOC validTXOC, invalidTXOC;
             Validate(*rec, state->regChange, validTXOC, invalidTXOC);

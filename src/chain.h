@@ -82,7 +82,7 @@ public:
         return a_chainwork < b_chainwork;
     }
 
-    inline bool IsMainChain() const {
+    bool IsMainChain() const {
         return ismainchain_;
     }
 
@@ -169,7 +169,7 @@ private:
     TXOC ValidateTxns(NodeRecord&);
     void CheckTxPartition(NodeRecord&, const arith_uint256&);
 
-    inline Coin GetPrevReward(const NodeRecord& rec) {
+    Coin GetPrevReward(const NodeRecord& rec) {
         return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
 

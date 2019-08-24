@@ -163,7 +163,7 @@ public:
     Transaction& operator=(const Transaction&) = default;
     Transaction& operator=(Transaction&&) = default;
 
-    inline bool IsNull() const {
+    bool IsNull() const {
         return inputs_.empty() && outputs_.empty();
     }
 

@@ -51,41 +51,41 @@ public:
           hashRate(hashRate), lastUpdateTime(lastUpdateTime), nTxnsCounter_(nTxnsCounter), nBlkCounter_(nBlkCounter_),
           lvs_(std::move(lvs)) {}
 
-    inline bool IsDiffTransition() const {
+    bool IsDiffTransition() const {
         return (height % GetParams().interval) == 0;
     }
 
-    inline uint64_t GetBlockDifficulty() const {
+    uint64_t GetBlockDifficulty() const {
         return (arith_uint256(GetParams().maxTarget) / (blockTarget + 1)).GetLow64();
     }
 
-    inline uint64_t GetMsDifficulty() const {
+    uint64_t GetMsDifficulty() const {
         return (arith_uint256(GetParams().maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
-    inline uint32_t GetTxnsCounter() const {
+    uint32_t GetTxnsCounter() const {
         return nTxnsCounter_;
     }
 
-    inline uint32_t GetAverageTxnsPerBlock() const {
+    uint32_t GetAverageTxnsPerBlock() const {
         return nTxnsCounter_ / nBlkCounter_;
     }
 
-    inline const std::vector<RecordWPtr>& GetLevelSet() const {
+    const std::vector<RecordWPtr>& GetLevelSet() const {
         return lvs_;
     }
 
-    inline void PushBlkToLvs(const RecordPtr& rec) {
+    void PushBlkToLvs(const RecordPtr& rec) {
         lvs_.emplace_back(rec);
     }
 
-    inline RecordPtr GetMilestone() const {
+    RecordPtr GetMilestone() const {
         return lvs_.back().lock();
     }
 
     const uint256& GetMilestoneHash() const;
 
-    inline const TXOC& GetTXOC() const {
+    const TXOC& GetTXOC() const {
         return txoc_;
     }
 
