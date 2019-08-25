@@ -35,6 +35,7 @@ public:
     uint256 GetMinerChainHead() const;
     bool SaveMinerChainHead(const uint256&) const;
 
+    bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;

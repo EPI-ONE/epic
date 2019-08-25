@@ -116,6 +116,7 @@ public:
         GetDataToCAT(size_t);
 
     bool IsMilestone(const uint256&) const;
+    bool IsTxFitsLedger(const ConstTxPtr& tx) const;
 
     friend class Chains;
 

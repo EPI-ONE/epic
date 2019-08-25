@@ -22,6 +22,8 @@ unique_message_t NetMessage::MessageFactory(uint32_t type, VStream& s) {
                 return std::make_unique<NetMessage>(GET_ADDR);
             case ADDR:
                 return std::make_unique<AddressMessage>(s);
+            case TX:
+                return std::make_unique<Transaction>(s);
             case BLOCK:
                 return std::make_unique<Block>(s);
             case BUNDLE:

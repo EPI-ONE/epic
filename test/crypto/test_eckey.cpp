@@ -48,7 +48,7 @@ TEST_F(TestECKey, key_workflow_test) {
     ASSERT_EQ(seckey, seckeyDup);
 
     // signing
-    uint256 hashMsg = HashSHA2<1>(&randstr, randstr.size());
+    uint256 hashMsg = HashSHA2<1>(randstr.data(), randstr.size());
     std::vector<unsigned char> detsig;
     ASSERT_TRUE(seckey.Sign(hashMsg, detsig));
 
@@ -116,7 +116,7 @@ TEST_F(TestECKey, key_regular_test) {
 
     for (int n = 0; n < 10; n++) {
         std::string strMsg = strprintf("EPIC secret number %i: 42", n);
-        uint256 hashMsg    = HashSHA2<1>(&strMsg, strMsg.size());
+        uint256 hashMsg    = HashSHA2<1>(strMsg.data(), strMsg.size());
 
         // normal signature
         std::vector<unsigned char> sign1, sign2, sign1C, sign2C;

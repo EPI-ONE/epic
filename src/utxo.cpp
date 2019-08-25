@@ -1,10 +1,6 @@
 #include "utxo.h"
 #include "caterpillar.h"
 
-uint256 ComputeUTXOKey(const uint256& hash, uint32_t index) {
-    return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
-}
-
 //////////////////////
 // UTXO
 //
@@ -128,6 +124,16 @@ void ChainLedger::Rollback(const TXOC& txoc) {
     for (const auto& utxokey : txoc.GetSpent()) {
         confirmed_.insert(removed_.extract(utxokey));
     }
+}
+
+bool ChainLedger::IsSpendable(const uint256& utxokey) const {
+    if (confirmed_.find(utxokey) != confirmed_.end()) {
+        return true;
+    }
+    if (removed_.find(utxokey) != removed_.end()) {
+        return false;
+    }
+    return CAT->ExistsUTXO(utxokey);
 }
 
 //////////////////////

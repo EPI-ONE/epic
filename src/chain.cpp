@@ -2,6 +2,7 @@
 #include "caterpillar.h"
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
+#include "mempool.h"
 
 ////////////////////
 // Chain
@@ -217,6 +218,7 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     return recs.back();
 }
 
+int counter = 0;
 std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
     const auto& pblock = record.cblock;
@@ -235,10 +237,15 @@ std::optional<TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
 
     // then verify its transaction and return the updating UTXO
     if (pblock->HasTransaction()) {
+        spdlog::debug("verifying tx {} , index = {}", pblock->GetTransaction()->GetHash().to_substr(), counter++);
         if (pblock->IsRegistration()) {
             result = ValidateRedemption(record, regChange);
         } else {
             result = ValidateTx(record);
+            // notify mempool to erase transaction from network synchronization
+            if (pblock->source == Block::Source::NETWORK) {
+                MEMPOOL->ReleaseTxFromConfirmed(*(pblock->GetTransaction()), bool(result));
+            }
         }
     } else {
         // regarded as a valid transaction but not updating ledger
@@ -422,6 +429,16 @@ bool Chain::IsMilestone(const uint256& blkHash) const {
         return CAT->IsMilestone(blkHash);
     }
     return result->second->isMilestone;
+}
+
+bool Chain::IsTxFitsLedger(const ConstTxPtr& tx) const {
+    // check each input
+    for (const auto& input : tx->GetInputs()) {
+        if (!ledger_.IsSpendable(input.outpoint.GetOutKey())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 ////////////////////

@@ -112,22 +112,9 @@ bool Block::Verify() const {
     }
 
     if (HasTransaction()) {
-        if (transaction_->GetInputs().empty() || transaction_->GetOutputs().empty()) {
-            spdlog::info("Block contains empty inputs or outputs [{}]", std::to_string(hash_));
-            return false;
+        if (!transaction_->Verify()) {
+            spdlog::info("Block fails on checking transaction integrity [{}]", std::to_string(hash_));
         }
-
-        // Make sure no duplicated TxInput
-        spdlog::trace("Block::Verify duplicated input {}", hash_.to_substr());
-        std::unordered_set<TxOutPoint> outpoints = {};
-        for (const TxInput& input : transaction_->GetInputs()) {
-            if (outpoints.find(input.outpoint) != outpoints.end()) {
-                spdlog::info("Block contains duplicated outpoints [{}]", std::to_string(hash_));
-                return false;
-            }
-            outpoints.insert(input.outpoint);
-        }
-        outpoints.clear();
     }
 
     // check the conditions of the first registration block
@@ -158,7 +145,7 @@ void Block::AddTransaction(const Transaction& tx) {
     CalculateOptimalEncodingSize();
 }
 
-void Block::AddTransaction(ConstTxPtr&& tx) {
+void Block::AddTransaction(ConstTxPtr tx) {
     if (!tx) {
         return;
     }

@@ -35,7 +35,7 @@ std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
 
 std::pair<uint256, std::vector<unsigned char>> TestFactory::CreateSig(const CKey& privateKey) {
     auto msg     = GetRandomString(10);
-    auto hashMsg = HashSHA2<1>(&msg, msg.size());
+    auto hashMsg = HashSHA2<1>(msg.data(), msg.size());
     std::vector<unsigned char> sig;
     privateKey.Sign(hashMsg, sig);
     return std::make_pair(hashMsg, sig);
