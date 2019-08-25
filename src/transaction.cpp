@@ -130,8 +130,8 @@ void Transaction::FinalizeHash() {
 
 bool Transaction::Verify() const {
     if (inputs_.empty() || outputs_.empty()) {
-        spdlog::info("Transaction {} contains empty inputs or outputs [{}]", hash_.to_substr(),
-                     std::to_string(parentBlock_->GetHash()));
+        spdlog::info("Transaction {} contains empty inputs or outputs {}", hash_.to_substr(),
+                     parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
         return false;
     }
     // TODO: add signature size checking
@@ -141,8 +141,8 @@ bool Transaction::Verify() const {
     outpoints.reserve(inputs_.size());
     for (const auto& input : inputs_) {
         if (outpoints.count(input.outpoint) > 0) {
-            spdlog::info("Transaction {} contains duplicated outpoints [{}]", hash_.to_substr(),
-                         std::to_string(parentBlock_->GetHash()));
+            spdlog::info("Transaction {} contains duplicated outpoints {}", hash_.to_substr(),
+                         parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
             return false;
         }
         outpoints.emplace(input.outpoint);

@@ -210,7 +210,6 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Start();
     MINER->Run();
 
-
     WALLET->CreateRandomTx(4);
     // receive the change of last transaction
     while (true) {

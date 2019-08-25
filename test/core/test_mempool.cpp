@@ -108,9 +108,9 @@ TEST_F(TestMemPool, receive_and_release) {
     usleep(10000);
     DAG->Wait();
 
-    auto [chain, vRecs] = fac.CreateChain(*DAG->GetMilestoneHead(), 5);
+    auto chain = fac.CreateChain(*DAG->GetMilestoneHead(), 5);
     std::for_each(chain.begin(), chain.end(), [](auto lvs) {
-        std::for_each(lvs.begin(), lvs.end(), [](auto b) { DAG->AddNewBlock((b), nullptr); });
+        std::for_each(lvs.begin(), lvs.end(), [](auto b) { DAG->AddNewBlock((b->cblock), nullptr); });
     });
 
     usleep(10000);
@@ -122,8 +122,8 @@ TEST_F(TestMemPool, receive_and_release) {
 
     Block b2 = blkTemplate;
     b2.SetMilestoneHash(DAG->GetMilestoneHead()->cblock->GetHash());
-    b2.SetPrevHash(chain.back().back()->GetHash());
-    b2.SetTime(chain.back().back()->GetTime() + 10);
+    b2.SetPrevHash(chain.back().back()->cblock->GetHash());
+    b2.SetTime(chain.back().back()->cblock->GetTime() + 10);
     b2.AddTransaction(redemption);
     b2.Solve();
     while (UintToArith256(b2.GetHash()) > DAG->GetBestChain().GetChainHead()->milestoneTarget) {

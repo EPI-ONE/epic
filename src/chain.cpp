@@ -297,7 +297,9 @@ void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, 
                 invalidTXOC.Merge(CreateTXOCFromInvalid(*txns[i], i));
             }
 
-            MEMPOOL->ReleaseTxFromConfirmed(txns[i], record.validity[i] == NodeRecord::Validity::VALID);
+            if (MEMPOOL) {
+                MEMPOOL->ReleaseTxFromConfirmed(txns[i], record.validity[i] == NodeRecord::Validity::VALID);
+            }
         }
     }
 }
