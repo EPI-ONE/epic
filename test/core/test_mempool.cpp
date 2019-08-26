@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "arith_uint256.h"
 #include "mempool.h"
 #include "test_env.h"
 
@@ -62,24 +63,30 @@ TEST_F(TestMemPool, ExtractTransactions) {
     /* hash used to simulate block */
     uint256 blkHash = fac.CreateRandomHash();
 
-    /* this transaction is used to
-     * simulate three cases:
-     * 1. d(bhash, thash) < threshold
-     * 2. d(bhash, thash) = threshold
-     * 3. d(bhash, thash) > threshold */
+    const auto& h1 = transactions[0]->GetHash();
+    const auto& h2 = transactions[1]->GetHash();
+
+    // The following transaction are used to simulate three cases:
+    // 1. threshold < both d(bhash, h1) and d(bhash, h2)
+    // 2. threshold = max of d(bhash, h1) and d(bhash, h2)
+    // 3. threshold > both d(bhash, h1) and d(bhash, h2)
     pool.Insert(transactions[0]);
+    pool.Insert(transactions[1]);
 
-    /* = */
-    arith_uint256 threshold = (UintToArith256(transactions[0]->GetHash()) ^ UintToArith256(blkHash)) << 32;
+    static auto cmpt = [&](uint256 n) -> arith_uint256 { return (UintToArith256(n) ^ UintToArith256(blkHash)) << 32; };
+
+    // case 1
+    arith_uint256 threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
     ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
-    /* > */
-    threshold--;
-    ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
+    // case 2
+    threshold     = std::max(cmpt(h1), cmpt(h2));
+    auto pool_cpy = pool;
+    ASSERT_EQ(pool_cpy.ExtractTransactions(blkHash, threshold).size(), 1);
 
-    /* < */
-    threshold += 2;
-    ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 1);
+    // case 3
+    threshold++;
+    ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 2);
     ASSERT_TRUE(pool.IsEmpty());
 }
 

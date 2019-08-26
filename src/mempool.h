@@ -25,6 +25,8 @@ public:
                   return *a == *b;
               }) {}
 
+    MemPool(const MemPool& m) : mempool_(m.mempool_) {}
+
     /**
      * basic operations for memory pool
      */

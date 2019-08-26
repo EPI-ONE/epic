@@ -92,15 +92,13 @@ std::vector<ConstTxPtr> MemPool::ExtractTransactions(const uint256& blkHash,
                                                      const arith_uint256& threshold,
                                                      size_t limit) {
     arith_uint256 base_hash = UintToArith256(blkHash);
+    std::vector<ConstTxPtr> result;
     WRITER_LOCK(mutex_)
 
-    std::vector<ConstTxPtr> result;
-    for (auto it = mempool_.begin(); it != mempool_.end();) {
-        if (result.size() == limit) {
-            return result;
-        }
-        auto distance = base_hash ^ UintToArith256((*it)->GetHash());
-        if (PartitionCmp(distance, threshold)) {
+    auto it = mempool_.begin();
+    while (it != mempool_.end() && result.size() < limit) {
+        auto dist = base_hash ^ UintToArith256((*it)->GetHash());
+        if (PartitionCmp(dist, threshold)) {
             result.emplace_back(*it);
             it = mempool_.erase(it);
         } else {
