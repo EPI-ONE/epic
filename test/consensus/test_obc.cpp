@@ -3,8 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <gtest/gtest.h>
+#include <memory>
 
+#include "block.h"
 #include "obc.h"
+#include "params.h"
 #include "test_factory.h"
 
 class OBCTest : public testing::Test {
@@ -75,17 +78,16 @@ TEST_F(OBCTest, simple_one_block_test) {
      * block in the OBC */
     EXPECT_EQ(obc.Size(), 1);
 
-    const uint256 dep_hash                           = blocks[2].GetHash();
-    std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
+    auto result = obc.SubmitHash(blocks[2].GetHash());
 
     /* check if a value was even returned */
-    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(result.empty());
 
     /* check if there was exactly one value returned*/
-    EXPECT_EQ(result.value().size(), 1);
+    EXPECT_EQ(result.size(), 1);
 
     /* check if that returned value was the one we expected to see */
-    EXPECT_TRUE(result.value()[0]->GetHash() == blocks[0].GetHash());
+    EXPECT_TRUE(result[0]->GetHash() == blocks[0].GetHash());
 }
 
 TEST_F(OBCTest, complex_secondary_deps_test) {
@@ -106,15 +108,15 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     EXPECT_EQ(obc.Size(), 4);
 
     /* submit missing hash */
-    std::optional<std::vector<ConstBlockPtr>> result = obc.SubmitHash(dep_hash);
+    std::vector<ConstBlockPtr> result = obc.SubmitHash(dep_hash);
 
     /* check if a value was even returned */
-    EXPECT_TRUE(result.has_value());
+    EXPECT_FALSE(result.empty());
 
     /* check if there were exactly three
      * values returned as the lose end 9
      * is not tied since it has two deps */
-    EXPECT_EQ(result.value().size(), 3);
+    EXPECT_EQ(result.size(), 3);
 
     /* check if the OBC has one element left */
     EXPECT_EQ(obc.Size(), 1);

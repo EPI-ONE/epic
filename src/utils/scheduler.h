@@ -6,6 +6,7 @@
 #define EPIC_SCHEDULER_H
 
 #include <chrono>
+#include <functional>
 #include <thread>
 #include <vector>
 

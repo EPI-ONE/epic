@@ -148,20 +148,22 @@ TEST_F(TestConsensus, AddNewBlocks) {
     ///////////////////////////
     // Prepare for test data
     //
-    // Construct a fully connected and syntatical valid random graph
+    // Construct a fully connected and syntactical valid random graph
 
     std::vector<VertexPtr> blocks;
-    while (blocks.size() <= 2) {
-        auto chain = fac.CreateChain(GENESIS_VERTEX, 1);
-        blocks     = std::move(chain.back());
-        blocks.pop_back(); // remove milestone such that all blocks will stay in pending
+    auto chain = fac.CreateChain(GENESIS_VERTEX, 1000);
+    for (auto& lvs : chain) {
+        for (auto& b : lvs) {
+            blocks.emplace_back(std::move(b));
+        }
     }
 
     spdlog::info("Number of blocks to be added: {}", blocks.size());
 
     // Shuffle order of blocks to make some of them not solid
-    auto rng = std::default_random_engine{};
-    std::shuffle(std::begin(blocks), std::end(blocks), rng);
+    std::random_device rd;
+    std::mt19937_64 g(rd());
+    std::shuffle(std::begin(blocks), std::end(blocks), g);
 
     ///////////////////////////
     // Test starts here
@@ -179,11 +181,9 @@ TEST_F(TestConsensus, AddNewBlocks) {
     for (const auto& blk : blocks) {
         auto bhash = blk->cblock->GetHash();
         ASSERT_TRUE(STORE->DAGExists(bhash));
-        auto blkCache = STORE->GetBlockCache(bhash);
-        ASSERT_TRUE(blkCache);
     }
 
-    EXPECT_EQ(DAG->GetBestChain().GetPendingBlockCount(), blocks.size());
+    EXPECT_TRUE(STORE->GetOBC().Empty());
 }
 
 TEST_F(TestConsensus, AddForks) {

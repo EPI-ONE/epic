@@ -13,29 +13,37 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), dbStore_(dbPa
     currentVtxName_  = dbStore_.GetInfo<uint16_t>("vtxN");
     currentBlkSize_  = dbStore_.GetInfo<uint32_t>("blkS");
     currentVtxSize_  = dbStore_.GetInfo<uint32_t>("vtxS");
+
+
+    obcThread_.Start();
+    obcTimeout_.AddPeriodTask(300, [this]() {
+        obcThread_.Execute([this]() {
+            auto n = obc_.Prune(3600);
+            spdlog::info("Erased {} outdated entries from OBC.", n);
+        });
+    });
 }
 
 BlockStore::~BlockStore() {
+    obcThread_.Abort();
     obcThread_.Stop();
 }
 
-void BlockStore::AddBlockToOBC(const ConstBlockPtr& blk, const uint8_t& mask) {
-    obcThread_.Execute([blk, mask, this]() {
+void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
+    obcThread_.Execute([blk = std::move(blk), mask, this]() mutable {
         spdlog::trace("AddBlockToOBC {}", blk->GetHash().to_substr());
         if (!obcEnabled_.load()) {
             return;
         }
-        obc_.AddBlock(blk, mask);
+        obc_.AddBlock(std::move(blk), mask);
     });
 }
 
 void BlockStore::ReleaseBlocks(const uint256& blkHash) {
     obcThread_.Execute([blkHash, this]() {
         auto releasedBlocks = obc_.SubmitHash(blkHash);
-        if (releasedBlocks) {
-            for (auto& blk : *releasedBlocks) {
-                DAG->AddNewBlock(blk, nullptr);
-            }
+        for (auto& blk : releasedBlocks) {
+            DAG->AddNewBlock(std::move(blk), nullptr);
         }
     });
 }
@@ -52,6 +60,10 @@ void BlockStore::DisableOBC() {
     if (obcEnabled_.compare_exchange_strong(flag, false)) {
         spdlog::info("OBC disabled.");
     }
+}
+
+const OrphanBlocksContainer& BlockStore::GetOBC() const {
+    return obc_;
 }
 
 ConstBlockPtr BlockStore::GetBlockCache(const uint256& blkHash) const {
