@@ -3,100 +3,108 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "obc.h"
+#include <memory>
 
-OrphanBlocksContainer::~OrphanBlocksContainer() {
-    block_dep_map_.clear();
-    lose_ends_.clear();
-}
+#define READER_LOCK(mu) std::shared_lock<std::shared_mutex> reader(mu);
+#define WRITER_LOCK(mu) std::unique_lock<std::shared_mutex> writer(mu);
 
 std::size_t OrphanBlocksContainer::Size() const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    return block_dep_map_.size();
+    READER_LOCK(mutex_)
+    return size;
 }
 
-size_t OrphanBlocksContainer::DependencySize() const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    return lose_ends_.size();
-}
-
-bool OrphanBlocksContainer::IsEmpty() const {
-    return this->Size() == 0;
+bool OrphanBlocksContainer::Empty() const {
+    READER_LOCK(mutex_)
+    return block_dep_map_.empty();
 }
 
 bool OrphanBlocksContainer::Contains(const uint256& hash) const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
-    return block_dep_map_.find(hash) != block_dep_map_.end();
+    READER_LOCK(mutex_)
+    auto entry = block_dep_map_.find(hash);
+    return entry != block_dep_map_.end() && entry->second->block;
 }
 
-void OrphanBlocksContainer::AddBlock(const ConstBlockPtr& block, uint8_t missing_mask) {
+void OrphanBlocksContainer::AddBlock(ConstBlockPtr&& block, uint8_t missing_mask) {
     if (missing_mask == 0) {
         return;
     }
 
-    // insert new dependency into block_dep_map_
-    std::unique_lock<std::shared_mutex> writer(mutex_);
+    auto bHash    = block->GetHash();
+    auto msHash   = block->GetMilestoneHash();
+    auto prevHash = block->GetPrevHash();
+    auto tipHash  = block->GetTipHash();
 
     // construct new dependency for the new block
-    obc_dep_ptr dep = std::make_shared<obc_dep>();
-    dep->block      = block;
+    obc_dep_ptr dep;
+
+    READER_LOCK(mutex_)
+    auto entry = block_dep_map_.find(bHash);
+    if (entry != block_dep_map_.end()) {
+        dep = entry->second;
+    } else {
+        dep = std::make_shared<obc_dep>();
+    }
+    reader.unlock();
+
+    dep->block = std::move(block);
 
     // insert new dependency into block_dep_map_
     std::unordered_set<uint256> unique_missing_hashes;
 
-    auto common_insert = [&](uint256&& hash) {
-        auto it = block_dep_map_.find(hash);
-        unique_missing_hashes.insert(hash);
+    auto common_insert = [&](const uint256& parent_hash) {
+        auto it = block_dep_map_.find(parent_hash);
+        unique_missing_hashes.insert(parent_hash);
 
         if (it == block_dep_map_.end()) {
             // if the dependency is not in this OBC then the dep is a lose end
-            lose_ends_[hash].insert(dep);
+            auto parent_dep = std::make_shared<obc_dep>();
+            parent_dep->deps.emplace(dep);
+            block_dep_map_.emplace(parent_hash, std::move(parent_dep));
         } else {
             // if the dependency is in the OBC the dep is linked to the dependency dep
-            it->second->deps.push_back(dep);
+            it->second->deps.emplace(dep);
         }
     };
 
-    // insert new dependency into block_dep_map_
-    block_dep_map_.insert_or_assign(block->GetHash(), dep);
+    WRITER_LOCK(mutex_)
+    block_dep_map_.insert_or_assign(bHash, dep);
+    size++;
 
     if (missing_mask & M_MISSING) {
-        common_insert(block->GetMilestoneHash());
+        common_insert(msHash);
     }
 
     if (missing_mask & T_MISSING) {
-        common_insert(block->GetTipHash());
+        common_insert(tipHash);
     }
 
     if (missing_mask & P_MISSING) {
-        common_insert(block->GetPrevHash());
+        common_insert(prevHash);
     }
 
     dep->ndeps = unique_missing_hashes.size();
 }
 
-std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
-    std::unique_lock<std::shared_mutex> writer(mutex_);
-    auto range = lose_ends_.find(hash);
-
-    // if no lose ends can be tied using this hash return
-    if (range == lose_ends_.end()) {
+std::vector<ConstBlockPtr> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
+    WRITER_LOCK(mutex_);
+    auto entry = block_dep_map_.find(hash);
+    if (entry == block_dep_map_.end()) {
         return {};
     }
 
     std::vector<obc_dep_ptr> stack;
     std::vector<ConstBlockPtr> result;
 
-    // for all deps that have the given hash as a parent/dependency
-    for (auto& n : range->second) {
-        // push it onto the stack as it might be used later on
+    // Push all dependencies of the entry to stack to recursively
+    // release dependencies of the dependencies
+    for (auto& n : entry->second->deps) {
         stack.push_back(n);
     }
 
-    /* the addition of the given hash
-     * ties lose ends therefore the
-     * corresponding dependencies have
-     * to be removed from lose_ends_ */
-    lose_ends_.erase(range);
+    if (entry->second->block) {
+        size--;
+    }
+    block_dep_map_.erase(entry);
     writer.unlock();
 
     obc_dep_ptr cursor;
@@ -119,15 +127,20 @@ std::optional<std::vector<ConstBlockPtr>> OrphanBlocksContainer::SubmitHash(cons
         /* this also means that we have to remove the
          * dependency from the block_dep_map_ */
         writer.lock();
-        block_dep_map_.erase(cursor->block->GetHash());
+        if (block_dep_map_.erase(cursor->block->GetHash())) {
+            size--;
+        }
         writer.unlock();
 
-        /* further we push all dependencies that dependend
-         * on this block onto the stack */
+        // further we push all dependencies of this block onto the stack
         for (const obc_dep_ptr& dep : cursor->deps) {
             stack.push_back(dep);
         }
     }
 
     return result;
+}
+
+size_t OrphanBlocksContainer::Prune(uint32_t secs) {
+    return 0;
 }

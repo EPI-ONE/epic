@@ -15,6 +15,11 @@
 #include <vector>
 
 typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
+#include "dag_manager.h"
+#include "obc.h"
+#include "rocksdb.h"
+#include "scheduler.h"
+#include "threadpool.h"
 
 class BlockStore {
 public:
@@ -89,10 +94,11 @@ public:
     bool IsWeaklySolid(const ConstBlockPtr&) const;   // if ancestors are all in either DAG or OBC
     bool AnyLinkIsOrphan(const ConstBlockPtr&) const; // if any ancestor is in OBC
     void Cache(const ConstBlockPtr&);
-    void AddBlockToOBC(const ConstBlockPtr&, const uint8_t& mask);
+    void AddBlockToOBC(ConstBlockPtr&&, const uint8_t& mask);
     void ReleaseBlocks(const uint256&);
     void EnableOBC();
     void DisableOBC();
+    const OrphanBlocksContainer& GetOBC() const;
 
     void SetFileCapacities(uint32_t, uint16_t);
 
@@ -106,13 +112,12 @@ public:
     ~BlockStore();
 
 private:
-    ThreadPool obcThread_;
-
-    RocksDBStore dbStore_;
     OrphanBlocksContainer obc_;
-
+    ThreadPool obcThread_;
+    Scheduler obcTimeout_;
     std::atomic<bool> obcEnabled_;
 
+    RocksDBStore dbStore_;
     ConcurrentHashMap<uint256, ConstBlockPtr> blockCache_;
 
     /**

@@ -323,7 +323,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         // First, check if we already received its preceding blocks
         if (STORE->IsWeaklySolid(blk)) {
             if (STORE->AnyLinkIsOrphan(blk)) {
-                STORE->AddBlockToOBC(blk, mask());
+                STORE->AddBlockToOBC(std::move(blk), mask());
                 return;
             }
         } else {
@@ -335,7 +335,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
                 return;
             }
             // Abort and send GetBlock requests.
-            STORE->AddBlockToOBC(blk, mask());
+            STORE->AddBlockToOBC(std::move(blk), mask());
 
             if (peer) {
                 peer->StartSync();
