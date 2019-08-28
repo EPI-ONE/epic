@@ -2,10 +2,13 @@
 #define __TEST_ENV__
 
 #include <gtest/gtest.h>
+#include <memory>
 
 #include "caterpillar.h"
+#include "miner.h"
 #include "params.h"
 #include "test_factory.h"
+#include "wallet.h"
 
 class EpicTestEnvironment : public ::testing::Environment {
 public:
@@ -24,7 +27,7 @@ public:
         ECC_Stop();
     }
 
-    static void SetUpDAG(std::string dirPath) {
+    static void SetUpDAG(std::string dirPath, bool enable_miner = false, bool enable_wallet = false) {
         std::ostringstream os;
         os << time(nullptr);
         file::SetDataDirPrefix(dirPath + os.str());
@@ -34,11 +37,26 @@ public:
         // Initialize DB with genesis
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
         CAT->StoreLevelSet(genesisLvs);
+
+        if (enable_miner) {
+            MEMPOOL = std::make_unique<MemPool>();
+            MINER   = std::make_unique<Miner>();
+        }
+
+        if (enable_wallet) {
+            WALLET = std::make_shared<Wallet>(dirPath + "/data/", 0);
+            DAG->RegisterOnLvsConfirmedCallback(std::bind(&Wallet::OnLvsConfirmed, WALLET, std::placeholders::_1,
+                                                          std::placeholders::_2, std::placeholders::_3));
+        }
     }
 
     static void TearDownDAG(std::string dirPath) {
         CAT.reset();
         DAG.reset();
+        MEMPOOL.reset();
+        MINER.reset();
+        WALLET.reset();
+
         std::string cmd = "exec rm -r " + dirPath;
         system(cmd.c_str());
     }

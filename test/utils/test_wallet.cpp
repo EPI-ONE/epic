@@ -143,11 +143,7 @@ TEST_F(TestWallet, test_wallet_store) {
 }
 
 TEST_F(TestWallet, work_flow) {
-    EpicTestEnvironment::SetUpDAG(path);
-    MEMPOOL = std::make_unique<MemPool>();
-    MINER   = std::make_unique<Miner>();
-    WALLET  = std::make_shared<Wallet>(dir, 0);
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
+    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
@@ -188,21 +184,14 @@ TEST_F(TestWallet, work_flow) {
     ASSERT_EQ(WALLET->GetSpent().size(), 1);
 
     MINER->Stop();
-    MEMPOOL.reset();
-    MINER.reset();
     WALLET->Stop();
-    WALLET.reset();
     DAG->Stop();
     CAT->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
 TEST_F(TestWallet, normal_workflow) {
-    EpicTestEnvironment::SetUpDAG(path);
-    MEMPOOL = std::make_unique<MemPool>();
-    MINER   = std::make_unique<Miner>();
-    WALLET  = std::make_shared<Wallet>(dir, 0);
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
+    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
@@ -226,10 +215,7 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_EQ(WALLET->GetSpent().size(), 1);
 
     MINER->Stop();
-    MEMPOOL.reset();
-    MINER.reset();
     WALLET->Stop();
-    WALLET.reset();
     DAG->Stop();
     CAT->Stop();
     EpicTestEnvironment::TearDownDAG(path);

@@ -735,8 +735,8 @@ void DAGManager::FlushToCAT(size_t level) {
         }
 
         // notify the listener
-        if (onLvsConfirmedListener) {
-            onLvsConfirmedListener->OnLvsConfirmed(std::move(blocksToListener), utxoToStore, utxoToRemove);
+        if (onLvsConfirmedCallback) {
+            onLvsConfirmedCallback(std::move(blocksToListener), utxoToStore, utxoToRemove);
         }
 
         // then remove chain states from chains
@@ -892,6 +892,6 @@ bool DAGManager::ExistsNode(const uint256& h) const {
     return false;
 }
 
-void DAGManager::RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener) {
-    onLvsConfirmedListener = listener;
+void DAGManager::RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func) {
+    onLvsConfirmedCallback = std::move(callback_func);
 }

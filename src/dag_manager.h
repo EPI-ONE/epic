@@ -2,12 +2,11 @@
 #define __SRC_DAG_MANAGER_H__
 
 #include <atomic>
+#include <functional>
 #include <list>
 
 #include "chains.h"
 #include "concurrent_container.h"
-#include "consensus.h"
-#include "dag_service.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
@@ -56,7 +55,6 @@ public:
      * Returns true only if the new block is successfully submitted to pendings.
      */
     void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
-    void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
 
     //////////////////////// APIs for retriving data from DAG ////////////////////////
 
@@ -89,6 +87,14 @@ public:
     }
 
     /////////////////////////////// Mics. /////////////////////////////////////
+
+    using OnLvsConfirmedCallback =
+        std::function<void(std::vector<RecordPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>)>;
+
+    /**
+     * Actions to be performed by wallet when a level set is confirmed
+     */
+    void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
 
     /**
      * Blocks the main thread from going forward
@@ -143,7 +149,7 @@ private:
     /**
      * Listener that triggers when a levelset is confirmed
      */
-    OnLvsConfirmedListener onLvsConfirmedListener;
+    OnLvsConfirmedCallback onLvsConfirmedCallback = nullptr;
 
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 

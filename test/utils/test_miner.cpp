@@ -12,19 +12,16 @@ public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
 
     static void SetUpEnv() {
-        EpicTestEnvironment::SetUpDAG("test_miner/");
+        EpicTestEnvironment::SetUpDAG("test_miner/", true);
 
         CKey key;
         key.MakeNewKey(false);
         auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
-
-        MEMPOOL = std::make_unique<MemPool>();
         MEMPOOL->PushRedemptionTx(tx);
     }
 
     static void TearDownEnv() {
         EpicTestEnvironment::TearDownDAG("test_miner/");
-        MEMPOOL.reset();
     }
 };
 
