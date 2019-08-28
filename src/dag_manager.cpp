@@ -450,7 +450,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            RecordPtr ms = GetState(msHash);
+            RecordPtr ms = GetState(msHash, false);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return;
             }
@@ -466,7 +466,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         // Check difficulty target //////
 
-        RecordPtr ms = GetState(msHash);
+        RecordPtr ms = GetState(msHash, false);
         if (!ms) {
             spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
@@ -508,12 +508,6 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) 
 
     if (blk->GetMilestoneHash() == GENESIS.GetHash()) {
         return true;
-    }
-
-    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
-        spdlog::info("Block is too old: {} vs. {} [{}]", blk->GetTime(), ms->cblock->GetTime(),
-                     std::to_string(blk->GetHash()));
-        return false;
     }
 
     assert(milestoneChains.size() > 0);
@@ -649,16 +643,16 @@ RecordPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
         return search->second;
-    } else {
-        auto prec = CAT->GetRecord(msHash, withBlock);
-        if (prec && prec->snapshot) {
-            return prec;
-        } else {
-            // cannot happen for in-dag workflow
-            // may return nullptr when rpc is requesting some non-existing states
-            return nullptr;
-        }
     }
+
+    auto prec = CAT->GetRecord(msHash, withBlock);
+    if (prec && prec->snapshot) {
+        return prec;
+    }
+
+    // cannot happen for in-dag workflow
+    // may return nullptr when rpc is requesting some non-existing states
+    return nullptr;
 }
 
 Chain& DAGManager::GetBestChain() const {
