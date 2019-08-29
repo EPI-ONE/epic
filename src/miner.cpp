@@ -200,7 +200,7 @@ void Miner::Run() {
                     auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
                                    GetParams().sortitionCoefficient *
                                    (GetParams().maxTarget / (head->snapshot->hashRate + 1));
-                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed));
+                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
                 }
             }
 

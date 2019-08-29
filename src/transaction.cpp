@@ -86,8 +86,6 @@ Transaction::Transaction(const CKeyID& addr) {
     SetParents();
 }
 
-Transaction::Transaction(CKeyID& addr) : Transaction((const CKeyID) addr) {}
-
 void Transaction::SetParents() const {
     for (const TxInput& input : inputs_) {
         input.SetParent(this);

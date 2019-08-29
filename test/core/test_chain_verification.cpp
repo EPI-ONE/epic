@@ -83,7 +83,7 @@ TEST_F(TestChainVerification, UTXO) {
 TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     // prepare keys and signature
     auto keypair        = fac.CreateKeyPair();
-    auto addr           = keypair.second.GetID();
+    const auto addr     = keypair.second.GetID();
     auto [hashMsg, sig] = fac.CreateSig(keypair.first);
 
     // chain configuration

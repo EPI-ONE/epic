@@ -39,6 +39,7 @@ TEST_F(TestMiner, Solve) {
     EXPECT_TRUE(block.Verify());
 }
 
+#ifdef __CUDA_ENABLED__
 TEST_F(TestMiner, SolveCuckaroo) {
     SetLogLevel(SPDLOG_LEVEL_TRACE);
 
@@ -51,6 +52,7 @@ TEST_F(TestMiner, SolveCuckaroo) {
 
     ResetLogLevel();
 }
+#endif
 
 TEST_F(TestMiner, Run) {
     SetUpEnv();

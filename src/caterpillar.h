@@ -26,7 +26,7 @@ public:
     ConstBlockPtr GetBlockCache(const uint256&) const;
     ConstBlockPtr FindBlock(const uint256&) const;
     VStream GetRawLevelSetAt(size_t height, file::FileType = file::FileType::BLK) const;
-    VStream GetRawLevelSetBetween(size_t height1, size_t heigh2, file::FileType = file::FileType::BLK) const;
+    VStream GetRawLevelSetBetween(size_t height1, size_t height2, file::FileType = file::FileType::BLK) const;
     std::vector<ConstBlockPtr> GetLevelSetBlksAt(size_t height) const;
     std::vector<RecordPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
     size_t GetHeight(const uint256&) const;

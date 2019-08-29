@@ -97,7 +97,7 @@ TEST_F(TestMemPool, receive_and_release) {
     auto [privkey, pubkey] = fac.CreateKeyPair();
     auto [hashMsg, sig]    = fac.CreateSig(privkey);
     auto [hashMsg2, sig2]  = fac.CreateSig(privkey);
-    auto addr              = pubkey.GetID();
+    const auto addr        = pubkey.GetID();
 
     Block blkTemplate{
         GetParams().version, ghash, ghash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};

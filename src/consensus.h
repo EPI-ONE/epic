@@ -178,7 +178,7 @@ public:
 
     NodeRecord();
     NodeRecord(const NodeRecord&) = default;
-    NodeRecord(const ConstBlockPtr&);
+    explicit NodeRecord(const ConstBlockPtr&);
     explicit NodeRecord(const Block&);
     explicit NodeRecord(Block&&);
     explicit NodeRecord(VStream&);

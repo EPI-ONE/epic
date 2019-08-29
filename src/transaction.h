@@ -15,7 +15,7 @@ class Block;
 class Transaction;
 
 /**
- * Computation methods of keys for searching UTXO in maps or in DB: hash ^ index
+ * Computation methods of keys for searching UTXO in maps or in DB: hash ^ txIdx ^ outIdx
  */
 uint256 ComputeUTXOKey(const uint256& hash, uint32_t txIdx, uint32_t outIdx);
 
@@ -147,7 +147,6 @@ public:
      * constructor of first registration where $addr is the address to redeem in the future
      */
     explicit Transaction(const CKeyID& addr);
-    explicit Transaction(CKeyID& addr);
 
     Transaction(std::vector<TxInput> inputs, std::vector<TxOutput> outputs)
         : inputs_(std::move(inputs)), outputs_(std::move(outputs)) {

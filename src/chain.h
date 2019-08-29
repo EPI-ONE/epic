@@ -160,9 +160,9 @@ private:
     /**
      * Checks whether the block contains a valide tx
      * and update its NR info
-     * Returns TXOC of the single block
+     * Returns valid TXOC and invalid TXOC of the single block
      */
-    void Validate(NodeRecord& record, RegChange&, TXOC& valid, TXOC& invalid);
+    std::pair<TXOC, TXOC> Validate(NodeRecord& record, RegChange&);
 
     // offline verification for transactions
     std::optional<TXOC> ValidateRedemption(NodeRecord&, RegChange&);

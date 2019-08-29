@@ -218,8 +218,7 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
             // Invalidate any txns other than the first registration in this block
             memset(&rec->validity[1], NodeRecord::Validity::INVALID, rec->validity.size() - 1);
         } else {
-            TXOC validTXOC, invalidTXOC;
-            Validate(*rec, state->regChange, validTXOC, invalidTXOC);
+            auto [validTXOC, invalidTXOC] = Validate(*rec, state->regChange);
 
             // update ledger in chain for future reference
             if (!validTXOC.Empty()) {
@@ -249,10 +248,9 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     return recs.back();
 }
 
-void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, TXOC& invalidTXOC) {
+std::pair<TXOC, TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
     spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
     const auto& pblock = record.cblock;
-    std::optional<TXOC> result;
 
     // first update the prev redemption hashes
     auto prevRec = GetRecord(pblock->GetPrevHash());
@@ -266,9 +264,10 @@ void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, 
     record.minerChainHeight = prevRec->minerChainHeight + 1;
 
     // then verify its transaction and return the updating UTXO
+    TXOC validTXOC, invalidTXOC;
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
-            result = ValidateRedemption(record, regChange);
+            auto result = ValidateRedemption(record, regChange);
             if (result) {
                 record.validity[0] = NodeRecord::Validity::VALID;
                 validTXOC.Merge(*result);
@@ -286,8 +285,7 @@ void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, 
 
         // check utxo
         // txns with valid utxo will have validity == VALID, and others are left unchanged
-        auto valid = ValidateTxns(record);
-        validTXOC.Merge(std::move(valid));
+        validTXOC.Merge(ValidateTxns(record));
 
         // invalidate transactions that still have validity == UNKNOWN
         const auto& txns = record.cblock->GetTransactions();
@@ -302,6 +300,8 @@ void Chain::Validate(NodeRecord& record, RegChange& regChange, TXOC& validTXOC, 
             }
         }
     }
+
+    return std::make_pair(validTXOC, invalidTXOC);
 }
 
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& regChange) {
