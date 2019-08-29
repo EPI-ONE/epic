@@ -142,7 +142,7 @@ TEST_F(TestWallet, test_wallet_store) {
     system(cmd.c_str());
 }
 
-TEST_F(TestWallet, work_flow) {
+TEST_F(TestWallet, workflow) {
     EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->Start();
 
@@ -176,12 +176,14 @@ TEST_F(TestWallet, work_flow) {
 
     // receive the change of last transaction
 
-    while (WALLET->GetSpent().empty())
-        ;
-    ASSERT_EQ(WALLET->GetUnspent().size(), 1);
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
-    ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_EQ(WALLET->GetSpent().size(), 1);
+    while (WALLET->GetSpent().empty()) {
+        usleep(50000);
+    }
+
+    EXPECT_EQ(WALLET->GetUnspent().size(), 1);
+    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
+    EXPECT_EQ(WALLET->GetPending().size(), 0);
+    EXPECT_EQ(WALLET->GetSpent().size(), 1);
 
     MINER->Stop();
     WALLET->Stop();
@@ -200,13 +202,10 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Run();
 
     WALLET->CreateRandomTx(4);
+
     // receive the change of last transaction
-    while (true) {
-        auto spent = WALLET->GetSpent();
-        if (spent.size() == 1) {
-            break;
-        }
-        std::this_thread::yield();
+    while (WALLET->GetSpent().size() != 1) {
+        usleep(500000);
     }
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 3);
