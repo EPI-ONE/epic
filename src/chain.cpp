@@ -4,6 +4,28 @@
 #include "tasm/functors.h"
 #include "tasm/tasm.h"
 
+template <typename K, typename V>
+bool UpdateKey(std::unordered_map<K, V>& m, const K& oldKey, const K& newKey) {
+    auto entry = m.extract(oldKey);
+    if (entry) {
+        entry.key() = newKey;
+        return m.insert(std::move(entry)).inserted;
+    }
+
+    return false;
+}
+
+template <typename K, typename V>
+bool UpdateValue(std::unordered_map<K, V>& m, const K& key, const V& newValue) {
+    auto entry = m.extract(key);
+    if (entry) {
+        entry.mapped() = newValue;
+        return m.insert(std::move(entry)).inserted;
+    }
+
+    return false;
+}
+
 ////////////////////
 // Chain
 ////////////////////
@@ -12,7 +34,7 @@ Chain::Chain() : ismainchain_(true) {}
 
 Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
-      recordHistory_(chain.recordHistory_), ledger_(chain.ledger_) {
+      recordHistory_(chain.recordHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_) {
     if (states_.empty()) {
         return;
     }
@@ -27,6 +49,14 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
             pendingBlocks_.insert({h, rpt.cblock});
             recordHistory_.erase(h);
             ledger_.Rollback((*it)->GetTXOC());
+
+            // Rollback prevRedempHashMap_
+            for (const auto& h : (*it)->regChange.GetCreated()) {
+                prevRedempHashMap_.erase(h.first);
+            }
+            for (const auto& h : (*it)->regChange.GetRemoved()) {
+                prevRedempHashMap_.insert(h);
+            }
         }
         states_.erase(std::next(it).base());
     }
@@ -210,8 +240,8 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
             const auto& blkHash = rec->cblock->GetHash();
-            rec->prevRedemHash  = blkHash;
-            rec->isRedeemed     = NodeRecord::NOT_YET_REDEEMED;
+            prevRedempHashMap_.insert_or_assign(blkHash, blkHash);
+            rec->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
             state->regChange.Create(blkHash, blkHash);
             rec->minerChainHeight = 1;
             rec->validity[0]      = NodeRecord::Validity::VALID;
@@ -249,19 +279,25 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
 }
 
 std::pair<TXOC, TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
-    spdlog::trace("Validating {}", record.cblock->GetHash().to_substr());
-    const auto& pblock = record.cblock;
+    const auto& pblock   = record.cblock;
+    const auto& blkHash  = pblock->GetHash();
+    const auto& prevHash = pblock->GetPrevHash();
+    spdlog::trace("Validating {}", blkHash.to_substr());
 
-    // first update the prev redemption hashes
-    auto prevRec = GetRecord(pblock->GetPrevHash());
+    // first update the key of the prev redemption hashes
+    uint256 oldRedempHash;
+    if (UpdateKey(prevRedempHashMap_, prevHash, blkHash)) {
+        oldRedempHash = prevRedempHashMap_.find(blkHash)->second;
+    } else {
+        oldRedempHash = CAT->GetPrevRedemHash(prevHash);
+        prevRedempHashMap_.emplace(blkHash, oldRedempHash);
+    }
 
-    const auto& oldRedemHash = prevRec->prevRedemHash;
-    assert(!oldRedemHash.IsNull());
-    record.prevRedemHash = oldRedemHash;
-    regChange.Remove(record.cblock->GetPrevHash(), oldRedemHash);
-    regChange.Create(record.cblock->GetHash(), oldRedemHash);
+    assert(!oldRedempHash.IsNull());
+    regChange.Remove(prevHash, oldRedempHash);
+    regChange.Create(blkHash, oldRedempHash);
 
-    record.minerChainHeight = prevRec->minerChainHeight + 1;
+    record.minerChainHeight = GetRecord(prevHash)->minerChainHeight + 1;
 
     // then verify its transaction and return the updating UTXO
     TXOC validTXOC, invalidTXOC;
@@ -304,16 +340,26 @@ std::pair<TXOC, TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) 
     return std::make_pair(validTXOC, invalidTXOC);
 }
 
+uint256 Chain::GetPrevRedempHash(const uint256& h) const {
+    auto entry = prevRedempHashMap_.find(h);
+    if (entry != prevRedempHashMap_.end()) {
+        return entry->second;
+    }
+    return CAT->GetPrevRedemHash(h);
+}
+
 std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& regChange) {
-    spdlog::trace("Validating redemption {}", record.cblock->GetHash().to_substr());
-    // this transaction is a redemption of reward
-    auto prevReg = GetRecord(record.prevRedemHash);
+    const auto& blkHash = record.cblock->GetHash();
+    const auto hashstr  = std::to_string(blkHash);
+    spdlog::trace("Validating redemption {}", blkHash.to_substr());
+
+    uint256 prevRedempHash = GetPrevRedempHash(blkHash);
+    auto prevReg           = GetRecord(prevRedempHash);
     assert(prevReg);
 
-    const auto& hashstr = std::to_string(record.cblock->GetHash());
 
     if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(record.prevRedemHash),
+        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(prevRedempHash),
                      hashstr);
         return {};
     }
@@ -335,15 +381,13 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     }
 
     // update redemption status
-    prevReg->isRedeemed  = NodeRecord::IS_REDEEMED;
-    record.isRedeemed    = NodeRecord::NOT_YET_REDEEMED;
-    const auto& oldRH    = record.prevRedemHash;
-    const auto& blkHash  = record.cblock->GetHash();
-    record.prevRedemHash = blkHash;
-    regChange.Remove(blkHash, oldRH);
+    prevReg->isRedeemed = NodeRecord::IS_REDEEMED;
+    record.isRedeemed   = NodeRecord::NOT_YET_REDEEMED;
+    regChange.Remove(blkHash, prevRedempHash);
     regChange.Create(blkHash, blkHash);
+    UpdateValue(prevRedempHashMap_, blkHash, blkHash);
 
-    return TXOC{{ComputeUTXOKey(record.cblock->GetHash(), 0, 0)}, {}};
+    return TXOC{{ComputeUTXOKey(blkHash, 0, 0)}, {}};
 }
 
 bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& fee) {
@@ -440,9 +484,6 @@ RecordPtr Chain::GetRecord(const uint256& blkHash) const {
     auto result = GetRecordCache(blkHash);
     if (!result) {
         result = CAT->GetRecord(blkHash);
-        if (result) {
-            result->prevRedemHash = CAT->GetPrevRedemHash(blkHash);
-        }
     }
 
     return result;

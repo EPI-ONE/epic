@@ -169,7 +169,6 @@ public:
     uint64_t minerChainHeight = 0;
 
     uint8_t isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
-    uint256 prevRedemHash;
 
     bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
@@ -228,7 +227,6 @@ public:
                minerChainHeight == another.minerChainHeight &&
                validity         == another.validity &&
                isRedeemed       == another.isRedeemed &&
-               prevRedemHash    == another.prevRedemHash &&
                isMilestone      == another.isMilestone &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
                ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));

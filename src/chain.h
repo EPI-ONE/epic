@@ -158,6 +158,13 @@ private:
     std::unordered_map<uint256, Cumulator> cumulatorMap_;
 
     /**
+     * Caches the hashes of the previous registration block for each peer chain.
+     * Key: hash of the head of peer chain
+     * Value: hash of the previous reg block of the corresponding key
+     */
+    std::unordered_map<uint256, uint256> prevRedempHashMap_;
+
+    /**
      * Checks whether the block contains a valide tx
      * and update its NR info
      * Returns valid TXOC and invalid TXOC of the single block
@@ -170,9 +177,11 @@ private:
     TXOC ValidateTxns(NodeRecord&);
     void CheckTxPartition(NodeRecord&, const arith_uint256&);
 
-    Coin GetPrevReward(const NodeRecord& rec) {
+    Coin GetPrevReward(const NodeRecord& rec) const {
         return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
+
+    uint256 GetPrevRedempHash(const uint256& h) const;
 
     // friend decleration for running a test
     friend class TestChainVerification;

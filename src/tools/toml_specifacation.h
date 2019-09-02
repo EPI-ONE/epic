@@ -108,7 +108,6 @@ auto RecordToToml(const RecordPtr& record) {
     root->insert("is_redeemed",
                  record->isRedeemed == 0 ? "not redemption" : record->isRedeemed == 1 ? "not yet" : "redeemed");
     root->insert("miner_chain_height", record->minerChainHeight);
-    root->insert("prev_redemhash", record->prevRedemHash.GetHex());
 
     // state
     if (record->isMilestone) {
