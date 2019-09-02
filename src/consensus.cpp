@@ -22,7 +22,7 @@ ChainState::ChainState(VStream& payload) {
 }
 
 void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
-    auto sumTxns = [&](const RecordWPtr& recPtr) -> uint32_t {
+    auto sumTxns = [](const RecordWPtr& recPtr) -> uint32_t {
         const std::vector<uint8_t>& validity = (*recPtr.lock()).validity;
         return std::accumulate(validity.begin(), validity.end(), 0, [](const size_t& sum, const uint8_t& v) {
             return sum + (v & NodeRecord::Validity::VALID);
