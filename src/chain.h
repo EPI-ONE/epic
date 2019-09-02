@@ -166,6 +166,7 @@ private:
 
     // offline verification for transactions
     std::optional<TXOC> ValidateRedemption(NodeRecord&, RegChange&);
+    bool ValidateTx(const Transaction&, uint32_t index, TXOC&, Coin& fee);
     TXOC ValidateTxns(NodeRecord&);
     void CheckTxPartition(NodeRecord&, const arith_uint256&);
 

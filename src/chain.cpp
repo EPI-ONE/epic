@@ -346,6 +346,58 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     return TXOC{{ComputeUTXOKey(record.cblock->GetHash(), 0, 0)}, {}};
 }
 
+bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& fee) {
+    const auto& blkHash = tx.GetParentBlock()->GetHash();
+
+    Coin valueIn{};
+    Coin valueOut{};
+    std::vector<Tasm::Listing> prevOutListing{};
+    prevOutListing.reserve(tx.GetInputs().size());
+
+    // check previous vouts that are used in this transaction and compute total value in along the way
+    for (const auto& vin : tx.GetInputs()) {
+        const TxOutPoint& outpoint = vin.outpoint;
+        // this ensures that $prevOut has not been spent yet
+        auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex));
+
+        if (!prevOut) {
+            spdlog::info("Attempting to spend a non-existent or spent output {} in tx {} [{}]",
+                         std::to_string(outpoint), std::to_string(tx.GetHash()), std::to_string(blkHash));
+            return false;
+        }
+        valueIn += prevOut->GetOutput().value;
+
+        prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
+        txoc.AddToSpent(vin);
+    }
+
+    // get key of new UTXO and compute total value out
+    for (size_t j = 0; j < tx.GetOutputs().size(); ++j) {
+        valueOut += tx.GetOutputs()[j].value;
+        txoc.AddToCreated(blkHash, index, j);
+    }
+
+    // check total amount of value in and value out and take a note of fee received
+    fee = valueIn - valueOut;
+    if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
+        spdlog::info("Transaction {} input value goes out of range! [{}]", std::to_string(tx.GetHash()),
+                     std::to_string(blkHash));
+        return false;
+    }
+
+    // verify transaction input one by one
+    auto itprevOut = prevOutListing.cbegin();
+    for (const auto& input : tx.GetInputs()) {
+        if (!VerifyInOut(input, *itprevOut)) {
+            spdlog::info("Singature failed in tx {}! [{}]", std::to_string(tx.GetHash()), std::to_string(blkHash));
+            return false;
+        }
+        itprevOut++;
+    }
+
+    return true;
+}
+
 TXOC Chain::ValidateTxns(NodeRecord& record) {
     const auto& blkHash = record.cblock->GetHash();
     spdlog::trace("Validating transactions in block {}", blkHash.to_substr());
@@ -360,58 +412,13 @@ TXOC Chain::ValidateTxns(NodeRecord& record) {
             continue;
         }
 
-        const auto& tx = txns[i];
-        // update TXOC
-        Coin valueIn{};
-        Coin valueOut{};
         TXOC txoc{};
-        std::vector<Tasm::Listing> prevOutListing{};
-        prevOutListing.reserve(tx->GetInputs().size());
-
-        // check previous vouts that are used in this transaction and compute total value in along the way
-        for (const auto& vin : tx->GetInputs()) {
-            const TxOutPoint& outpoint = vin.outpoint;
-            // this ensures that $prevOut has not been spent yet
-            auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex));
-
-            if (!prevOut) {
-                spdlog::info("Attempting to spend a non-existent or spent output {} in tx {} [{}]",
-                             std::to_string(outpoint), std::to_string(tx->GetHash()), std::to_string(blkHash));
-                continue;
-            }
-            valueIn += prevOut->GetOutput().value;
-
-            prevOutListing.emplace_back(prevOut->GetOutput().listingContent);
-            txoc.AddToSpent(vin);
+        Coin fee{};
+        if (ValidateTx(*txns[i], i, txoc, fee)) {
+            record.fee += fee;
+            validTXOC.Merge(std::move(txoc));
+            record.validity[i] = NodeRecord::Validity::VALID;
         }
-
-        // get key of new UTXO and compute total value out
-        for (size_t j = 0; j < tx->GetOutputs().size(); ++j) {
-            valueOut += tx->GetOutputs()[j].value;
-            txoc.AddToCreated(blkHash, i, j);
-        }
-
-        // check total amount of value in and value out and take a note of fee received
-        Coin fee = valueIn - valueOut;
-        if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
-            spdlog::info("Transaction {} input value goes out of range! [{}]", std::to_string(tx->GetHash()),
-                         std::to_string(blkHash));
-            continue;
-        }
-
-        // verify transaction input one by one
-        auto itprevOut = prevOutListing.cbegin();
-        for (const auto& input : tx->GetInputs()) {
-            if (!VerifyInOut(input, *itprevOut)) {
-                spdlog::info("Singature failed in tx {}! [{}]", std::to_string(tx->GetHash()), std::to_string(blkHash));
-                continue;
-            }
-            itprevOut++;
-        }
-
-        record.fee += fee;
-        validTXOC.Merge(std::move(txoc));
-        record.validity[i] = NodeRecord::Validity::VALID;
     }
 
     return validTXOC;
