@@ -24,7 +24,11 @@ enum ParamsType : uint8_t {
 
 class Params {
 public:
-    static inline const std::string INITIAL_MS_TARGET = "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21";
+#define INITIAL_MS_TARGET "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21"
+
+// proof-of-work parameters
+#define EDGEBITS 29
+#define PROOFSIZE 6
 
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,

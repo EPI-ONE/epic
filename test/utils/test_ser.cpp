@@ -30,16 +30,16 @@ protected:
     }
 };
 
-TEST_F(TestSer, SerializeOptional) {
-    std::optional<uint32_t> o1 = 4, o2;
-    VStream vstream;
-    vstream << o1 << o2;
-    std::optional<uint32_t> o3, o4 = 5;
-    vstream >> o3 >> o4;
+// TEST_F(TestSer, SerializeOptional) {
+// std::optional<uint32_t> o1 = 4, o2;
+// VStream vstream;
+// vstream << o1 << o2;
+// std::optional<uint32_t> o3, o4 = 5;
+// vstream >> o3 >> o4;
 
-    ASSERT_EQ(o1, o3);
-    ASSERT_EQ(o2, o4);
-}
+// ASSERT_EQ(o1, o3);
+// ASSERT_EQ(o2, o4);
+//}
 
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     auto pubkey = fac.CreateKeyPair().second;
@@ -163,15 +163,15 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
 
     ASSERT_EQ(s, soutput.str());
 
-    Transaction txx(std::move(tx));
-    std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
-    VStream vs;
-    vs << ot;
-    vs >> ots;
+    // Transaction txx(std::move(tx));
+    // std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
+    // VStream vs;
+    // vs << ot;
+    // vs >> ots;
 
-    ASSERT_TRUE(ot.has_value());
-    ASSERT_TRUE(ots.has_value());
-    ASSERT_EQ(ot, ots);
+    // ASSERT_TRUE(ot.has_value());
+    // ASSERT_TRUE(ots.has_value());
+    // ASSERT_EQ(ot, ots);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {

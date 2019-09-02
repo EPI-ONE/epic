@@ -4,6 +4,7 @@
 #pragma once
 
 #include "blake2b.h"
+#include "params.h"
 #include "siphash.h"
 #include "spdlog.h"
 
@@ -22,12 +23,10 @@
 // the main parameter is the number of bits in an edge index,
 // i.e. the 2-log of the number of edges
 #define EDGEBITS 29
-//#define EDGEBITS 26
 #endif
 #ifndef PROOFSIZE
 // the next most important parameter is the (even) length
 // of the cycle to be found. a minimum of 12 is recommended
-//#define PROOFSIZE 42
 #define PROOFSIZE 4
 #endif
 
