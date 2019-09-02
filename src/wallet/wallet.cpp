@@ -145,7 +145,7 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
                 }
             }
             pendingTx.erase(it);
-            return;
+            continue;
         }
 
         it = pendingRedemption.find(tx->GetHash());
