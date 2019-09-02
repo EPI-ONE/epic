@@ -3,9 +3,9 @@
 
 #include "concurrent_container.h"
 #include "consensus.h"
-#include "dag_service.h"
 #include "key.h"
 #include "scheduler.h"
+#include "tasm.h"
 #include "threadpool.h"
 #include "wallet_store.h"
 
@@ -16,17 +16,18 @@ constexpr uint64_t MIN_FEE = 1;
 
 std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content);
 
-class Wallet : public OnLvsConfirmedInterface {
+class Wallet {
 private:
     using UTXOKey     = uint256;
     using TxHash      = uint256;
+    using TxIndex     = uint32_t;
     using OutputIndex = uint32_t;
-    using utxo_info   = std::pair<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>>;
-    enum { CKEY_ID = 0, OUTPUT_INDEX, COIN };
+    using utxo_info   = std::pair<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>>;
+    enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
     Wallet(std::string walletPath, uint32_t period)
-        : OnLvsConfirmedInterface(), threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
+        : threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
         Load();
     }
 
@@ -38,7 +39,7 @@ public:
 
     void OnLvsConfirmed(std::vector<RecordPtr> records,
                         std::unordered_map<uint256, UTXOPtr> UTXOs,
-                        std::unordered_set<uint256> STXOs) override;
+                        std::unordered_set<uint256> STXOs);
 
     CKeyID GetRandomAddress();
 
@@ -77,7 +78,7 @@ public:
     }
 
 private:
-    ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, OutputIndex, uint64_t>> unspent, pending;
+    ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingRedemption;
     ConcurrentHashMap<CKeyID, std::pair<CKey, CPubKey>> keyBook;

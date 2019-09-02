@@ -6,6 +6,7 @@
 #include "rpc_server.h"
 
 #include "key.h"
+#include "rpc_tools.h"
 #include "test_env.h"
 
 class TestRPCServer : public testing::Test {
@@ -44,13 +45,16 @@ TEST_F(TestRPCServer, GetBlock) {
     auto req_hash = std::to_string(GENESIS_RECORD.cblock->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
-    auto expected = HashToRPCHash(GENESIS_RECORD.cblock->GetHash());
-    ASSERT_EQ(res.value().block_hash().hash(), expected->hash());
-    delete expected;
+
+    auto blk = ToBlock(*res);
+    ASSERT_EQ(blk, GENESIS);
 
     auto res_fake = client.GetBlock(std::to_string(double0hash));
     ASSERT_TRUE(res_fake.has_value());
-    ASSERT_TRUE(res_fake->block_hash().hash() == rpc::Block().default_instance().block_hash().hash());
+
+    auto blk_fake    = ToBlock(*res_fake);
+    auto blk_default = ToBlock(rpc::Block().default_instance());
+    ASSERT_EQ(blk_fake, blk_default);
 }
 
 TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
@@ -82,18 +86,20 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     auto req_hash = std::to_string(lvs[0]->cblock->GetHash());
     auto res_set  = client.GetLevelSet(req_hash);
     ASSERT_TRUE(res_set.has_value());
-    auto expected = HashToRPCHash(lvs[0]->cblock->GetHash());
-    EXPECT_EQ(res_set.value()[0].block_hash().hash(), expected->hash());
-    delete expected;
+
+    for (size_t i = 0; i < lvs.size(); ++i) {
+        auto res_blk = ToBlock(res_set.value()[i]);
+        EXPECT_EQ(res_blk, *lvs[i]->cblock);
+    }
 }
 
 TEST_F(TestRPCServer, GetLatestMilestone) {
     int size       = 5;
-    auto chain     = std::get<0>(fac.CreateChain(GENESIS_RECORD, size));
+    auto chain     = fac.CreateChain(GENESIS_RECORD, size);
     auto latest_ms = chain.back().back();
     for (auto lvs : chain) {
         for (auto elem : lvs) {
-            DAG->AddNewBlock(elem, nullptr);
+            DAG->AddNewBlock(elem->cblock, nullptr);
         }
     }
 
@@ -104,7 +110,9 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
 
     auto res = client.GetLatestMilestone();
     ASSERT_TRUE(res.has_value());
-    EXPECT_EQ(res.value().block_hash().hash(), std::to_string(latest_ms->GetHash()));
+
+    auto res_blk = ToBlock(*res);
+    EXPECT_EQ(res_blk, *latest_ms->cblock);
 }
 
 TEST_F(TestRPCServer, GetNewMilestoneSince) {
@@ -146,6 +154,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     ASSERT_TRUE(res.has_value());
     ASSERT_EQ(res.value().size(), request_milestone_number);
     for (int i = 0; i < request_milestone_number; ++i) {
-        EXPECT_EQ(res.value()[i].block_hash().hash(), std::to_string(mss_to_check[i + 1]->cblock->GetHash()));
+        auto res_blk = ToBlock(res.value()[i]);
+        EXPECT_EQ(res_blk, *mss_to_check[i + 1]->cblock);
     }
 }

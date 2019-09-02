@@ -141,7 +141,8 @@ int Init(int argc, char* argv[]) {
      * Load wallet
      */
     WALLET = std::make_shared<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
+    DAG->RegisterOnLvsConfirmedCallback(std::bind(&Wallet::OnLvsConfirmed, WALLET, std::placeholders::_1,
+                                                  std::placeholders::_2, std::placeholders::_3));
 
     MEMPOOL = std::make_unique<MemPool>();
 

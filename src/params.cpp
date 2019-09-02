@@ -26,6 +26,8 @@ static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
 static constexpr uint32_t REWARD_COEFFICIENT   = 50;
 static constexpr size_t CACHE_STATES           = 100;
 static constexpr size_t CACHE_STATES_TO_DELETE = 20;
+// capacity of transactions in a block
+static constexpr size_t BLK_CAPACITY = 128;
 
 const Block& Params::GetGenesis() const {
     return *genesis_;
@@ -42,16 +44,17 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
-    genesis_       = std::make_unique<Block>(genesisBlock);
-    genesisRecord_ = std::make_shared<NodeRecord>(genesisBlock);
+    genesis_                    = std::make_unique<Block>(genesisBlock);
+    genesisRecord_              = std::make_shared<NodeRecord>(genesisBlock);
+    genesisRecord_->validity[0] = NodeRecord::VALID;
 
     arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
     arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
-    static auto genesisState = std::make_shared<ChainState>(0, chainwork, genesisBlock.GetTime(), msTarget, blockTarget,
-                                                            hashRate, std::vector<RecordWPtr>{genesisRecord_});
+    static auto genesisState = std::make_shared<ChainState>(
+        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<RecordWPtr>{genesisRecord_});
 
     genesisRecord_->LinkChainState(genesisState);
 }
@@ -77,6 +80,7 @@ MainNetParams::MainNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
+    blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -84,11 +88,11 @@ MainNetParams::MainNetParams() {
     };
 
     const std::string genesisHexStr{
-        "01000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855a2471a5dffff001d8f7f"
-        "6c650101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffff00484704ffff001d01044549742069"
-        "73206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b"
-        "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+        "0100e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
+        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8553e7b565dffff001d1ad3a83a"
+        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
+        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
+        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
     CreateGenesis(genesisHexStr);
 }
@@ -110,6 +114,7 @@ TestNetParams::TestNetParams() {
     cacheStatesSize      = CACHE_STATES;
     cacheStatesToDelete  = CACHE_STATES_TO_DELETE;
     deleteForkThreshold  = 5;
+    blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -117,11 +122,11 @@ TestNetParams::TestNetParams() {
     };
 
     const std::string genesisHexStr{
-        "0a000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001e3634"
-        "c8010101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffff00484704ffff001d01044549742069"
-        "73206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b"
-        "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
+        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001e0f253f02"
+        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
+        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
+        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
     CreateGenesis(genesisHexStr);
 }
@@ -143,6 +148,7 @@ UnitTestParams::UnitTestParams() {
     cacheStatesSize      = 25;
     cacheStatesToDelete  = 5;
     deleteForkThreshold  = 10;
+    blockCapacity        = 10;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -150,11 +156,11 @@ UnitTestParams::UnitTestParams() {
     };
 
     const std::string genesisHexStr{
-        "64000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001fb7d5"
-        "03000101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffff00484704ffff001d01044549742069"
-        "73206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b"
-        "696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+        "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
+        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001f213d0000"
+        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
+        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
+        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
     CreateGenesis(genesisHexStr);
 

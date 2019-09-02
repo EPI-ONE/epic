@@ -30,7 +30,7 @@ public:
     };
 
     // consensus parameter setting
-    uint32_t version;
+    uint16_t version;
     uint32_t targetTimespan;
     uint32_t timeInterval;
     uint32_t interval;
@@ -51,6 +51,8 @@ public:
 
     size_t cacheStatesSize;
     size_t cacheStatesToDelete;
+
+    size_t blockCapacity;
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     const Block& GetGenesis() const;

@@ -17,10 +17,10 @@ TEST_F(TestInit, test_init_dag) {
 
     // validate blocks and flush to DB
     auto factory = EpicTestEnvironment::GetFactory();
-    auto chain   = std::get<0>(factory.CreateChain(GENESIS_RECORD, testChainHeight + 1, false));
+    auto chain   = factory.CreateChain(GENESIS_RECORD, testChainHeight, false);
     for (auto& lvs : chain) {
         for (auto& block : lvs) {
-            DAG->AddNewBlock(block, nullptr);
+            DAG->AddNewBlock(block->cblock, nullptr);
         }
     }
     usleep(500000);

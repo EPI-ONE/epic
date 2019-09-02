@@ -5,21 +5,23 @@
 #include "utilstrencodings.h"
 
 class TestMiner : public testing::Test {
+    void SetUp() override {}
+    void TearDown() override {}
+
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
-    void SetUp() override {
-        EpicTestEnvironment::SetUpDAG("test_miner/");
+
+    static void SetUpEnv() {
+        EpicTestEnvironment::SetUpDAG("test_miner/", true);
 
         CKey key;
         key.MakeNewKey(false);
         auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
-
-        MEMPOOL = std::make_unique<MemPool>();
         MEMPOOL->PushRedemptionTx(tx);
     }
-    void TearDown() override {
+
+    static void TearDownEnv() {
         EpicTestEnvironment::TearDownDAG("test_miner/");
-        MEMPOOL.reset();
     }
 };
 
@@ -34,6 +36,7 @@ TEST_F(TestMiner, Solve) {
     EXPECT_TRUE(block.Verify());
 }
 
+#ifdef __CUDA_ENABLED__
 TEST_F(TestMiner, SolveCuckaroo) {
     SetLogLevel(SPDLOG_LEVEL_TRACE);
 
@@ -46,8 +49,11 @@ TEST_F(TestMiner, SolveCuckaroo) {
 
     ResetLogLevel();
 }
+#endif
 
 TEST_F(TestMiner, Run) {
+    SetUpEnv();
+
     Miner m(2);
     m.Run();
     usleep(500000);
@@ -58,9 +64,13 @@ TEST_F(TestMiner, Run) {
     ASSERT_TRUE(m.GetSelfChainHead());
     ASSERT_TRUE(DAG->GetBestChain().GetStates().size() > 1);
     ASSERT_TRUE(DAG->GetChains().size() == 1);
+
+    TearDownEnv();
 }
 
 TEST_F(TestMiner, Restart) {
+    SetUpEnv();
+
     Miner m(2);
     m.Run();
     usleep(100000);
@@ -85,6 +95,8 @@ TEST_F(TestMiner, Restart) {
     }
 
     ASSERT_EQ(*cursor, *selfChainHead);
+
+    TearDownEnv();
 }
 
 TEST_F(TestMiner, MineGenesis) {
@@ -94,7 +106,9 @@ TEST_F(TestMiner, MineGenesis) {
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
 
-    Block genesisBlock{100};
+    std::vector<uint16_t> versions     = {100, 10, 1};
+    std::vector<uint32_t> difficulties = {0x1f00ffffL, 0x1e00ffffL, 0x1d00ffffL};
+
     Transaction tx;
 
     // Construct a script containing the difficulty bits and the following
@@ -112,12 +126,17 @@ TEST_F(TestMiner, MineGenesis) {
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
-    genesisBlock.AddTransaction(tx);
-    genesisBlock.SetDifficultyTarget(0x1f00ffffL);
-    genesisBlock.SetTime(1559859000L);
-    genesisBlock.SetNonce(0);
-    genesisBlock.FinalizeHash();
-    genesisBlock.CalculateOptimalEncodingSize();
+    std::vector<Block> genesisBlocks;
+    for (int i = 0; i < versions.size(); ++i) {
+        Block b{versions[i]};
+        b.AddTransaction(tx);
+        b.SetDifficultyTarget(difficulties[i]);
+        b.SetTime(1559859000L);
+        b.SetNonce(0);
+        b.FinalizeHash();
+        b.CalculateOptimalEncodingSize();
+        genesisBlocks.emplace_back(std::move(b));
+    }
 
     /////////////////////////////////////////////////////////////////////
     // Uncomment the following lines to mine
@@ -125,20 +144,25 @@ TEST_F(TestMiner, MineGenesis) {
     // int numThreads = 44;
     // Miner m(numThreads);
     // m.Start();
+    // for (auto& genesisBlock : genesisBlocks) {
     // m.Solve(genesisBlock);
-    // m.Stop();
     // std::cout << std::to_string(genesisBlock) << std::endl;
     // VStream gvs(genesisBlock);
-    // std::cout << "HEX string: \n" << HexStr(gvs.cbegin(), gvs.cend()) <<
-    // std::endl; EXPECT_TRUE(genesisBlock.Verify());
+    // std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
+    //<< HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
+    // EXPECT_TRUE(genesisBlock.CheckPOW());
+    //}
+    // m.Stop();
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    genesisBlock.SetNonce(251319); // UnitTest
-    // genesisBlock.SetNonce(29897782); // TestNet
-    // genesisBlock.SetNonce(1701609359); // MainNet
+    genesisBlocks[0].SetNonce(15649);     // UnitTest
+    genesisBlocks[1].SetNonce(37692687);  // TestNet
+    genesisBlocks[2].SetNonce(984142618); // MainNet
 
-    genesisBlock.FinalizeHash();
+    for (auto& genesisBlock : genesisBlocks) {
+        genesisBlock.FinalizeHash();
+    }
 
     EXPECT_TRUE(GENESIS.Verify());
 }

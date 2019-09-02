@@ -38,9 +38,9 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         block.CalculateHash();
         block.SetParents();
 
-        auto utxo        = std::make_shared<UTXO>(block.GetTransaction()->GetOutputs()[0], 0);
-        auto record      = std::make_shared<NodeRecord>(block);
-        record->validity = NodeRecord::VALID;
+        auto utxo           = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[0], 0, 0);
+        auto record         = std::make_shared<NodeRecord>(block);
+        record->validity[0] = NodeRecord::VALID;
         wallet.OnLvsConfirmed({record}, {{utxo->GetKey(), utxo}}, {});
 
         while (wallet.GetBalance() != init_money) {
@@ -74,21 +74,21 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         new_block.AddTransaction(std::move(new_tx));
         new_block.CalculateHash();
         new_block.SetParents();
-        auto outputPoint = new_block.GetTransaction()->GetInputs()[0].outpoint;
-        auto stxokey     = ComputeUTXOKey(outputPoint.bHash, outputPoint.index);
+        auto outpoint = new_block.GetTransactions()[0]->GetInputs()[0].outpoint;
+        auto stxokey  = ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex);
         ASSERT_EQ(stxokey, utxo->GetKey());
 
         std::unordered_map<uint256, UTXOPtr> utxos;
 
         int index = 0;
-        for (auto& output : new_block.GetTransaction()->GetOutputs()) {
-            auto putxo = std::make_shared<UTXO>(output, index);
+        for (auto& output : new_block.GetTransactions()[0]->GetOutputs()) {
+            auto putxo = std::make_shared<UTXO>(output, index, index);
             utxos.emplace(putxo->GetKey(), putxo);
             index++;
         }
 
-        auto new_record      = std::make_shared<NodeRecord>(new_block);
-        new_record->validity = NodeRecord::VALID;
+        auto new_record         = std::make_shared<NodeRecord>(new_block);
+        new_record->validity[0] = NodeRecord::VALID;
 
         wallet.OnLvsConfirmed({new_record}, std::move(utxos), {stxokey});
         while (wallet.GetBalance() == init_money - spent_money - MIN_FEE) {
@@ -142,12 +142,8 @@ TEST_F(TestWallet, test_wallet_store) {
     system(cmd.c_str());
 }
 
-TEST_F(TestWallet, work_flow) {
-    EpicTestEnvironment::SetUpDAG(path);
-    MEMPOOL = std::make_unique<MemPool>();
-    MINER   = std::make_unique<Miner>();
-    WALLET  = std::make_shared<Wallet>(dir, 0);
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
+TEST_F(TestWallet, workflow) {
+    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
@@ -180,29 +176,24 @@ TEST_F(TestWallet, work_flow) {
 
     // receive the change of last transaction
 
-    while (WALLET->GetSpent().empty())
-        ;
-    ASSERT_EQ(WALLET->GetUnspent().size(), 1);
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
-    ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_EQ(WALLET->GetSpent().size(), 1);
+    while (WALLET->GetSpent().empty()) {
+        usleep(50000);
+    }
+
+    EXPECT_EQ(WALLET->GetUnspent().size(), 1);
+    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
+    EXPECT_EQ(WALLET->GetPending().size(), 0);
+    EXPECT_EQ(WALLET->GetSpent().size(), 1);
 
     MINER->Stop();
-    MEMPOOL.reset();
-    MINER.reset();
     WALLET->Stop();
-    WALLET.reset();
     DAG->Stop();
     CAT->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
 TEST_F(TestWallet, normal_workflow) {
-    EpicTestEnvironment::SetUpDAG(path);
-    MEMPOOL = std::make_unique<MemPool>();
-    MINER   = std::make_unique<Miner>();
-    WALLET  = std::make_shared<Wallet>(dir, 0);
-    DAG->RegisterOnLvsConfirmedListener(WALLET);
+    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
@@ -210,15 +201,11 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Start();
     MINER->Run();
 
-
     WALLET->CreateRandomTx(4);
+
     // receive the change of last transaction
-    while (true) {
-        auto spent = WALLET->GetSpent();
-        if (spent.size() == 1) {
-            break;
-        }
-        std::this_thread::yield();
+    while (WALLET->GetSpent().size() != 1) {
+        usleep(500000);
     }
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 3);
@@ -227,10 +214,7 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_EQ(WALLET->GetSpent().size(), 1);
 
     MINER->Stop();
-    MEMPOOL.reset();
-    MINER.reset();
     WALLET->Stop();
-    WALLET.reset();
     DAG->Stop();
     CAT->Stop();
     EpicTestEnvironment::TearDownDAG(path);

@@ -2,12 +2,11 @@
 #define __SRC_DAG_MANAGER_H__
 
 #include <atomic>
+#include <functional>
 #include <list>
 
 #include "chains.h"
 #include "concurrent_container.h"
-#include "consensus.h"
-#include "dag_service.h"
 #include "sync_messages.h"
 #include "task.h"
 #include "threadpool.h"
@@ -24,6 +23,8 @@ public:
      * Delete the genesis state in the chains if last head height >0, maybe reload some blocks as cache later
      */
     bool Init();
+
+    /////////////////////////////// Synchronization /////////////////////////////////////
 
     /**
      * Called by Cat when a coming block is not solid. Do nothing if isBatchSynching
@@ -46,14 +47,7 @@ public:
 
     void DisconnectPeerSync(const PeerPtr&);
 
-    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
-
-    /**
-     * Starting from the given hash, traverses the main milestone chain
-     * backward/forward by the given length
-     */
-    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
-    std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
+    /////////////////////////////// Verification /////////////////////////////////////
 
     /*
      * Submits tasks to a single thread in which it checks its syntax.
@@ -62,20 +56,45 @@ public:
      */
     void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
 
+    //////////////////////// APIs for retriving data from DAG ////////////////////////
+
+    // The following two methods searches on main chain ONLY.
+    RecordPtr GetMainChainRecord(const uint256&) const;
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+
+    /**
+     * Returns the level set of the milestone with the given hash.
+     * Also searches on forked branches.
+     */
+    std::vector<RecordPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
+
+    /**
+     * Starting from the given hash, traverses the main milestone chain
+     * backward/forward by the given length
+     */
+    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
+    std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
+
     // Checkout states either in different chain or in db
-    RecordPtr GetState(const uint256&) const;
+    RecordPtr GetState(const uint256&, bool withBlock = true) const;
 
     Chain& GetBestChain() const;
-
     size_t GetBestMilestoneHeight() const;
-
     RecordPtr GetMilestoneHead() const;
 
     const Chains& GetChains() const {
         return milestoneChains;
     }
 
-    void RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener);
+    /////////////////////////////// Mics. /////////////////////////////////////
+
+    using OnLvsConfirmedCallback =
+        std::function<void(std::vector<RecordPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>)>;
+
+    /**
+     * Actions to be performed by wallet when a level set is confirmed
+     */
+    void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
 
     /**
      * Blocks the main thread from going forward
@@ -130,7 +149,7 @@ private:
     /**
      * Listener that triggers when a levelset is confirmed
      */
-    OnLvsConfirmedListener onLvsConfirmedListener;
+    OnLvsConfirmedCallback onLvsConfirmedCallback = nullptr;
 
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 
@@ -150,15 +169,12 @@ private:
     void BatchSync(std::vector<uint256>& requests, const PeerPtr& requestFrom);
 
     /**
-     * TODO:
      * Removes a verified ms hash from the downloading queue, and start another
      * round of batch sync when the downloading queue is empty.
      * Returns whether the hash is removed successfully.
      */
     bool UpdateDownloadingQueue(const uint256&);
-
     void AddToDownloadingQueue(const uint256&);
-
     void ClearDownloadingQueues();
 
     /** Delete the chain who loses in the race competition */
@@ -178,12 +194,9 @@ private:
 
     size_t GetHeight(const uint256&) const;
 
-    RecordPtr GetMainChainRecord(const uint256&) const;
-
     std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
 
     VStream GetMainChainRawLevelSet(size_t height) const;
-
     VStream GetMainChainRawLevelSet(const uint256&) const;
 
     bool ExistsNode(const uint256&) const;

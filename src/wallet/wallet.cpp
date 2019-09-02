@@ -57,12 +57,12 @@ void Wallet::SendingStorageTask(uint32_t period) {
                 walletStore_.StoreTx(*pairTx.second);
             }
             for (const auto& [utxoKey, utxoTuple] : unspent) {
-                walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
-                                          std::get<COIN>(utxoTuple));
+                walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
+                                          std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
             }
             for (const auto& [utxoKey, utxoTuple] : pending) {
-                walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<OUTPUT_INDEX>(utxoTuple),
-                                          std::get<COIN>(utxoTuple));
+                walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
+                                          std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
             }
         });
     });
@@ -93,7 +93,9 @@ void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
     auto keyId = ParseAddrFromScript(utxo->GetOutput().listingContent);
     if (keyId) {
         if (keyBook.find(*keyId) != keyBook.end()) {
-            unspent.insert({utxokey, std::make_tuple(*keyId, utxo->GetIndex(), utxo->GetOutput().value.GetValue())});
+            auto indices = utxo->GetIndices();
+            unspent.insert(
+                {utxokey, std::make_tuple(*keyId, indices.first, indices.second, utxo->GetOutput().value.GetValue())});
             totalBalance_ += utxo->GetOutput().value.GetValue();
         }
     }
@@ -103,7 +105,8 @@ void Wallet::ProcessSTXO(const UTXOKey& stxo) {
     auto it = pending.find(stxo);
     if (it != pending.end()) {
         auto& tup = it->second;
-        walletStore_.StoreSpent(it->first, std::get<CKEY_ID>(tup), std::get<OUTPUT_INDEX>(tup), std::get<COIN>(tup));
+        walletStore_.StoreSpent(it->first, std::get<CKEY_ID>(tup), std::get<TX_INDEX>(tup), std::get<OUTPUT_INDEX>(tup),
+                                std::get<COIN>(tup));
         pending.erase(it);
     }
 }
@@ -118,34 +121,41 @@ void Wallet::ProcessRecord(const RecordPtr& record) {
         return;
     }
 
-    auto it = pendingTx.find(record->cblock->GetTransaction()->GetHash());
-    if (it != pendingTx.end()) {
-        if (record->validity != record->VALID) {
-            spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}",
-                         std::to_string(record->cblock->GetHash()));
+    const auto& txns = record->cblock->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        const auto& tx       = txns[i];
+        const auto& validity = record->validity[i];
 
-            // release all relavent utxos from pending
-            for (auto& input : record->cblock->GetTransaction()->GetInputs()) {
-                auto utxoKey    = ComputeUTXOKey(input.outpoint.bHash, input.outpoint.index);
-                auto it_pending = pending.find(utxoKey);
-                if (it_pending != pending.end()) {
-                    unspent.insert(*it_pending);
-                    totalBalance_ += std::get<COIN>(it_pending->second);
-                    pending.erase(it_pending);
+        auto it = pendingTx.find(tx->GetHash());
+        if (it != pendingTx.end()) {
+            if (validity != record->VALID) {
+                spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}",
+                             std::to_string(record->cblock->GetHash()));
+
+                // release all relavent utxos from pending
+                for (auto& input : tx->GetInputs()) {
+                    auto utxoKey =
+                        ComputeUTXOKey(input.outpoint.bHash, input.outpoint.txIndex, input.outpoint.outIndex);
+                    auto it_pending = pending.find(utxoKey);
+                    if (it_pending != pending.end()) {
+                        unspent.insert(*it_pending);
+                        totalBalance_ += std::get<COIN>(it_pending->second);
+                        pending.erase(it_pending);
+                    }
                 }
             }
+            pendingTx.erase(it);
+            continue;
         }
-        pendingTx.erase(it);
-        return;
-    }
 
-    it = pendingRedemption.find(record->cblock->GetTransaction()->GetHash());
-    if (it != pendingRedemption.end()) {
-        auto output = it->second->GetOutputs()[0];
-        auto keyId  = ParseAddrFromScript(output.listingContent);
-        assert(keyId);
-        SetLastRedemAddress(*keyId);
-        pendingRedemption.erase(it);
+        it = pendingRedemption.find(tx->GetHash());
+        if (it != pendingRedemption.end()) {
+            auto output = it->second->GetOutputs()[0];
+            auto keyId  = ParseAddrFromScript(output.listingContent);
+            assert(keyId);
+            SetLastRedemAddress(*keyId);
+            pendingRedemption.erase(it);
+        }
     }
 }
 
@@ -174,7 +184,7 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
 ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& nextAddr, const std::string& msg) {
     Transaction redeem{};
     auto minerInfo = GetMinerInfo();
-    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo.first, UNCONNECTED}, msg))
+    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo.first, UNCONNECTED, UNCONNECTED}, msg))
         .AddOutput(minerInfo.second, nextAddr);
     auto redemPtr = std::make_shared<const Transaction>(std::move(redeem));
     pendingRedemption.insert({redemPtr->GetHash(), redemPtr});
@@ -213,7 +223,7 @@ ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs,
     }
 
     tx.FinalizeHash();
-    auto tx_ptr = std::make_shared<const Transaction>(tx);
+    auto tx_ptr = std::make_shared<const Transaction>(std::move(tx));
     pendingTx.insert({tx_ptr->GetHash(), tx_ptr});
     return tx_ptr;
 }
@@ -236,11 +246,12 @@ std::pair<Coin, std::vector<Wallet::utxo_info>> Wallet::Select(const Coin& amoun
 }
 
 void Wallet::AddInput(Transaction& tx, const utxo_info& utxo) {
-    auto index     = std::get<OUTPUT_INDEX>(utxo.second);
-    auto blockHash = ComputeUTXOKey(utxo.first, index);
+    auto txIndex   = std::get<TX_INDEX>(utxo.second);
+    auto outIndex  = std::get<OUTPUT_INDEX>(utxo.second);
+    auto blockHash = ComputeUTXOKey(utxo.first, txIndex, outIndex);
     auto& keyID    = std::get<CKeyID>(utxo.second);
     std::string message("wallet_create_new_transaction");
-    tx.AddInput(CreateSignedVin(keyID, TxOutPoint(blockHash, index), message));
+    tx.AddInput(CreateSignedVin(keyID, TxOutPoint(blockHash, txIndex, outIndex), message));
     SpendUTXO(utxo.first);
 }
 

@@ -18,10 +18,10 @@ class ChainState {
 public:
     uint64_t height;
     arith_uint256 chainwork;
-    uint32_t lastUpdateTime;
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
     uint64_t hashRate;
+    uint32_t lastUpdateTime = 0;
 
     // Incremental change of the last registration block on each peer chain,
     // whose elements are pairs consisting of:
@@ -40,24 +40,35 @@ public:
     /* simple constructor (now for test only) */
     ChainState(uint64_t height,
                arith_uint256 chainwork,
-               uint32_t lastUpdateTime,
                arith_uint256 milestoneTarget,
                arith_uint256 blockTarget,
                uint64_t hashRate,
-               std::vector<RecordWPtr>&& lvs)
-        : height(height), chainwork(chainwork), lastUpdateTime(lastUpdateTime), milestoneTarget(milestoneTarget),
-          blockTarget(blockTarget), hashRate(hashRate), lvs_(std::move(lvs)) {}
+               uint32_t lastUpdateTime,
+               std::vector<RecordWPtr>&& lvs,
+               uint32_t nTxnsCounter = 0,
+               uint32_t nBlkCounter_ = 0)
+        : height(height), chainwork(chainwork), milestoneTarget(milestoneTarget), blockTarget(blockTarget),
+          hashRate(hashRate), lastUpdateTime(lastUpdateTime), nTxnsCounter_(nTxnsCounter), nBlkCounter_(nBlkCounter_),
+          lvs_(std::move(lvs)) {}
 
-    inline bool IsDiffTransition() const {
-        return ((height + 1) % GetParams().interval) == 0;
+    bool IsDiffTransition() const {
+        return (height % GetParams().interval) == 0;
     }
 
-    inline uint64_t GetBlockDifficulty() const {
+    uint64_t GetBlockDifficulty() const {
         return (arith_uint256(GetParams().maxTarget) / (blockTarget + 1)).GetLow64();
     }
 
-    inline uint64_t GetMsDifficulty() const {
+    uint64_t GetMsDifficulty() const {
         return (arith_uint256(GetParams().maxTarget) / (milestoneTarget + 1)).GetLow64();
+    }
+
+    uint32_t GetTxnsCounter() const {
+        return nTxnsCounter_;
+    }
+
+    uint32_t GetAverageTxnsPerBlock() const {
+        return nTxnsCounter_ / nBlkCounter_;
     }
 
     const std::vector<RecordWPtr>& GetLevelSet() const {
@@ -85,7 +96,6 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(VARINT(height));
         READWRITE(VARINT(hashRate));
-        READWRITE(lastUpdateTime);
         if (ser_action.ForRead()) {
             chainwork.SetCompact(ser_readdata32(s));
             milestoneTarget.SetCompact(ser_readdata32(s));
@@ -102,11 +112,11 @@ public:
      */
     bool operator==(const ChainState& rhs) const {
         // clang-format off
-        return lastUpdateTime               == rhs.lastUpdateTime &&
-               chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
+        return chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
                hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
-               blockTarget.GetCompact()     == rhs.blockTarget.GetCompact();
+               blockTarget.GetCompact()     == rhs.blockTarget.GetCompact() &&
+               (!lastUpdateTime || !rhs.lastUpdateTime) ? true : lastUpdateTime == rhs.lastUpdateTime;
         // clang-format on
     }
 
@@ -115,8 +125,12 @@ public:
     }
 
 private:
+    uint32_t nTxnsCounter_;
+    uint32_t nBlkCounter_;
+
     // a vector consists of hashes of blocks in level set of this chain state
     std::vector<std::weak_ptr<NodeRecord>> lvs_;
+
     // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
@@ -150,17 +164,16 @@ public:
 
     uint64_t height = 0;
 
-    Coin cumulativeReward;
-    Coin fee;
+    Coin cumulativeReward     = 0;
+    Coin fee                  = 0;
     uint64_t minerChainHeight = 0;
 
     uint8_t isRedeemed = RedemptionStatus::IS_NOT_REDEMPTION;
-    uint256 prevRedemHash;
 
     bool isMilestone       = false;
     ChainStatePtr snapshot = nullptr;
 
-    uint8_t validity = Validity::UNKNOWN;
+    std::vector<uint8_t> validity;
 
     NodeRecord();
     NodeRecord(const NodeRecord&) = default;
@@ -189,6 +202,9 @@ public:
                 ChainState cs{};
                 ::Deserialize(s, cs);
                 snapshot = std::make_shared<ChainState>(std::move(cs));
+                if (snapshot->IsDiffTransition() && cblock) {
+                    snapshot->lastUpdateTime = cblock->GetTime();
+                }
             }
         } else {
             if (isMilestone) {
@@ -211,7 +227,6 @@ public:
                minerChainHeight == another.minerChainHeight &&
                validity         == another.validity &&
                isRedeemed       == another.isRedeemed &&
-               prevRedemHash    == another.prevRedemHash &&
                isMilestone      == another.isMilestone &&
                ((snapshot == nullptr || another.snapshot == nullptr) ? true : *snapshot == *(another.snapshot)) &&
                ((cblock == nullptr || another.cblock == nullptr) ? true : *cblock == *(another.cblock));

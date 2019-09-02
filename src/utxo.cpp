@@ -9,11 +9,11 @@ uint256 UTXO::GetContainingBlkHash() const {
 }
 
 uint256 UTXO::GetKey() const {
-    return ComputeUTXOKey(GetContainingBlkHash(), index_);
+    return ComputeUTXOKey(GetContainingBlkHash(), txIndex_, outIndex_);
 }
 
 uint64_t UTXO::HashCode() const {
-    return std::hash<uint256>()(GetContainingBlkHash()) ^ index_;
+    return std::hash<uint256>()(GetContainingBlkHash()) ^ txIndex_ ^ outIndex_;
 }
 
 //////////////////////
@@ -23,13 +23,13 @@ void TXOC::AddToCreated(const UTXOPtr& putxo) {
     increment_.Create(putxo->GetKey());
 }
 
-void TXOC::AddToCreated(const uint256& blkHash, uint32_t index) {
-    increment_.Create(ComputeUTXOKey(blkHash, index));
+void TXOC::AddToCreated(const uint256& blkHash, uint32_t txIndex, uint32_t outIndex) {
+    increment_.Create(ComputeUTXOKey(blkHash, txIndex, outIndex));
 }
 
 void TXOC::AddToSpent(const TxInput& input) {
     auto& outpoint = input.outpoint;
-    increment_.Remove(ComputeUTXOKey(outpoint.bHash, outpoint.index));
+    increment_.Remove(ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex));
 }
 
 void TXOC::Merge(TXOC txoc) {
@@ -40,13 +40,13 @@ bool TXOC::Empty() {
     return increment_.GetCreated().empty() && increment_.GetRemoved().empty();
 }
 
-TXOC CreateTXOCFromInvalid(const Block& invalid) {
-    const size_t nOuts = invalid.GetTransaction()->GetOutputs().size();
+TXOC CreateTXOCFromInvalid(const Transaction& invalid, uint32_t txIndex) {
+    const size_t nOuts = invalid.GetOutputs().size();
     std::unordered_set<uint256> invalidUTXO;
     invalidUTXO.reserve(nOuts);
 
     for (size_t i = 0; i < nOuts; i++) {
-        invalidUTXO.emplace(ComputeUTXOKey(invalid.GetHash(), i));
+        invalidUTXO.emplace(ComputeUTXOKey(invalid.GetHash(), txIndex, i));
     }
     return TXOC{{}, std::move(invalidUTXO)};
 }
@@ -142,7 +142,8 @@ bool ChainLedger::IsSpendable(const uint256& utxokey) const {
 std::string std::to_string(const UTXO& utxo) {
     std::string s;
     s += "UTXO { \n";
-    s += "   " + std::to_string(utxo.output_) + "with index " + std::to_string(utxo.index_);
+    s += "   " + std::to_string(utxo.output_) + "with index " + std::to_string(utxo.txIndex_) + ", " +
+         std::to_string(utxo.outIndex_);
     s += "   }";
     return s;
 }

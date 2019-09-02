@@ -69,8 +69,9 @@ public:
     std::vector<uint256> GetPendingHashes() const;
     ConstBlockPtr GetRandomTip() const;
 
-    RecordPtr GetMsRecordCache(const uint256&);
+    RecordPtr GetRecordCache(const uint256&) const;
     RecordPtr GetRecord(const uint256&) const;
+    RecordPtr GetMsRecordCache(const uint256&) const;
 
     /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
@@ -81,7 +82,7 @@ public:
         return a_chainwork < b_chainwork;
     }
 
-    inline bool IsMainChain() const {
+    bool IsMainChain() const {
         return ismainchain_;
     }
 
@@ -157,20 +158,30 @@ private:
     std::unordered_map<uint256, Cumulator> cumulatorMap_;
 
     /**
+     * Caches the hashes of the previous registration block for each peer chain.
+     * Key: hash of the head of peer chain
+     * Value: hash of the previous reg block of the corresponding key
+     */
+    std::unordered_map<uint256, uint256> prevRedempHashMap_;
+
+    /**
      * Checks whether the block contains a valide tx
      * and update its NR info
-     * Returns TXOC of the single block
+     * Returns valid TXOC and invalid TXOC of the single block
      */
-    std::optional<TXOC> Validate(NodeRecord& record, RegChange&);
+    std::pair<TXOC, TXOC> Validate(NodeRecord& record, RegChange&);
 
     // offline verification for transactions
-    std::optional<TXOC> ValidateRedemption(NodeRecord& record, RegChange&);
-    std::optional<TXOC> ValidateTx(NodeRecord& record);
-    bool IsValidDistance(const NodeRecord&, const arith_uint256&);
+    std::optional<TXOC> ValidateRedemption(NodeRecord&, RegChange&);
+    bool ValidateTx(const Transaction&, uint32_t index, TXOC&, Coin& fee);
+    TXOC ValidateTxns(NodeRecord&);
+    void CheckTxPartition(NodeRecord&, const arith_uint256&);
 
-    Coin GetPrevReward(const NodeRecord& rec) {
+    Coin GetPrevReward(const NodeRecord& rec) const {
         return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
     }
+
+    uint256 GetPrevRedempHash(const uint256& h) const;
 
     // friend decleration for running a test
     friend class TestChainVerification;

@@ -1,27 +1,29 @@
 #include "transaction.h"
+#include "block.h"
 #include "params.h"
 #include "spdlog.h"
 
+#include <string>
 #include <unordered_set>
 
 using Listing = Tasm::Listing;
 
-uint256 ComputeUTXOKey(const uint256& hash, uint32_t index) {
-    return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(index) << 224));
+uint256 ComputeUTXOKey(const uint256& hash, uint32_t txIndex, uint32_t outIndex) {
+    return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(txIndex) << 224) ^ (arith_uint256(outIndex) << 192));
 }
 
 /*
  * TxInput class START
  */
 bool TxInput::IsRegistration() const {
-    return outpoint.index == UNCONNECTED;
+    return outpoint.txIndex == UNCONNECTED && outpoint.outIndex == UNCONNECTED;
 }
 
 bool TxInput::IsFirstRegistration() const {
     return outpoint.bHash == Hash::GetZeroHash() && IsRegistration();
 }
 
-void TxInput::SetParent(const Transaction* const tx) {
+void TxInput::SetParent(const Transaction* const tx) const {
     assert(tx != nullptr);
     parentTx_ = tx;
 }
@@ -48,7 +50,7 @@ TxOutput::TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData) 
     listingContent = listingData;
 }
 
-void TxOutput::SetParent(const Transaction* const tx) {
+void TxOutput::SetParent(const Transaction* const tx) const {
     assert(tx != nullptr);
     parentTx_ = tx;
 }
@@ -78,22 +80,17 @@ Transaction::Transaction(Transaction&& tx) noexcept
     SetParents();
 }
 
-Transaction::Transaction(VStream& vs) {
-    vs >> *this;
+Transaction::Transaction(const CKeyID& addr) {
+    AddInput(TxInput{}).AddOutput(Coin{}, addr);
     FinalizeHash();
     SetParents();
 }
 
-Transaction::Transaction(const CKeyID& addr) {
-    AddInput(TxInput{}).AddOutput(Coin{}, addr);
-    FinalizeHash();
-}
-
-void Transaction::SetParents() {
-    for (TxInput& input : inputs_) {
+void Transaction::SetParents() const {
+    for (const TxInput& input : inputs_) {
         input.SetParent(this);
     }
-    for (TxOutput& output : outputs_) {
+    for (const TxOutput& output : outputs_) {
         output.SetParent(this);
     }
 }
@@ -131,17 +128,19 @@ void Transaction::FinalizeHash() {
 
 bool Transaction::Verify() const {
     if (inputs_.empty() || outputs_.empty()) {
-        spdlog::info("Transaction {} contains empty inputs or outputs", hash_.to_substr());
+        spdlog::info("Transaction {} contains empty inputs or outputs {}", hash_.to_substr(),
+                     parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
         return false;
     }
-    // TODO: whether to add size checking
+    // TODO: add signature size checking
 
     // check no double spending on the same output
     std::unordered_set<TxOutPoint> outpoints;
     outpoints.reserve(inputs_.size());
     for (const auto& input : inputs_) {
         if (outpoints.count(input.outpoint) > 0) {
-            spdlog::info("Transaction {} contains duplicated outpoints", hash_.to_substr());
+            spdlog::info("Transaction {} contains duplicated outpoints {}", hash_.to_substr(),
+                         parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
             return false;
         }
         outpoints.emplace(input.outpoint);
@@ -178,7 +177,7 @@ bool Transaction::IsFirstRegistration() const {
     return inputs_.size() == 1 && inputs_.front().IsFirstRegistration() && outputs_.front().value == ZERO_COIN;
 }
 
-void Transaction::SetParent(const Block* const blk) {
+void Transaction::SetParent(const Block* const blk) const {
     assert(blk != nullptr);
     parentBlock_ = blk;
 }
@@ -202,7 +201,7 @@ bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
 
 std::string std::to_string(const TxOutPoint& outpoint) {
     std::string str;
-    str += strprintf("%s:%d", std::to_string(outpoint.bHash), outpoint.index);
+    str += strprintf("%s:%d,%d", std::to_string(outpoint.bHash), outpoint.txIndex, outpoint.outIndex);
     return str;
 }
 

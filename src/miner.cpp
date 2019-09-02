@@ -164,7 +164,7 @@ void Miner::Run() {
             auto head = DAG->GetMilestoneHead();
 
             if (!head) {
-                spdlog::error("Cannot get milestone head. Did you init with new DB?");
+                spdlog::error("Cannot get milestone head. Did you init with new DB (with flag \"-N\")?");
                 enabled_ = false;
                 spdlog::info("Miner stopped.");
                 return;
@@ -179,7 +179,7 @@ void Miner::Run() {
                         firstRegTx = MEMPOOL->GetRedemptionTx(true);
                     }
                 }
-                spdlog::info("Get first registration, start mining");
+                spdlog::info("Got the first registration. Start mining.");
                 prevHash = GENESIS.GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
@@ -187,20 +187,20 @@ void Miner::Run() {
                 if (distanceCal.Full()) {
                     auto timeInterval = distanceCal.TimeSpan();
                     double percentage =
-                        distanceCal.Sum().getdouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
+                        distanceCal.Sum().GetDouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
                     if (counter % 2000 == 0) {
                         std::cout << "Hashing power percentage " << percentage << std::endl;
                     }
+
                     auto tx = MEMPOOL->GetRedemptionTx(false);
-                    if (!tx) {
-                        auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
-                                       GetParams().sortitionCoefficient *
-                                       (GetParams().maxTarget / (head->snapshot->hashRate + 1));
-                        tx = MEMPOOL->ExtractTransaction(prevHash, allowed);
-                    }
                     if (tx) {
                         b.AddTransaction(std::move(tx));
                     }
+
+                    auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
+                                   GetParams().sortitionCoefficient *
+                                   (GetParams().maxTarget / (head->snapshot->hashRate + 1));
+                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
                 }
             }
 
@@ -226,9 +226,6 @@ void Miner::Run() {
             }
             distanceCal.Add(bPtr, true);
             selfChainHead = bPtr;
-            if(bPtr->HasTransaction()){
-                MEMPOOL->ReleaseTxFromConfirmed(*bPtr->GetTransaction(), true);
-            }
             DAG->AddNewBlock(bPtr, nullptr);
             CAT->SaveMinerChainHead(bPtr->GetHash());
 

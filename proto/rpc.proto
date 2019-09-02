@@ -2,33 +2,40 @@ syntax = "proto3";
 
 package rpc;
 
-message Block {
-  Hash block_hash = 1;
-  uint32 version = 2;
-  Hash milestoneBlockHash = 3;
-  Hash prevBlockHash = 4;
-  Hash tipBlockHash = 5;
-  uint32 diffTarget = 6;
-  uint32 nonce = 7;
-  uint64 time = 8;
-  Transaction transactions = 9;
+message Hash {
+    bytes hash = 1;
+}
+
+message Outpoint {
+    Hash fromblock = 1;
+    uint32 txidx = 2;
+    uint32 outidx = 3;
+}
+
+message Input {
+    Outpoint outpoint = 1;
+    bytes listing = 2;
+}
+
+message Output{
+    bytes address = 1;
+    uint64 money = 2;
 }
 
 message Transaction {
-    message Input {
-        bytes listing = 1;
-    }
-    message Output {
-        bytes listing = 1;
-    }
-    Hash transaction_hash = 1;
-    uint32 fee = 2;
-    repeated Input inputs = 3;
-    repeated Output outputs = 4;
+    repeated Input inputs = 1;
+    repeated Output outputs = 2;
 }
 
-message Hash {
-    bytes hash = 1;
+message Block {
+  uint32 version = 1;
+  Hash milestoneBlockHash = 2;
+  Hash prevBlockHash = 3;
+  Hash tipBlockHash = 4;
+  uint32 diffTarget = 5;
+  uint32 nonce = 6;
+  uint64 time = 7;
+  repeated Transaction transactions = 8;
 }
 
 service BasicBlockExplorerRPC {
@@ -40,42 +47,42 @@ service BasicBlockExplorerRPC {
 }
 
 message GetBlockRequest {
-    Hash hash = 1;    
+    Hash hash = 1;
 }
 
 message GetBlockResponse {
-    Block block = 1;    
+    Block block = 1;
 }
 
 message GetNewMilestoneSinceRequest {
     Hash hash = 1;
     int64 number = 2;
-} 
+}
 
 message GetNewMilestoneSinceResponse {
-    repeated Block blocks = 1;    
-} 
+    repeated Block blocks = 1;
+}
 
 message GetLatestMilestoneRequest {}
 
 message GetLatestMilestoneResponse {
-    Block milestone = 1;    
+    Block milestone = 1;
 }
 
 message GetLevelSetRequest {
-    Hash hash = 1;    
+    Hash hash = 1;
 }
 
 message GetLevelSetResponse {
-    repeated Block blocks = 1;    
+    repeated Block blocks = 1;
 }
 
 message GetLevelSetSizeRequest {
-    Hash hash = 1;    
+    Hash hash = 1;
 }
 
 message GetLevelSetSizeResponse {
-    uint64 size = 1;    
+    uint64 size = 1;
 }
 
 service CommanderRPC {
@@ -96,13 +103,13 @@ message StopResponse {}
 message StartMinerRequest {}
 
 message StartMinerResponse {
-    bool success = 1;    
+    bool success = 1;
 }
 
 message StopMinerRequest {}
 
 message StopMinerResponse {
-    bool success = 1;    
+    bool success = 1;
 }
 
 message StatusRequest {}
@@ -132,11 +139,6 @@ message GetBalanceRequest{}
 
 message GetBalanceResponse{
     string coin = 1;
-}
-
-message Output{
-    string address = 1;
-    uint64 money = 2;
 }
 
 message CreateTxRequest{

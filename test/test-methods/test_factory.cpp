@@ -1,4 +1,6 @@
 #include "test_factory.h"
+#include <cstring>
+#include <memory>
 
 std::string TestFactory::GetRandomString(size_t len) {
     static const char alph[] = "0123456789"
@@ -45,7 +47,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     Transaction tx;
     uint32_t maxPos = GetRand() % 128 + 1;
     for (int i = 0; i < numTxInput; ++i) {
-        tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, Listing(std::vector<unsigned char>(i))));
+        tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, i % maxPos, Listing(std::vector<unsigned char>(i))));
     }
 
     for (int i = 0; i < numTxOutput; ++i) {
@@ -55,22 +57,14 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     return tx;
 }
 
-Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
-    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(),
-                    timeGenerator.NextTime(), GetParams().maxTarget.GetCompact(), 0);
+Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), uint256(),
+                    timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
 
-    if (numTxInput || numTxOutput) {
-        Transaction tx;
-        int maxPos = (numGenerator.GetRand() % 128) + 1;
-        for (int i = 0; i < numTxInput; ++i) {
-            tx.AddInput(TxInput(CreateRandomHash(), i % maxPos, Listing(std::vector<unsigned char>(i))));
+    if (numTxInput && numTxOutput) {
+        for (int i = 0; i < maxTxns; ++i) {
+            b.AddTransaction(CreateTx(numTxInput, numTxOutput));
         }
-
-        for (int i = 0; i < numTxOutput; ++i) {
-            tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
-        }
-
-        b.AddTransaction(tx);
     }
 
     b.CalculateOptimalEncodingSize();
@@ -84,8 +78,8 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize) {
     }
 }
 
-ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool finalize) {
-    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize));
+ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize, maxTxns));
 }
 
 NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
@@ -95,29 +89,16 @@ NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
     rec.cumulativeReward = Coin(GetRand());
 
     if (GetRand() % 2) {
-        // Link a ms instance
-        auto cs =
-            std::make_shared<ChainState>(GetRand(), arith_uint256(GetRand()), NextTime(), arith_uint256(GetRand()),
-                                         arith_uint256(GetRand()), GetRand(), std::vector<RecordWPtr>{});
-        rec.LinkChainState(cs);
-
-        if (GetRand() % 2) {
-            // Make it a fake milestone
-            rec.isMilestone = false;
-        }
-    }
-
-    if (GetRand() % 2) {
-        rec.validity = NodeRecord::VALID;
+        rec.validity.push_back(NodeRecord::VALID);
     } else {
-        rec.validity = NodeRecord::INVALID;
+        rec.validity.push_back(NodeRecord::INVALID);
     }
 
     return rec;
 }
 
-RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool finalize) {
-    return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize)));
+RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize, maxTxns)));
 }
 
 RecordPtr TestFactory::CreateConsecutiveRecordPtr(uint32_t timeToset) {
@@ -141,59 +122,101 @@ ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr
     return CreateNextChainState(previous, *pRec, std::vector<RecordWPtr>{pRec});
 }
 
-std::tuple<TestChain, std::vector<NodeRecord>> TestFactory::CreateChain(const NodeRecord& startMs,
-                                                                        size_t height,
-                                                                        bool tx) {
-    NodeRecord lastMs       = startMs;
-    ConstBlockPtr prevBlock = startMs.cblock;
+TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool tx) {
+    assert(height);
+    RecordPtr lastMs    = startMs;
+    RecordPtr prevBlock = startMs;
 
     TestChain testChain{{}};
-    std::vector<NodeRecord> vMs;
-    vMs.reserve(height);
 
-    size_t count = 1;
-    TimeGenerator timeg{startMs.cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
+    size_t count = 0;
+    TimeGenerator timeg{startMs->cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
         Block b{GetParams().version};
-        if (tx) {
-            b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
-        }
-        b.SetMilestoneHash(lastMs.cblock->GetHash());
-        b.SetPrevHash(prevBlock->GetHash());
+        b.SetMilestoneHash(lastMs->cblock->GetHash());
+        b.SetPrevHash(prevBlock->cblock->GetHash());
         if (testChain.size() == 1) {
             b.SetTipHash(GENESIS.GetHash());
         } else {
-            b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->GetHash());
+            b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->cblock->GetHash());
         }
         b.SetTime(timeg.NextTime());
-        b.SetDifficultyTarget(lastMs.snapshot->blockTarget.GetCompact());
+        b.SetDifficultyTarget(lastMs->snapshot->blockTarget.GetCompact());
 
         // Special transaction on the first registration block
         if (b.GetPrevHash() == GENESIS.GetHash()) {
-            b.AddTransaction(Transaction{CreateKeyPair().second.GetID()});
+            Transaction tx = Transaction{CreateKeyPair().second.GetID()};
+            b.AddTransaction(tx);
+        } else if (tx) {
+            for (int i = 0; i < GetRand() % 10; ++i) {
+                b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
+            }
         }
         b.CalculateOptimalEncodingSize();
         b.Solve();
 
-        ConstBlockPtr blkptr   = std::make_shared<const Block>(std::move(b));
-        bool make_new_levelset = false;
+        ConstBlockPtr blkptr = std::make_shared<const Block>(std::move(b));
+        RecordPtr node       = std::make_shared<NodeRecord>(blkptr);
 
-        if (CheckMsPOW(blkptr, lastMs.snapshot)) {
-            NodeRecord node{blkptr};
-            ChainStatePtr cs = CreateNextChainState(lastMs.snapshot, node, std::vector<RecordWPtr>{});
-            vMs.emplace_back(std::move(node));
-            lastMs = vMs.back();
-            count++;
-            if (count < height) {
-                make_new_levelset = true;
+        // Set proper info in node
+        node->height           = lastMs->height + 1;
+        node->minerChainHeight = prevBlock->minerChainHeight + 1;
+        node->validity.resize(blkptr->GetTransactionSize());
+        memset(node->validity.data(), NodeRecord::Validity::VALID, blkptr->GetTransactionSize());
+
+        prevBlock = node;
+        testChain.back().emplace_back(node);
+
+        if (CheckMsPOW(blkptr, lastMs->snapshot)) {
+            // Prepare the lvs of the milestone
+            std::vector<RecordWPtr> lvs;
+            const auto& lvs_recs = testChain.back();
+            lvs.reserve(lvs_recs.size());
+            std::transform(lvs_recs.begin(), lvs_recs.end(), std::back_inserter(lvs),
+                           [](RecordPtr p) -> RecordWPtr { return RecordWPtr(p); });
+
+            CreateNextChainState(lastMs->snapshot, *node, std::move(lvs));
+            lastMs = std::move(node);
+
+            if (count++ < height - 1) {
+                testChain.emplace_back();
             }
         }
-
-        prevBlock = blkptr;
-        testChain.back().emplace_back(std::move(blkptr));
-        if (make_new_levelset) {
-            testChain.emplace_back();
-        }
     }
-    return {testChain, vMs};
+    // PrintChain(testChain);
+    return testChain;
+}
+
+TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
+    return CreateChain(std::make_shared<NodeRecord>(startMs), height, tx);
+}
+
+std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const RecordPtr& startMs,
+                                                                             size_t height,
+                                                                             bool tx) {
+    auto chain = CreateChain(startMs, height, tx);
+
+    TestRawChain rawChain;
+    rawChain.reserve(chain.size());
+    std::vector<RecordPtr> milestons;
+    milestons.reserve(chain.size());
+
+    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetRecs lvs) {
+        // extract milestone
+        milestons.emplace_back(lvs.back());
+
+        // convert each block from RecordPtr to ConstBlockPtr
+        LevelSetBlks rawLvs;
+        rawLvs.reserve(lvs.size());
+        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](RecordPtr rec) { return rec->cblock; });
+        return rawLvs;
+    });
+
+    return {rawChain, milestons};
+}
+
+std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const NodeRecord& startMs,
+                                                                             size_t height,
+                                                                             bool tx) {
+    return CreateRawChain(std::make_shared<NodeRecord>(startMs), height, tx);
 }

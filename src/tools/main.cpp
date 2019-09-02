@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
             }
             file.open(dir + std::to_string(i) + ".toml", std::ios::out | std::ios::trunc);
 
-            auto set = CAT->GetLevelSetWithRecAt(i);
+            auto set = CAT->GetLevelSetRecsAt(i);
             auto ms  = CAT->GetMilestoneAt(i);
             auto res = LvsWithRecToToml(set);
             file << *res;

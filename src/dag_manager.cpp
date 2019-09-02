@@ -450,7 +450,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            RecordPtr ms = GetState(msHash);
+            RecordPtr ms = GetState(msHash, false);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return;
             }
@@ -466,7 +466,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         // Check difficulty target //////
 
-        RecordPtr ms = GetState(msHash);
+        RecordPtr ms = GetState(msHash, false);
         if (!ms) {
             spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
@@ -510,20 +510,16 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) 
         return true;
     }
 
-    if (blk->GetTime() - ms->cblock->GetTime() > GetParams().punctualityThred) {
-        spdlog::info("Block is too old: {} vs. {} [{}]", blk->GetTime(), ms->cblock->GetTime(),
+    assert(milestoneChains.size() > 0);
+    assert(milestoneChains.best());
+
+    auto bestHeight = GetBestMilestoneHeight();
+    if (bestHeight > ms->height && (bestHeight - ms->height) > GetParams().cacheStatesSize) {
+        spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height, bestHeight,
                      std::to_string(blk->GetHash()));
         return false;
     }
 
-    assert(milestoneChains.size() > 0);
-    assert(milestoneChains.best());
-    if (GetBestMilestoneHeight() > ms->height &&
-        (GetBestMilestoneHeight() - ms->height) > GetParams().cacheStatesSize) {
-        spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height,
-                     GetBestMilestoneHeight(), std::to_string(blk->GetHash()));
-        return false;
-    }
     return true;
 }
 
@@ -532,11 +528,12 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
     // Extract utxos from outputs and pass their pointers to chains
     std::vector<UTXOPtr> utxos;
-    if (block->HasTransaction()) {
-        auto& outs = block->GetTransaction()->GetOutputs();
+    const auto& txns = block->GetTransactions();
+    for (size_t i = 0; i < txns.size(); ++i) {
+        auto& outs = txns[i]->GetOutputs();
         utxos.reserve(outs.size());
-        for (size_t i = 0; i < outs.size(); ++i) {
-            utxos.emplace_back(std::make_shared<UTXO>(outs[i], i));
+        for (size_t j = 0; j < outs.size(); ++j) {
+            utxos.emplace_back(std::make_shared<UTXO>(outs[j], i, j));
         }
     }
 
@@ -642,20 +639,20 @@ void DAGManager::DeleteFork() {
     }
 }
 
-RecordPtr DAGManager::GetState(const uint256& msHash) const {
+RecordPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
         return search->second;
-    } else {
-        auto prec = CAT->GetRecord(msHash);
-        if (prec && prec->snapshot) {
-            return prec;
-        } else {
-            // cannot happen for in-dag workflow
-            // may return nullptr when rpc is requesting some non-existing states
-            return nullptr;
-        }
     }
+
+    auto prec = CAT->GetRecord(msHash, withBlock);
+    if (prec && prec->snapshot) {
+        return prec;
+    }
+
+    // cannot happen for in-dag workflow
+    // may return nullptr when rpc is requesting some non-existing states
+    return nullptr;
 }
 
 Chain& DAGManager::GetBestChain() const {
@@ -738,8 +735,8 @@ void DAGManager::FlushToCAT(size_t level) {
         }
 
         // notify the listener
-        if (onLvsConfirmedListener) {
-            onLvsConfirmedListener->OnLvsConfirmed(std::move(blocksToListener), utxoToStore, utxoToRemove);
+        if (onLvsConfirmedCallback) {
+            onLvsConfirmedCallback(std::move(blocksToListener), utxoToStore, utxoToRemove);
         }
 
         // then remove chain states from chains
@@ -805,7 +802,7 @@ RecordPtr DAGManager::GetMainChainRecord(const uint256& blkHash) const {
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {
-    auto rec = GetBestChain().GetRecord(blockHash);
+    auto rec = GetBestChain().GetRecordCache(blockHash);
     if (rec) {
         return rec->height;
     }
@@ -818,13 +815,12 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        auto recs = CAT->GetLevelSetAt(height);
-        lvs.reserve(recs.size());
-        for (auto& b : recs) {
-            lvs.emplace_back(std::move(b));
-        }
+        auto recs = CAT->GetLevelSetBlksAt(height);
+        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
     } else {
         auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+        std::swap(recs.front(), recs.back());
+
         lvs.reserve(recs.size());
         for (auto& rwp : recs) {
             lvs.push_back((*rwp.lock()).cblock);
@@ -836,6 +832,28 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
 
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& blockHash) const {
     return GetMainChainLevelSet(GetHeight(blockHash));
+}
+
+std::vector<RecordPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool withBlock) const {
+    std::vector<RecordPtr> lvs;
+    size_t leastHeightCached = GetBestChain().GetLeastHeightCached();
+
+    auto height = GetHeight(blockHash);
+    if (height < leastHeightCached) {
+        auto recs = CAT->GetLevelSetRecsAt(height, withBlock);
+        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+    } else {
+        auto state = GetState(blockHash);
+        if (state) {
+            auto recs = state->snapshot->GetLevelSet();
+            lvs.reserve(recs.size());
+            for (auto& rwp : recs) {
+                lvs.push_back(rwp.lock());
+            }
+        }
+    }
+
+    return lvs;
 }
 
 VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
@@ -874,6 +892,6 @@ bool DAGManager::ExistsNode(const uint256& h) const {
     return false;
 }
 
-void DAGManager::RegisterOnLvsConfirmedListener(OnLvsConfirmedListener listener) {
-    onLvsConfirmedListener = listener;
+void DAGManager::RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func) {
+    onLvsConfirmedCallback = std::move(callback_func);
 }
