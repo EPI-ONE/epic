@@ -30,17 +30,6 @@ protected:
     }
 };
 
-// TEST_F(TestSer, SerializeOptional) {
-// std::optional<uint32_t> o1 = 4, o2;
-// VStream vstream;
-// vstream << o1 << o2;
-// std::optional<uint32_t> o3, o4 = 5;
-// vstream >> o3 >> o4;
-
-// ASSERT_EQ(o1, o3);
-// ASSERT_EQ(o2, o4);
-//}
-
 TEST_F(TestSer, SerializeEqDeserializePublicKey) {
     auto pubkey = fac.CreateKeyPair().second;
 

@@ -5,6 +5,7 @@
 #ifndef EPIC_BLOCK_H
 #define EPIC_BLOCK_H
 
+#include "cuckaroo.h"
 #include "net_message.h"
 #include "spdlog.h"
 #include "transaction.h"
@@ -38,9 +39,11 @@ public:
           uint256 merkle,
           uint32_t time,
           uint32_t difficultyTarget,
-          uint32_t nonce)
+          uint32_t nonce,
+          word_t proof[PROOFSIZE] = {})
         : NetMessage(BLOCK), version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
           tipBlockHash_(tipBlockHash), merkleRoot_(merkle), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+        memcpy(proof_, proof, PROOFSIZE);
         CalculateOptimalEncodingSize();
     }
 
@@ -147,6 +150,7 @@ public:
         READWRITE(time_);
         READWRITE(diffTarget_);
         READWRITE(nonce_);
+        READWRITE(proof_);
         READWRITE(transactions_);
         if (ser_action.ForRead()) {
             SetParents();
@@ -181,6 +185,7 @@ private:
     uint32_t time_;
     uint32_t diffTarget_;
     uint32_t nonce_;
+    word_t proof_[PROOFSIZE];
     std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
