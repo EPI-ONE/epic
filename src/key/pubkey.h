@@ -163,6 +163,11 @@ public:
         return CKeyID(Hash160<1>(vch, size()));
     }
 
+    //! Get the 256-bit hash of this public key.
+    uint256 GetHash() const {
+        return HashSHA2<2>(vch, size());
+    }
+
     /*
      * Check syntactic correctness.
      *

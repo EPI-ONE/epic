@@ -238,7 +238,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     TestRawChain chain;
     std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
-    for (size_t i = 0; i < chain.size(); i++) {
+   for (size_t i = 0; i < chain.size(); i++) {
         if (i > GetParams().cacheStatesSize) {
             usleep(50000);
         }

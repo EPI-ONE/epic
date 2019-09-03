@@ -9,6 +9,7 @@
 #include "big_uint.h"
 #include "hash.h"
 #include "key.h"
+#include "test_env.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
@@ -186,4 +187,15 @@ TEST_F(TestECKey, key_regular_test) {
     ASSERT_TRUE(key2.SignCompact(hashMsg, detsig));
     ASSERT_TRUE(key2C.SignCompact(hashMsg, detsigc));
     ASSERT_NE(detsig, detsigc);
+}
+
+TEST_F(TestECKey, create_key_from_random) {
+    TestFactory fac = EpicTestEnvironment::GetFactory();
+    for (int i = 0; i < 50; i++) {
+        uint256 zero = fac.CreateRandomHash();
+        CKey key{};
+        key.Set(zero.begin(), zero.end(), true);
+        ASSERT_TRUE(key.IsValid());
+        ASSERT_TRUE(key.IsCompressed());
+    }
 }

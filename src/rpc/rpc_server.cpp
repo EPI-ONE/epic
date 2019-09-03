@@ -156,11 +156,8 @@ grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* contex
     if (!WALLET) {
         reply->set_address("Wallet has not been started");
     } else {
-        auto key     = WALLET->CreateNewKey(false);
-        auto pubkey  = key.GetPubKey();
-        auto address = pubkey.GetID();
-        reply->set_address(EncodeAddress(address));
-        reply->set_privatekey(EncodeSecret(key));
+        auto key = WALLET->CreateNewKey(false);
+        reply->set_address(EncodeAddress(key));
     }
     return grpc::Status::OK;
 }
@@ -177,8 +174,55 @@ grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
+grpc::Status CommanderRPCServiceImpl::SetPassphrase(grpc::ServerContext* context,
+                                                    const SetPassphraseRequest* request,
+                                                    SetPassphraseResponse* reply) {
+    if (!WALLET) {
+        reply->set_responseinfo("Wallet has not been started");
+    } else if (WALLET->IsCrypted()) {
+        reply->set_responseinfo("Wallet has already be encrypted with passphrase");
+    } else if (!WALLET->SetPassphrase(SecureString{request->passphrase()})) {
+        reply->set_responseinfo("Fail to set passphrase");
+    } else {
+        reply->set_responseinfo("Your passphrase has been successfully set as [" + request->passphrase() + "]!");
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::ChangePassphrase(grpc::ServerContext* context,
+                                                       const ChangePassphraseRequest* request,
+                                                       ChangePassphraseResponse* reply) {
+    if (!WALLET) {
+        reply->set_responseinfo("Wallet has not been started");
+    } else if (!WALLET->IsCrypted()) {
+        reply->set_responseinfo("Wallet has no phrase set. Please set one first");
+    } else if (!WALLET->ChangePassphrase(SecureString{request->oldpassphrase()},
+                                         SecureString{request->newpassphrase()})) {
+        reply->set_responseinfo("Fail to change passphrase. Please check passphrase");
+    } else {
+        reply->set_responseinfo("Your passphrase is successfully updated!");
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
+                                            const LoginRequest* request,
+                                            LoginResponse* reply) {
+    if (!WALLET) {
+        reply->set_responseinfo("Wallet has not been started");
+    } else if (!WALLET->IsCrypted()) {
+        reply->set_responseinfo("Wallet has no phrase set. Please set one first");
+    } else if (!WALLET->CheckPassphrase(SecureString{request->passphrase()})) {
+        reply->set_responseinfo("Fail to login with the passphrase. Please check passphrase");
+    } else {
+        WALLET->RPCLogin();
+        reply->set_responseinfo("You are already logged in");
+    }
+    return grpc::Status::OK;
+}
+
 RPCServer::RPCServer(NetAddress adr) {
-    this->server_address_ = adr.ToString();
+    server_address_ = adr.ToString();
 }
 
 void RPCServer::Start() {
@@ -198,12 +242,12 @@ void RPCServer::LaunchServer() {
     BasicBlockExplorerRPCServiceImpl be_service;
     CommanderRPCServiceImpl commander_service;
     grpc::ServerBuilder builder;
-    builder.AddListeningPort(this->server_address_, grpc::InsecureServerCredentials());
+    builder.AddListeningPort(server_address_, grpc::InsecureServerCredentials());
     builder.RegisterService(&be_service);
     builder.RegisterService(&commander_service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
     isRunning_ = true;
-    spdlog::info("RPC Server is running on {}", this->server_address_);
+    spdlog::info("RPC Server is running on {}", server_address_);
     while (IsRunning()) {
         std::this_thread::yield();
     }

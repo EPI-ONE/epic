@@ -180,13 +180,13 @@ void SetupCommandline(cxxopts::Options& options) {
     // clang-format off
     options.add_options()
     ("h,help", "print this message", cxxopts::value<bool>())
-    ("configpath", "specified config path",cxxopts::value<std::string>()->default_value("config.toml"))
-    ("b,bindip", "bind ip address",cxxopts::value<std::string>())
+    ("configpath", "specified config path", cxxopts::value<std::string>()->default_value("config.toml"))
+    ("b,bindip", "bind ip address", cxxopts::value<std::string>())
     ("p,bindport", "bind port", cxxopts::value<uint16_t>())
     ("connect","connect", cxxopts::value<std::string>())
     ("disable-rpc", "disable rpc server", cxxopts::value<bool>())
-    ("D,daemon","make the program running in a daemon process",cxxopts::value<bool>())
-    ("N,newdb","start with the new db",cxxopts::value<bool>())
+    ("D,daemon","make the program running in a daemon process", cxxopts::value<bool>())
+    ("N,newdb","start with the new db", cxxopts::value<bool>())
     ;
     // clang-format on
 }
@@ -376,10 +376,15 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 bool Start() {
     // start p2p network
     if (!PEERMAN->Init(CONFIG)) {
+        std::cerr << "fail to start peer manager" << std::endl;
         return false;
     }
     PEERMAN->Start();
     WALLET->Start();
+    if (!WALLET->GenerateMaster()) {
+        std::cerr << "fail to generate master key for wallet" << std::endl;
+        return false;
+    } // TODO: make it from rpc calls
 
     // start rpc server
     if (!(CONFIG->GetDisableRPC())) {

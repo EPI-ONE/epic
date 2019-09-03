@@ -30,6 +30,8 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
     {
         Coin init_money{100};
         Wallet wallet{dir, 1};
+        wallet.GenerateMaster();
+        wallet.SetPassphrase("");
         wallet.Start();
         wallet.CreateNewKey(false);
         MEMPOOL   = std::make_unique<MemPool>();
@@ -113,6 +115,9 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
     ASSERT_EQ(newWallet.GetPending().size(), 0);
     ASSERT_EQ(newWallet.GetSpent().size(), 1);
     ASSERT_EQ(newWallet.GetPendingTx().size(), 0);
+
+    std::string cmd = "exec rm -r " + dir;
+    system(cmd.c_str());
 }
 
 TEST_F(TestWallet, test_wallet_store) {
@@ -127,7 +132,8 @@ TEST_F(TestWallet, test_wallet_store) {
     // very simple key tests
     auto [priv, pub] = fac.CreateKeyPair();
     auto addr        = pub.GetID();
-    store.StoreKeys(addr, priv);
+    auto testCipher  = ParseHex("f5f7228bfe8d771c7f860338cf6fa2d609aa1fdf8167046cc3f4ebdc3169d6ad");
+    store.StoreKeys(addr, testCipher, pub);
 
     auto keys = store.GetAllKey();
     ASSERT_EQ(keys.count(addr), 1);
@@ -138,17 +144,26 @@ TEST_F(TestWallet, test_wallet_store) {
     std::ifstream input{"keys"};
     std::string line;
     ASSERT_TRUE(std::getline(input, line));
-    ASSERT_EQ(line, EncodeSecret(priv));
+    VStream stm;
+    stm << pub;
+    std::string pubstr;
+    stm >> pubstr;
+    ASSERT_EQ(line, pubstr);
 
     store.ClearOldData();
     ASSERT_EQ(store.GetAllTx().size(), 0);
 
     std::string cmd = "exec rm keys";
     system(cmd.c_str());
+
+    cmd = "exec rm -r " + dir;
+    system(cmd.c_str());
 }
 
 TEST_F(TestWallet, workflow) {
     EpicTestEnvironment::SetUpDAG(path, true, true);
+    WALLET->GenerateMaster();
+    WALLET->SetPassphrase("");
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
@@ -199,6 +214,8 @@ TEST_F(TestWallet, workflow) {
 
 TEST_F(TestWallet, normal_workflow) {
     EpicTestEnvironment::SetUpDAG(path, true, true);
+    WALLET->GenerateMaster();
+    WALLET->SetPassphrase("");
     WALLET->Start();
 
     WALLET->CreateNewKey(false);

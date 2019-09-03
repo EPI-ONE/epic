@@ -10,6 +10,7 @@
 #include "lockedpool.h"
 
 #include <string>
+#include <vector>
 
 //
 // Allocator that locks its contents from being paged
@@ -17,7 +18,6 @@
 //
 template <typename T>
 struct secure_allocator : public std::allocator<T> {
-    // MSVC8 default copy constructor is broken
     typedef std::allocator<T> base;
     typedef typename base::size_type size_type;
     typedef typename base::difference_type difference_type;
@@ -54,5 +54,6 @@ struct secure_allocator : public std::allocator<T> {
 
 // This is exactly like std::string, but with a custom allocator.
 typedef std::basic_string<char, std::char_traits<char>, secure_allocator<char>> SecureString;
+typedef std::vector<unsigned char, secure_allocator<unsigned char>> SecureByte;
 
 #endif // BITCOIN_SUPPORT_ALLOCATORS_SECURE_H

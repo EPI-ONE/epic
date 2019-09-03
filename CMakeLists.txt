@@ -37,6 +37,10 @@ endif ()
 
 LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
+# openssl
+find_package(OpenSSL REQUIRED)
+target_link_libraries(OpenSSL::Crypto)
+
 # gtest
 find_package(GTest 1.8.1 EXACT REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
@@ -172,6 +176,7 @@ aux_source_directory(test/peer TEST_PEER_SRCS)
 aux_source_directory(test/storage TEST_STORAGE_SRCS)
 aux_source_directory(test/pow TEST_POW_SRCS)
 aux_source_directory(${TEST_METHODS_DIR} TEST_METHODS_SRCS)
+aux_source_directory(test/wallet TEST_WALLET_SRCS)
 
 include_directories(test
     ${TEST_METHODS_DIR}
@@ -188,6 +193,7 @@ set(TEST_CODE
         ${TEST_STORAGE_SRCS}
         ${TEST_METHODS_SRCS}
         ${TEST_POW_SRCS}
+        ${TEST_WALLET_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
 
@@ -231,6 +237,7 @@ target_link_libraries(epicc gRPC::grpc++_reflection)
 
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
 
+target_link_libraries(epiccore ${OPENSSL_CRYPTO_LIBRARY})
 target_link_libraries(epiccore ${LIBEVENT_SHARED_LIBRARIES})
 target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
 target_link_libraries(epiccore ${Secp256k1_LIBRARY})
