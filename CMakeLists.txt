@@ -75,27 +75,39 @@ grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${PROTO_SRC_DIR} ${PROTOS})
 
 # src codes
 set(NET_DIR src/net)
+set(PEER_DIR src/peer)
 set(UTIL_DIR src/utils)
-set(CRYPTO_DIR src/crypto)
+set(HASH_DIR src/hash)
+set(KEY_DIR src/key)
 set(COMPAT_DIR src/compat)
-set(SUPPORT_DIR src/support)
+set(MEMORY_DIR src/memory)
 set(TASM_DIR src/tasm)
 set(SPDLOG_DIR src/spdlog)
 set(WALLET_DIR src/wallet)
 set(CORE_DIR src)
 set(TOOLS_DIR src/tools)
-set(CUCKAROO_DIR src/utils/cuckaroo)
+set(CUCKAROO_DIR src/cuckaroo)
 set(CUDA_DIR ${CUCKAROO_DIR}/cuda)
+set(CONSENSUS_DIR src/consensus)
+set(MESSAGES_DIR src/messages)
+set(MINER_DIR src/miner)
+set(STORAGE_DIR src/storage)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
+aux_source_directory(${PEER_DIR} PEER_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${TASM_DIR} TASM_SRCS)
-aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
+aux_source_directory(${HASH_DIR} HASH_SRCS)
+aux_source_directory(${KEY_DIR} KEY_SRCS)
 aux_source_directory(${CORE_DIR} CORE_SRCS)
-aux_source_directory(${SUPPORT_DIR} SUPPORT_SRCS)
+aux_source_directory(${MEMORY_DIR} MEMORY_SRCS)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
 aux_source_directory(${WALLET_DIR} WALLET_SRCS)
 aux_source_directory(${CUCKAROO_DIR} CUCKAROO_SRCS)
+aux_source_directory(${CONSENSUS_DIR} CONSENSUS_SRCS)
+aux_source_directory(${MESSAGES_DIR} MESSAGES_SRCS)
+aux_source_directory(${MINER_DIR} MINER_SRCS)
+aux_source_directory(${STORAGE_DIR} STORAGE_SRCS)
 
 list(REMOVE_ITEM CORE_SRCS src/main.cpp)
 
@@ -103,17 +115,23 @@ include_directories(src
         ${RPC_DIR}
         ${PROTO_SRC_DIR}
         ${NET_DIR}
+        ${PEER_DIR}
         ${UTIL_DIR}
-        ${CRYPTO_DIR}
+        ${HASH_DIR}
+        ${KEY_DIR}
         ${COMPAT_DIR}
         ${CORE_DIR}
         ${TASM_DIR}
         ${SPDLOG_DIR}
-        ${SUPPORT_DIR}
+        ${MEMORY_DIR}
         ${INTERFACE_DIR}
         ${WALLET_DIR}
         ${CUCKAROO_DIR}
         ${CUDA_DIR}
+        ${CONSENSUS_DIR}
+        ${MESSAGES_DIR}
+        ${MINER_DIR}
+        ${STORAGE_DIR}
         )
 
 set(SRC_CODE
@@ -121,14 +139,20 @@ set(SRC_CODE
         ${PROTO_SRCS}
         ${GRPC_SRCS}
         ${NET_SRCS}
+        ${PEER_SRCS}
         ${UTIL_SRCS}
-        ${CRYPTO_SRCS}
+        ${HASH_SRCS}
+        ${KEY_SRCS}
         ${CORE_SRCS}
         ${TASM_SRCS}
-        ${SUPPORT_SRCS}
+        ${MEMORY_SRCS}
         ${INTERFACE_SRCS}
         ${WALLET_SRCS}
         ${CUCKAROO_SRCS}
+        ${CONSENSUS_SRCS}
+        ${MESSAGES_SRCS}
+        ${MINER_SRCS}
+        ${STORAGE_SRCS}
         )
 
 set(SRC_MAIN src/main.cpp)
@@ -142,8 +166,9 @@ aux_source_directory(test/net TEST_NET_SRCS)
 aux_source_directory(test/utils TEST_UTILS_SRCS)
 aux_source_directory(test/tasm TEST_TASM_SRCS)
 aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
-aux_source_directory(test/core TEST_CORE_SRCS)
-aux_source_directory(test/support TEST_SUPPORT_SRCS)
+aux_source_directory(test/consensus TEST_CONSENSUS_SRCS)
+aux_source_directory(test/peer TEST_PEER_SRCS)
+aux_source_directory(test/storage TEST_STORAGE_SRCS)
 aux_source_directory(${TEST_METHODS_DIR} TEST_METHODS_SRCS)
 
 include_directories(test
@@ -156,8 +181,9 @@ set(TEST_CODE
         ${TEST_UTILS_SRCS}
         ${TEST_TASM_SRCS}
         ${TEST_CRYPTO_SRCS}
-        ${TEST_CORE_SRCS}
-        ${TEST_SUPPORT_SRCS}
+        ${TEST_CONSENSUS_SRCS}
+        ${TEST_PEER_SRCS}
+        ${TEST_STORAGE_SRCS}
         ${TEST_METHODS_SRCS}
         )
 set(TEST_MAIN test/main.cpp)

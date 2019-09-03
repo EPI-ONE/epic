@@ -1,12 +1,9 @@
 // Copyright (c) 2012-2018 The Bitcoin Core developers
-// Copyright (c) 2019 EPIC
+// Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <cstdio>
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
 
 #include "base58.h"
 #include "big_uint.h"
@@ -14,6 +11,9 @@
 #include "key.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
+
+#include <string>
+#include <vector>
 
 class TestECKey : public testing::Test {
 protected:

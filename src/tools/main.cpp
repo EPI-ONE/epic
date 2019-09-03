@@ -1,6 +1,11 @@
-#include "caterpillar.h"
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "cxxopts.hpp"
+#include "storage.h"
 #include "toml_specifacation.h"
+
 #include <iostream>
 
 int ParseArg(int argc, char** argv, std::string& root, std::string& type) {
@@ -48,9 +53,9 @@ int main(int argc, char** argv) {
             return -1;
         }
         file::SetDataDirPrefix(rootpath);
-        CAT = std::make_unique<Caterpillar>(rootpath + "/db/");
+        STORE = std::make_unique<BlockStore>(rootpath + "/db/");
 
-        auto height = CAT->GetHeadHeight();
+        auto height = STORE->GetHeadHeight();
         for (int i = 1; i < height; i++) {
             std::ofstream file;
             std::string dir = "tools/records/";
@@ -59,13 +64,13 @@ int main(int argc, char** argv) {
             }
             file.open(dir + std::to_string(i) + ".toml", std::ios::out | std::ios::trunc);
 
-            auto set = CAT->GetLevelSetRecsAt(i);
-            auto ms  = CAT->GetMilestoneAt(i);
+            auto set = STORE->GetLevelSetRecsAt(i);
+            auto ms  = STORE->GetMilestoneAt(i);
             auto res = LvsWithRecToToml(set);
             file << *res;
             file.close();
         }
 
-        CAT.reset();
+        STORE.reset();
     }
 }

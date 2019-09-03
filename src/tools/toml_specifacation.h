@@ -1,7 +1,12 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_TOML_SPECIFACATION_H
 #define EPIC_TOML_SPECIFACATION_H
-#include "consensus.h"
+
 #include "cpptoml.h"
+#include "node.h"
 
 #include <algorithm>
 #include <vector>

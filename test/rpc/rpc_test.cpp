@@ -1,13 +1,16 @@
-#include <chrono>
-#include <gtest/gtest.h>
-#include <iostream>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "rpc_client.h"
-#include "rpc_server.h"
+#include <gtest/gtest.h>
 
 #include "key.h"
+#include "rpc_client.h"
+#include "rpc_server.h"
 #include "rpc_tools.h"
 #include "test_env.h"
+
+#include <chrono>
 
 class TestRPCServer : public testing::Test {
 public:
@@ -73,7 +76,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
         b->height      = ms->height;
         lvs.push_back(b);
     }
-    ASSERT_TRUE(CAT->StoreLevelSet(lvs));
+    ASSERT_TRUE(STORE->StoreLevelSet(lvs));
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
@@ -126,7 +129,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     first_ms->height           = 1;
     mss.push_back(first_ms);
     mss_to_check.push_back(first_ms);
-    ASSERT_TRUE(CAT->StoreLevelSet(mss));
+    ASSERT_TRUE(STORE->StoreLevelSet(mss));
     mss.clear();
     auto prev = first_ms->snapshot;
     for (int i = 2; i < size; ++i) {
@@ -137,13 +140,13 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
         ms->height                 = i;
         mss.push_back(ms);
         mss_to_check.push_back(ms);
-        ASSERT_TRUE(CAT->StoreLevelSet(mss));
+        ASSERT_TRUE(STORE->StoreLevelSet(mss));
         mss.clear();
         prev = ms->snapshot;
     }
 
     usleep(50000);
-    CAT->Stop();
+    STORE->Stop();
     DAG->Stop();
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));

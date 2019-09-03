@@ -1,21 +1,23 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "init.h"
-
-#include <atomic>
-#include <csignal>
-#include <net/peer_manager.h>
-#include <spawn.h>
-
 #include "dag_manager.h"
 #include "mempool.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
 #include "wallet.h"
 
+#include <atomic>
+#include <csignal>
+#include <spawn.h>
+
 Block GENESIS;
 NodeRecord GENESIS_RECORD;
 std::unique_ptr<Config> CONFIG;
 std::unique_ptr<PeerManager> PEERMAN;
-std::unique_ptr<Caterpillar> CAT;
+std::unique_ptr<BlockStore> STORE;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
@@ -124,12 +126,12 @@ int Init(int argc, char* argv[]) {
         DeleteDir(CONFIG->GetWalletPath());
     }
 
-    CAT = std::make_unique<Caterpillar>(CONFIG->GetDBPath());
+    STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
     if (!CAT->DBExists(GENESIS.GetHash())) {
         // put genesis block into cat
         std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreLevelSet(genesisLvs);
+        STORE->StoreLevelSet(genesisLvs);
     }
 
     DAG = std::make_unique<DAGManager>();
@@ -396,12 +398,12 @@ void ShutDown() {
     PEERMAN->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     if (MINER->IsRunning()) {
         MINER->Stop();
     }
 
-    CAT.reset();
+    STORE.reset();
     DAG.reset();
     MEMPOOL.reset();
     PEERMAN.reset();

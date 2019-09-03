@@ -1,9 +1,13 @@
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef EPIC_NET_ADDRESS_H
 #define EPIC_NET_ADDRESS_H
+
+#include "serialize.h"
+#include "utilstrencodings.h"
 
 #include <arpa/inet.h>
 #include <iostream>
@@ -12,9 +16,6 @@
 #include <sstream>
 #include <string>
 #include <tinyformat.h>
-
-#include "serialize.h"
-#include "utilstrencodings.h"
 
 enum NetworkType {
     NET_UNROUTABLE = 0,
@@ -89,7 +90,6 @@ public:
     virtual ~IPAddress() = default;
 
 protected:
-    // Serialize
     unsigned char ip[16];
 };
 
@@ -138,8 +138,7 @@ public:
         READWRITE(port_);
     }
 
-protected:
-    // Serialize
+private:
     uint16_t port_ = 0;
 };
 

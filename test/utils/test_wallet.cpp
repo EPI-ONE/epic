@@ -1,10 +1,15 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include <gtest/gtest.h>
+
 #include "mempool.h"
 #include "miner.h"
 #include "test_env.h"
 #include "wallet.h"
 
 #include <chrono>
-#include <gtest/gtest.h>
 
 class TestWallet : public testing::Test {
 public:
@@ -16,7 +21,7 @@ public:
     void SetUp() override {}
 
     void TearDown() override {
-        std::string cmd = "exec rm -r " + dir;
+        std::string cmd = "exec rm -rf " + dir;
         system(cmd.c_str());
     }
 };
@@ -188,7 +193,7 @@ TEST_F(TestWallet, workflow) {
     MINER->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
@@ -216,6 +221,6 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }

@@ -1,9 +1,13 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_WALLET_H
 #define EPIC_WALLET_H
 
 #include "concurrent_container.h"
-#include "consensus.h"
 #include "key.h"
+#include "node.h"
 #include "scheduler.h"
 #include "tasm.h"
 #include "threadpool.h"

@@ -1,12 +1,16 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __SRC_INIT_H__
 #define __SRC_INIT_H__
 
-#include "caterpillar.h"
 #include "config.h"
 #include "cpptoml.h"
 #include "cxxopts.hpp"
 #include "file_utils.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include "storage.h"
 
 extern std::atomic_bool b_shutdown;
 extern ECCVerifyHandle handle;

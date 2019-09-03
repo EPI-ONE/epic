@@ -1,10 +1,14 @@
-#ifndef __FUNCTOR_H__
-#define __FUNCTOR_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef __SRC_TASM_FUNCTOR_H__
+#define __SRC_TASM_FUNCTOR_H__
+
+#include "pubkey.h"
 
 #include <array>
 #include <functional>
-
-#include "pubkey.h"
 
 typedef std::function<size_t(VStream& data, std::size_t ip)> instruction;
 
@@ -38,4 +42,4 @@ static const std::array<instruction, 256> functors = {
         return ip + 2;
     })};
 
-#endif // __FUNCTOR_H__
+#endif // __SRC_TASM_FUNCTOR_H__

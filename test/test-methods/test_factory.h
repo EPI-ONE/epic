@@ -1,11 +1,14 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __TEST_TEST_FACTORY_H__
 #define __TEST_TEST_FACTORY_H__
 
 #include "block.h"
-#include "consensus.h"
 #include "dag_manager.h"
 #include "key.h"
-#include "pubkey.h"
+#include "node.h"
 #include "tasm.h"
 
 #include <random>

@@ -1,9 +1,13 @@
-#include <gtest/gtest.h>
-#include <optional>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "consensus.h"
-#include "key.h"
+#include <gtest/gtest.h>
+
+#include "node.h"
 #include "test_env.h"
+
+#include <optional>
 
 typedef Tasm::Listing Listing;
 

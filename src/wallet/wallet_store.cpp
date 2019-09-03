@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "wallet_store.h"
 #include "big_uint.h"
 #include "file_utils.h"
@@ -5,7 +9,6 @@
 #include "stream.h"
 #include "transaction.h"
 
-//#include <cstdio>
 #include <fstream>
 
 using namespace rocksdb;

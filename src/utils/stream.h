@@ -6,10 +6,10 @@
 #ifndef __SRC_UTILS_STREAM_H__
 #define __SRC_UTILS_STREAM_H__
 
-#include <cstring>
-
 #include "serialize.h"
 #include "zeroafterfree.h"
+
+#include <cstring>
 
 // Byte-vector that sets contents to 0's before deallocation.
 typedef std::vector<char, zero_after_free_allocator<char>> byte_vector;

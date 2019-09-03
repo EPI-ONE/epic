@@ -1,5 +1,11 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __SRC_UTILS_FILE_UTILS_H__
 #define __SRC_UTILS_FILE_UTILS_H__
+
+#include "stream.h"
 
 #include <array>
 #include <cerrno>
@@ -10,8 +16,6 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include "stream.h"
 
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);

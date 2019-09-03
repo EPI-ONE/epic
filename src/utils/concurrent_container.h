@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __SRC_UTILS_CONCURRENT_HASHMAP_H__
 #define __SRC_UTILS_CONCURRENT_HASHMAP_H__
 

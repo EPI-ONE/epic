@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "cxxopts.hpp"
 #include "rpc_client.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -20,17 +24,21 @@ int main(int argc, char** argv) {
     uint16_t rpc_port;
     // clang-format off
     cxxopts::Options options("epicc", "epic client");
-    options.positional_help("COMMAND. available commands: \n"
-                            "1. status \n"
-                            "2. start-miner \n"
-                            "3. stop-miner \n"
-                            "4. stop \n"
-                            "5. create-randomtx, args = size: uint64(the size of transactions you want to create) \n"
-                            "6. generate-newkey \n"
-                            "7. get-balance \n"
-                            "8. create-tx args = fee : uint64(optional, default to be 1), outputValue1 : uint64, "
-                                                "outputAddr1 : string, outputValue2 : uint64, outputAddr2 : string ...")
-                            .show_positional_help();
+    options.positional_help("COMMAND \n\n"
+                            "Available commands: \n"
+                            "   1. status \n"
+                            "   2. start-miner \n"
+                            "   3. stop-miner \n"
+                            "   4. stop \n"
+                            "   5. create-randomtx, args=size: uint64 (the size of transactions you want to create) \n"
+                            "   6. generate-newkey \n"
+                            "   7. get-balance \n"
+                            "   8. create-tx args=fee: uint64 (optional, default to be 1), \\\n"
+                            "                     outputValue1: uint64, outputAddr1: string, \\\n"
+                            "                     outputValue2: uint64, outputAddr2: string, \\\n"
+                            "                     ...\n\n"
+                            "Available options:"
+                            ).show_positional_help();
 
     std::vector<std::string> more_args;
     options

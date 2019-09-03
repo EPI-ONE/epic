@@ -1,14 +1,18 @@
-#ifndef __TASM_H__
-#define __TASM_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef __SRC_TASM_TASM_H__
+#define __SRC_TASM_TASM_H__
+
+#include "functors.h"
+#include "opcodes.h"
+#include "stream.h"
+#include "utilstrencodings.h"
 
 #include <array>
 #include <functional>
 #include <vector>
-
-#include "opcodes.h"
-#include "stream.h"
-#include "utilstrencodings.h"
-#include "functors.h"
 
 class Tasm {
 public:
@@ -113,4 +117,4 @@ namespace std {
 string to_string(const Tasm::Listing& listing);
 }
 
-#endif
+#endif // __SRC_TASM_TASM_H__

@@ -1,10 +1,13 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
+
+#include "common.h"
 
 #include <cassert>
 #include <cstdint>
@@ -13,8 +16,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "common.h"
 
 /** Template base class for fixed-sized opaque blobs. */
 template <unsigned int BITS>

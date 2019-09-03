@@ -1,5 +1,14 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_CONNECTION_MANAGER_H
 #define EPIC_CONNECTION_MANAGER_H
+
+#include "blocking_queue.h"
+#include "connection.h"
+#include "net_message.h"
+#include "threadpool.h"
 
 #include <atomic>
 #include <cstdint>
@@ -10,11 +19,6 @@
 #include <functional>
 #include <string>
 #include <thread>
-
-#include "blocking_queue.h"
-#include "connection.h"
-#include "net_message.h"
-#include "threadpool.h"
 
 typedef std::pair<shared_connection_t, unique_message_t> connection_message_t;
 typedef std::function<void(shared_connection_t&)> connection_callback_t;

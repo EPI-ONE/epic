@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <gtest/gtest.h>
 
 #include "miner.h"
@@ -91,7 +95,7 @@ TEST_F(TestMiner, Restart) {
     ASSERT_NE(*cursor, *selfChainHead);
 
     while (*cursor != GENESIS && *cursor != *selfChainHead) {
-        cursor = CAT->FindBlock(cursor->GetPrevHash());
+        cursor = STORE->FindBlock(cursor->GetPrevHash());
     }
 
     ASSERT_EQ(*cursor, *selfChainHead);

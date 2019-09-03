@@ -1,9 +1,13 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __SRC_UTILS_INCREMENTAL_CONTAINER__
 #define __SRC_UTILS_INCREMENTAL_CONTAINER__
 
-#include <unordered_set>
-
 #include "big_uint.h"
+
+#include <unordered_set>
 
 template <typename T>
 class Increment {

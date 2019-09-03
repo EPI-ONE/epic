@@ -1,12 +1,16 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef __SRC_CONFIG_H__
 #define __SRC_CONFIG_H__
+
+#include "net_address.h"
+#include "spdlog.h"
 
 #include <memory>
 #include <sstream>
 #include <string>
-
-#include "net_address.h"
-#include "spdlog.h"
 
 class Config {
 public:

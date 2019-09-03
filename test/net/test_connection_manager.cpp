@@ -1,10 +1,15 @@
-#include <atomic>
-#include <connection_manager.h>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <gtest/gtest.h>
 #include <random>
 
+#include "connection_manager.h"
 #include "message_header.h"
 #include "sync_messages.h"
+
+#include <atomic>
 
 class TestConnectionManager : public testing::Test {
 public:
