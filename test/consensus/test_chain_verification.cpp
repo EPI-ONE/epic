@@ -23,38 +23,38 @@ public:
         EpicTestEnvironment::TearDownDAG(prefix);
     }
 
-    void AddToHistory(Chain* c, RecordPtr prec) {
-        c->recordHistory_.emplace(prec->cblock->GetHash(), prec);
+    void AddToHistory(Chain* c, VertexPtr prec) {
+        c->recentHistory_.emplace(prec->cblock->GetHash(), prec);
     }
 
     void AddToLedger(Chain* c, ChainLedger&& ledger) {
         c->ledger_ = ledger;
     }
 
-    std::unique_ptr<Chain> make_chain(const ConcurrentQueue<ChainStatePtr>& states,
-                                      const std::vector<RecordPtr>& recs,
+    std::unique_ptr<Chain> make_chain(const ConcurrentQueue<MilestonePtr>& states,
+                                      const std::vector<VertexPtr>& recs,
                                       bool ismain = false) {
         auto chain          = std::make_unique<Chain>();
         chain->ismainchain_ = ismain;
         chain->states_      = states;
         for (const auto& pRec : recs) {
-            chain->recordHistory_.emplace(pRec->cblock->GetHash(), pRec);
+            chain->recentHistory_.emplace(pRec->cblock->GetHash(), pRec);
         }
         return chain;
     }
 
-    std::optional<TXOC> ValidateRedemption(Chain* c, NodeRecord& record, RegChange& regChange) {
-        return c->ValidateRedemption(record, regChange);
+    std::optional<TXOC> ValidateRedemption(Chain* c, Vertex& vertex, RegChange& regChange) {
+        return c->ValidateRedemption(vertex, regChange);
     }
 
-    TXOC ValidateTx(Chain* c, NodeRecord& record) {
-        return c->ValidateTxns(record);
+    TXOC ValidateTx(Chain* c, Vertex& vertex) {
+        return c->ValidateTxns(vertex);
     }
 
-    bool IsValidDistance(Chain* c, NodeRecord& rec, const arith_uint256& msHashRate) {
+    bool IsValidDistance(Chain* c, Vertex& rec, const arith_uint256& msHashRate) {
         c->CheckTxPartition(rec, msHashRate);
         for (size_t i = 0; i < rec.validity.size(); ++i) {
-            if (rec.validity[i] == NodeRecord::Validity::INVALID) {
+            if (rec.validity[i] == Vertex::Validity::INVALID) {
                 return false;
             }
         }
@@ -62,8 +62,8 @@ public:
         return true;
     }
 
-    RecordPtr GetRecord(Chain* c, const uint256& h) {
-        return c->GetRecord(h);
+    VertexPtr GetVertex(Chain* c, const uint256& h) {
+        return c->GetVertex(h);
     }
 };
 
@@ -71,7 +71,7 @@ TEST_F(TestChainVerification, chain_with_genesis) {
     ASSERT_EQ(DAG->GetMilestoneHead()->height, 0);
     ASSERT_EQ(DAG->GetMilestoneHead()->snapshot->GetLevelSet().size(), 1);
     ASSERT_EQ(*DAG->GetMilestoneHead()->snapshot->GetLevelSet()[0].lock()->cblock, GENESIS);
-    ASSERT_EQ(*DAG->GetBestChain().GetRecord(GENESIS.GetHash()), GENESIS_RECORD);
+    ASSERT_EQ(*DAG->GetBestChain().GetVertex(GENESIS.GetHash()), GENESIS_VERTEX);
 }
 
 TEST_F(TestChainVerification, UTXO) {
@@ -92,7 +92,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 
     // chain configuration
     constexpr size_t HEIGHT = 30;
-    std::array<RecordPtr, HEIGHT> recs;
+    std::array<VertexPtr, HEIGHT> recs;
     std::array<uint256, HEIGHT> hashes;
     std::array<bool, HEIGHT> isRedemption{};
     std::array<bool, HEIGHT> isMilestone{};
@@ -132,7 +132,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     c.AddPendingBlock(std::make_shared<const Block>(std::move(b1)));
     auto prevHash    = b1hash;
     auto prevRedHash = b1hash;
-    auto prevMs      = GENESIS_RECORD.snapshot;
+    auto prevMs      = GENESIS_VERTEX.snapshot;
     for (size_t i = 0; i < HEIGHT; i++) {
         Block blk{1, ghash, prevHash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
@@ -170,10 +170,10 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
 
     // check testing results
-    auto firstRegRec = GetRecord(&c, b1hash);
+    auto firstRegRec = GetVertex(&c, b1hash);
     ASSERT_EQ(firstRegRec->minerChainHeight, 1);
     ASSERT_TRUE(firstRegRec->cumulativeReward == 0);
-    ASSERT_EQ(firstRegRec->isRedeemed, NodeRecord::IS_REDEEMED);
+    ASSERT_EQ(firstRegRec->isRedeemed, Vertex::IS_REDEEMED);
     uint32_t lastMs = HEIGHT - 1;
     while (!isMilestone[lastMs]) {
         lastMs--;
@@ -183,13 +183,13 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
         lastRdm--;
     }
     for (size_t i = 0; i < lastMs; i++) {
-        recs[i] = GetRecord(&c, hashes[i]);
+        recs[i] = GetVertex(&c, hashes[i]);
         ASSERT_EQ(recs[i]->minerChainHeight, i + 2);
         if (isRedemption[i]) {
             if (i < lastRdm) {
-                ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::IS_REDEEMED);
+                ASSERT_EQ(recs[i]->isRedeemed, Vertex::IS_REDEEMED);
             } else {
-                ASSERT_EQ(recs[i]->isRedeemed, NodeRecord::NOT_YET_REDEEMED);
+                ASSERT_EQ(recs[i]->isRedeemed, Vertex::NOT_YET_REDEEMED);
             }
         } else {
             if (i > 0 && !isMilestone[i]) {
@@ -230,14 +230,14 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     uint32_t t = time(nullptr);
     Block b1{
-        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0};
     Transaction tx1{};
     tx1.AddOutput(std::move(output));
     tx1.FinalizeHash();
     b1.AddTransaction(tx1);
     b1.Solve();
     ASSERT_NE(b1.GetChainWork(), 0);
-    auto rec1              = std::make_shared<NodeRecord>(std::move(b1));
+    auto rec1              = std::make_shared<Vertex>(std::move(b1));
     rec1->minerChainHeight = 1;
     const auto& b1hash     = rec1->cblock->GetHash();
 
@@ -249,12 +249,12 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     // construct an empty block
     Block b2{
-        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0};
+        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0};
     b2.Solve();
-    NodeRecord rec2{std::move(b2)};
+    Vertex rec2{std::move(b2)};
     rec2.minerChainHeight = 2;
     const auto& b2hash    = rec2.cblock->GetHash();
-    AddToHistory(&c, std::make_shared<NodeRecord>(rec2));
+    AddToHistory(&c, std::make_shared<Vertex>(rec2));
 
     // construct another block
     Transaction tx{};
@@ -268,11 +268,11 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
              ghash,
              uint256(),
              t + 1,
-             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
              0};
     b3.AddTransaction(tx);
     b3.Solve();
-    NodeRecord rec3{std::move(b3)};
+    Vertex rec3{std::move(b3)};
     rec3.minerChainHeight = 3;
 
     auto txoc{ValidateTx(&c, rec3)};
@@ -290,13 +290,13 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
 TEST_F(TestChainVerification, ChainForking) {
     // construct the main chain and fork
-    ConcurrentQueue<ChainStatePtr> dqcs{{GetParams().GetGenesisRecord().snapshot}};
-    std::vector<RecordPtr> recs{};
+    ConcurrentQueue<MilestonePtr> dqcs{{GetParams().GetGenesisVertex().snapshot}};
+    std::vector<VertexPtr> recs{};
     ConstBlockPtr forkblk;
-    ChainStatePtr split;
+    MilestonePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
-        recs.emplace_back(fac.CreateConsecutiveRecordPtr(fac.NextTime()));
-        dqcs.push_back(fac.CreateChainStatePtr(dqcs.back(), recs[i - 1]));
+        recs.emplace_back(fac.CreateConsecutiveVertexPtr(fac.NextTime()));
+        dqcs.push_back(fac.CreateMilestonePtr(dqcs.back(), recs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5
             auto blk = fac.CreateBlock();
@@ -325,13 +325,13 @@ TEST_F(TestChainVerification, CheckPartition) {
                   ghash,
                   uint256(),
                   fac.NextTime(),
-                  GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+                  GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
                   0};
     reg_inv.AddTransaction(Transaction(CKeyID()));
     reg_inv.AddTransaction(fac.CreateTx(1, 1));
-    NodeRecord reg_inv_rec{reg_inv};
+    Vertex reg_inv_rec{reg_inv};
     reg_inv_rec.minerChainHeight = 1;
-    EXPECT_FALSE(IsValidDistance(&c, reg_inv_rec, GENESIS_RECORD.snapshot->hashRate));
+    EXPECT_FALSE(IsValidDistance(&c, reg_inv_rec, GENESIS_VERTEX.snapshot->hashRate));
 
     // Valid registration block
     Block reg{GetParams().version,
@@ -340,13 +340,13 @@ TEST_F(TestChainVerification, CheckPartition) {
               ghash,
               uint256(),
               fac.NextTime(),
-              GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+              GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
               0};
     reg.AddTransaction(Transaction(CKeyID()));
-    NodeRecord reg_rec{reg};
+    Vertex reg_rec{reg};
     reg_rec.minerChainHeight = 1;
-    AddToHistory(&c, std::make_shared<NodeRecord>(reg_rec));
-    EXPECT_TRUE(IsValidDistance(&c, reg_rec, GENESIS_RECORD.snapshot->hashRate));
+    AddToHistory(&c, std::make_shared<Vertex>(reg_rec));
+    EXPECT_TRUE(IsValidDistance(&c, reg_rec, GENESIS_VERTEX.snapshot->hashRate));
 
     // Malicious blocks
     // Block with transaction but minerChainHeight not reached sortitionThreshold
@@ -356,13 +356,13 @@ TEST_F(TestChainVerification, CheckPartition) {
              ghash,
              uint256(),
              fac.NextTime(),
-             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
              0};
     b1.AddTransaction(fac.CreateTx(1, 1));
-    NodeRecord rec1{b1};
+    Vertex rec1{b1};
     rec1.minerChainHeight = 2;
-    AddToHistory(&c, std::make_shared<NodeRecord>(rec1));
-    EXPECT_FALSE(IsValidDistance(&c, rec1, GENESIS_RECORD.snapshot->hashRate));
+    AddToHistory(&c, std::make_shared<Vertex>(rec1));
+    EXPECT_FALSE(IsValidDistance(&c, rec1, GENESIS_VERTEX.snapshot->hashRate));
 
     // Block with invalid distance
     Block b2{GetParams().version,
@@ -371,11 +371,11 @@ TEST_F(TestChainVerification, CheckPartition) {
              ghash,
              uint256(),
              fac.NextTime(),
-             GENESIS_RECORD.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
              0};
     Transaction tx1 = fac.CreateTx(1, 1);
     b2.AddTransaction(tx1);
-    NodeRecord rec2{b2};
+    Vertex rec2{b2};
     rec2.minerChainHeight = 3;
     EXPECT_FALSE(IsValidDistance(&c, rec2, 1000000000));
 }

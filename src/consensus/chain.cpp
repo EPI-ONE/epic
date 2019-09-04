@@ -38,20 +38,20 @@ Chain::Chain() : ismainchain_(true) {}
 
 Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
-      recordHistory_(chain.recordHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_) {
+      recentHistory_(chain.recentHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_) {
     if (states_.empty()) {
         return;
     }
 
     uint256 target = pfork->GetMilestoneHash();
-    assert(recordHistory_.find(target) != recordHistory_.end());
+    assert(recentHistory_.find(target) != recentHistory_.end());
 
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
         for (const auto& rwp : (*it)->GetLevelSet()) {
             const auto& rpt = *rwp.lock();
             const auto& h   = rpt.cblock->GetHash();
             pendingBlocks_.insert({h, rpt.cblock});
-            recordHistory_.erase(h);
+            recentHistory_.erase(h);
             ledger_.Rollback((*it)->GetTXOC());
 
             // Rollback prevRedempHashMap_
@@ -67,9 +67,9 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     // note that we don't do any verification here
 }
 
-ChainStatePtr Chain::GetChainHead() const {
+MilestonePtr Chain::GetChainHead() const {
     if (states_.empty()) {
-        // Note: the lvs_ in the returned ChainStatePtr contains a dummy weak_ptr that CANNOT be used
+        // Note: the lvs_ in the returned MilestonePtr contains a dummy weak_ptr that CANNOT be used
         return STORE->GetMilestoneAt(STORE->GetHeadHeight())->snapshot;
     }
     return states_.back();
@@ -155,17 +155,17 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     return result;
 }
 
-void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
+void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
     if (b.minerChainHeight <= GetParams().sortitionThreshold) {
         if (b.cblock->IsRegistration()) {
             if (b.cblock->GetTransactionSize() > 1) {
-                memset(&b.validity[1], NodeRecord::Validity::INVALID, b.validity.size() - 1);
+                memset(&b.validity[1], Vertex::Validity::INVALID, b.validity.size() - 1);
                 spdlog::info("Does not reach height of partition threshold but contains transactions other than "
                              "registration [{}]",
                              std::to_string(b.cblock->GetHash()));
             }
         } else {
-            memset(&b.validity[0], NodeRecord::Validity::INVALID, b.validity.size());
+            memset(&b.validity[0], Vertex::Validity::INVALID, b.validity.size());
             spdlog::info("Does not reach height of partition threshold but contains non-reg transactions [{}]",
                          std::to_string(b.cblock->GetHash()));
         }
@@ -178,9 +178,9 @@ void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
         Cumulator cum;
 
         ConstBlockPtr cursor = b.cblock;
-        RecordPtr previous;
+        VertexPtr previous;
         while (!cum.Full()) {
-            previous = GetRecord(cursor->GetPrevHash());
+            previous = GetVertex(cursor->GetPrevHash());
 
             if (!previous) {
                 // cannot happen
@@ -210,7 +210,7 @@ void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
         auto dist = UintToArith256(txns[i]->GetHash()) ^ UintToArith256(b.cblock->GetPrevHash());
 
         if (!PartitionCmp(dist, allowed)) {
-            b.validity[i] = NodeRecord::Validity::INVALID;
+            b.validity[i] = Vertex::Validity::INVALID;
             spdlog::info("Transaction distance exceeds its allowed distance! [{}]",
                          std::to_string(b.cblock->GetHash()));
         }
@@ -222,35 +222,35 @@ void Chain::CheckTxPartition(NodeRecord& b, const arith_uint256& ms_hashrate) {
     cumulatorMap_.insert(std::move(nodeHandler));
 }
 
-RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
+VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     spdlog::debug("Verifying milestone block {} on height {}", pblock->GetHash().to_substr(), GetChainHead()->height);
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
-    std::vector<RecordPtr> recs;
-    std::vector<RecordWPtr> wrecs;
+    std::vector<VertexPtr> recs;
+    std::vector<VertexWPtr> wrecs;
     recs.reserve(blocksToValidate.size());
     wrecs.reserve(blocksToValidate.size());
     verifying_.clear();
 
     for (const auto& b : blocksToValidate) {
-        recs.emplace_back(std::make_shared<NodeRecord>(b));
+        recs.emplace_back(std::make_shared<Vertex>(b));
         wrecs.emplace_back(recs.back());
     }
-    auto state = CreateNextChainState(GetChainHead(), *recs.back(), std::move(wrecs));
+    auto state = CreateNextMilestone(GetChainHead(), *recs.back(), std::move(wrecs));
 
     // validate each block in order
     for (auto& rec : recs) {
         if (rec->cblock->IsFirstRegistration()) {
             const auto& blkHash = rec->cblock->GetHash();
             prevRedempHashMap_.insert_or_assign(blkHash, blkHash);
-            rec->isRedeemed = NodeRecord::NOT_YET_REDEEMED;
+            rec->isRedeemed = Vertex::NOT_YET_REDEEMED;
             state->regChange.Create(blkHash, blkHash);
             rec->minerChainHeight = 1;
-            rec->validity[0]      = NodeRecord::Validity::VALID;
+            rec->validity[0]      = Vertex::Validity::VALID;
             // Invalidate any txns other than the first registration in this block
-            memset(&rec->validity[1], NodeRecord::Validity::INVALID, rec->validity.size() - 1);
+            memset(&rec->validity[1], Vertex::Validity::INVALID, rec->validity.size() - 1);
         } else {
             auto [validTXOC, invalidTXOC] = Validate(*rec, state->regChange);
 
@@ -278,12 +278,12 @@ RecordPtr Chain::Verify(const ConstBlockPtr& pblock) {
         verifying_.insert({rec->cblock->GetHash(), rec});
     }
 
-    recordHistory_.merge(std::move(verifying_));
+    recentHistory_.merge(std::move(verifying_));
     return recs.back();
 }
 
-std::pair<TXOC, TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) {
-    const auto& pblock   = record.cblock;
+std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
+    const auto& pblock   = vertex.cblock;
     const auto& blkHash  = pblock->GetHash();
     const auto& prevHash = pblock->GetPrevHash();
     spdlog::trace("Validating {}", blkHash.to_substr());
@@ -301,42 +301,42 @@ std::pair<TXOC, TXOC> Chain::Validate(NodeRecord& record, RegChange& regChange) 
     regChange.Remove(prevHash, oldRedempHash);
     regChange.Create(blkHash, oldRedempHash);
 
-    record.minerChainHeight = GetRecord(prevHash)->minerChainHeight + 1;
+    vertex.minerChainHeight = GetVertex(prevHash)->minerChainHeight + 1;
 
     // then verify its transaction and return the updating UTXO
     TXOC validTXOC, invalidTXOC;
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
-            auto result = ValidateRedemption(record, regChange);
+            auto result = ValidateRedemption(vertex, regChange);
             if (result) {
-                record.validity[0] = NodeRecord::Validity::VALID;
+                vertex.validity[0] = Vertex::Validity::VALID;
                 validTXOC.Merge(*result);
             } else {
-                record.validity[0] = NodeRecord::Validity::INVALID;
-                invalidTXOC.Merge(CreateTXOCFromInvalid(*record.cblock->GetTransactions()[0], 0));
+                vertex.validity[0] = Vertex::Validity::INVALID;
+                invalidTXOC.Merge(CreateTXOCFromInvalid(*vertex.cblock->GetTransactions()[0], 0));
             }
         } // by now, registrations (validity[0]) must != UNKNOWN (either VALID or INVALID)
 
         // check partition
         // txns with invalid distance will have validity == INVALID, and others are left unchanged
-        RecordPtr prevMs = DAG->GetState(record.cblock->GetMilestoneHash());
+        VertexPtr prevMs = DAG->GetState(vertex.cblock->GetMilestoneHash());
         assert(prevMs);
-        CheckTxPartition(record, prevMs->snapshot->hashRate);
+        CheckTxPartition(vertex, prevMs->snapshot->hashRate);
 
         // check utxo
         // txns with valid utxo will have validity == VALID, and others are left unchanged
-        validTXOC.Merge(ValidateTxns(record));
+        validTXOC.Merge(ValidateTxns(vertex));
 
         // invalidate transactions that still have validity == UNKNOWN
-        const auto& txns = record.cblock->GetTransactions();
+        const auto& txns = vertex.cblock->GetTransactions();
         for (size_t i = 0; i < txns.size(); ++i) {
-            if (!record.validity[i]) { // if UNKNOWN
-                record.validity[i] = NodeRecord::Validity::INVALID;
+            if (!vertex.validity[i]) { // if UNKNOWN
+                vertex.validity[i] = Vertex::Validity::INVALID;
                 invalidTXOC.Merge(CreateTXOCFromInvalid(*txns[i], i));
             }
 
             if (MEMPOOL) {
-                MEMPOOL->ReleaseTxFromConfirmed(txns[i], record.validity[i] == NodeRecord::Validity::VALID);
+                MEMPOOL->ReleaseTxFromConfirmed(txns[i], vertex.validity[i] == Vertex::Validity::VALID);
             }
         }
     }
@@ -352,27 +352,27 @@ uint256 Chain::GetPrevRedempHash(const uint256& h) const {
     return STORE->GetPrevRedemHash(h);
 }
 
-std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& regChange) {
-    const auto& blkHash = record.cblock->GetHash();
+std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChange) {
+    const auto& blkHash = vertex.cblock->GetHash();
     const auto hashstr  = std::to_string(blkHash);
     spdlog::trace("Validating redemption {}", blkHash.to_substr());
 
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
-    auto prevReg           = GetRecord(prevRedempHash);
+    auto prevReg           = GetVertex(prevRedempHash);
     assert(prevReg);
 
 
-    if (prevReg->isRedeemed != NodeRecord::NOT_YET_REDEEMED) {
+    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
         spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(prevRedempHash),
                      hashstr);
         return {};
     }
 
-    const auto& redem = record.cblock->GetTransactions().at(0);
+    const auto& redem = vertex.cblock->GetTransactions().at(0);
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
 
-    auto prevBlock = GetRecord(record.cblock->GetPrevHash());
+    auto prevBlock = GetVertex(vertex.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter
     if (!(vout.value <= prevBlock->cumulativeReward)) {
         spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
@@ -385,8 +385,8 @@ std::optional<TXOC> Chain::ValidateRedemption(NodeRecord& record, RegChange& reg
     }
 
     // update redemption status
-    prevReg->isRedeemed = NodeRecord::IS_REDEEMED;
-    record.isRedeemed   = NodeRecord::NOT_YET_REDEEMED;
+    prevReg->isRedeemed = Vertex::IS_REDEEMED;
+    vertex.isRedeemed   = Vertex::NOT_YET_REDEEMED;
     regChange.Remove(blkHash, prevRedempHash);
     regChange.Create(blkHash, blkHash);
     UpdateValue(prevRedempHashMap_, blkHash, blkHash);
@@ -446,15 +446,15 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
     return true;
 }
 
-TXOC Chain::ValidateTxns(NodeRecord& record) {
-    const auto& blkHash = record.cblock->GetHash();
+TXOC Chain::ValidateTxns(Vertex& vertex) {
+    const auto& blkHash = vertex.cblock->GetHash();
     spdlog::trace("Validating transactions in block {}", blkHash.to_substr());
 
     TXOC validTXOC{};
 
-    const auto& txns = record.cblock->GetTransactions();
+    const auto& txns = vertex.cblock->GetTransactions();
     for (size_t i = 0; i < txns.size(); ++i) {
-        if (record.validity[i]) { // if not UNKNWON
+        if (vertex.validity[i]) { // if not UNKNWON
             // Skipping, because this txn is either redemption
             // or has been marked invalid by CheckTxPartition
             continue;
@@ -463,20 +463,20 @@ TXOC Chain::ValidateTxns(NodeRecord& record) {
         TXOC txoc{};
         Coin fee{};
         if (ValidateTx(*txns[i], i, txoc, fee)) {
-            record.fee += fee;
+            vertex.fee += fee;
             validTXOC.Merge(std::move(txoc));
-            record.validity[i] = NodeRecord::Validity::VALID;
+            vertex.validity[i] = Vertex::Validity::VALID;
         }
     }
 
     return validTXOC;
 }
 
-RecordPtr Chain::GetRecordCache(const uint256& blkHash) const {
+VertexPtr Chain::GetVertexCache(const uint256& blkHash) const {
     auto result = verifying_.find(blkHash);
     if (result == verifying_.end()) {
-        result = recordHistory_.find(blkHash);
-        if (result == recordHistory_.end()) {
+        result = recentHistory_.find(blkHash);
+        if (result == recentHistory_.end()) {
             return nullptr;
         }
     }
@@ -484,18 +484,18 @@ RecordPtr Chain::GetRecordCache(const uint256& blkHash) const {
     return result->second;
 }
 
-RecordPtr Chain::GetRecord(const uint256& blkHash) const {
-    auto result = GetRecordCache(blkHash);
+VertexPtr Chain::GetVertex(const uint256& blkHash) const {
+    auto result = GetVertexCache(blkHash);
     if (!result) {
-        result = STORE->GetRecord(blkHash);
+        result = STORE->GetVertex(blkHash);
     }
 
     return result;
 }
 
-RecordPtr Chain::GetMsRecordCache(const uint256& msHash) const {
-    auto entry = recordHistory_.find(msHash);
-    if (entry != recordHistory_.end() && entry->second->isMilestone) {
+VertexPtr Chain::GetMsVertexCache(const uint256& msHash) const {
+    auto entry = recentHistory_.find(msHash);
+    if (entry != recentHistory_.end() && entry->second->isMilestone) {
         return entry->second;
     }
     return nullptr;
@@ -504,7 +504,7 @@ RecordPtr Chain::GetMsRecordCache(const uint256& msHash) const {
 void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove) {
     // remove records
     for (const auto& lvsh : recToRemove) {
-        recordHistory_.erase(lvsh);
+        recentHistory_.erase(lvsh);
     }
 
     // remove utxos
@@ -527,8 +527,8 @@ Chain::GetDataToSTORE(ChainStatePtr chain_state) {
 }
 
 bool Chain::IsMilestone(const uint256& blkHash) const {
-    auto result = recordHistory_.find(blkHash);
-    if (result == recordHistory_.end()) {
+    auto result = recentHistory_.find(blkHash);
+    if (result == recentHistory_.end()) {
         return STORE->IsMilestone(blkHash);
     }
     return result->second->isMilestone;

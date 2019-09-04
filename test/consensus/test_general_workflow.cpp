@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include "key.h"
-#include "node.h"
 #include "storage.h"
 #include "test_env.h"
+#include "vertex.h"
 
 #include <algorithm>
 #include <array>
@@ -85,19 +85,19 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     TimeGenerator timeGenerator{GENESIS.GetTime(), 25, 400, fac.GetRand()};
 
     constexpr size_t HEIGHT = 100;
-    std::array<std::shared_ptr<ChainState>, HEIGHT> arrayMs;
-    arrayMs[0] = GENESIS_RECORD.snapshot;
+    std::array<std::shared_ptr<Milestone>, HEIGHT> arrayMs;
+    arrayMs[0] = GENESIS_VERTEX.snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec = fac.CreateConsecutiveRecordPtr(timeGenerator.NextTime());
+        auto rec = fac.CreateConsecutiveVertexPtr(timeGenerator.NextTime());
 
         // Generate some "valid" txns
         auto s = (i - 1) % GetParams().blockCapacity + 1;
         rec->validity.resize(s);
-        memset(rec->validity.data(), NodeRecord::VALID, s);
+        memset(rec->validity.data(), Vertex::VALID, s);
 
-        arrayMs[i] = fac.CreateChainStatePtr(arrayMs[i - 1], rec);
+        arrayMs[i] = fac.CreateMilestonePtr(arrayMs[i - 1], rec);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (arrayMs[i]->IsDiffTransition()) {
@@ -113,8 +113,8 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         ASSERT_LE(arrayMs[i - 1]->chainwork, arrayMs[i]->chainwork);
     }
 
-    auto chain = fac.CreateChain(GENESIS_RECORD, HEIGHT);
-    std::vector<RecordPtr> mses;
+    auto chain = fac.CreateChain(GENESIS_VERTEX, HEIGHT);
+    std::vector<VertexPtr> mses;
     for (const auto& lvs : chain) {
         // zero out some of the lastUpdateTime to check
         // if they can be successfully recovered
@@ -133,7 +133,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     for (size_t i = 0; i < mses.size(); ++i) {
         if (mses[i]->height > 5) {
             auto lvs          = mses[i]->snapshot->GetLevelSet();
-            auto recovered_ms = CreateNextChainState(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
+            auto recovered_ms = CreateNextMilestone(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
             auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
             ASSERT_EQ(*expected_cs, *recovered_ms);
 
@@ -150,9 +150,9 @@ TEST_F(TestConsensus, AddNewBlocks) {
     //
     // Construct a fully connected and syntatical valid random graph
 
-    std::vector<RecordPtr> blocks;
+    std::vector<VertexPtr> blocks;
     while (blocks.size() <= 2) {
-        auto chain = fac.CreateChain(GENESIS_RECORD, 1);
+        auto chain = fac.CreateChain(GENESIS_VERTEX, 1);
         blocks     = std::move(chain.back());
         blocks.pop_back(); // remove milestone such that all blocks will stay in pending
     }
@@ -192,11 +192,11 @@ TEST_F(TestConsensus, AddForks) {
     constexpr int n_branches   = 5;
 
     std::vector<TestRawChain> branches;
-    std::vector<std::vector<RecordPtr>> branches_rec;
+    std::vector<std::vector<VertexPtr>> branches_rec;
     branches.reserve(n_branches);
     branches.reserve(n_branches);
 
-    auto [chain, vMsRec] = fac.CreateRawChain(GENESIS_RECORD, chain_length);
+    auto [chain, vMsRec] = fac.CreateRawChain(GENESIS_VERTEX, chain_length);
     // fac.PrintChain(chain);
     branches.emplace_back(std::move(chain));
     branches_rec.emplace_back(std::move(vMsRec));
@@ -236,7 +236,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     constexpr size_t FLUSHED = 10;
     const size_t HEIGHT      = GetParams().cacheStatesSize + FLUSHED;
     TestRawChain chain;
-    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, HEIGHT);
+    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
     for (size_t i = 0; i < chain.size(); i++) {
         if (i > GetParams().cacheStatesSize) {
@@ -276,7 +276,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     const size_t HEIGHT    = GetParams().cacheStatesSize + 5;
     constexpr size_t hfork = 15;
-    auto [chain1, vMsRec]  = fac.CreateRawChain(GENESIS_RECORD, HEIGHT);
+    auto [chain1, vMsRec]  = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
     std::array<TestRawChain, 3> chains;
     chains[0]                        = std::move(chain1);

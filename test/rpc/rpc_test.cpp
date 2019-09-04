@@ -45,7 +45,7 @@ std::string TestRPCServer::adr = "";
 TEST_F(TestRPCServer, GetBlock) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
-    auto req_hash = std::to_string(GENESIS_RECORD.cblock->GetHash());
+    auto req_hash = std::to_string(GENESIS_VERTEX.cblock->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
 
@@ -62,16 +62,16 @@ TEST_F(TestRPCServer, GetBlock) {
 
 TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     int size = 1;
-    std::vector<RecordPtr> lvs;
+    std::vector<VertexPtr> lvs;
     lvs.reserve(size);
-    auto ms = fac.CreateRecordPtr(1, 1, true);
-    fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, ms);
+    auto ms = fac.CreateVertexPtr(1, 1, true);
+    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, ms);
     ms->isMilestone      = true;
     ms->snapshot->height = 1;
     ms->height           = 1;
     lvs.push_back(ms);
     for (int i = 1; i < size; ++i) {
-        auto b         = fac.CreateRecordPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
+        auto b         = fac.CreateVertexPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
         b->isMilestone = false;
         b->height      = ms->height;
         lvs.push_back(b);
@@ -98,7 +98,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
 
 TEST_F(TestRPCServer, GetLatestMilestone) {
     int size       = 5;
-    auto chain     = fac.CreateChain(GENESIS_RECORD, size);
+    auto chain     = fac.CreateChain(GENESIS_VERTEX, size);
     auto latest_ms = chain.back().back();
     for (auto lvs : chain) {
         for (auto elem : lvs) {
@@ -120,10 +120,10 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
 
 TEST_F(TestRPCServer, GetNewMilestoneSince) {
     int size = 5;
-    std::vector<RecordPtr> mss;
-    std::vector<RecordPtr> mss_to_check;
-    auto first_ms = fac.CreateRecordPtr(1, 1, true);
-    fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, first_ms);
+    std::vector<VertexPtr> mss;
+    std::vector<VertexPtr> mss_to_check;
+    auto first_ms = fac.CreateVertexPtr(1, 1, true);
+    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, first_ms);
     first_ms->isMilestone      = true;
     first_ms->snapshot->height = 1;
     first_ms->height           = 1;
@@ -133,8 +133,8 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     mss.clear();
     auto prev = first_ms->snapshot;
     for (int i = 2; i < size; ++i) {
-        auto ms = fac.CreateRecordPtr(i, i, true);
-        fac.CreateChainStatePtr(prev, ms);
+        auto ms = fac.CreateVertexPtr(i, i, true);
+        fac.CreateMilestonePtr(prev, ms);
         ms->isMilestone            = true;
         first_ms->snapshot->height = i;
         ms->height                 = i;

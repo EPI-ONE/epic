@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_RPCCLIENT_H__
-#define __SRC_RPCCLIENT_H__
+#ifndef EPIC_RPC_CLIENT_H
+#define EPIC_RPC_CLIENT_H
 
 #include "rpc_header.h"
 
@@ -44,4 +44,4 @@ private:
     std::unique_ptr<CommanderRPC::Stub> commander_stub_;
 };
 
-#endif //__SRC_RPCCLIENT_H__
+#endif // EPIC_RPC_CLIENT_H

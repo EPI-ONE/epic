@@ -44,9 +44,9 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         block.SetParents();
 
         auto utxo           = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[0], 0, 0);
-        auto record         = std::make_shared<NodeRecord>(block);
-        record->validity[0] = NodeRecord::VALID;
-        wallet.OnLvsConfirmed({record}, {{utxo->GetKey(), utxo}}, {});
+        auto vertex         = std::make_shared<Vertex>(block);
+        vertex->validity[0] = Vertex::VALID;
+        wallet.OnLvsConfirmed({vertex}, {{utxo->GetKey(), utxo}}, {});
 
         while (wallet.GetBalance() != init_money) {
             std::this_thread::yield();
@@ -92,10 +92,10 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
             index++;
         }
 
-        auto new_record         = std::make_shared<NodeRecord>(new_block);
-        new_record->validity[0] = NodeRecord::VALID;
+        auto new_vertex         = std::make_shared<Vertex>(new_block);
+        new_vertex->validity[0] = Vertex::VALID;
 
-        wallet.OnLvsConfirmed({new_record}, std::move(utxos), {stxokey});
+        wallet.OnLvsConfirmed({new_vertex}, std::move(utxos), {stxokey});
         while (wallet.GetBalance() == init_money - spent_money - MIN_FEE) {
             std::this_thread::yield();
         }

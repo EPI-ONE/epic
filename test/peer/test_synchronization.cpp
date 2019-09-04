@@ -4,10 +4,10 @@
 
 #include <gtest/gtest.h>
 
-#include "node.h"
 #include "peer_manager.h"
 #include "storage.h"
 #include "test_env.h"
+#include "vertex.h"
 
 #include <algorithm>
 #include <vector>
@@ -70,7 +70,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     // create a new chain
     constexpr long testChainHeight = 5;
     TestRawChain chain;
-    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_RECORD, testChainHeight);
+    std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_VERTEX, testChainHeight);
 
     ASSERT_TRUE(server.Bind(0x7f000001));
     ASSERT_TRUE(server.Listen(12121));
@@ -102,7 +102,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     // check GetInv message
     ASSERT_EQ(getInv->locator.size(), 1);
-    ASSERT_EQ(getInv->locator[0], GENESIS_RECORD.cblock->GetHash());
+    ASSERT_EQ(getInv->locator[0], GENESIS_VERTEX.cblock->GetHash());
 
     auto getInv_Cmp = std::unique_ptr<GetInv>(dynamic_cast<GetInv*>(message.second.release()));
 

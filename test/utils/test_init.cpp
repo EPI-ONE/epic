@@ -15,12 +15,12 @@ TEST_F(TestInit, test_init_dag) {
     file::SetDataDirPrefix(dir);
     STORE                             = std::make_unique<BlockStore>(dir);
     DAG                               = std::make_unique<DAGManager>();
-    std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+    std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
     STORE->StoreLevelSet(genesisLvs);
 
     // validate blocks and flush to DB
     auto factory = EpicTestEnvironment::GetFactory();
-    auto chain   = factory.CreateChain(GENESIS_RECORD, testChainHeight, false);
+    auto chain   = factory.CreateChain(GENESIS_VERTEX, testChainHeight, false);
     for (auto& lvs : chain) {
         for (auto& block : lvs) {
             DAG->AddNewBlock(block->cblock, nullptr);

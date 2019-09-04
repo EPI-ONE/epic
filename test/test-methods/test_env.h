@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __TEST_ENV__
-#define __TEST_ENV__
+#ifndef EPIC_TEST_ENV_H
+#define EPIC_TEST_ENV_H
 
 #include <gtest/gtest.h>
 
@@ -40,7 +40,7 @@ public:
         DAG   = std::make_unique<DAGManager>();
 
         // Initialize DB with genesis
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
         STORE->StoreLevelSet(genesisLvs);
 
         if (enable_miner) {
@@ -78,4 +78,4 @@ inline void ResetLogLevel() {
     SetLogLevel(SPDLOG_LEVEL_INFO);
 }
 
-#endif // __TEST_ENV__
+#endif // EPIC_TEST_ENV_H

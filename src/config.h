@@ -258,7 +258,6 @@ private:
     std::string walletPath_ = "wallet/";
     uint32_t backupPeriod_;
 
-
     // daemon
     bool daemon_;
 };

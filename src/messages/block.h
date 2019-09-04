@@ -194,4 +194,4 @@ public:
 typedef std::shared_ptr<const Block> ConstBlockPtr;
 extern Block GENESIS;
 
-#endif //__SRC_BLOCK_H__
+#endif // EPIC_BLOCK_H

@@ -9,7 +9,7 @@
 
 DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1), isVerifying(false) {
     milestoneChains.push(std::make_unique<Chain>());
-    globalStates_.emplace(GENESIS.GetHash(), std::make_shared<NodeRecord>(GENESIS_RECORD));
+    globalStates_.emplace(GENESIS.GetHash(), std::make_shared<Vertex>(GENESIS_VERTEX));
 
     // Start threadpools
     verifyThread_.Start();
@@ -201,7 +201,7 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
     return TraverseMilestoneBackward(*startMilestone, length);
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(const NodeRecord& cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(const Vertex& cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
 
@@ -234,7 +234,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(const NodeRecord& cur
     return result;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneForward(const NodeRecord& cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneForward(const Vertex& cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
 
@@ -330,7 +330,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            RecordPtr ms = GetState(msHash, false);
+            VertexPtr ms = GetState(msHash, false);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return;
             }
@@ -346,7 +346,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         // Check difficulty target //////
 
-        RecordPtr ms = GetState(msHash, false);
+        VertexPtr ms = GetState(msHash, false);
         if (!ms) {
             spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
@@ -379,7 +379,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     });
 }
 
-bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const {
+bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const {
     assert(ms);
 
     if (blk->IsFirstRegistration()) {
@@ -426,9 +426,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // Check if it's a new ms from the main chain
     auto& mainchain    = milestoneChains.best();
     const auto& msHash = block->GetMilestoneHash();
-    RecordPtr msBlock  = mainchain->GetMsRecordCache(msHash);
+    VertexPtr msBlock  = mainchain->GetMsVertexCache(msHash);
     if (!msBlock) {
-        msBlock = STORE->GetRecord(msHash);
+        msBlock = STORE->GetVertex(msHash);
     }
 
     if (msBlock) {
@@ -461,13 +461,13 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
             continue;
         }
 
-        msBlock = chain->GetMsRecordCache(msHash);
+        msBlock = chain->GetMsVertexCache(msHash);
 
         if (!msBlock) {
             continue;
         }
 
-        ChainStatePtr ms = msBlock->snapshot;
+        MilestonePtr ms = msBlock->snapshot;
 
         if (CheckMsPOW(block, ms)) {
             if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
@@ -525,13 +525,13 @@ void DAGManager::DeleteFork() {
     }
 }
 
-RecordPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
+VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
     auto search = globalStates_.find(msHash);
     if (search != globalStates_.end()) {
         return search->second;
     }
 
-    auto prec = STORE->GetRecord(msHash, withBlock);
+    auto prec = STORE->GetVertex(msHash, withBlock);
     if (prec && prec->snapshot) {
         return prec;
     }
@@ -563,7 +563,7 @@ void DAGManager::FlushTrigger() {
     if (bestChain->GetStates().size() <= GetParams().cacheStatesSize) {
         return;
     }
-    std::vector<ConcurrentQueue<ChainStatePtr>::const_iterator> forks;
+    std::vector<ConcurrentQueue<MilestonePtr>::const_iterator> forks;
     forks.reserve(milestoneChains.size() - 1);
     for (auto& chain : milestoneChains) {
         if (chain == bestChain) {
@@ -605,7 +605,7 @@ void DAGManager::FlushToSTORE(ChainStatePtr chain_state) {
 
     storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
-        std::vector<RecordPtr> blocksToListener;
+        std::vector<VertexPtr> blocksToListener;
         blocksToListener.reserve(recToStore.size());
 
 
@@ -658,11 +658,11 @@ void DAGManager::FlushToSTORE(ChainStatePtr chain_state) {
     });
 }
 
-bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m) {
+bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
     return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
 }
 
-RecordPtr DAGManager::GetMilestoneHead() const {
+VertexPtr DAGManager::GetMilestoneHead() const {
     if (GetBestChain().GetStates().empty()) {
         return STORE->GetMilestoneAt(STORE->GetHeadHeight());
     }
@@ -681,16 +681,16 @@ bool DAGManager::IsMainChainMS(const uint256& blkHash) const {
     return GetBestChain().IsMilestone(blkHash);
 }
 
-RecordPtr DAGManager::GetMainChainRecord(const uint256& blkHash) const {
-    auto rec = GetBestChain().GetRecord(blkHash);
+VertexPtr DAGManager::GetMainChainVertex(const uint256& blkHash) const {
+    auto rec = GetBestChain().GetVertex(blkHash);
     if (!rec) {
-        rec = STORE->GetRecord(blkHash);
+        rec = STORE->GetVertex(blkHash);
     }
     return rec;
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {
-    auto rec = GetBestChain().GetRecordCache(blockHash);
+    auto rec = GetBestChain().GetVertexCache(blockHash);
     if (rec) {
         return rec->height;
     }
@@ -722,8 +722,8 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& block
     return GetMainChainLevelSet(GetHeight(blockHash));
 }
 
-std::vector<RecordPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool withBlock) const {
-    std::vector<RecordPtr> lvs;
+std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool withBlock) const {
+    std::vector<VertexPtr> lvs;
     size_t leastHeightCached = GetBestChain().GetLeastHeightCached();
 
     auto height = GetHeight(blockHash);
@@ -773,7 +773,7 @@ VStream DAGManager::GetMainChainRawLevelSet(const uint256& blockHash) const {
 
 bool DAGManager::ExistsNode(const uint256& h) const {
     for (const auto& chain : milestoneChains) {
-        if (chain->GetRecord(h)) {
+        if (chain->GetVertex(h)) {
             return true;
         }
     }

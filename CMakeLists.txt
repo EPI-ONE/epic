@@ -155,8 +155,8 @@ set(SRC_CODE
         ${STORAGE_SRCS}
         )
 
-set(SRC_MAIN src/main.cpp)
-set(SRC_CLIENT_MAIN src/epicc/main.cpp)
+set(SRC_MAIN src/epic.cpp)
+set(SRC_CLIENT_MAIN src/epic-cli.cpp)
 
 # test codes
 set(TEST_METHODS_DIR test/test-methods)

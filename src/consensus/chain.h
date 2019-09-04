@@ -6,7 +6,7 @@
 #define __SRC_CHAIN_H__
 
 #include "concurrent_container.h"
-#include "node.h"
+#include "vertex.h"
 
 #include <deque>
 #include <optional>
@@ -61,7 +61,7 @@ public:
      */
     Chain(const Chain&, const ConstBlockPtr& fork);
 
-    ChainStatePtr GetChainHead() const;
+    MilestonePtr GetChainHead() const;
 
     /** Adds the block to pending and returns its milestone status */
     void AddPendingBlock(ConstBlockPtr);
@@ -73,9 +73,9 @@ public:
     std::vector<uint256> GetPendingHashes() const;
     ConstBlockPtr GetRandomTip() const;
 
-    RecordPtr GetRecordCache(const uint256&) const;
-    RecordPtr GetRecord(const uint256&) const;
-    RecordPtr GetMsRecordCache(const uint256&) const;
+    VertexPtr GetVertexCache(const uint256&) const;
+    VertexPtr GetVertex(const uint256&) const;
+    VertexPtr GetMsVertexCache(const uint256&) const;
 
     /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
@@ -90,7 +90,7 @@ public:
         return ismainchain_;
     }
 
-    const ConcurrentQueue<ChainStatePtr>& GetStates() const {
+    const ConcurrentQueue<MilestonePtr>& GetStates() const {
         return states_;
     }
 
@@ -102,7 +102,7 @@ public:
         return states_.front()->height;
     }
 
-    void AddNewState(const NodeRecord& ms) {
+    void AddNewState(const Vertex& ms) {
         states_.emplace_back(ms.snapshot);
     }
 
@@ -111,7 +111,7 @@ public:
      * performed when we add a milestone block to this chain.
      * Updates TXOC of the of the chain on whole level set
      */
-    RecordPtr Verify(const ConstBlockPtr&);
+    VertexPtr Verify(const ConstBlockPtr&);
 
     /**
      * Removes oldest chain state as well as corresponding data
@@ -131,9 +131,8 @@ private:
 
     /**
      * Stores a (probabily recent) list of milestones
-     * TODO: thinking of a lifetime mechanism for it
      */
-    ConcurrentQueue<ChainStatePtr> states_;
+    ConcurrentQueue<MilestonePtr> states_;
 
     /**
      * Stores data not yet verified in this chain
@@ -143,12 +142,12 @@ private:
     /**
      * Stores verified blocks on this chain as cache
      */
-    ConcurrentHashMap<uint256, RecordPtr> recordHistory_;
+    ConcurrentHashMap<uint256, VertexPtr> recentHistory_;
 
     /*
      * Stores blocks being verified in a level set
      */
-    std::unordered_map<uint256, RecordPtr> verifying_;
+    std::unordered_map<uint256, VertexPtr> verifying_;
 
     /**
      * Manages UTXO
@@ -173,16 +172,16 @@ private:
      * and update its NR info
      * Returns valid TXOC and invalid TXOC of the single block
      */
-    std::pair<TXOC, TXOC> Validate(NodeRecord& record, RegChange&);
+    std::pair<TXOC, TXOC> Validate(Vertex& vertex, RegChange&);
 
     // offline verification for transactions
-    std::optional<TXOC> ValidateRedemption(NodeRecord&, RegChange&);
+    std::optional<TXOC> ValidateRedemption(Vertex&, RegChange&);
     bool ValidateTx(const Transaction&, uint32_t index, TXOC&, Coin& fee);
-    TXOC ValidateTxns(NodeRecord&);
-    void CheckTxPartition(NodeRecord&, const arith_uint256&);
+    TXOC ValidateTxns(Vertex&);
+    void CheckTxPartition(Vertex&, const arith_uint256&);
 
-    Coin GetPrevReward(const NodeRecord& rec) const {
-        return GetRecord(rec.cblock->GetPrevHash())->cumulativeReward;
+    Coin GetPrevReward(const Vertex& rec) const {
+        return GetVertex(rec.cblock->GetPrevHash())->cumulativeReward;
     }
 
     uint256 GetPrevRedempHash(const uint256& h) const;

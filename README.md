@@ -75,4 +75,4 @@ $ export ASAN_OPTIONS="protect_shadow_gap=0"
 ## License
 
 EPIC project is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT).
+information or see [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT). For the submodule [Cuckaroo](src/cuckaroo), we follow the original license from the source [Cuckoo](https://github.com/tromp/cuckoo/blob/master/LICENSE.txt).

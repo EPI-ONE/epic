@@ -2,20 +2,20 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __TEST_TEST_FACTORY_H__
-#define __TEST_TEST_FACTORY_H__
+#ifndef EPIC_TEST_FACTORY_H
+#define EPIC_TEST_FACTORY_H
 
 #include "block.h"
 #include "dag_manager.h"
 #include "key.h"
-#include "node.h"
 #include "tasm.h"
+#include "vertex.h"
 
 #include <random>
 
 using LevelSetBlks = std::vector<ConstBlockPtr>;
 using TestRawChain = std::vector<LevelSetBlks>;
-using LevelSetRecs = std::vector<RecordPtr>;
+using LevelSetRecs = std::vector<VertexPtr>;
 using TestChain    = std::vector<LevelSetRecs>;
 
 class NumberGenerator {
@@ -64,19 +64,19 @@ public:
 
     Block CreateBlock(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
     ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
-    NodeRecord CreateNodeRecord(ConstBlockPtr b);
-    RecordPtr CreateRecordPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
-    RecordPtr CreateConsecutiveRecordPtr(uint32_t);
-    ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec);
-    ChainStatePtr CreateChainStatePtr(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& hashes);
-    std::tuple<TestRawChain, std::vector<RecordPtr>> CreateRawChain(const RecordPtr& startMs,
+    Vertex CreateVertex(ConstBlockPtr b);
+    VertexPtr CreateVertexPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
+    VertexPtr CreateConsecutiveVertexPtr(uint32_t);
+    MilestonePtr CreateMilestonePtr(MilestonePtr previous, VertexPtr& pRec);
+    MilestonePtr CreateMilestonePtr(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& hashes);
+    std::tuple<TestRawChain, std::vector<VertexPtr>> CreateRawChain(const VertexPtr& startMs,
                                                                     size_t height,
                                                                     bool tx = false);
-    std::tuple<TestRawChain, std::vector<RecordPtr>> CreateRawChain(const NodeRecord& startMs,
+    std::tuple<TestRawChain, std::vector<VertexPtr>> CreateRawChain(const Vertex& startMs,
                                                                     size_t height,
                                                                     bool tx = false);
-    TestChain CreateChain(const RecordPtr& startMs, size_t height, bool tx = false);
-    TestChain CreateChain(const NodeRecord& startMs, size_t height, bool tx = false);
+    TestChain CreateChain(const VertexPtr& startMs, size_t height, bool tx = false);
+    TestChain CreateChain(const Vertex& startMs, size_t height, bool tx = false);
 
     void PrintChain(const TestChain& chain) {
         std::cout << "{ " << std::endl;
@@ -119,4 +119,4 @@ private:
     };
 };
 
-#endif // __TEST_TEST_FACTORY_H__
+#endif // EPIC_TEST_FACTORY_H

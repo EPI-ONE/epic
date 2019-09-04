@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "params.h"
-#include "node.h"
+#include "vertex.h"
 
 // 1 day per diffculty cycle on average
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;
@@ -35,8 +35,8 @@ const Block& Params::GetGenesis() const {
     return *genesis_;
 }
 
-const NodeRecord& Params::GetGenesisRecord() const {
-    return *genesisRecord_;
+const Vertex& Params::GetGenesisVertex() const {
+    return *genesisVertex_;
 }
 
 void Params::CreateGenesis(const std::string& genesisHexStr) {
@@ -47,18 +47,18 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     genesisBlock.CalculateOptimalEncodingSize();
 
     genesis_                    = std::make_unique<Block>(genesisBlock);
-    genesisRecord_              = std::make_shared<NodeRecord>(genesisBlock);
-    genesisRecord_->validity[0] = NodeRecord::VALID;
+    genesisVertex_              = std::make_shared<Vertex>(genesisBlock);
+    genesisVertex_->validity[0] = Vertex::VALID;
 
     arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
     arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
-    static auto genesisState = std::make_shared<ChainState>(
-        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<RecordWPtr>{genesisRecord_});
+    static auto genesisState = std::make_shared<Milestone>(
+        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex_});
 
-    genesisRecord_->LinkChainState(genesisState);
+    genesisVertex_->LinkMilestone(genesisState);
 }
 
 unsigned char Params::GetKeyPrefix(KeyPrefixType type) const {
@@ -163,9 +163,9 @@ UnitTestParams::UnitTestParams() {
 
     CreateGenesis(genesisHexStr);
 
-    genesisRecord_->snapshot->hashRate    = 1;
-    genesisRecord_->snapshot->blockTarget = maxTarget;
-    genesisRecord_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
+    genesisVertex_->snapshot->hashRate    = 1;
+    genesisVertex_->snapshot->blockTarget = maxTarget;
+    genesisVertex_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
 }
 
 static std::unique_ptr<const Params> pparams;
@@ -187,5 +187,5 @@ void SelectParams(ParamsType type) {
     }
 
     GENESIS        = pparams->GetGenesis();
-    GENESIS_RECORD = pparams->GetGenesisRecord();
+    GENESIS_VERTEX = pparams->GetGenesisVertex();
 }

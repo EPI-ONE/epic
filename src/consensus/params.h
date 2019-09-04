@@ -14,7 +14,7 @@
 #include <string>
 
 class Block;
-class NodeRecord;
+class Vertex;
 
 enum ParamsType : uint8_t {
     MAINNET = 1,
@@ -59,7 +59,7 @@ public:
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     const Block& GetGenesis() const;
-    const NodeRecord& GetGenesisRecord() const;
+    const Vertex& GetGenesisVertex() const;
 
 protected:
     Params() = default;
@@ -67,7 +67,7 @@ protected:
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
 
     std::unique_ptr<Block> genesis_;
-    std::shared_ptr<NodeRecord> genesisRecord_;
+    std::shared_ptr<Vertex> genesisVertex_;
     void CreateGenesis(const std::string& genesisHexStr);
 };
 

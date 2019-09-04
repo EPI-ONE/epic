@@ -28,7 +28,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     // data preparation
     auto blk = fac.CreateBlock();
     blk.Solve();
-    NodeRecord rec{blk};
+    Vertex rec{blk};
     uint32_t blksize = blk.GetOptimalEncodingSize(), recsize = rec.GetOptimalStorageSize();
     FilePos fpos{0, 0, 0};
     FilePos fpos1{0, 0, blksize};
@@ -50,7 +50,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     ASSERT_EQ(reader.GetOffset(), blksize);
     ASSERT_EQ(blk, blk1);
 
-    NodeRecord rec1{};
+    Vertex rec1{};
     reader >> rec1;
     ASSERT_EQ(reader.GetOffset(), blksize + recsize);
     ASSERT_EQ(rec, rec1);
@@ -58,12 +58,12 @@ TEST_F(TestFileStorage, basic_read_write) {
 
     // modifying
     FileModifier modifier{file::FileType::BLK, fpos1};
-    rec.isRedeemed = NodeRecord::IS_REDEEMED;
+    rec.isRedeemed = Vertex::IS_REDEEMED;
     modifier << rec;
     modifier.Close();
 
     // checking modifying result
-    NodeRecord rec2{};
+    Vertex rec2{};
     FileReader reader2{file::FileType::BLK, fpos1};
     reader2 >> rec2;
     ASSERT_EQ(reader2.GetOffset(), blksize + recsize);
@@ -71,12 +71,12 @@ TEST_F(TestFileStorage, basic_read_write) {
     reader2.Close();
 }
 
-TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
+TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     EpicTestEnvironment::SetUpDAG(prefix);
     STORE->SetFileCapacities(8000, 2);
 
-    std::vector<RecordPtr> blocks;
-    std::vector<std::vector<RecordPtr>> levelsets;
+    std::vector<VertexPtr> blocks;
+    std::vector<std::vector<VertexPtr>> levelsets;
 
     constexpr int nLvs = 20;
 
@@ -84,13 +84,13 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     for (int i = 1; i <= nLvs; ++i) {
         int size = fac.GetRand() % 10;
 
-        std::vector<RecordPtr> lvs;
+        std::vector<VertexPtr> lvs;
         lvs.reserve(size);
 
         // Construct milestone
-        auto ms      = fac.CreateRecordPtr(1, 1, true);
-        auto prev_ms = levelsets.empty() ? GENESIS_RECORD : *levelsets.back()[0];
-        fac.CreateChainStatePtr(prev_ms.snapshot, ms);
+        auto ms      = fac.CreateVertexPtr(1, 1, true);
+        auto prev_ms = levelsets.empty() ? GENESIS_VERTEX : *levelsets.back()[0];
+        fac.CreateMilestonePtr(prev_ms.snapshot, ms);
         ms->isMilestone = true;
         ms->height      = i;
 
@@ -99,7 +99,7 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
 
         // Construct blocks in the level set
         for (int j = 0; j < size; ++j) {
-            auto b         = fac.CreateRecordPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
+            auto b         = fac.CreateVertexPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
             b->isMilestone = false;
             b->height      = ms->height;
             lvs.push_back(b);
@@ -110,18 +110,18 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
         levelsets.emplace_back(std::move(lvs));
     }
 
-    // Inspect inserted records
+    // Inspect inserted vertices
     for (auto& block : blocks) {
         const auto& h = block->cblock->GetHash();
 
         // without cblock
-        auto rec = STORE->GetRecord(h, false);
+        auto rec = STORE->GetVertex(h, false);
         ASSERT_TRUE(rec);
         ASSERT_FALSE(rec->cblock);
         ASSERT_EQ(*block, *rec);
 
         // with cblock
-        auto rec_blk = STORE->GetRecord(h);
+        auto rec_blk = STORE->GetVertex(h);
         ASSERT_TRUE(rec_blk->cblock);
         ASSERT_EQ(*block, *rec_blk);
     }
@@ -140,7 +140,7 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
     ASSERT_FALSE(vs_recs.empty());
 
     for (auto& block : blocks) {
-        NodeRecord recovered_rec(vs_recs);
+        Vertex recovered_rec(vs_recs);
         ASSERT_EQ(*block, recovered_rec);
     }
 
@@ -167,13 +167,13 @@ TEST_F(TestFileStorage, cat_store_and_get_records_and_get_lvs) {
         ASSERT_EQ(*lvs[i], *recovered_recs[i]);
     }
 
-    // update records
-    NodeRecord copyRec;
+    // update vertices
+    Vertex copyRec;
     {
-        auto rec        = STORE->GetRecord(blocks[0]->cblock->GetHash());
-        rec->isRedeemed = NodeRecord::IS_REDEEMED;
+        auto rec        = STORE->GetVertex(blocks[0]->cblock->GetHash());
+        rec->isRedeemed = Vertex::IS_REDEEMED;
         copyRec         = *rec;
     }
-    auto newout = STORE->GetRecord(blocks[0]->cblock->GetHash());
+    auto newout = STORE->GetVertex(blocks[0]->cblock->GetHash());
     ASSERT_EQ(copyRec, *newout);
 }

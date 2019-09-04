@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_RPC_SERVER_H__
-#define __SRC_RPC_SERVER_H__
+#ifndef EPIC_RPC_SERVER_H
+#define EPIC_RPC_SERVER_H
 
 #include "block.h"
 #include "init.h"
@@ -88,4 +88,5 @@ private:
 };
 
 extern std::unique_ptr<RPCServer> RPC;
-#endif //__SRC_RPC_SERVER_H__
+
+#endif // EPIC_RPC_SERVER_H

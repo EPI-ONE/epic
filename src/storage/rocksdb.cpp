@@ -67,7 +67,7 @@ size_t RocksDBStore::GetHeight(const uint256& blkHash) const {
 }
 
 bool RocksDBStore::IsMilestone(const uint256& blkHash) const {
-    auto value = GetRecordOffsets(blkHash);
+    auto value = GetVertexOffsets(blkHash);
     if (!value) {
         return false;
     }
@@ -104,8 +104,8 @@ optional<FilePos> RocksDBStore::GetMsBlockPos(const uint64_t& height) const {
     return {};
 }
 
-optional<pair<FilePos, FilePos>> RocksDBStore::GetRecordPos(const uint256& blkHash) const {
-    auto offsets = GetRecordOffsets(blkHash);
+optional<pair<FilePos, FilePos>> RocksDBStore::GetVertexPos(const uint256& blkHash) const {
+    auto offsets = GetVertexOffsets(blkHash);
     if (!offsets) {
         return {};
     }
@@ -287,7 +287,7 @@ uint256 RocksDBStore::GetMsHashAt(const uint64_t& height) const {
     }
 }
 
-optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetRecordOffsets(const uint256& blkHash) const {
+optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetVertexOffsets(const uint256& blkHash) const {
     MAKE_KEY_SLICE(blkHash);
     GET_VALUE(db_->DefaultColumnFamily(), {});
 

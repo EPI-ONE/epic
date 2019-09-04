@@ -7,7 +7,7 @@
 
 #include "db_wrapper.h"
 #include "file_utils.h"
-#include "node.h"
+#include "vertex.h"
 
 #include <string>
 #include <vector>
@@ -37,7 +37,7 @@ public:
      * Gets the file posisionts of the hash.
      * Returns {blk FilePos, rec FilePos}
      */
-    std::optional<std::pair<FilePos, FilePos>> GetRecordPos(const uint256&) const;
+    std::optional<std::pair<FilePos, FilePos>> GetVertexPos(const uint256&) const;
 
     /**
      * Writes the file offsets of the milestone hash
@@ -74,7 +74,7 @@ public:
 
 private:
     uint256 GetMsHashAt(const uint64_t& height) const;
-    std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetRecordOffsets(const uint256&) const;
+    std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetVertexOffsets(const uint256&) const;
 
     bool WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
     bool DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;

@@ -2,38 +2,35 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "node.h"
+#include "dag_manager.h"
 #include "storage.h"
+#include "vertex.h"
 
-#include <algorithm>
+#include < algorithm>
 #include <numeric>
 
-////////////////
-// ChainState
-//
-ChainState::ChainState(const std::shared_ptr<ChainState>& previous,
-                       const ConstBlockPtr& msBlock,
-                       std::vector<RecordWPtr>&& lvs)
+Milestone::Milestone(const std::shared_ptr<Milestone>& previous,
+                     const ConstBlockPtr& msBlock,
+                     std::vector<VertexWPtr>&& lvs)
     : height(previous->height + 1), milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget),
       hashRate(previous->hashRate), lastUpdateTime(previous->lastUpdateTime), nTxnsCounter_(previous->nTxnsCounter_),
       nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)) {
     if (previous->chainwork == 0) {
-        previous->chainwork = UintToArith256(CAT->GetBestChainWork());
+        previous->chainwork = UintToArith256(STORE->GetBestChainWork());
     }
     chainwork = previous->chainwork + (GetParams().maxTarget / previous->milestoneTarget);
     UpdateDifficulty(msBlock->GetTime());
 }
 
-ChainState::ChainState(VStream& payload) {
+Milestone::Milestone(VStream& payload) {
     payload >> *this;
 }
 
-void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
-    auto sumTxns = [](const RecordWPtr& recPtr) -> uint32_t {
+void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
+    auto sumTxns = [](const VertexWPtr& recPtr) -> uint32_t {
         const std::vector<uint8_t>& validity = (*recPtr.lock()).validity;
-        return std::accumulate(validity.begin(), validity.end(), 0, [](const size_t& sum, const uint8_t& v) {
-            return sum + (v & NodeRecord::Validity::VALID);
-        });
+        return std::accumulate(validity.begin(), validity.end(), 0,
+                               [](const size_t& sum, const uint8_t& v) { return sum + (v & Vertex::Validity::VALID); });
     };
 
     if (!lastUpdateTime) {
@@ -137,107 +134,21 @@ void ChainState::UpdateDifficulty(uint32_t blockUpdateTime) {
     nBlkCounter_   = 0;
 }
 
-void ChainState::UpdateTXOC(TXOC&& txoc) {
+void Milestone::UpdateTXOC(TXOC&& txoc) {
     txoc_.Merge(std::move(txoc));
 }
 
-const uint256& ChainState::GetMilestoneHash() const {
+const uint256& Milestone::GetMilestoneHash() const {
     return (*lvs_.back().lock()).cblock->GetHash();
 }
 
-ChainStatePtr CreateNextChainState(ChainStatePtr previous, NodeRecord& record, std::vector<RecordWPtr>&& lvs) {
-    auto pcs = std::make_shared<ChainState>(previous, record.cblock, std::move(lvs));
-    record.LinkChainState(pcs);
+MilestonePtr CreateNextMilestone(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs) {
+    auto pcs = std::make_shared<Milestone>(previous, vertex.cblock, std::move(lvs));
+    vertex.LinkMilestone(pcs);
     return pcs;
 }
 
-////////////////
-// NodeRecord
-//
-NodeRecord::NodeRecord() : minerChainHeight(0), optimalStorageSize_(0) {}
-
-NodeRecord::NodeRecord(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
-    if (cblock) {
-        auto n = cblock->GetTransactionSize();
-        if (n > 0) {
-            validity.resize(n);
-            memset(&validity[0], UNKNOWN, n);
-        }
-    }
-}
-
-NodeRecord::NodeRecord(const Block& blk) : minerChainHeight(0), optimalStorageSize_(0) {
-    cblock = std::make_shared<Block>(blk);
-    auto n = cblock->GetTransactionSize();
-    if (n > 0) {
-        validity.resize(n);
-        memset(&validity[0], UNKNOWN, n);
-    }
-}
-
-NodeRecord::NodeRecord(Block&& blk) : minerChainHeight(0), optimalStorageSize_(0) {
-    cblock = std::make_shared<Block>(std::move(blk));
-    auto n = cblock->GetTransactionSize();
-    if (n > 0) {
-        validity.resize(n);
-        memset(&validity[0], UNKNOWN, n);
-    }
-}
-
-NodeRecord::NodeRecord(VStream& s) {
-    s >> *this;
-}
-
-void NodeRecord::LinkChainState(const ChainStatePtr& pcs) {
-    snapshot    = pcs;
-    isMilestone = true;
-}
-
-void NodeRecord::UpdateReward(const Coin& prevReward) {
-    // cumulative reward without fee; default for blocks except first registration
-    cumulativeReward = prevReward + GetParams().reward;
-
-    if (cblock->HasTransaction()) {
-        if (cblock->IsRegistration()) {
-            // remaining reward = last cumulative reward - redemption amount
-            cumulativeReward -= cblock->GetTransactions()[0]->GetOutputs()[0].value;
-        }
-
-        cumulativeReward += fee;
-    }
-
-    // update reward of miletone
-    if (isMilestone) {
-        cumulativeReward +=
-            GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
-    }
-}
-
-size_t NodeRecord::GetOptimalStorageSize() {
-    if (optimalStorageSize_ > 0) {
-        return optimalStorageSize_;
-    }
-
-    optimalStorageSize_ += GetSizeOfVarInt(height)                                         // block height
-                           + GetSizeOfVarInt(cumulativeReward.GetValue())                  // reward
-                           + GetSizeOfVarInt(minerChainHeight)                             // miner chain height
-                           + ::GetSizeOfCompactSize(validity.size()) + validity.size() * 1 // validity
-                           + 1                                                             // RedemptionStatus
-                           + 1;                                                            // MilestoneStatus
-
-    // ChainState
-    if (snapshot != nullptr) {
-        optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height)     // ms height
-                                + GetSizeOfVarInt(snapshot->hashRate) // hash rate
-                                + 4                                   // ms target
-                                + 4                                   // block target
-        );
-    }
-
-    return optimalStorageSize_;
-}
-
-std::string std::to_string(const ChainState& cs) {
+std::string std::to_string(const Milestone& cs) {
     std::string s = "Chain State {\n";
     s += strprintf("   height:                %s \n", cs.height);
     s += strprintf("   chainwork:             %s \n", cs.chainwork.GetCompact());
@@ -247,27 +158,5 @@ std::string std::to_string(const ChainState& cs) {
     s += strprintf("   hash rate:             %s \n", cs.hashRate);
     s += strprintf("   avg. # txns per block: %s \n", cs.GetAverageTxnsPerBlock());
     s += "   }\n";
-    return s;
-}
-
-std::string std::to_string(const NodeRecord& rec, bool showtx) {
-    std::string s = "NodeRecord {\n";
-    s += strprintf("   at height :   %i \n", rec.height);
-    s += strprintf("   is milestone: %s \n\n", rec.isMilestone);
-
-    if (rec.snapshot) {
-        s += "   with snapshot of ";
-        s += to_string(*(rec.snapshot));
-    }
-
-    if (rec.cblock) {
-        s += strprintf("   contains%s \n", std::to_string(*(rec.cblock), showtx, rec.validity));
-    }
-
-    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
-    s += strprintf("   cumulative reward:  %s \n", rec.cumulativeReward.GetValue());
-
-    const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
-    s += strprintf("   redemption status:  %s \n", enumRedeemption[rec.isRedeemed]);
     return s;
 }

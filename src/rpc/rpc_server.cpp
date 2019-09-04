@@ -7,11 +7,11 @@
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
                                                         const GetBlockRequest* request,
                                                         GetBlockResponse* reply) {
-    auto record = DAG->GetMainChainRecord(ToHash(request->hash()));
-    if (!record) {
+    auto vertex = DAG->GetMainChainVertex(ToHash(request->hash()));
+    if (!vertex) {
         return grpc::Status::OK;
     }
-    rpc::Block* b = ToRPCBlock(*(record->cblock));
+    rpc::Block* b = ToRPCBlock(*(vertex->cblock));
     reply->set_allocated_block(b);
     return grpc::Status::OK;
 }
@@ -43,11 +43,11 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerConte
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
                                                                     const GetNewMilestoneSinceRequest* request,
                                                                     GetNewMilestoneSinceResponse* reply) {
-    auto record = DAG->GetState(ToHash(request->hash()));
-    if (!record) {
+    auto vertex = DAG->GetState(ToHash(request->hash()));
+    if (!vertex) {
         return grpc::Status::OK;
     }
-    auto milestone_hashes = DAG->TraverseMilestoneForward(*record, request->number());
+    auto milestone_hashes = DAG->TraverseMilestoneForward(*vertex, request->number());
     for (size_t i = 0; i < milestone_hashes.size(); ++i) {
         auto rec        = DAG->GetState(milestone_hashes[i]);
         auto newBlock   = reply->add_blocks();
@@ -61,8 +61,8 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::Server
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerContext* context,
                                                                   const GetLatestMilestoneRequest* request,
                                                                   GetLatestMilestoneResponse* reply) {
-    auto record   = DAG->GetMilestoneHead();
-    rpc::Block* b = ToRPCBlock(*(record->cblock));
+    auto vertex   = DAG->GetMilestoneHead();
+    rpc::Block* b = ToRPCBlock(*(vertex->cblock));
     reply->set_allocated_milestone(b);
     return grpc::Status::OK;
 }

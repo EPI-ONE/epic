@@ -10,7 +10,6 @@
 #include "pong.h"
 #include "sync_messages.h"
 #include "test_factory.h"
-#include "version_ack.h"
 #include "version_message.h"
 
 #include <ostream>

@@ -6,7 +6,7 @@
 #define EPIC_TOML_SPECIFACATION_H
 
 #include "cpptoml.h"
-#include "node.h"
+#include "vertex.h"
 
 #include <algorithm>
 #include <vector>
@@ -103,45 +103,45 @@ auto BlockToToml(ConstBlockPtr& block, const std::vector<uint8_t>& validity) {
     return root;
 }
 
-auto RecordToToml(const RecordPtr& record) {
+auto VertexToToml(const VertexPtr& vertex) {
     auto root = cpptoml::make_table();
 
-    root->insert("height", record->height);
-    root->insert("cumulative_reward", record->cumulativeReward.GetValue());
-    //    root->insert("fee", record->fee.GetValue());
-    root->insert("is_milestone", record->isMilestone);
+    root->insert("height", vertex->height);
+    root->insert("cumulative_reward", vertex->cumulativeReward.GetValue());
+    //    root->insert("fee", vertex->fee.GetValue());
+    root->insert("is_milestone", vertex->isMilestone);
     root->insert("is_redeemed",
-                 record->isRedeemed == 0 ? "not redemption" : record->isRedeemed == 1 ? "not yet" : "redeemed");
-    root->insert("miner_chain_height", record->minerChainHeight);
+                 vertex->isRedeemed == 0 ? "not redemption" : vertex->isRedeemed == 1 ? "not yet" : "redeemed");
+    root->insert("miner_chain_height", vertex->minerChainHeight);
 
     // state
-    if (record->isMilestone) {
+    if (vertex->isMilestone) {
         auto state_info = cpptoml::make_table();
 
-        state_info->insert("milestone_height", record->snapshot->height);
-        state_info->insert("chain_work", record->snapshot->chainwork.GetCompact(false));
-        state_info->insert("block_diff_target", record->snapshot->blockTarget.GetCompact(false));
-        state_info->insert("ms_diff_target", record->snapshot->milestoneTarget.GetCompact(false));
-        state_info->insert("hash_rate", record->snapshot->hashRate);
-        state_info->insert("last_update_time", record->snapshot->lastUpdateTime);
+        state_info->insert("milestone_height", vertex->snapshot->height);
+        state_info->insert("chain_work", vertex->snapshot->chainwork.GetCompact(false));
+        state_info->insert("block_diff_target", vertex->snapshot->blockTarget.GetCompact(false));
+        state_info->insert("ms_diff_target", vertex->snapshot->milestoneTarget.GetCompact(false));
+        state_info->insert("hash_rate", vertex->snapshot->hashRate);
+        state_info->insert("last_update_time", vertex->snapshot->lastUpdateTime);
 
         // TODO regChange
         root->insert("state_info", state_info);
     }
 
     // block
-    root->insert("block", BlockToToml(record->cblock, record->validity));
+    root->insert("block", BlockToToml(vertex->cblock, vertex->validity));
     return root;
 }
 
-auto LvsWithRecToToml(std::vector<RecordPtr>& records) {
+auto LvsWithRecToToml(std::vector<VertexPtr>& vertices) {
     auto root  = cpptoml::make_table();
     auto array = cpptoml::make_table_array(false);
-    std::swap(records.front(), records.back());
-    for (auto& rec : records) {
-        array->push_back(RecordToToml(rec));
+    std::swap(vertices.front(), vertices.back());
+    for (auto& rec : vertices) {
+        array->push_back(VertexToToml(rec));
     }
-    root->insert("records", array);
+    root->insert("vertices", array);
     return root;
 }
 #endif // EPIC_TOML_SPECIFACATION_H

@@ -56,28 +56,28 @@ public:
     //////////////////////// APIs for retriving data from DAG ////////////////////////
 
     // The following two methods searches on main chain ONLY.
-    RecordPtr GetMainChainRecord(const uint256&) const;
+    VertexPtr GetMainChainVertex(const uint256&) const;
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
 
     /**
      * Returns the level set of the milestone with the given hash.
      * Also searches on forked branches.
      */
-    std::vector<RecordPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
+    std::vector<VertexPtr> GetLevelSet(const uint256&, bool withBlock = true) const;
 
     /**
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    std::vector<uint256> TraverseMilestoneBackward(const NodeRecord&, size_t) const;
-    std::vector<uint256> TraverseMilestoneForward(const NodeRecord&, size_t) const;
+    std::vector<uint256> TraverseMilestoneBackward(const Vertex&, size_t) const;
+    std::vector<uint256> TraverseMilestoneForward(const Vertex&, size_t) const;
 
     // Checkout states either in different chain or in db
-    RecordPtr GetState(const uint256&, bool withBlock = true) const;
+    VertexPtr GetState(const uint256&, bool withBlock = true) const;
 
     Chain& GetBestChain() const;
     size_t GetBestMilestoneHeight() const;
-    RecordPtr GetMilestoneHead() const;
+    VertexPtr GetMilestoneHead() const;
 
     const Chains& GetChains() const {
         return milestoneChains;
@@ -86,7 +86,7 @@ public:
     /////////////////////////////// Mics. /////////////////////////////////////
 
     using OnLvsConfirmedCallback =
-        std::function<void(std::vector<RecordPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>)>;
+        std::function<void(std::vector<VertexPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>)>;
 
     /**
      * Actions to be performed by wallet when a level set is confirmed
@@ -133,9 +133,9 @@ private:
     Chains milestoneChains;
 
     /**
-     * Stores RecordPtr of all verified milestones on all branches as a cache
+     * Stores VertexPtr of all verified milestones on all branches as a cache
      */
-    ConcurrentHashMap<uint256, RecordPtr> globalStates_;
+    ConcurrentHashMap<uint256, VertexPtr> globalStates_;
 
     /**
      * Listener that triggers when a levelset is confirmed
@@ -162,7 +162,7 @@ private:
     /** Delete the chain who loses in the race competition */
     void DeleteFork();
 
-    bool CheckPuntuality(const ConstBlockPtr& blk, const RecordPtr& ms) const;
+    bool CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const;
 
     /**
      * Adds a newly received block to the corresponding chain
@@ -184,7 +184,7 @@ private:
     bool ExistsNode(const uint256&) const;
 
     /**
-     * Methods that flushing oldest blocks with corresponding node records and in memory to hybrid db system
+     * Methods that flushing oldest blocks with corresponding node vertices and in memory to hybrid db system
      */
 
     /**
@@ -196,7 +196,7 @@ private:
     void FlushToCAT(ChainStatePtr); // flush the oldest chain states
 };
 
-bool CheckMsPOW(const ConstBlockPtr& b, const ChainStatePtr& m);
+bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);
 
 extern std::unique_ptr<DAGManager> DAG;
 

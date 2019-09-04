@@ -14,7 +14,7 @@
 #include <spawn.h>
 
 Block GENESIS;
-NodeRecord GENESIS_RECORD;
+Vertex GENESIS_VERTEX;
 std::unique_ptr<Config> CONFIG;
 std::unique_ptr<PeerManager> PEERMAN;
 std::unique_ptr<BlockStore> STORE;
@@ -130,7 +130,7 @@ int Init(int argc, char* argv[]) {
 
     if (!CAT->DBExists(GENESIS.GetHash())) {
         // put genesis block into cat
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
+        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
         STORE->StoreLevelSet(genesisLvs);
     }
 

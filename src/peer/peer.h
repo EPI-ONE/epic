@@ -18,7 +18,6 @@
 #include "spdlog/spdlog.h"
 #include "sync_messages.h"
 #include "task.h"
-#include "version_ack.h"
 #include "version_message.h"
 
 #include <atomic>

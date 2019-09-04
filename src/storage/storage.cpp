@@ -69,27 +69,27 @@ ConstBlockPtr BlockStore::FindBlock(const uint256& blkHash) const {
     }
 
     if (dbStore_.Exists(blkHash)) {
-        return GetRecord(blkHash)->cblock;
+        return GetVertex(blkHash)->cblock;
     }
 
     return nullptr;
 }
 
-RecordPtr BlockStore::GetMilestoneAt(size_t height) const {
-    RecordPtr rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
+VertexPtr BlockStore::GetMilestoneAt(size_t height) const {
+    VertexPtr rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
     rec->snapshot->PushBlkToLvs(rec);
     return rec;
 }
 
-RecordPtr BlockStore::GetRecord(const uint256& blkHash, bool withBlock) const {
-    RecordPtr rec = ConstructNRFromFile(dbStore_.GetRecordPos(blkHash), withBlock);
+VertexPtr BlockStore::GetVertex(const uint256& blkHash, bool withBlock) const {
+    VertexPtr rec = ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock);
     if (rec && rec->isMilestone) {
         rec->snapshot->PushBlkToLvs(rec);
     }
     return rec;
 }
 
-std::vector<RecordPtr> BlockStore::GetLevelSetRecsAt(size_t height, bool withBlock) const {
+std::vector<VertexPtr> BlockStore::GetLevelSetRecsAt(size_t height, bool withBlock) const {
     // Get recs
     auto vs = GetRawLevelSetAt(height, file::FileType::REC);
 
@@ -97,9 +97,9 @@ std::vector<RecordPtr> BlockStore::GetLevelSetRecsAt(size_t height, bool withBlo
         return {};
     }
 
-    std::vector<RecordPtr> result;
+    std::vector<VertexPtr> result;
     while (vs.in_avail()) {
-        result.emplace_back(std::make_shared<NodeRecord>(vs));
+        result.emplace_back(std::make_shared<Vertex>(vs));
     }
 
     assert(!result.empty());
@@ -121,9 +121,9 @@ std::vector<RecordPtr> BlockStore::GetLevelSetRecsAt(size_t height, bool withBlo
     return result;
 }
 
-StoredRecord BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value, bool withBlock) const {
+StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value, bool withBlock) const {
     if (!value) {
-        StoredRecord ret{nullptr, [](NodeRecord* ptr) {}};
+        StoredVertex ret{nullptr, [](Vertex* ptr) {}};
         return ret;
     }
 
@@ -137,12 +137,12 @@ StoredRecord BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
         blk = std::make_shared<Block>(std::move(b));
     }
 
-    StoredRecord record = std::unique_ptr<NodeRecord, std::function<void(NodeRecord*)>>(
-        new NodeRecord{std::move(blk)}, [pos = recPos](NodeRecord* ptr) {
+    StoredVertex vertex =
+        std::unique_ptr<Vertex, std::function<void(Vertex*)>>(new Vertex{std::move(blk)}, [pos = recPos](Vertex* ptr) {
             if (pos == FilePos{}) {
                 return;
             }
-            if (ptr->isRedeemed == NodeRecord::IS_REDEEMED) {
+            if (ptr->isRedeemed == Vertex::IS_REDEEMED) {
                 FileModifier recmod{file::REC, pos};
                 recmod << *ptr;
             }
@@ -150,9 +150,9 @@ StoredRecord BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
         });
 
     FileReader recReader{file::REC, recPos};
-    recReader >> *record;
+    recReader >> *vertex;
 
-    return record;
+    return vertex;
 }
 
 std::vector<ConstBlockPtr> BlockStore::GetLevelSetBlksAt(size_t height) const {
@@ -306,16 +306,16 @@ bool BlockStore::RollBackPrevRedemHashes(const RegChange& change) const {
     return dbStore_.RollBackReg(change);
 }
 
-bool BlockStore::StoreLevelSet(const std::vector<RecordWPtr>& lvs) {
+bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
     try {
         // Function to sum up storage sizes for blk and rec in this lvs
         auto sumSize = [](const std::pair<uint32_t, uint32_t>& prevSum,
-                          const RecordWPtr& rec) -> std::pair<uint32_t, uint32_t> {
+                          const VertexWPtr& rec) -> std::pair<uint32_t, uint32_t> {
             return std::make_pair(prevSum.first + (*rec.lock()).cblock->GetOptimalEncodingSize(),
                                   prevSum.second + (*rec.lock()).GetOptimalStorageSize());
         };
 
-        // pair of (total block size, total record size)
+        // pair of (total block size, total vertex size)
         std::pair<uint32_t, uint32_t> totalSize =
             std::accumulate(lvs.begin(), lvs.end(), std::make_pair(0, 0), sumSize);
 
@@ -365,10 +365,10 @@ bool BlockStore::StoreLevelSet(const std::vector<RecordWPtr>& lvs) {
     return true;
 }
 
-bool BlockStore::StoreLevelSet(const std::vector<RecordPtr>& lvs) {
-    std::vector<RecordWPtr> wLvs;
-    std::transform(lvs.begin(), lvs.end(), std::back_inserter(wLvs), [](RecordPtr p) {
-        RecordWPtr wptr = p;
+bool BlockStore::StoreLevelSet(const std::vector<VertexPtr>& lvs) {
+    std::vector<VertexWPtr> wLvs;
+    std::transform(lvs.begin(), lvs.end(), std::back_inserter(wLvs), [](VertexPtr p) {
+        VertexWPtr wptr = p;
         return wptr;
     });
     return StoreLevelSet(wLvs);

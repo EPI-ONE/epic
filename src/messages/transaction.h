@@ -235,4 +235,4 @@ string to_string(const TxOutput& output);
 string to_string(const Transaction& tx);
 } // namespace std
 
-#endif //__SRC_TRANSACTION_H__
+#endif // EPIC_TRANSACTION_H

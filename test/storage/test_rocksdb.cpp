@@ -64,7 +64,7 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
     auto msPos1   = *db->GetMsPos(height);      // get milestone positions by height
     auto msPos2   = *db->GetMsPos(blkHash);     // get milestone positions by the normal block hash
     auto msPos3   = *db->GetMsPos(msHash);      // get milestone positions by it's own hash
-    auto blkPoses = *db->GetRecordPos(blkHash); // get normal block positions by it's own hash
+    auto blkPoses = *db->GetVertexPos(blkHash); // get normal block positions by it's own hash
 
     ASSERT_EQ(msPos1, msPos2);
     ASSERT_EQ(msPos1, msPos3);
@@ -117,7 +117,7 @@ TEST_F(TestRocksDB, batch_insertion) {
     ASSERT_TRUE(db->WriteRecPoses(hashes, heights, blkOffsets, recOffsets));
 
     for (int i = 1; i < size; ++i) {
-        auto pos = *db->GetRecordPos(hashes[i]);
+        auto pos = *db->GetVertexPos(hashes[i]);
         ASSERT_EQ(blkPoses[i], pos.first);
         ASSERT_EQ(recPoses[i], pos.second);
     }

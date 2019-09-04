@@ -14,7 +14,7 @@
 #include <numeric>
 #include <vector>
 
-typedef std::unique_ptr<NodeRecord, std::function<void(NodeRecord*)>> StoredRecord;
+typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
 
 class BlockStore {
 public:
@@ -24,14 +24,14 @@ public:
     /**
      * DB API for other modules
      */
-    RecordPtr GetMilestoneAt(size_t height) const;
-    RecordPtr GetRecord(const uint256&, bool withBlock = true) const;
+    VertexPtr GetMilestoneAt(size_t height) const;
+    VertexPtr GetVertex(const uint256&, bool withBlock = true) const;
     ConstBlockPtr GetBlockCache(const uint256&) const;
     ConstBlockPtr FindBlock(const uint256&) const;
     VStream GetRawLevelSetAt(size_t height, file::FileType = file::FileType::BLK) const;
     VStream GetRawLevelSetBetween(size_t height1, size_t height2, file::FileType = file::FileType::BLK) const;
     std::vector<ConstBlockPtr> GetLevelSetBlksAt(size_t height) const;
-    std::vector<RecordPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
+    std::vector<VertexPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     uint256 GetBestChainWork() const;
@@ -53,8 +53,8 @@ public:
      * Note that this method assumes that the milestone is
      * the first block in the lvs.
      */
-    bool StoreLevelSet(const std::vector<RecordWPtr>& lvs);
-    bool StoreLevelSet(const std::vector<RecordPtr>& lvs);
+    bool StoreLevelSet(const std::vector<VertexWPtr>& lvs);
+    bool StoreLevelSet(const std::vector<VertexPtr>& lvs);
 
     /**
      * Removes block cache when flushing
@@ -137,7 +137,7 @@ private:
     void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
-    StoredRecord ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
+    StoredVertex ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
     FilePos& NextFile(FilePos&) const;
 };
 

@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
         auto height = STORE->GetHeadHeight();
         for (int i = 1; i < height; i++) {
             std::ofstream file;
-            std::string dir = "tools/records/";
+            std::string dir = "tools/vertices/";
             if (!CheckDirExist(dir)) {
                 Mkdir_recursive(dir);
             }

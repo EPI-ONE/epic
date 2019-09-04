@@ -109,7 +109,7 @@ TEST_F(TestMemPool, receive_and_release) {
     Block b1      = blkTemplate;
     b1.AddTransaction(firstReg);
     b1.Solve();
-    while (UintToArith256(b1.GetHash()) > GENESIS_RECORD.snapshot->milestoneTarget) {
+    while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX.snapshot->milestoneTarget) {
         b1.SetNonce(b1.GetNonce() + 1);
         b1.Solve();
     }
