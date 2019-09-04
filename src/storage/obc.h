@@ -47,14 +47,18 @@ public:
      */
     std::vector<ConstBlockPtr> SubmitHash(const uint256& hash);
 
+    void DeleteBlockTree(const uint256& hash);
+
     /**
      * Iterate block_dep_map_ and delete outdated entries that have timestamps
      * before the current time - specified seconds.
      */
     size_t Prune(uint32_t seconds);
 
+    size_t GetDepNodeSize() const;
+
 private:
-    size_t size = 0;
+    size_t obcBlockSize_ = 0;
     struct obc_dependency {
         // number of dependencies that must be
         // found in order for this dependency
@@ -78,11 +82,6 @@ private:
      */
     std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;
 
-    /**
-     * this container maps missing hashes to one or more
-     * dependency structs that wait for this one hash
-     */
-    // std::unordered_map<uint256, std::unordered_set<obc_dep_ptr>> lose_ends_;
 };
 
 #endif // EPIC_OBC_H

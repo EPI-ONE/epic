@@ -5,21 +5,17 @@
 #ifndef EPIC_STORAGE_H
 #define EPIC_STORAGE_H
 
-#include "dag_manager.h"
-#include "obc.h"
-#include "rocksdb.h"
-
 #include <atomic>
 #include <memory>
 #include <numeric>
 #include <vector>
 
-typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
 #include "dag_manager.h"
 #include "obc.h"
 #include "rocksdb.h"
 #include "scheduler.h"
 #include "threadpool.h"
+typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
 
 class BlockStore {
 public:
@@ -114,8 +110,12 @@ public:
 private:
     OrphanBlocksContainer obc_;
     ThreadPool obcThread_;
-    Scheduler obcTimeout_;
     std::atomic<bool> obcEnabled_;
+    Scheduler obcTimeout_;
+
+    std::atomic_bool interrupt{false};
+    std::thread scheduler_;
+    void ScheduleTask();
 
     RocksDBStore dbStore_;
     ConcurrentHashMap<uint256, ConstBlockPtr> blockCache_;
