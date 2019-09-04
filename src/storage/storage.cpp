@@ -4,16 +4,13 @@
 
 #include "storage.h"
 
-BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), dbStore_(dbPath), obcEnabled_(false) {
-    obcThread_.Start();
-
+BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
     currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
     currentVtxEpoch_ = dbStore_.GetInfo<uint32_t>("vtxE");
     currentBlkName_  = dbStore_.GetInfo<uint16_t>("blkN");
     currentVtxName_  = dbStore_.GetInfo<uint16_t>("vtxN");
     currentBlkSize_  = dbStore_.GetInfo<uint32_t>("blkS");
     currentVtxSize_  = dbStore_.GetInfo<uint32_t>("vtxS");
-
 
     obcThread_.Start();
     obcTimeout_.AddPeriodTask(300, [this]() {
@@ -22,11 +19,14 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), dbStore_(dbPa
             spdlog::info("Erased {} outdated entries from OBC.", n);
         });
     });
+    scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));
 }
 
 BlockStore::~BlockStore() {
     obcThread_.Abort();
     obcThread_.Stop();
+    interrupt = true;
+    scheduler_.join();
 }
 
 void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
@@ -508,4 +508,11 @@ FilePos& BlockStore::NextFile(FilePos& pos) const {
     }
     pos.nOffset = 0;
     return pos;
+}
+
+void BlockStore::ScheduleTask() {
+    while (!interrupt) {
+        obcTimeout_.Loop();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 }

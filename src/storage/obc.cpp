@@ -4,18 +4,19 @@
 
 #include "obc.h"
 #include <memory>
+#include <queue>
 
 #define READER_LOCK(mu) std::shared_lock<std::shared_mutex> reader(mu);
 #define WRITER_LOCK(mu) std::unique_lock<std::shared_mutex> writer(mu);
 
 std::size_t OrphanBlocksContainer::Size() const {
     READER_LOCK(mutex_)
-    return size;
+    return obcBlockSize_;
 }
 
 bool OrphanBlocksContainer::Empty() const {
     READER_LOCK(mutex_)
-    return block_dep_map_.empty();
+    return obcBlockSize_ == 0;
 }
 
 bool OrphanBlocksContainer::Contains(const uint256& hash) const {
@@ -68,7 +69,7 @@ void OrphanBlocksContainer::AddBlock(ConstBlockPtr&& block, uint8_t missing_mask
 
     WRITER_LOCK(mutex_)
     block_dep_map_.insert_or_assign(bHash, dep);
-    size++;
+    obcBlockSize_++;
 
     if (missing_mask & M_MISSING) {
         common_insert(msHash);
@@ -86,61 +87,98 @@ void OrphanBlocksContainer::AddBlock(ConstBlockPtr&& block, uint8_t missing_mask
 }
 
 std::vector<ConstBlockPtr> OrphanBlocksContainer::SubmitHash(const uint256& hash) {
-    WRITER_LOCK(mutex_);
+    WRITER_LOCK(mutex_)
     auto entry = block_dep_map_.find(hash);
     if (entry == block_dep_map_.end()) {
         return {};
     }
-
-    std::vector<obc_dep_ptr> stack;
     std::vector<ConstBlockPtr> result;
-
-    // Push all dependencies of the entry to stack to recursively
-    // release dependencies of the dependencies
+    // release only one level of blocks(its children blocks)
     for (auto& n : entry->second->deps) {
-        stack.push_back(n);
-    }
+        n->ndeps--;
 
-    if (entry->second->block) {
-        size--;
-    }
-    block_dep_map_.erase(entry);
-    writer.unlock();
-
-    obc_dep_ptr cursor;
-    while (!stack.empty()) {
-        // pop dependency from the stack
-        cursor = stack.back();
-        stack.pop_back();
-
-        // decrement the number of missing dependencies
-        cursor->ndeps--;
-        if (cursor->ndeps > 0) {
+        if (n->ndeps > 0) {
             continue;
         }
 
-        /* by now we know that all blocks are available
-         * meaning that the block is return as it is not
-         * an orphan anymore */
-        result.push_back(cursor->block);
-
-        /* this also means that we have to remove the
-         * dependency from the block_dep_map_ */
-        writer.lock();
-        if (block_dep_map_.erase(cursor->block->GetHash())) {
-            size--;
-        }
-        writer.unlock();
-
-        // further we push all dependencies of this block onto the stack
-        for (const obc_dep_ptr& dep : cursor->deps) {
-            stack.push_back(dep);
-        }
+        result.push_back(n->block);
+        n->block = nullptr;
+        obcBlockSize_--;
     }
 
+    block_dep_map_.erase(entry);
     return result;
 }
 
 size_t OrphanBlocksContainer::Prune(uint32_t secs) {
-    return 0;
+    std::vector<uint256> pruned_block;
+    std::unordered_set<uint256> old_dependency;
+
+    // to find the obc_dependency which doesn't have a block instance
+    auto check_old_dependency = [&](const uint256& parent_hash, std::unordered_set<uint256>& hashes) {
+        auto it = block_dep_map_.find(parent_hash);
+        if (it != block_dep_map_.end() && !it->second->block) {
+            hashes.insert(parent_hash);
+        }
+    };
+
+    {
+        READER_LOCK(mutex_)
+        uint64_t current_time = time(nullptr);
+        for (auto& it : block_dep_map_) {
+            if (it.second->block && it.second->block->GetTime() + secs <= current_time) {
+                pruned_block.push_back(it.first);
+                check_old_dependency(it.second->block->GetMilestoneHash(), old_dependency);
+                check_old_dependency(it.second->block->GetPrevHash(), old_dependency);
+                check_old_dependency(it.second->block->GetTipHash(), old_dependency);
+            }
+        }
+    }
+
+    for (const auto& blk_hash : old_dependency) {
+        DeleteBlockTree(blk_hash);
+    }
+
+    spdlog::debug("Pruned {} blocks and {} void blocks in obc", pruned_block.size(), old_dependency.size());
+
+    return pruned_block.size() + old_dependency.size();
+}
+
+size_t OrphanBlocksContainer::GetDepNodeSize() const {
+    READER_LOCK(mutex_)
+    return block_dep_map_.size();
+}
+
+void OrphanBlocksContainer::DeleteBlockTree(const uint256& hash) {
+    WRITER_LOCK(mutex_)
+    auto entry = block_dep_map_.find(hash);
+    if (entry == block_dep_map_.end()) {
+        return;
+    }
+
+    std::queue<obc_dep_ptr> toBeDeleted;
+    for (auto& n : entry->second->deps) {
+        toBeDeleted.push(n);
+    }
+
+
+    if (entry->second->block) {
+        obcBlockSize_--;
+    }
+    block_dep_map_.erase(entry);
+
+    // delete the tree starting from the root using BFS
+    obc_dep_ptr cursor;
+    while (!toBeDeleted.empty()) {
+        cursor = toBeDeleted.front();
+        toBeDeleted.pop();
+
+        if (block_dep_map_.erase(cursor->block->GetHash())) {
+            obcBlockSize_--;
+        }
+
+        for (const obc_dep_ptr& dep : cursor->deps) {
+            toBeDeleted.push(dep);
+        }
+    }
 }

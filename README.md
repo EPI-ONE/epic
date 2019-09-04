@@ -1,7 +1,7 @@
 # epic
 
 [![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
-[![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=travis-190&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=master&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
 
 Epic is a pow chain that achives an order of magnitude improvement on the throughput without sacrificing the security and decentralization.
 

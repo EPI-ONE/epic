@@ -116,11 +116,42 @@ TEST_F(OBCTest, complex_secondary_deps_test) {
     /* check if there were exactly three
      * values returned as the lose end 9
      * is not tied since it has two deps */
-    EXPECT_EQ(result.size(), 3);
+    EXPECT_EQ(result.size(), 1);
 
     /* check if the OBC has one element left */
-    EXPECT_EQ(obc.Size(), 1);
+    EXPECT_EQ(obc.Size(), 3);
 
     /* check if that remaining block is 9*/
     EXPECT_TRUE(obc.Contains(rem_hash));
+}
+
+TEST_F(OBCTest, test_prune) {
+    OrphanBlocksContainer obc;
+
+    auto current_time = time(nullptr);
+
+    blocks[7].SetTime(current_time);
+    blocks[1].SetTime(current_time);
+    blocks[0].SetTime(current_time + 7200);
+    blocks[9].SetTime(current_time + 7200);
+
+    // we only consider the prev chain: 4 <- 7 <- 1 <- 0
+    obc.AddBlock(std::make_shared<const Block>(blocks[0]), P_MISSING);
+    obc.AddBlock(std::make_shared<const Block>(blocks[1]), P_MISSING);
+    obc.AddBlock(std::make_shared<const Block>(blocks[7]), P_MISSING);
+
+    // we only consider the tip chain: 3 <- 9. block[9] and block[3] is irrelevant to above 3 blocks
+    obc.AddBlock(std::make_shared<const Block>(blocks[9]), T_MISSING);
+
+    ASSERT_EQ(obc.Size(), 4);
+    ASSERT_EQ(obc.GetDepNodeSize(), 6);
+
+    // now block[1] and block[7] have the older block time and will be pruned while block[9] will not be pruned
+    obc.Prune(0);
+
+    // but the later block[0] which depends on block[1] and the former dep_node without a real block instance(block[4]
+    // will be pruned too while block[9] and block[3] are still safe
+    ASSERT_EQ(obc.GetDepNodeSize(), 2);
+
+    ASSERT_EQ(obc.Size(), 1);
 }
