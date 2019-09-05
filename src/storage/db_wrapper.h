@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_DB_WRAPPER__
-#define __SRC_DB_WRAPPER__
+#ifndef EPIC_DB_WRAPPER_H
+#define EPIC_DB_WRAPPER_H
 
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
@@ -32,4 +32,4 @@ protected:
     void PrintColumns() const;
 };
 
-#endif // __SRC_DB_WRAPPER__
+#endif // EPIC_DB_WRAPPER_H

@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_CRYPTO_HASH__
-#define __SRC_CRYPTO_HASH__
+#ifndef EPIC_HASH_H
+#define EPIC_HASH_H
 
 #include "big_uint.h"
 #include "blake2b.h"
@@ -68,4 +68,4 @@ inline base_blob<OUTPUT_SIZE> HashBLAKE2(const VStream& data) {
     return HashBLAKE2<OUTPUT_SIZE>(data.data(), data.size());
 }
 
-#endif
+#endif // EPIC_HASH_H

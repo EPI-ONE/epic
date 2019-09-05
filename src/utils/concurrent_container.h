@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_UTILS_CONCURRENT_HASHMAP_H__
-#define __SRC_UTILS_CONCURRENT_HASHMAP_H__
+#ifndef EPIC_CONCURRENT_CONTAINER_H
+#define EPIC_CONCURRENT_CONTAINER_H
 
 #include <functional>
 #include <queue>
@@ -393,4 +393,4 @@ public:
     void reserve(size_type n)                 = delete;
 };
 
-#endif // __SRC_UTILS_CONCURRENT_HASHMAP_H__
+#endif // EPIC_CONCURRENT_CONTAINER_H

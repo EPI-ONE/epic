@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_COIN_H__
-#define __SRC_COIN_H__
+#ifndef EPIC_COIN_H
+#define EPIC_COIN_H
 
 #include "serialize.h"
 
@@ -133,4 +133,4 @@ private:
     uint64_t value_;
 };
 
-#endif /* ifndef __SRC_COIN_H__ */
+#endif // ifndef EPIC_COIN_H

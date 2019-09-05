@@ -1,5 +1,5 @@
-#ifndef __SRC_CRYPTO_BLAKE2B_H__
-#define __SRC_CRYPTO_BLAKE2B_H__
+#ifndef EPIC_BLAKE2B_H
+#define EPIC_BLAKE2B_H
 
 #include "common.h"
 
@@ -62,4 +62,4 @@ void HashBLAKE2(const char* pin, uint32_t inlen, const unsigned char* out, uint3
 // checks if the implementation is correct
 bool BLAKE2BSelfTest();
 
-#endif // __SRC_CRYPTO_BLAKE2B_H__
+#endif // EPIC_BLAKE2B_H

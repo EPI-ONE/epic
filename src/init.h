@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_INIT_H__
-#define __SRC_INIT_H__
+#ifndef EPIC_INIT_H
+#define EPIC_INIT_H
 
 #include "config.h"
 #include "cpptoml.h"
@@ -38,4 +38,4 @@ void UseFileLogger(const std::string& path, const std::string& filename);
 void InitLogger();
 
 void CreateDaemon();
-#endif // __SRC_INIT_H__
+#endif // EPIC_INIT_H

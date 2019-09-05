@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_MEMPOOL_H__
-#define __SRC_MEMPOOL_H__
+#ifndef EPIC_MEMPOOL_H
+#define EPIC_MEMPOOL_H
 
 #include "arith_uint256.h"
 #include "blocking_queue.h"
@@ -75,4 +75,4 @@ private:
 
 extern std::unique_ptr<MemPool> MEMPOOL;
 
-#endif // __SRC_MEMPOOL_H__
+#endif // EPIC_MEMPOOL_H

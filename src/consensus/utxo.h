@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_UTXO_H__
-#define __SRC_UTXO_H__
+#ifndef EPIC_UTXO_H
+#define EPIC_UTXO_H
 
 #include "block.h"
 #include "increment.h"
@@ -153,4 +153,4 @@ private:
 };
 
 TXOC CreateTXOCFromInvalid(const Transaction&, uint32_t txIndex);
-#endif /* ifndef __SRC_UTXO_H__ */
+#endif // EPIC_UTXO_H

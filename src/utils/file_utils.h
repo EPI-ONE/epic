@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_UTILS_FILE_UTILS_H__
-#define __SRC_UTILS_FILE_UTILS_H__
+#ifndef EPIC_FILE_UTILS_H
+#define EPIC_FILE_UTILS_H
 
 #include "stream.h"
 
@@ -206,4 +206,4 @@ public:
     }
 };
 
-#endif // __SRC_UTILS_FILE_UTILS_H__
+#endif // EPIC_FILE_UTILS_H

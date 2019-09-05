@@ -2,9 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __TASM_OPCODES_H__
-#define __TASM_OPCODES_H__
+#ifndef EPIC_OPCODES_H
+#define EPIC_OPCODES_H
 
 enum OPCODES { FAIL = 0, SUCCESS, VERIFY };
 
-#endif
+#endif // EPIC_OPCODES_H

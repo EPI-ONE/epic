@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_TASM_TASM_H__
-#define __SRC_TASM_TASM_H__
+#ifndef EPIC_TASM_H
+#define EPIC_TASM_H
 
 #include "functors.h"
 #include "opcodes.h"
@@ -117,4 +117,4 @@ namespace std {
 string to_string(const Tasm::Listing& listing);
 }
 
-#endif // __SRC_TASM_TASM_H__
+#endif // EPIC_TASM_H

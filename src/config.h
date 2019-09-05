@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_CONFIG_H__
-#define __SRC_CONFIG_H__
+#ifndef EPIC_CONIFG_H
+#define EPIC_CONIFG_H
 
 #include "net_address.h"
 #include "spdlog.h"
@@ -264,4 +264,4 @@ private:
 
 extern std::unique_ptr<Config> CONFIG;
 
-#endif // __SRC_CONFIG_H__
+#endif // EPIC_CONIFG_H

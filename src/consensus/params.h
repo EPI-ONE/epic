@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_PARAMS_H__
-#define __SRC_PARAMS_H__
+#ifndef EPIC_PARAMS_H
+#define EPIC_PARAMS_H
 
 #include "arith_uint256.h"
 #include "coin.h"
@@ -90,4 +90,4 @@ public:
 const Params& GetParams();
 void SelectParams(ParamsType type);
 
-#endif // __SRC_PARAMS_H__
+#endif // EPIC_PARAMS_H

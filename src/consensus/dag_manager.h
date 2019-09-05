@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_DAG_MANAGER_H__
-#define __SRC_DAG_MANAGER_H__
+#ifndef EPIC_DAG_MANAGER_H
+#define EPIC_DAG_MANAGER_H
 
 #include "chains.h"
 #include "concurrent_container.h"
@@ -200,4 +200,4 @@ bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);
 
 extern std::unique_ptr<DAGManager> DAG;
 
-#endif // __SRC_DAG_MANAGER_H__
+#endif // EPIC_DAG_MANAGER_H

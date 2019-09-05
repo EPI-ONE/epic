@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_TASK_H_
-#define __SRC_TASK_H_
+#ifndef EPIC_TASK_H
+#define EPIC_TASK_H
 
 #include "sync_messages.h"
 #include <atomic>
@@ -140,4 +140,4 @@ private:
     std::shared_ptr<GetDataTask> tail_ = nullptr;
 };
 
-#endif // ifndef __SRC_TASK_H_
+#endif // EPIC_TASK_H

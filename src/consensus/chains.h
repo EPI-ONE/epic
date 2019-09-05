@@ -1,5 +1,5 @@
-#ifndef __SRC_UTILS_CHAINS_H__
-#define __SRC_UTILS_CHAINS_H__
+#ifndef EPIC_CHAINS_H
+#define EPIC_CHAINS_H
 
 #include "chain.h"
 
@@ -130,4 +130,4 @@ private:
     }
 };
 
-#endif /* ifndef __SRC_UTILS_CHAINS_H__ */
+#endif // EPIC_CHAINS_H

@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_TASM_FUNCTOR_H__
-#define __SRC_TASM_FUNCTOR_H__
+#ifndef EPIC_FUNCTORS_H
+#define EPIC_FUNCTORS_H
 
 #include "pubkey.h"
 
@@ -42,4 +42,4 @@ static const std::array<instruction, 256> functors = {
         return ip + 2;
     })};
 
-#endif // __SRC_TASM_FUNCTOR_H__
+#endif // EPIC_FUNCTORS_H

@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_BLOCK_H__
-#define __SRC_BLOCK_H__
+#ifndef EPIC_BLOCK_H
+#define EPIC_BLOCK_H
 
 #include "net_message.h"
 #include "spdlog.h"

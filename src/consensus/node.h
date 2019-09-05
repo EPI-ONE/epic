@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_NODE_H__
-#define __SRC_NODE_H__
+#ifndef EPIC_NODE_H
+#define EPIC_NODE_H
 
 #include "block.h"
 #include "utxo.h"
@@ -251,4 +251,4 @@ string to_string(const NodeRecord& rec, bool showtx = false);
 
 extern NodeRecord GENESIS_RECORD;
 
-#endif // __SRC_NODE_H__
+#endif // EPIC_NODE_H

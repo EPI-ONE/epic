@@ -45,9 +45,9 @@ matrix:
         - cd $EPIC_PATH
         - pip install --user cpp-coveralls
         - coveralls --help
-        - coveralls --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/spdlog/.*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
+        - coveralls --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/cuckaroo/.*" -E ".*/src/main.*" -E ".*/src/rpc/proto-gen/.*" -E ".*/src/utils/(memory|spdlog|ar.*|big.*|cpptoml.*|cxx.*|merkle.*|port.*|seri.*|tiny.*|utilstr.*).*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
         - rm ~/.ssh/id_rsa
-        - openssl aes-256-cbc -K $encrypted_be909093e248_key -iv $encrypted_be909093e248_iv -in id_rsa.enc -out temp_key -d
+        - openssl aes-256-cbc -K $encrypted_be909093e248_key -iv $encrypted_be909093e248_iv -in ci/id_rsa.enc -out temp_key -d
         - cp temp_key ~/.ssh/id_rsa
         - chmod 600 ~/.ssh/id_rsa
         - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB021.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && ./ci/deploy-build.sh"

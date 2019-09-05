@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_PING_H__
-#define __SRC_PING_H__
+#ifndef EPIC_PING_H
+#define EPIC_PING_H
 
 #include "net_message.h"
 #include "serialize.h"

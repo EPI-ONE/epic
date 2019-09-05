@@ -1,5 +1,5 @@
-#ifndef __SRC_OBC_H__
-#define __SRC_OBC_H__
+#ifndef EPIC_OBC_H
+#define EPIC_OBC_H
 
 #include "block.h"
 
@@ -83,4 +83,4 @@ private:
     std::unordered_map<uint256, std::unordered_set<obc_dep_ptr>> lose_ends_;
 };
 
-#endif // __SRC_OBC_H__
+#endif // EPIC_OBC_H

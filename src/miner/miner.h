@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_POW_H__
-#define __SRC_POW_H__
+#ifndef EPIC_MINER_H
+#define EPIC_MINER_H
 
 #include "key.h"
 #include "mempool.h"
@@ -73,4 +73,4 @@ private:
 };
 
 extern std::unique_ptr<Miner> MINER;
-#endif /* ifndef __SRC_POW_H__ */
+#endif // EPIC_MINER_H

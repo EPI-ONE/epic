@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_CATERPILLAR_H__
-#define __SRC_CATERPILLAR_H__
+#ifndef EPIC_STORAGE_H
+#define EPIC_STORAGE_H
 
 #include "dag_manager.h"
 #include "obc.h"
@@ -143,4 +143,4 @@ private:
 
 extern std::unique_ptr<BlockStore> STORE;
 
-#endif // __SRC_CATERPILLAR_H__
+#endif // EPIC_STORAGE_H

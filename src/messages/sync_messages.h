@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_GETADDR_MESSAGE_H__
-#define __SRC_GETADDR_MESSAGE_H__
+#ifndef EPIC_SYNC_MESSAGE_H
+#define EPIC_SYNC_MESSAGE_H
 
 #include "block.h"
 #include "net_message.h"
@@ -188,4 +188,4 @@ public:
     }
 };
 
-#endif // __SRC_GETADDR_MESSAGE_H__
+#endif // EPIC_SYNC_MESSAGE_H

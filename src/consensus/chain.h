@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_CHAIN_H__
-#define __SRC_CHAIN_H__
+#ifndef EPIC_CHAIN_H
+#define EPIC_CHAIN_H
 
 #include "concurrent_container.h"
 #include "vertex.h"
@@ -192,4 +192,4 @@ private:
 
 typedef std::unique_ptr<Chain> ChainPtr;
 
-#endif // __SRC_CHAIN_H__
+#endif // EPIC_CHAIN_H

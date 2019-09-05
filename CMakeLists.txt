@@ -169,6 +169,7 @@ aux_source_directory(test/crypto TEST_CRYPTO_SRCS)
 aux_source_directory(test/consensus TEST_CONSENSUS_SRCS)
 aux_source_directory(test/peer TEST_PEER_SRCS)
 aux_source_directory(test/storage TEST_STORAGE_SRCS)
+aux_source_directory(test/pow TEST_POW_SRCS)
 aux_source_directory(${TEST_METHODS_DIR} TEST_METHODS_SRCS)
 
 include_directories(test
@@ -185,6 +186,7 @@ set(TEST_CODE
         ${TEST_PEER_SRCS}
         ${TEST_STORAGE_SRCS}
         ${TEST_METHODS_SRCS}
+        ${TEST_POW_SRCS}
         )
 set(TEST_MAIN test/main.cpp)
 

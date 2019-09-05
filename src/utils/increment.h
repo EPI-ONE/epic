@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_UTILS_INCREMENTAL_CONTAINER__
-#define __SRC_UTILS_INCREMENTAL_CONTAINER__
+#ifndef EPIC_INCREMENT_H
+#define EPIC_INCREMENT_H
 
 #include "big_uint.h"
 
@@ -82,4 +82,4 @@ struct std::hash<std::pair<uint256, uint256>> {
 
 typedef Increment<std::pair<uint256, uint256>> RegChange;
 
-#endif /* ifndef __SRC_UTILS_INCREMENTAL_CONTAINER__ */
+#endif // EPIC_INCREMENT_H
