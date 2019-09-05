@@ -8,6 +8,11 @@
 #include "siphash.h"
 #include "spdlog.h"
 
+// arbitrary length of header hashed into siphash key
+#ifndef HEADERLEN
+#define HEADERLEN 142
+#endif
+
 #ifndef MAXSOLS
 #define MAXSOLS 4
 #endif
@@ -123,10 +128,10 @@ static const char* errstr[] = {"OK",
 
 // fills buffer with EDGE_BLOCK_SIZE siphash outputs for block containing edge in cuckaroo graph
 // returns siphash output for given edge
-uint64_t sipblock(siphash_keys& keys, word_t edge, uint64_t* buf);
+uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf);
 
 // verify that edges are ascending and form a cycle in header-generated graph
-int verify(word_t edges[PROOFSIZE], siphash_keys& keys);
+int verify(const word_t edges[PROOFSIZE], const siphash_keys& keys);
 
 // convenience function for extracting siphash keys from header
 void setheader(const char* header, uint32_t headerlen, siphash_keys* keys);

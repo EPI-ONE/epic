@@ -16,7 +16,7 @@
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // exact number of size of a block without counting transaction
-static constexpr std::size_t HEADER_SIZE = 110;
+static constexpr size_t HEADER_SIZE = HEADERLEN + PROOFSIZE * sizeof(word_t);
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 
@@ -26,6 +26,44 @@ string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validi
 
 class Block : public NetMessage {
 public:
+    struct Header {
+        uint16_t version = 0;
+        uint256 milestoneBlockHash{};
+        uint256 prevBlockHash{};
+        uint256 tipBlockHash{};
+        uint256 merkleRoot{};
+        uint32_t timestamp  = 0;
+        uint32_t diffTarget = 0;
+        uint32_t nonce      = 0;
+
+        Header() = default;
+
+        Header(uint16_t version_,
+               uint256 milestoneBlockHash_,
+               uint256 prevBlockHash_,
+               uint256 tipBlockHash_,
+               uint256 merkle_,
+               uint32_t time_,
+               uint32_t diffTarget_,
+               uint32_t nonce_);
+
+        Header(const Block& b);
+
+        void SetNull();
+
+        ADD_SERIALIZE_METHODS template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream& s, Operation ser_action) {
+            READWRITE(version);
+            READWRITE(milestoneBlockHash);
+            READWRITE(prevBlockHash);
+            READWRITE(tipBlockHash);
+            READWRITE(merkleRoot);
+            READWRITE(timestamp);
+            READWRITE(diffTarget);
+            READWRITE(nonce);
+        }
+    };
+
     Block();
     Block(const Block&);
     Block(Block&&) noexcept;
@@ -40,10 +78,10 @@ public:
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce,
-          word_t proof[PROOFSIZE] = {})
-        : NetMessage(BLOCK), version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), merkleRoot_(merkle), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
-        memcpy(proof_, proof, PROOFSIZE);
+          std::array<word_t, PROOFSIZE> proof = {0})
+        : NetMessage(BLOCK),
+          header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce) {
+        memcpy(proof_, proof.data(), PROOFSIZE * sizeof(word_t));
         CalculateOptimalEncodingSize();
     }
 
@@ -61,6 +99,7 @@ public:
     uint32_t GetDifficultyTarget() const;
     uint32_t GetTime() const;
     uint32_t GetNonce() const;
+    const word_t* GetProof() const;
 
     void SetMilestoneHash(const uint256&);
     void SetPrevHash(const uint256&);
@@ -68,6 +107,8 @@ public:
     void SetDifficultyTarget(uint32_t target);
     void SetTime(uint32_t);
     void SetNonce(uint32_t);
+    void SetProof(const word_t (&proof)[PROOFSIZE]);
+    void SetProof(word_t* begin);
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
@@ -143,13 +184,7 @@ public:
     ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(version_);
-        READWRITE(milestoneBlockHash_);
-        READWRITE(prevBlockHash_);
-        READWRITE(tipBlockHash_);
-        READWRITE(time_);
-        READWRITE(diffTarget_);
-        READWRITE(nonce_);
+        READWRITE(header_);
         READWRITE(proof_);
         READWRITE(transactions_);
         if (ser_action.ForRead()) {
@@ -177,19 +212,16 @@ protected:
     uint256 hash_;
 
 private:
-    uint16_t version_;
-    uint256 milestoneBlockHash_;
-    uint256 prevBlockHash_;
-    uint256 tipBlockHash_;
-    uint256 merkleRoot_;
-    uint32_t time_;
-    uint32_t diffTarget_;
-    uint32_t nonce_;
-    word_t proof_[PROOFSIZE];
+    Header header_;
+    word_t proof_[PROOFSIZE] = {};
     std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
     bool mutated                = false;
+
+    void ResetProof() {
+        memset(proof_, 0, PROOFSIZE);
+    }
 
 public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };

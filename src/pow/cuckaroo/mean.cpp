@@ -7,11 +7,6 @@
 #include <iostream>
 #include <unistd.h>
 
-#ifndef HEADERLEN
-// arbitrary length of header hashed into siphash key
-#define HEADERLEN 112
-#endif
-
 void* etworker(void* vp) {
     thread_ctx* tp = (thread_ctx*) vp;
     tp->et->trimmer(tp->id);

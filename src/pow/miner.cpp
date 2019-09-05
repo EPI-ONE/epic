@@ -79,8 +79,9 @@ void Miner::SolveCuckaroo(Block& b) {
     arith_uint256 target = b.GetTargetAsInteger();
     size_t nthreads      = solverPool_.GetThreadSize();
 
-    final_nonce = 0;
-    final_time  = b.GetTime();
+    final_nonce     = 0;
+    final_ctx_index = -1;
+    final_time      = b.GetTime();
 
     std::vector<std::unique_ptr<CTX>> ctx_q(nthreads);
 
@@ -89,24 +90,24 @@ void Miner::SolveCuckaroo(Block& b) {
             SolverParams _params = this->params;
             Block blk(b);
             blk.SetNonce(i + 1);
+            VStream vs(blk);
 
             _params.device  = i;
             ctx_q[i]        = CreateSolverCtx(&_params);
             const auto& ctx = ctx_q[i];
 
             while (final_nonce.load() == 0 && enabled_.load()) {
-                VStream vs(blk);
-                ctx->setheader(vs.data(), vs.size());
-                std::cout << "Solving for nonce " << blk.GetNonce() << std::endl;
+                ctx->setheader(vs.data(), HEADERLEN);
 
                 if (ctx->solve()) {
-                    uint256 cyclehash = HashBLAKE2<256>(ctx->cg.sols[0], sizeof(ctx->cg.sols[0]));
-                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}", blk.GetNonce(),
+                    uint256 cyclehash = HashBLAKE2<256>(ctx->sols.data(), sizeof(proof));
+                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", blk.GetNonce(),
                                   cyclehash.to_substr(), ArithToUint256(target).to_substr());
                     if (UintToArith256(cyclehash) <= target) {
-                        uint32_t zero = 0;
-                        if (final_nonce.compare_exchange_strong(zero, blk.GetNonce())) {
-                            final_time = blk.GetTime();
+                        size_t minus_one = -1;
+                        if (final_ctx_index.compare_exchange_strong(minus_one, i)) {
+                            final_nonce = blk.GetNonce();
+                            final_time  = blk.GetTime();
                         }
                         break;
                     }
@@ -123,7 +124,7 @@ void Miner::SolveCuckaroo(Block& b) {
     }
 
     while (final_nonce.load() == 0 && enabled_.load()) {
-        std::this_thread::yield();
+        usleep(500000);
     }
 
     // Abort unfinished tasks
@@ -135,6 +136,8 @@ void Miner::SolveCuckaroo(Block& b) {
 
     spdlog::trace("Final nonce {}", final_nonce.load());
     b.SetNonce(final_nonce.load());
+    b.SetProof(ctx_q[final_ctx_index]->sols.data());
+    assert(verify(b.GetProof(), ctx_q[final_ctx_index]->trimmer.sipkeys) == POW_OK);
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();

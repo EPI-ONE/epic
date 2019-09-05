@@ -110,8 +110,10 @@ TEST_F(TestMiner, MineGenesis) {
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
 
-    std::vector<uint16_t> versions     = {100, 10, 1};
-    std::vector<uint32_t> difficulties = {0x1f00ffffL, 0x1e00ffffL, 0x1d00ffffL};
+    // std::vector<uint16_t> versions     = {100, 10, 1};
+    // std::vector<uint32_t> difficulties = {0x1f00ffffL, 0x1e00ffffL, 0x1d00ffffL};
+    std::vector<uint16_t> versions     = {100};
+    std::vector<uint32_t> difficulties = {0x1f00ffffL};
 
     Transaction tx;
 
@@ -145,28 +147,28 @@ TEST_F(TestMiner, MineGenesis) {
     /////////////////////////////////////////////////////////////////////
     // Uncomment the following lines to mine
     /////////////////////////////////////////////////////////////////////
-    // int numThreads = 44;
-    // Miner m(numThreads);
-    // m.Start();
-    // for (auto& genesisBlock : genesisBlocks) {
-    // m.Solve(genesisBlock);
-    // std::cout << std::to_string(genesisBlock) << std::endl;
-    // VStream gvs(genesisBlock);
-    // std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
-    //<< HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
-    // EXPECT_TRUE(genesisBlock.CheckPOW());
-    //}
-    // m.Stop();
+    int numThreads = 44;
+    Miner m(numThreads);
+    m.Start();
+    for (auto& genesisBlock : genesisBlocks) {
+        m.SolveCuckaroo(genesisBlock);
+        std::cout << std::to_string(genesisBlock) << std::endl;
+        VStream gvs(genesisBlock);
+        std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
+                  << HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
+        EXPECT_TRUE(genesisBlock.CheckPOW());
+    }
+    m.Stop();
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    genesisBlocks[0].SetNonce(15649);     // UnitTest
-    genesisBlocks[1].SetNonce(37692687);  // TestNet
-    genesisBlocks[2].SetNonce(984142618); // MainNet
+    // genesisBlocks[0].SetNonce(15649);     // UnitTest
+    // genesisBlocks[1].SetNonce(37692687);  // TestNet
+    // genesisBlocks[2].SetNonce(984142618); // MainNet
 
-    for (auto& genesisBlock : genesisBlocks) {
-        genesisBlock.FinalizeHash();
-    }
+    // for (auto& genesisBlock : genesisBlocks) {
+    // genesisBlock.FinalizeHash();
+    //}
 
-    EXPECT_TRUE(GENESIS.Verify());
+    // EXPECT_TRUE(GENESIS.Verify());
 }

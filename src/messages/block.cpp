@@ -7,34 +7,59 @@
 
 #include <unordered_set>
 
+Block::Header::Header(uint16_t version_,
+                      uint256 milestoneBlockHash_,
+                      uint256 prevBlockHash_,
+                      uint256 tipBlockHash_,
+                      uint256 merkle_,
+                      uint32_t time_,
+                      uint32_t diffTarget_,
+                      uint32_t nonce_)
+    : version(version_), milestoneBlockHash(milestoneBlockHash_), prevBlockHash(prevBlockHash_),
+      tipBlockHash(tipBlockHash_), merkleRoot(merkle_), timestamp(time_), diffTarget(diffTarget_), nonce(nonce_) {}
+
+Block::Header::Header(const Block& b)
+    : version(b.header_.version), milestoneBlockHash(b.header_.milestoneBlockHash),
+      prevBlockHash(b.header_.prevBlockHash), tipBlockHash(b.header_.tipBlockHash), merkleRoot(b.header_.merkleRoot),
+      timestamp(b.header_.timestamp), diffTarget(b.header_.diffTarget), nonce(b.header_.nonce) {}
+
+
+void Block::Header::SetNull() {
+    milestoneBlockHash.SetNull();
+    prevBlockHash.SetNull();
+    tipBlockHash.SetNull();
+    merkleRoot.SetNull();
+    version    = 0;
+    timestamp  = 0;
+    diffTarget = 0;
+    nonce      = 0;
+}
+
 Block::Block() : NetMessage(BLOCK) {
     SetNull();
 }
 
 Block::Block(const Block& b)
-    : NetMessage(BLOCK), hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
-      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), merkleRoot_(b.merkleRoot_), time_(b.time_),
-      diffTarget_(b.diffTarget_), nonce_(b.nonce_), transactions_(b.transactions_),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), transactions_(b.transactions_),
       optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
+    SetProof(b.proof_);
     SetParents();
-}
+};
 
 Block::Block(Block&& b) noexcept
-    : NetMessage(BLOCK), hash_(b.hash_), version_(b.version_), milestoneBlockHash_(b.milestoneBlockHash_),
-      prevBlockHash_(b.prevBlockHash_), tipBlockHash_(b.tipBlockHash_), merkleRoot_(b.merkleRoot_), time_(b.time_),
-      diffTarget_(b.diffTarget_), nonce_(b.nonce_), transactions_(std::move(b.transactions_)),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), transactions_(std::move(b.transactions_)),
       optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     b.SetNull();
     SetParents();
 }
 
 Block::Block(uint16_t versionNum) : Block() {
-    version_            = versionNum;
-    milestoneBlockHash_ = Hash::GetZeroHash();
-    prevBlockHash_      = Hash::GetZeroHash();
-    tipBlockHash_       = Hash::GetZeroHash();
-    merkleRoot_         = uint256();
-    time_               = time(nullptr);
+    header_.version            = versionNum;
+    header_.milestoneBlockHash = Hash::GetZeroHash();
+    header_.prevBlockHash      = Hash::GetZeroHash();
+    header_.tipBlockHash       = Hash::GetZeroHash();
+    header_.merkleRoot         = uint256();
+    header_.timestamp          = time(nullptr);
 }
 
 Block::Block(VStream& payload) : NetMessage(BLOCK) {
@@ -42,71 +67,65 @@ Block::Block(VStream& payload) : NetMessage(BLOCK) {
 }
 
 void Block::SetNull() {
-    milestoneBlockHash_.SetNull();
-    prevBlockHash_.SetNull();
-    tipBlockHash_.SetNull();
-    merkleRoot_.SetNull();
-    version_    = 0;
-    time_       = 0;
-    diffTarget_ = 0;
-    nonce_      = 0;
+    header_.SetNull();
+    ResetProof();
     transactions_.clear();
     source = Source::UNKNOWN;
 }
 
 bool Block::IsNull() const {
-    return time_ == 0;
+    return header_.timestamp == 0;
 }
 
 uint16_t Block::GetVersion() const {
-    return version_;
+    return header_.version;
 }
 
 uint256 Block::GetMilestoneHash() const {
-    return milestoneBlockHash_;
+    return header_.milestoneBlockHash;
 }
 
 uint256 Block::GetPrevHash() const {
-    return prevBlockHash_;
+    return header_.prevBlockHash;
 }
 
 uint256 Block::GetTipHash() const {
-    return tipBlockHash_;
+    return header_.tipBlockHash;
 }
 
 uint256 Block::GetMerkleRoot() const {
-    return merkleRoot_;
+    return header_.merkleRoot;
 }
 
-void Block::SetMilestoneHash(const uint256& hash) {
-    milestoneBlockHash_ = hash;
+void Block::SetMilestoneHash(const uint256& h) {
+    header_.milestoneBlockHash = h;
 }
 
-void Block::SetPrevHash(const uint256& hash) {
-    prevBlockHash_ = hash;
+void Block::SetPrevHash(const uint256& h) {
+    header_.prevBlockHash = h;
 }
 
-void Block::SetTipHash(const uint256& hash) {
-    tipBlockHash_ = hash;
+void Block::SetTipHash(const uint256& h) {
+    header_.tipBlockHash = h;
 }
 
 void Block::UnCache() {
     optimalEncodingSize_ = 0;
     hash_.SetNull();
-    merkleRoot_.SetNull();
+    header_.merkleRoot.SetNull();
 }
 
 bool Block::Verify() const {
     // check version
     spdlog::trace("Block::Verify version {}", hash_.to_substr());
-    if (version_ != GetParams().version) {
-        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", version_, GetParams().version,
+    if (header_.version != GetParams().version) {
+        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
                      std::to_string(hash_));
         return false;
     }
 
     if (!HasTransaction()) {
-        assert(merkleRoot_.IsNull());
+        assert(header_.merkleRoot.IsNull());
     }
 
     // check pow
@@ -125,10 +144,10 @@ bool Block::Verify() const {
     // check if the timestamp is too far in the future
     spdlog::trace("Block::Verify allowed time {}", hash_.to_substr());
     time_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
-    if (time_ > allowedTime) {
-        time_t t = time_;
+    if (header_.timestamp > allowedTime) {
+        time_t t = header_.timestamp;
         spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", std::string(ctime(&t)),
-                     time_, std::string(ctime(&allowedTime)), allowedTime, std::to_string(hash_));
+                     header_.timestamp, std::string(ctime(&allowedTime)), allowedTime, std::to_string(hash_));
         return false;
     }
 
@@ -162,7 +181,7 @@ bool Block::Verify() const {
 
     // check the conditions of the first registration block
     spdlog::trace("Block::Verify first reg {}", hash_.to_substr());
-    if (prevBlockHash_ == GENESIS.GetHash()) {
+    if (header_.prevBlockHash == GENESIS.GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
             spdlog::info("Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
@@ -229,29 +248,41 @@ size_t Block::GetTransactionSize() const {
 }
 
 void Block::SetDifficultyTarget(uint32_t target) {
-    diffTarget_ = target;
+    header_.diffTarget = target;
 }
 
 uint32_t Block::GetDifficultyTarget() const {
-    return diffTarget_;
+    return header_.diffTarget;
 }
 
-void Block::SetTime(uint32_t time) {
-    time_ = time;
+void Block::SetTime(uint32_t t) {
+    header_.timestamp = t;
 }
 
 uint32_t Block::GetTime() const {
-    return time_;
+    return header_.timestamp;
 }
 
 void Block::SetNonce(uint32_t nonce) {
     hash_.SetNull();
-    merkleRoot_.SetNull();
-    nonce_ = nonce;
+    header_.merkleRoot.SetNull();
+    header_.nonce = nonce;
 }
 
 uint32_t Block::GetNonce() const {
-    return nonce_;
+    return header_.nonce;
+}
+
+void Block::SetProof(const word_t (&proof)[PROOFSIZE]) {
+    memcpy(proof_, proof, PROOFSIZE * sizeof(word_t));
+}
+
+void Block::SetProof(word_t* begin) {
+    memcpy(proof_, begin, PROOFSIZE * sizeof(word_t));
+}
+
+const word_t* Block::GetProof() const {
+    return &proof_[0];
 }
 
 uint256 Block::ComputeMerkleRoot(bool* mutated) const {
@@ -269,13 +300,12 @@ void Block::FinalizeHash() {
 }
 
 void Block::CalculateHash() {
-    if (HasTransaction() && merkleRoot_.IsNull()) {
-        merkleRoot_ = ComputeMerkleRoot(&mutated);
+    if (HasTransaction() && header_.merkleRoot.IsNull()) {
+        header_.merkleRoot = ComputeMerkleRoot(&mutated);
     }
 
     VStream s;
-    s << version_ << milestoneBlockHash_ << prevBlockHash_ << tipBlockHash_ << merkleRoot_ << time_ << diffTarget_
-      << nonce_;
+    s << header_ << proof_;
 
     hash_ = HashSHA2<1>(s);
 }
@@ -330,7 +360,8 @@ bool Block::IsRegistration() const {
 }
 
 bool Block::IsFirstRegistration() const {
-    return HasTransaction() ? transactions_[0]->IsFirstRegistration() && prevBlockHash_ == GENESIS.GetHash() : false;
+    return HasTransaction() ? transactions_[0]->IsFirstRegistration() && header_.prevBlockHash == GENESIS.GetHash() :
+                              false;
 }
 
 arith_uint256 Block::GetChainWork() const {
@@ -340,7 +371,7 @@ arith_uint256 Block::GetChainWork() const {
 
 arith_uint256 Block::GetTargetAsInteger() const {
     arith_uint256 target{};
-    target.SetCompact(diffTarget_);
+    target.SetCompact(header_.diffTarget);
     return target;
 }
 
@@ -369,10 +400,10 @@ void Block::Solve() {
 
     CalculateHash();
     while (UintToArith256(hash_) > target) {
-        if (nonce_ == UINT_LEAST32_MAX) {
-            time_ = time(nullptr);
+        if (header_.nonce == UINT_LEAST32_MAX) {
+            header_.timestamp = time(nullptr);
         }
-        nonce_++;
+        header_.nonce++;
         CalculateHash();
     }
 }
@@ -388,14 +419,19 @@ std::string std::to_string(const Block& block, bool showtx, std::vector<uint8_t>
     std::string s;
     s += " Block { \n";
     s += strprintf("      hash: %s \n", std::to_string(block.GetHash()));
-    s += strprintf("      version: %s \n", block.version_);
-    s += strprintf("      milestone block: %s \n", std::to_string(block.milestoneBlockHash_));
-    s += strprintf("      previous block: %s \n", std::to_string(block.prevBlockHash_));
-    s += strprintf("      tip block: %s \n", std::to_string(block.tipBlockHash_));
-    s += strprintf("      merkle root: %s \n", std::to_string(block.merkleRoot_));
-    s += strprintf("      time: %d \n", std::to_string(block.time_));
-    s += strprintf("      difficulty target: %d \n", std::to_string(block.diffTarget_));
-    s += strprintf("      nonce: %d \n ", std::to_string(block.nonce_));
+    s += strprintf("      version: %s \n", block.header_.version);
+    s += strprintf("      milestone block: %s \n", std::to_string(block.header_.milestoneBlockHash));
+    s += strprintf("      previous block: %s \n", std::to_string(block.header_.prevBlockHash));
+    s += strprintf("      tip block: %s \n", std::to_string(block.header_.tipBlockHash));
+    s += strprintf("      merkle root: %s \n", std::to_string(block.header_.merkleRoot));
+    s += strprintf("      time: %d \n", std::to_string(block.header_.timestamp));
+    s += strprintf("      difficulty target: %d \n", std::to_string(block.header_.diffTarget));
+    s += strprintf("      nonce: %d \n", std::to_string(block.header_.nonce));
+    s += strprintf("      proof: [ ");
+    for (int i = 0; i < PROOFSIZE; ++i) {
+        s += strprintf("%d ", block.proof_[i]);
+    }
+    s += strprintf("] \n");
 
     const std::array<std::string, 3> enumName{"UNKNOWN", "VALID", "INVALID"};
     if (block.HasTransaction() && showtx) {

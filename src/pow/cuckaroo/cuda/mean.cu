@@ -360,6 +360,19 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
     }
 }
 
+int gpuAssert(cudaError_t code, char* file, int line, bool abort) {
+    int device_id;
+    cudaGetDevice(&device_id);
+    if (code != cudaSuccess) {
+        spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+
+        cudaDeviceReset();
+        if (abort)
+            exit(code);
+    }
+    return code;
+}
+
 trimparams::trimparams() {
     ntrims         = 176;
     genA.blocks    = 4096;
@@ -532,8 +545,10 @@ GSolverCtx::GSolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGE
 
 int GSolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     cg.reset();
-    for (uint32_t i = 0; i < nedges; i++)
+    for (uint32_t i = 0; i < nedges; i++) {
         cg.add_compress_edge(edges[i].x, edges[i].y);
+    }
+
     for (uint32_t s = 0; s < cg.nsols; s++) {
         for (uint32_t j = 0; j < PROOFSIZE; j++) {
             soledges[j] = edges[cg.sols[s][j]];

@@ -9,18 +9,9 @@
 #include "siphash.cuh"
 #include "spdlog.h"
 
-extern inline int gpuAssert(cudaError_t code, char* file, int line, bool abort = true) {
-    int device_id;
-    cudaGetDevice(&device_id);
-    if (code != cudaSuccess) {
-        spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+typedef uint32_t proof[PROOFSIZE];
 
-        cudaDeviceReset();
-        if (abort)
-            exit(code);
-    }
-    return code;
-}
+int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 
 #define checkCudaErrors(ans)                                       \
     ({                                                             \
@@ -41,7 +32,6 @@ extern inline int gpuAssert(cudaError_t code, char* file, int line, bool abort =
             return;                                                      \
     })
 
-
 struct blockstpb {
     uint16_t blocks;
     uint16_t tpb;
@@ -57,8 +47,6 @@ struct trimparams {
 
     trimparams();
 };
-
-typedef uint32_t proof[PROOFSIZE];
 
 // maintains set of trimmable edges
 struct GEdgeTrimmer {

@@ -16,7 +16,7 @@
 class Miner {
 public:
     Miner() : solverPool_(1) {}
-    explicit Miner(size_t nThreads, size_t nSipThreads = 0) {
+    Miner(size_t nThreads, size_t nSipThreads = 0) {
 #ifndef __CUDA_ENABLED__
         if ((nSipThreads & (nSipThreads - 1)) != 0) { // make sure it's power of 2
             // Round it to the largest power of 2 less than nSipThreads
@@ -63,6 +63,7 @@ private:
 
     std::atomic<uint32_t> final_nonce;
     std::atomic<uint64_t> final_time;
+    std::atomic<size_t> final_ctx_index;
 
     ConstBlockPtr selfChainHead = nullptr;
     Cumulator distanceCal;

@@ -28,7 +28,7 @@ public:
 
 // proof-of-work parameters
 #define EDGEBITS 29
-#define PROOFSIZE 6
+#define PROOFSIZE 4
 
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,

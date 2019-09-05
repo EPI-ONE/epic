@@ -5,11 +5,6 @@
 
 #include <memory>
 
-// arbitrary length of header hashed into siphash key
-#ifndef HEADERLEN
-#define HEADERLEN 112
-#endif // HEADERLEN
-
 extern inline std::unique_ptr<CSolverCtx> CreateCSolverCtx(SolverParams* params) {
     if (params->nthreads == 0)
         params->nthreads = 1;
