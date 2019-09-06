@@ -1,5 +1,5 @@
 #include "consensus.h"
-#include "dag_manager.h"
+#include "caterpillar.h"
 
 #include <algorithm>
 #include <numeric>
@@ -13,6 +13,9 @@ ChainState::ChainState(const std::shared_ptr<ChainState>& previous,
     : height(previous->height + 1), milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget),
       hashRate(previous->hashRate), lastUpdateTime(previous->lastUpdateTime), nTxnsCounter_(previous->nTxnsCounter_),
       nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)) {
+    if (previous->chainwork == 0) {
+        previous->chainwork = UintToArith256(CAT->GetBestChainWork());
+    }
     chainwork = previous->chainwork + (GetParams().maxTarget / previous->milestoneTarget);
     UpdateDifficulty(msBlock->GetTime());
 }
@@ -222,7 +225,6 @@ size_t NodeRecord::GetOptimalStorageSize() {
     if (snapshot != nullptr) {
         optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height)     // ms height
                                 + GetSizeOfVarInt(snapshot->hashRate) // hash rate
-                                + 4                                   // chain work
                                 + 4                                   // ms target
                                 + 4                                   // block target
         );

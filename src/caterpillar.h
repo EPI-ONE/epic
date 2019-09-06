@@ -31,10 +31,11 @@ public:
     std::vector<RecordPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
-    bool SaveHeadHeight(uint64_t height) const;
+    uint256 GetBestChainWork() const;
     uint256 GetMinerChainHead() const;
+    bool SaveHeadHeight(uint64_t height) const;
     bool SaveMinerChainHead(const uint256&) const;
-
+    bool SaveBestChainWork(const uint256&) const;
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;

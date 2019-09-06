@@ -259,6 +259,14 @@ bool Caterpillar::SaveHeadHeight(uint64_t height) const {
     return dbStore_.WriteInfo("headHeight", height);
 }
 
+uint256 Caterpillar::GetBestChainWork() const {
+    return dbStore_.GetInfo<uint256>("chainwork");    
+}
+
+bool Caterpillar::SaveBestChainWork(const uint256& chainwork) const {
+    return dbStore_.WriteInfo("chainwork", chainwork);
+}
+
 uint256 Caterpillar::GetMinerChainHead() const {
     return dbStore_.GetInfo<uint256>("minerHead");
 }
@@ -342,6 +350,7 @@ bool Caterpillar::StoreLevelSet(const std::vector<RecordWPtr>& lvs) {
         AddCurrentSize(totalSize);
 
         SaveHeadHeight(height);
+        SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
 
         spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", ms.height, height,
                       std::to_string(*dbStore_.GetMsBlockPos(height)));

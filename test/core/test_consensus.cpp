@@ -131,6 +131,10 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
             auto recovered_ms = CreateNextChainState(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
             auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
             ASSERT_EQ(*expected_cs, *recovered_ms);
+
+            if (mses[i]->height > CAT->GetHeadHeight()) {
+                ASSERT_EQ(expected_cs->chainwork, recovered_ms->chainwork);
+            }
         }
     }
 }
