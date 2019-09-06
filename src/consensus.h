@@ -98,11 +98,9 @@ public:
         READWRITE(VARINT(height));
         READWRITE(VARINT(hashRate));
         if (ser_action.ForRead()) {
-            chainwork.SetCompact(ser_readdata32(s));
             milestoneTarget.SetCompact(ser_readdata32(s));
             blockTarget.SetCompact(ser_readdata32(s));
         } else {
-            ::Serialize(s, chainwork.GetCompact());
             ::Serialize(s, milestoneTarget.GetCompact());
             ::Serialize(s, blockTarget.GetCompact());
         }
@@ -113,7 +111,7 @@ public:
      */
     bool operator==(const ChainState& rhs) const {
         // clang-format off
-        return chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
+        return (chainwork == 0 || rhs.chainwork ==0) ? true : chainwork == rhs.chainwork &&
                hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact() &&
