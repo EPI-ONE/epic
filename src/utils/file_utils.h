@@ -20,7 +20,7 @@
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);
 bool CheckFileExist(const std::string& filePath);
-bool Mkdir_recursive(const std::string& path);
+bool MkdirRecursive(const std::string& path);
 void DeleteDir(const std::string& dirpath);
 
 struct FilePos;
@@ -36,10 +36,10 @@ std::string to_string(FileModifier&);
 } // namespace std
 
 namespace file {
-enum FileType : uint8_t { BLK = 0, REC = 1 };
+enum FileType : uint8_t { BLK = 0, VTX = 1 };
 static std::string prefix = "data/";
 void SetDataDirPrefix(std::string strprefix);
-static const std::array<std::string, 2> typestr{"BLK", "REC"};
+static const std::array<std::string, 2> typestr{"BLK", "VTX"};
 std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
 std::string GetFilePath(FileType type, const FilePos&);
@@ -159,7 +159,7 @@ public:
     FileWriter(file::FileType type, const FilePos& pos) {
         std::string dir = file::GetEpochPath(type, pos.nEpoch);
         if (!CheckDirExist(dir)) {
-            Mkdir_recursive(dir);
+            MkdirRecursive(dir);
         }
         std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
         fbuf_.open(filename_, std::ios_base::out | std::ios_base::binary | std::ios_base::app);

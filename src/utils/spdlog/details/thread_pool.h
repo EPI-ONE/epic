@@ -198,12 +198,12 @@ private:
         while (process_next_msg_()) {};
     }
 
-    // process next message in the queue
-    // return true if this thread should still be active (while no terminate msg
-    // was received)
-    bool process_next_msg_()
-    {
-        async_msg incoming_async_msg;
+   // process next message in the queue
+   // return true if this thread should still be active (while no terminate msg
+   // was received)
+   bool process_next_msg_()
+   {
+       async_msg incoming_async_msg;
         bool dequeued = q_.dequeue_for(incoming_async_msg, std::chrono::seconds(10));
         if (!dequeued)
         {

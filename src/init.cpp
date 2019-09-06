@@ -51,7 +51,7 @@ void InitSignal() {
 
 void CreateRoot(const std::string& path) {
     if (!CheckDirExist(path)) {
-        if (Mkdir_recursive(path)) {
+        if (MkdirRecursive(path)) {
             spdlog::info("root {} has been created", path);
         } else {
             throw spdlog::spdlog_ex("fail to create the path " + path);
@@ -122,13 +122,13 @@ int Init(int argc, char* argv[]) {
         // delete old block data
         DeleteDir(CONFIG->GetDBPath());
         DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::BLK]);
-        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::REC]);
+        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::VTX]);
         DeleteDir(CONFIG->GetWalletPath());
     }
 
     STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
-    if (!CAT->DBExists(GENESIS.GetHash())) {
+    if (!STORE->DBExists(GENESIS.GetHash())) {
         // put genesis block into cat
         std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
         STORE->StoreLevelSet(genesisLvs);
@@ -357,7 +357,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
     try {
         if (!CheckDirExist(path)) {
             std::cerr << "The logger dir \"" << path << "\" not found, try to create the directory..." << std::endl;
-            if (Mkdir_recursive(path)) {
+            if (MkdirRecursive(path)) {
                 std::cerr << path << " has been created" << std::endl;
             } else {
                 throw spdlog::spdlog_ex("fail to create the logger file");

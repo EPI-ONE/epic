@@ -193,7 +193,7 @@ private:
      */
     void FlushTrigger();
 
-    void FlushToCAT(ChainStatePtr); // flush the oldest chain states
+    void FlushToSTORE(MilestonePtr); // flush the oldest chain states
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);

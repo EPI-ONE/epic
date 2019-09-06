@@ -172,7 +172,7 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
 void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
     auto message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
     for (auto& h : requests) {
-        if (downloading.contains(h) || CAT->Exists(h)) {
+        if (downloading.contains(h) || STORE->Exists(h)) {
             continue;
         }
 
@@ -193,7 +193,7 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
 }
 
 std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr& peer) {
-    const RecordPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetState(fromHash);
+    const VertexPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetState(fromHash);
     if (!startMilestone) {
         return {};
     }
@@ -531,9 +531,9 @@ VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
         return search->second;
     }
 
-    auto prec = STORE->GetVertex(msHash, withBlock);
-    if (prec && prec->snapshot) {
-        return prec;
+    auto pvtx = STORE->GetVertex(msHash, withBlock);
+    if (pvtx && pvtx->snapshot) {
+        return pvtx;
     }
 
     // cannot happen for in-dag workflow
@@ -576,7 +576,7 @@ void DAGManager::FlushTrigger() {
     for (int i = 0;
          i < bestChain->GetStates().size() - GetParams().cacheStatesSize && cursor != bestChain->GetStates().end();
          i++, cursor++) {
-        if ((*cursor)->isStoraged) {
+        if ((*cursor)->stored) {
             for (auto& fork_it : forks) {
                 fork_it++;
             }
@@ -590,35 +590,35 @@ void DAGManager::FlushTrigger() {
             fork_it++;
         }
 
-        FlushToCAT(*cursor);
+        FlushToSTORE(*cursor);
     }
 
     return;
 }
 
-void DAGManager::FlushToSTORE(ChainStatePtr chain_state) {
-    // first store data to CAT
-    auto [recToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToCAT(chain_state);
-    chain_state->isStoraged                      = true;
+void DAGManager::FlushToSTORE(MilestonePtr ms) {
+    // first store data to STORE
+    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
+    ms->stored                                   = true;
 
-    spdlog::debug("flushing at height {}", chain_state->height);
+    spdlog::debug("flushing at height {}", ms->height);
 
-    storagePool_.Execute([=, recToStore = std::move(recToStore), utxoToStore = std::move(utxoToStore),
+    storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         std::vector<VertexPtr> blocksToListener;
-        blocksToListener.reserve(recToStore.size());
+        blocksToListener.reserve(vtxToStore.size());
 
 
-        std::swap(recToStore.front(), recToStore.back());
-        const auto& ms = *recToStore.front().lock();
+        std::swap(vtxToStore.front(), vtxToStore.back());
+        const auto& ms = *vtxToStore.front().lock();
 
-        STORE->StoreLevelSet(recToStore);
+        STORE->StoreLevelSet(vtxToStore);
         STORE->UpdatePrevRedemHashes(ms.snapshot->regChange);
 
-        std::swap(recToStore.front(), recToStore.back());
-        for (auto& rec : recToStore) {
-            blocksToListener.emplace_back(rec.lock());
-            CAT->UnCache((*rec.lock()).cblock->GetHash());
+        std::swap(vtxToStore.front(), vtxToStore.back());
+        for (auto& vtx : vtxToStore) {
+            blocksToListener.emplace_back(vtx.lock());
+            STORE->UnCache((*vtx.lock()).cblock->GetHash());
         }
         globalStates_.erase(ms.cblock->GetHash());
 
@@ -635,13 +635,13 @@ void DAGManager::FlushToSTORE(ChainStatePtr chain_state) {
         }
 
         // then remove chain states from chains
-        std::vector<uint256> recHashes{};
-        recHashes.reserve(recToStore.size());
+        std::vector<uint256> vtxHashes{};
+        vtxHashes.reserve(vtxToStore.size());
         std::unordered_set<uint256> utxoCreated{};
         utxoCreated.reserve(utxoToStore.size());
 
-        for (auto& rec : recToStore) {
-            recHashes.emplace_back((*rec.lock()).cblock->GetHash());
+        for (auto& vtx : vtxToStore) {
+            vtxHashes.emplace_back((*vtx.lock()).cblock->GetHash());
         }
 
         for (const auto& [key, value] : utxoToStore) {
@@ -650,9 +650,9 @@ void DAGManager::FlushToSTORE(ChainStatePtr chain_state) {
 
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
 
-        verifyThread_.Execute([=, recHashes = std::move(recHashes), txocToRemove = std::move(txocToRemove)]() {
+        verifyThread_.Execute([=, vtxHashes = std::move(vtxHashes), txocToRemove = std::move(txocToRemove)]() {
             for (auto& chain : milestoneChains) {
-                chain->PopOldest(recHashes, txocToRemove);
+                chain->PopOldest(vtxHashes, txocToRemove);
             }
         });
     });
@@ -682,17 +682,17 @@ bool DAGManager::IsMainChainMS(const uint256& blkHash) const {
 }
 
 VertexPtr DAGManager::GetMainChainVertex(const uint256& blkHash) const {
-    auto rec = GetBestChain().GetVertex(blkHash);
-    if (!rec) {
-        rec = STORE->GetVertex(blkHash);
+    auto vtx = GetBestChain().GetVertex(blkHash);
+    if (!vtx) {
+        vtx = STORE->GetVertex(blkHash);
     }
-    return rec;
+    return vtx;
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {
-    auto rec = GetBestChain().GetVertexCache(blockHash);
-    if (rec) {
-        return rec->height;
+    auto vtx = GetBestChain().GetVertexCache(blockHash);
+    if (vtx) {
+        return vtx->height;
     }
     return STORE->GetHeight(blockHash);
 }
@@ -703,14 +703,14 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        auto recs = STORE->GetLevelSetBlksAt(height);
-        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+        auto vtcs = STORE->GetLevelSetBlksAt(height);
+        lvs.insert(lvs.end(), std::make_move_iterator(vtcs.begin()), std::make_move_iterator(vtcs.end()));
     } else {
-        auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
-        std::swap(recs.front(), recs.back());
+        auto vtcs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+        std::swap(vtcs.front(), vtcs.back());
 
-        lvs.reserve(recs.size());
-        for (auto& rwp : recs) {
+        lvs.reserve(vtcs.size());
+        for (auto& rwp : vtcs) {
             lvs.push_back((*rwp.lock()).cblock);
         }
     }
@@ -728,14 +728,14 @@ std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool wi
 
     auto height = GetHeight(blockHash);
     if (height < leastHeightCached) {
-        auto recs = STORE->GetLevelSetRecsAt(height, withBlock);
-        lvs.insert(lvs.end(), std::make_move_iterator(recs.begin()), std::make_move_iterator(recs.end()));
+        auto vtcs = STORE->GetLevelSetVtcsAt(height, withBlock);
+        lvs.insert(lvs.end(), std::make_move_iterator(vtcs.begin()), std::make_move_iterator(vtcs.end()));
     } else {
         auto state = GetState(blockHash);
         if (state) {
-            auto recs = state->snapshot->GetLevelSet();
-            lvs.reserve(recs.size());
-            for (auto& rwp : recs) {
+            auto vtcs = state->snapshot->GetLevelSet();
+            lvs.reserve(vtcs.size());
+            for (auto& rwp : vtcs) {
                 lvs.push_back(rwp.lock());
             }
         }
@@ -754,13 +754,13 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     }
 
     // Find in cache
-    auto recs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+    auto vtcs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
-    std::swap(recs.front(), recs.back());
+    std::swap(vtcs.front(), vtcs.back());
 
     VStream result;
-    for (auto& rwp : recs) {
+    for (auto& rwp : vtcs) {
         result << (*rwp.lock()).cblock;
     }
 

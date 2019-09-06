@@ -44,20 +44,20 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
     auto msHash     = fac.CreateRandomHash();
     uint32_t height = fac.GetRand();
     FilePos msBlkPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
-    FilePos msRecPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
+    FilePos msVtxPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
 
     // Construct a normal block file position contained
     // in the same level set as the above milestone
     auto blkHash       = fac.CreateRandomHash();
     uint32_t blkOffset = fac.GetRand();
-    uint32_t recOffset = fac.GetRand();
+    uint32_t vtxOffset = fac.GetRand();
     FilePos blkPos{msBlkPos.nEpoch, msBlkPos.nName, msBlkPos.nOffset + blkOffset};
-    FilePos recPos{msRecPos.nEpoch, msRecPos.nName, msRecPos.nOffset + recOffset};
+    FilePos vtxPos{msVtxPos.nEpoch, msVtxPos.nName, msVtxPos.nOffset + vtxOffset};
 
     // Write
-    ASSERT_TRUE(db->WriteMsPos(height, msHash, msBlkPos, msRecPos));     // write milestone to "ms" column
-    ASSERT_TRUE(db->WriteRecPos(msHash, height, 0, 0));                  // write milestone to default column
-    ASSERT_TRUE(db->WriteRecPos(blkHash, height, blkOffset, recOffset)); // write normal block to default column
+    ASSERT_TRUE(db->WriteMsPos(height, msHash, msBlkPos, msVtxPos));     // write milestone to "ms" column
+    ASSERT_TRUE(db->WriteVtxPos(msHash, height, 0, 0));                  // write milestone to default column
+    ASSERT_TRUE(db->WriteVtxPos(blkHash, height, blkOffset, vtxOffset)); // write normal block to default column
 
     // Read
     ASSERT_TRUE(db->IsMilestone(msHash));
@@ -70,13 +70,13 @@ TEST_F(TestRocksDB, single_insertion_and_deletion) {
     ASSERT_EQ(msPos1, msPos3);
 
     ASSERT_EQ(msPos1.first, msBlkPos);
-    ASSERT_EQ(msPos1.second, msRecPos);
+    ASSERT_EQ(msPos1.second, msVtxPos);
 
     ASSERT_EQ(blkPoses.first, blkPos);
-    ASSERT_EQ(blkPoses.second, recPos);
+    ASSERT_EQ(blkPoses.second, vtxPos);
 
     // Delete
-    db->DeleteRecPos(blkHash);
+    db->DeleteVtxPos(blkHash);
     ASSERT_FALSE(db->Exists(blkHash));
     ASSERT_EQ(-1, db->GetHeight(blkHash));
 
@@ -90,18 +90,18 @@ TEST_F(TestRocksDB, batch_insertion) {
     auto msHash     = fac.CreateRandomHash();
     uint32_t height = fac.GetRand();
     FilePos msBlkPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
-    FilePos msRecPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
+    FilePos msVtxPos{fac.GetRand() % 10, fac.GetRand() % 100, fac.GetRand()};
 
-    ASSERT_TRUE(db->WriteMsPos(height, msHash, msBlkPos, msRecPos));
+    ASSERT_TRUE(db->WriteMsPos(height, msHash, msBlkPos, msVtxPos));
 
     // Construct normal block positions in the same level set
     std::vector<uint256> hashes      = {msHash};
     std::vector<uint64_t> heights    = {height};
     std::vector<uint32_t> blkOffsets = {0};
-    std::vector<uint32_t> recOffsets = {0};
+    std::vector<uint32_t> vtxOffsets = {0};
 
     std::vector<FilePos> blkPoses = {msBlkPos};
-    std::vector<FilePos> recPoses = {msRecPos};
+    std::vector<FilePos> vtxPoses = {msVtxPos};
 
     int size = 100;
 
@@ -109,17 +109,17 @@ TEST_F(TestRocksDB, batch_insertion) {
         hashes.push_back(fac.CreateRandomHash());
         heights.push_back(height);
         blkOffsets.push_back(fac.GetRand() % 500 + blkOffsets.back());
-        recOffsets.push_back(fac.GetRand() % 50 + recOffsets.back());
+        vtxOffsets.push_back(fac.GetRand() % 50 + vtxOffsets.back());
         blkPoses.emplace_back(msBlkPos.nEpoch, msBlkPos.nName, msBlkPos.nOffset + blkOffsets.back());
-        recPoses.emplace_back(msRecPos.nEpoch, msRecPos.nName, msRecPos.nOffset + recOffsets.back());
+        vtxPoses.emplace_back(msVtxPos.nEpoch, msVtxPos.nName, msVtxPos.nOffset + vtxOffsets.back());
     }
 
-    ASSERT_TRUE(db->WriteRecPoses(hashes, heights, blkOffsets, recOffsets));
+    ASSERT_TRUE(db->WriteVtxPoses(hashes, heights, blkOffsets, vtxOffsets));
 
     for (int i = 1; i < size; ++i) {
         auto pos = *db->GetVertexPos(hashes[i]);
         ASSERT_EQ(blkPoses[i], pos.first);
-        ASSERT_EQ(recPoses[i], pos.second);
+        ASSERT_EQ(vtxPoses[i], pos.second);
     }
 }
 

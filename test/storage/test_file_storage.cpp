@@ -28,8 +28,8 @@ TEST_F(TestFileStorage, basic_read_write) {
     // data preparation
     auto blk = fac.CreateBlock();
     blk.Solve();
-    Vertex rec{blk};
-    uint32_t blksize = blk.GetOptimalEncodingSize(), recsize = rec.GetOptimalStorageSize();
+    Vertex vtx{blk};
+    uint32_t blksize = blk.GetOptimalEncodingSize(), vtxsize = vtx.GetOptimalStorageSize();
     FilePos fpos{0, 0, 0};
     FilePos fpos1{0, 0, blksize};
 
@@ -38,8 +38,8 @@ TEST_F(TestFileStorage, basic_read_write) {
     ASSERT_EQ(writer.GetOffset(), 0);
     writer << blk;
     ASSERT_EQ(writer.GetOffset(), blksize);
-    writer << rec;
-    ASSERT_EQ(writer.GetOffset(), blksize + recsize);
+    writer << vtx;
+    ASSERT_EQ(writer.GetOffset(), blksize + vtxsize);
     writer.Close();
 
     // reading
@@ -50,24 +50,24 @@ TEST_F(TestFileStorage, basic_read_write) {
     ASSERT_EQ(reader.GetOffset(), blksize);
     ASSERT_EQ(blk, blk1);
 
-    Vertex rec1{};
-    reader >> rec1;
-    ASSERT_EQ(reader.GetOffset(), blksize + recsize);
-    ASSERT_EQ(rec, rec1);
+    Vertex vtx1{};
+    reader >> vtx1;
+    ASSERT_EQ(reader.GetOffset(), blksize + vtxsize);
+    ASSERT_EQ(vtx, vtx1);
     reader.Close();
 
     // modifying
     FileModifier modifier{file::FileType::BLK, fpos1};
-    rec.isRedeemed = Vertex::IS_REDEEMED;
-    modifier << rec;
+    vtx.isRedeemed = Vertex::IS_REDEEMED;
+    modifier << vtx;
     modifier.Close();
 
     // checking modifying result
-    Vertex rec2{};
+    Vertex vtx2{};
     FileReader reader2{file::FileType::BLK, fpos1};
-    reader2 >> rec2;
-    ASSERT_EQ(reader2.GetOffset(), blksize + recsize);
-    ASSERT_EQ(rec, rec2);
+    reader2 >> vtx2;
+    ASSERT_EQ(reader2.GetOffset(), blksize + vtxsize);
+    ASSERT_EQ(vtx, vtx2);
     reader2.Close();
 }
 
@@ -115,15 +115,15 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
         const auto& h = block->cblock->GetHash();
 
         // without cblock
-        auto rec = STORE->GetVertex(h, false);
-        ASSERT_TRUE(rec);
-        ASSERT_FALSE(rec->cblock);
-        ASSERT_EQ(*block, *rec);
+        auto vtx = STORE->GetVertex(h, false);
+        ASSERT_TRUE(vtx);
+        ASSERT_FALSE(vtx->cblock);
+        ASSERT_EQ(*block, *vtx);
 
         // with cblock
-        auto rec_blk = STORE->GetVertex(h);
-        ASSERT_TRUE(rec_blk->cblock);
-        ASSERT_EQ(*block, *rec_blk);
+        auto vtx_blk = STORE->GetVertex(h);
+        ASSERT_TRUE(vtx_blk->cblock);
+        ASSERT_EQ(*block, *vtx_blk);
     }
 
     // Recover level sets in blocks in batch
@@ -135,12 +135,12 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
         ASSERT_EQ(*block->cblock, recovered_blk);
     }
 
-    // Recover level sets in recs in batch
-    auto vs_recs = STORE->GetRawLevelSetBetween(1, nLvs, file::FileType::REC);
-    ASSERT_FALSE(vs_recs.empty());
+    // Recover level sets in vtcs in batch
+    auto vs_vtcs = STORE->GetRawLevelSetBetween(1, nLvs, file::FileType::VTX);
+    ASSERT_FALSE(vs_vtcs.empty());
 
     for (auto& block : blocks) {
-        Vertex recovered_rec(vs_recs);
+        Vertex recovered_rec(vs_vtcs);
         ASSERT_EQ(*block, recovered_rec);
     }
 
@@ -149,31 +149,31 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     auto height     = lvs.front()->height;
 
     auto recovered_blks      = STORE->GetLevelSetBlksAt(height);
-    auto recovered_recs_blks = STORE->GetLevelSetRecsAt(height);
-    auto recovered_recs      = STORE->GetLevelSetRecsAt(height, false);
+    auto recovered_vtcs_blks = STORE->GetLevelSetVtcsAt(height);
+    auto recovered_vtcs      = STORE->GetLevelSetVtcsAt(height, false);
 
     ASSERT_EQ(recovered_blks.size(), lvs.size());
-    ASSERT_EQ(recovered_recs_blks.size(), lvs.size());
-    ASSERT_EQ(recovered_recs.size(), lvs.size());
+    ASSERT_EQ(recovered_vtcs_blks.size(), lvs.size());
+    ASSERT_EQ(recovered_vtcs.size(), lvs.size());
 
-    ASSERT_TRUE(recovered_recs_blks[0]->snapshot);
-    ASSERT_FALSE(recovered_recs_blks[0]->snapshot->GetLevelSet().empty());
-    ASSERT_TRUE(recovered_recs_blks[0]->snapshot->GetLevelSet()[0].lock());
+    ASSERT_TRUE(recovered_vtcs_blks[0]->snapshot);
+    ASSERT_FALSE(recovered_vtcs_blks[0]->snapshot->GetLevelSet().empty());
+    ASSERT_TRUE(recovered_vtcs_blks[0]->snapshot->GetLevelSet()[0].lock());
 
     for (size_t i = 0; i < lvs.size(); ++i) {
-        ASSERT_TRUE(recovered_recs_blks[i]->cblock);
+        ASSERT_TRUE(recovered_vtcs_blks[i]->cblock);
         ASSERT_EQ(*lvs[i]->cblock, *recovered_blks[i]);
-        ASSERT_EQ(*lvs[i], *recovered_recs_blks[i]);
-        ASSERT_EQ(*lvs[i], *recovered_recs[i]);
+        ASSERT_EQ(*lvs[i], *recovered_vtcs_blks[i]);
+        ASSERT_EQ(*lvs[i], *recovered_vtcs[i]);
     }
 
     // update vertices
-    Vertex copyRec;
+    Vertex copyVtx;
     {
-        auto rec        = STORE->GetVertex(blocks[0]->cblock->GetHash());
-        rec->isRedeemed = Vertex::IS_REDEEMED;
-        copyRec         = *rec;
+        auto vtx        = STORE->GetVertex(blocks[0]->cblock->GetHash());
+        vtx->isRedeemed = Vertex::IS_REDEEMED;
+        copyVtx         = *vtx;
     }
     auto newout = STORE->GetVertex(blocks[0]->cblock->GetHash());
-    ASSERT_EQ(copyRec, *newout);
+    ASSERT_EQ(copyVtx, *newout);
 }

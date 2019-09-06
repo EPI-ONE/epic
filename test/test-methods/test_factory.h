@@ -15,8 +15,8 @@
 
 using LevelSetBlks = std::vector<ConstBlockPtr>;
 using TestRawChain = std::vector<LevelSetBlks>;
-using LevelSetRecs = std::vector<VertexPtr>;
-using TestChain    = std::vector<LevelSetRecs>;
+using LevelSetVtxs = std::vector<VertexPtr>;
+using TestChain    = std::vector<LevelSetVtxs>;
 
 class NumberGenerator {
 public:
@@ -67,7 +67,7 @@ public:
     Vertex CreateVertex(ConstBlockPtr b);
     VertexPtr CreateVertexPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
     VertexPtr CreateConsecutiveVertexPtr(uint32_t);
-    MilestonePtr CreateMilestonePtr(MilestonePtr previous, VertexPtr& pRec);
+    MilestonePtr CreateMilestonePtr(MilestonePtr previous, VertexPtr& pVtx);
     MilestonePtr CreateMilestonePtr(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& hashes);
     std::tuple<TestRawChain, std::vector<VertexPtr>> CreateRawChain(const VertexPtr& startMs,
                                                                     size_t height,

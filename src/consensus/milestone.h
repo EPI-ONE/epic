@@ -17,6 +17,7 @@ public:
     arith_uint256 blockTarget;
     uint64_t hashRate;
     uint32_t lastUpdateTime = 0;
+    bool stored             = false;
 
     // Incremental change of the last registration block on each peer chain,
     // whose elements are pairs consisting of:
@@ -70,8 +71,8 @@ public:
         return lvs_;
     }
 
-    void PushBlkToLvs(const std::shared_ptr<Vertex>& rec) {
-        lvs_.emplace_back(rec);
+    void PushBlkToLvs(const std::shared_ptr<Vertex>& vtx) {
+        lvs_.emplace_back(vtx);
     }
 
     std::shared_ptr<Vertex> GetMilestone() const {
@@ -105,10 +106,10 @@ public:
      */
     bool operator==(const Milestone& rhs) const {
         // clang-format off
-        return chainwork.GetCompact()       == rhs.chainwork.GetCompact() &&
-               hashRate                     == rhs.hashRate &&
+        return hashRate                     == rhs.hashRate &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact() &&
+               (chainwork == 0 || rhs.chainwork == 0) ? true : chainwork == rhs.chainwork &&
                (!lastUpdateTime || !rhs.lastUpdateTime) ? true : lastUpdateTime == rhs.lastUpdateTime;
         // clang-format on
     }

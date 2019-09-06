@@ -29,7 +29,7 @@ static const std::vector<std::string> COLUMN_NAMES = {
                               // the milestone contained in the same level set
 
     "ms", // (key) level set height
-          // (value) {blk FilePos, rec FilePos}
+          // (value) {blk FilePos, vtx FilePos}
 
     "utxo", // (key) outpoint hash ^ outpoint index
             // (value) utxo
@@ -85,8 +85,8 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetMsPos(const uint64_t& height) 
 
         value.ignore(Hash::SIZE);
         FilePos blkPos(value);
-        FilePos recPos(value);
-        return {{blkPos, recPos}};
+        FilePos vtxPos(value);
+        return {{blkPos, vtxPos}};
     } catch (const std::exception&) {
         return {};
     }
@@ -110,33 +110,35 @@ optional<pair<FilePos, FilePos>> RocksDBStore::GetVertexPos(const uint256& blkHa
         return {};
     }
 
-    auto [height, blkOffset, recOffset] = *offsets;
-    auto [blkPos, recPos]               = *GetMsPos(height);
+    auto [height, blkOffset, vtxOffset] = *offsets;
+    auto [blkPos, vtxPos]               = *GetMsPos(height);
 
     blkPos.nOffset += blkOffset;
-    recPos.nOffset += recOffset;
+    vtxPos.nOffset += vtxOffset;
 
-    return {{blkPos, recPos}};
+    return {{blkPos, vtxPos}};
 }
 
-bool RocksDBStore::WriteRecPos(const uint256& key,
+
+bool RocksDBStore::WriteVtxPos(const uint256& key,
                                const uint64_t& height,
                                const uint32_t& blkOffset,
-                               const uint32_t& recOffset) const {
-    return WritePosImpl(kDefaultColumnFamilyName, key, VARINT(height), blkOffset, recOffset);
+                               const uint32_t& vtxOffset) const {
+    return WritePosImpl(kDefaultColumnFamilyName, key, VARINT(height), blkOffset, vtxOffset);
 }
 
-bool RocksDBStore::WriteRecPoses(const std::vector<uint256>& keys,
+
+bool RocksDBStore::WriteVtxPoses(const std::vector<uint256>& keys,
                                  const std::vector<uint64_t>& heights,
                                  const std::vector<uint32_t>& blkOffsets,
-                                 const std::vector<uint32_t>& recOffsets) const {
+                                 const std::vector<uint32_t>& vtxOffsets) const {
     class WriteBatch wb;
     VStream keyStream;
     keyStream.reserve(Hash::SIZE);
     VStream valueStream;
     valueStream.reserve(16);
 
-    assert(keys.size() == heights.size() && keys.size() == blkOffsets.size() && keys.size() == recOffsets.size());
+    assert(keys.size() == heights.size() && keys.size() == blkOffsets.size() && keys.size() == vtxOffsets.size());
 
     for (size_t i = 0; i < keys.size(); ++i) {
         // Prepare key
@@ -144,7 +146,7 @@ bool RocksDBStore::WriteRecPoses(const std::vector<uint256>& keys,
         Slice keySlice(keyStream.data(), keyStream.size());
 
         // Prepare value
-        valueStream << VARINT(heights[i]) << blkOffsets[i] << recOffsets[i];
+        valueStream << VARINT(heights[i]) << blkOffsets[i] << vtxOffsets[i];
         Slice valueSlice(valueStream.data(), valueStream.size());
 
         wb.Put(db_->DefaultColumnFamily(), keySlice, valueSlice);
@@ -159,9 +161,10 @@ bool RocksDBStore::WriteRecPoses(const std::vector<uint256>& keys,
 bool RocksDBStore::WriteMsPos(const uint64_t& key,
                               const uint256& msHash,
                               const FilePos& blkPos,
-                              const FilePos& recPos) const {
-    return WritePosImpl("ms", key, msHash, blkPos, recPos);
+                              const FilePos& vtxPos) const {
+    return WritePosImpl("ms", key, msHash, blkPos, vtxPos);
 }
+
 
 bool RocksDBStore::ExistsUTXO(const uint256& key) const {
     MAKE_KEY_SLICE(key);
@@ -198,14 +201,14 @@ bool RocksDBStore::RemoveUTXO(const uint256& key) const {
     return db_->Delete(WriteOptions(), handleMap_.at("utxo"), keySlice).ok();
 }
 
-bool RocksDBStore::DeleteRecPos(const uint256& h) const {
+bool RocksDBStore::DeleteVtxPos(const uint256& h) const {
     return db_->Delete(WriteOptions(), db_->DefaultColumnFamily(), VStream(h).str()).ok();
 }
 
 bool RocksDBStore::DeleteMsPos(const uint256& h) const {
     bool status = db_->Delete(WriteOptions(), handleMap_.at("ms"), std::to_string(GetHeight(h))).ok();
     if (status && IsMilestone(h)) {
-        return DeleteRecPos(h);
+        return DeleteVtxPos(h);
     }
     return status;
 }
@@ -296,9 +299,9 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> RocksDBStore::GetVertexOffsets(con
         valueSlice.Reset();
 
         uint64_t height;
-        uint32_t blkOffset, recOffset;
-        value >> VARINT(height) >> blkOffset >> recOffset;
-        return std::make_tuple(height, blkOffset, recOffset);
+        uint32_t blkOffset, vtxOffset;
+        value >> VARINT(height) >> blkOffset >> vtxOffset;
+        return std::make_tuple(height, blkOffset, vtxOffset);
 
     } catch (const std::exception&) {
         return {};

@@ -88,18 +88,18 @@ ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool 
 }
 
 Vertex TestFactory::CreateVertex(ConstBlockPtr b) {
-    Vertex rec(b);
+    Vertex vtx(b);
     // Set extra info
-    rec.minerChainHeight = GetRand();
-    rec.cumulativeReward = Coin(GetRand());
+    vtx.minerChainHeight = GetRand();
+    vtx.cumulativeReward = Coin(GetRand());
 
     if (GetRand() % 2) {
-        rec.validity.push_back(Vertex::VALID);
+        vtx.validity.push_back(Vertex::VALID);
     } else {
-        rec.validity.push_back(Vertex::INVALID);
+        vtx.validity.push_back(Vertex::INVALID);
     }
 
-    return rec;
+    return vtx;
 }
 
 VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
@@ -121,8 +121,8 @@ MilestonePtr TestFactory::CreateMilestonePtr(MilestonePtr previous, Vertex& vert
     return CreateNextMilestone(previous, vertex, std::move(lvs));
 }
 
-MilestonePtr TestFactory::CreateMilestonePtr(MilestonePtr previous, VertexPtr& pRec) {
-    return CreateNextMilestone(previous, *pRec, std::vector<VertexWPtr>{pRec});
+MilestonePtr TestFactory::CreateMilestonePtr(MilestonePtr previous, VertexPtr& pVtx) {
+    return CreateNextMilestone(previous, *pVtx, std::vector<VertexWPtr>{pVtx});
 }
 
 TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool tx) {
@@ -173,9 +173,9 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
         if (CheckMsPOW(blkptr, lastMs->snapshot)) {
             // Prepare the lvs of the milestone
             std::vector<VertexWPtr> lvs;
-            const auto& lvs_recs = testChain.back();
-            lvs.reserve(lvs_recs.size());
-            std::transform(lvs_recs.begin(), lvs_recs.end(), std::back_inserter(lvs),
+            const auto& lvs_vtcs = testChain.back();
+            lvs.reserve(lvs_vtcs.size());
+            std::transform(lvs_vtcs.begin(), lvs_vtcs.end(), std::back_inserter(lvs),
                            [](VertexPtr p) -> VertexWPtr { return VertexWPtr(p); });
 
             CreateNextMilestone(lastMs->snapshot, *node, std::move(lvs));
@@ -204,14 +204,14 @@ std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(con
     std::vector<VertexPtr> milestons;
     milestons.reserve(chain.size());
 
-    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetRecs lvs) {
+    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetVtxs lvs) {
         // extract milestone
         milestons.emplace_back(lvs.back());
 
         // convert each block from VertexPtr to ConstBlockPtr
         LevelSetBlks rawLvs;
         rawLvs.reserve(lvs.size());
-        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](VertexPtr rec) { return rec->cblock; });
+        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](VertexPtr vtx) { return vtx->cblock; });
         return rawLvs;
     });
 

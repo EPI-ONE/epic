@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "cxxopts.hpp"
+#include "cxxopts.h"
 #include "rpc_client.h"
 #include "spdlog/sinks/basic_file_sink.h"
 

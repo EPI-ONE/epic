@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "cxxopts.hpp"
+#include "cxxopts.h"
 #include "storage.h"
 #include "toml_specifacation.h"
 
@@ -60,13 +60,13 @@ int main(int argc, char** argv) {
             std::ofstream file;
             std::string dir = "tools/vertices/";
             if (!CheckDirExist(dir)) {
-                Mkdir_recursive(dir);
+                MkdirRecursive(dir);
             }
             file.open(dir + std::to_string(i) + ".toml", std::ios::out | std::ios::trunc);
 
-            auto set = STORE->GetLevelSetRecsAt(i);
+            auto set = STORE->GetLevelSetVtcsAt(i);
             auto ms  = STORE->GetMilestoneAt(i);
-            auto res = LvsWithRecToToml(set);
+            auto res = LvsWithVtxToToml(set);
             file << *res;
             file.close();
         }

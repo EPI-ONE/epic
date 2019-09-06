@@ -31,14 +31,14 @@ public:
     VStream GetRawLevelSetAt(size_t height, file::FileType = file::FileType::BLK) const;
     VStream GetRawLevelSetBetween(size_t height1, size_t height2, file::FileType = file::FileType::BLK) const;
     std::vector<ConstBlockPtr> GetLevelSetBlksAt(size_t height) const;
-    std::vector<VertexPtr> GetLevelSetRecsAt(size_t height, bool withBlock = true) const;
+    std::vector<VertexPtr> GetLevelSetVtcsAt(size_t height, bool withBlock = true) const;
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
-    uint256 GetBestChainWork() const;
-    uint256 GetMinerChainHead() const;
     bool SaveHeadHeight(uint64_t height) const;
-    bool SaveMinerChainHead(const uint256&) const;
+    uint256 GetBestChainWork() const;
     bool SaveBestChainWork(const uint256&) const;
+    uint256 GetMinerChainHead() const;
+    bool SaveMinerChainHead(const uint256&) const;
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
@@ -121,18 +121,18 @@ private:
     uint32_t fileCapacity_                     = 1 << 28;
     uint16_t epochCapacity_                    = UINT_LEAST16_MAX;
     std::atomic_uint_fast32_t currentBlkEpoch_ = 0;
-    std::atomic_uint_fast32_t currentRecEpoch_ = 0;
+    std::atomic_uint_fast32_t currentVtxEpoch_ = 0;
     std::atomic_uint_fast16_t currentBlkName_  = 0;
-    std::atomic_uint_fast16_t currentRecName_  = 0;
+    std::atomic_uint_fast16_t currentVtxName_  = 0;
     std::atomic_uint_fast32_t currentBlkSize_  = 0;
-    std::atomic_uint_fast32_t currentRecSize_  = 0;
+    std::atomic_uint_fast32_t currentVtxSize_  = 0;
 
     uint32_t loadCurrentBlkEpoch();
-    uint32_t loadCurrentRecEpoch();
+    uint32_t loadCurrentVtxEpoch();
     uint16_t loadCurrentBlkName();
-    uint16_t loadCurrentRecName();
+    uint16_t loadCurrentVtxName();
     uint32_t loadCurrentBlkSize();
-    uint32_t loadCurrentRecSize();
+    uint32_t loadCurrentVtxSize();
 
     void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);

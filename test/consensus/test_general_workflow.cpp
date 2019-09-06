@@ -90,14 +90,14 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto rec = fac.CreateConsecutiveVertexPtr(timeGenerator.NextTime());
+        auto vtx = fac.CreateConsecutiveVertexPtr(timeGenerator.NextTime());
 
         // Generate some "valid" txns
         auto s = (i - 1) % GetParams().blockCapacity + 1;
-        rec->validity.resize(s);
-        memset(rec->validity.data(), Vertex::VALID, s);
+        vtx->validity.resize(s);
+        memset(vtx->validity.data(), Vertex::VALID, s);
 
-        arrayMs[i] = fac.CreateMilestonePtr(arrayMs[i - 1], rec);
+        arrayMs[i] = fac.CreateMilestonePtr(arrayMs[i - 1], vtx);
         ASSERT_EQ(i, arrayMs[i]->height);
 
         if (arrayMs[i]->IsDiffTransition()) {
@@ -137,7 +137,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
             auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
             ASSERT_EQ(*expected_cs, *recovered_ms);
 
-            if (mses[i]->height > CAT->GetHeadHeight()) {
+            if (mses[i]->height > STORE->GetHeadHeight()) {
                 ASSERT_EQ(expected_cs->chainwork, recovered_ms->chainwork);
             }
         }
@@ -168,8 +168,8 @@ TEST_F(TestConsensus, AddNewBlocks) {
     //
     STORE->EnableOBC();
 
-    for (auto& rec : blocks) {
-        DAG->AddNewBlock(rec->cblock, nullptr);
+    for (auto& vtx : blocks) {
+        DAG->AddNewBlock(vtx->cblock, nullptr);
     }
 
     usleep(50000);
@@ -192,25 +192,25 @@ TEST_F(TestConsensus, AddForks) {
     constexpr int n_branches   = 5;
 
     std::vector<TestRawChain> branches;
-    std::vector<std::vector<VertexPtr>> branches_rec;
+    std::vector<std::vector<VertexPtr>> branches_vtx;
     branches.reserve(n_branches);
     branches.reserve(n_branches);
 
-    auto [chain, vMsRec] = fac.CreateRawChain(GENESIS_VERTEX, chain_length);
+    auto [chain, vMsVtx] = fac.CreateRawChain(GENESIS_VERTEX, chain_length);
     // fac.PrintChain(chain);
     branches.emplace_back(std::move(chain));
-    branches_rec.emplace_back(std::move(vMsRec));
+    branches_vtx.emplace_back(std::move(vMsVtx));
 
     for (int i = 1; i < n_branches; ++i) {
         // randomly pick a branch and fork it at random height
-        auto& picked_chain    = branches_rec[fac.GetRand() % branches_rec.size()];
+        auto& picked_chain    = branches_vtx[fac.GetRand() % branches_vtx.size()];
         auto& new_split_point = picked_chain[fac.GetRand() % (chain_length - 3)];
 
-        auto [chain, vMsRec] = fac.CreateRawChain(new_split_point, chain_length);
+        auto [chain, vMsVtx] = fac.CreateRawChain(new_split_point, chain_length);
         // fac.PrintChain(chain);
 
         branches.emplace_back(std::move(chain));
-        branches_rec.emplace_back(std::move(vMsRec));
+        branches_vtx.emplace_back(std::move(vMsVtx));
     }
 
     ///////////////////////////
@@ -276,12 +276,12 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
     const size_t HEIGHT    = GetParams().cacheStatesSize + 5;
     constexpr size_t hfork = 15;
-    auto [chain1, vMsRec]  = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
+    auto [chain1, vMsVtx]  = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
     std::array<TestRawChain, 3> chains;
     chains[0]                        = std::move(chain1);
-    std::tie(chains[1], std::ignore) = fac.CreateRawChain(vMsRec[hfork], HEIGHT - hfork + 5);
-    std::tie(chains[2], std::ignore) = fac.CreateRawChain(vMsRec.back(), 5);
+    std::tie(chains[1], std::ignore) = fac.CreateRawChain(vMsVtx[hfork], HEIGHT - hfork + 5);
+    std::tie(chains[2], std::ignore) = fac.CreateRawChain(vMsVtx.back(), 5);
 
     // add blocks in a carefully assigned sequence
     for (int i : {0, 1, 2}) {
@@ -292,7 +292,6 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
         }
         usleep(50000);
     }
-    usleep(50000);
 
     STORE->Wait();
     DAG->Wait();

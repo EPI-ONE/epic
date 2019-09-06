@@ -228,31 +228,31 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
-    std::vector<VertexPtr> recs;
-    std::vector<VertexWPtr> wrecs;
-    recs.reserve(blocksToValidate.size());
-    wrecs.reserve(blocksToValidate.size());
+    std::vector<VertexPtr> vtcs;
+    std::vector<VertexWPtr> wvtcs;
+    vtcs.reserve(blocksToValidate.size());
+    wvtcs.reserve(blocksToValidate.size());
     verifying_.clear();
 
     for (const auto& b : blocksToValidate) {
-        recs.emplace_back(std::make_shared<Vertex>(b));
-        wrecs.emplace_back(recs.back());
+        vtcs.emplace_back(std::make_shared<Vertex>(b));
+        wvtcs.emplace_back(vtcs.back());
     }
-    auto state = CreateNextMilestone(GetChainHead(), *recs.back(), std::move(wrecs));
+    auto state = CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs));
 
     // validate each block in order
-    for (auto& rec : recs) {
-        if (rec->cblock->IsFirstRegistration()) {
-            const auto& blkHash = rec->cblock->GetHash();
+    for (auto& vtx : vtcs) {
+        if (vtx->cblock->IsFirstRegistration()) {
+            const auto& blkHash = vtx->cblock->GetHash();
             prevRedempHashMap_.insert_or_assign(blkHash, blkHash);
-            rec->isRedeemed = Vertex::NOT_YET_REDEEMED;
+            vtx->isRedeemed = Vertex::NOT_YET_REDEEMED;
             state->regChange.Create(blkHash, blkHash);
-            rec->minerChainHeight = 1;
-            rec->validity[0]      = Vertex::Validity::VALID;
+            vtx->minerChainHeight = 1;
+            vtx->validity[0]      = Vertex::Validity::VALID;
             // Invalidate any txns other than the first registration in this block
-            memset(&rec->validity[1], Vertex::Validity::INVALID, rec->validity.size() - 1);
+            memset(&vtx->validity[1], Vertex::Validity::INVALID, vtx->validity.size() - 1);
         } else {
-            auto [validTXOC, invalidTXOC] = Validate(*rec, state->regChange);
+            auto [validTXOC, invalidTXOC] = Validate(*vtx, state->regChange);
 
             // update ledger in chain for future reference
             if (!validTXOC.Empty()) {
@@ -268,18 +268,18 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
                 state->UpdateTXOC(std::move(invalidTXOC));
             }
 
-            for (const auto& v : rec->validity) {
+            for (const auto& v : vtx->validity) {
                 assert(v);
             }
 
-            rec->UpdateReward(GetPrevReward(*rec));
+            vtx->UpdateReward(GetPrevReward(*vtx));
         }
-        rec->height = state->height;
-        verifying_.insert({rec->cblock->GetHash(), rec});
+        vtx->height = state->height;
+        verifying_.insert({vtx->cblock->GetHash(), vtx});
     }
 
     recentHistory_.merge(std::move(verifying_));
-    return recs.back();
+    return vtcs.back();
 }
 
 std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
@@ -501,9 +501,9 @@ VertexPtr Chain::GetMsVertexCache(const uint256& msHash) const {
     return nullptr;
 }
 
-void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocToRemove) {
-    // remove records
-    for (const auto& lvsh : recToRemove) {
+void Chain::PopOldest(const std::vector<uint256>& vtxToRemove, const TXOC& txocToRemove) {
+    // remove vertices
+    for (const auto& lvsh : vtxToRemove) {
         recentHistory_.erase(lvsh);
     }
 
@@ -514,16 +514,16 @@ void Chain::PopOldest(const std::vector<uint256>& recToRemove, const TXOC& txocT
     states_.pop_front();
 }
 
-std::tuple<std::vector<RecordWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
-Chain::GetDataToSTORE(ChainStatePtr chain_state) {
-    std::vector<RecordWPtr> result_rec = chain_state->GetLevelSet();
-    TXOC result_txoc                   = chain_state->GetTXOC();
+std::tuple<std::vector<VertexWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+Chain::GetDataToSTORE(MilestonePtr ms) {
+    std::vector<VertexWPtr> result_vtx = ms->GetLevelSet();
+    TXOC result_txoc                   = ms->GetTXOC();
 
     std::unordered_map<uint256, UTXOPtr> result_created{};
     for (const auto& key_created : result_txoc.GetCreated()) {
         result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
-    return {result_rec, result_created, result_txoc.GetSpent()};
+    return {result_vtx, result_created, result_txoc.GetSpent()};
 }
 
 bool Chain::IsMilestone(const uint256& blkHash) const {

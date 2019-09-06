@@ -156,5 +156,4 @@ bool ECC_InitSanityCheck();
 std::optional<CKey> DecodeSecret(const std::string& str);
 std::string EncodeSecret(const CKey& key);
 
-
 #endif // BITCOIN_KEY_H

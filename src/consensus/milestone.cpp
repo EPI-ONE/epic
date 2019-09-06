@@ -6,7 +6,7 @@
 #include "storage.h"
 #include "vertex.h"
 
-#include < algorithm>
+#include <algorithm>
 #include <numeric>
 
 Milestone::Milestone(const std::shared_ptr<Milestone>& previous,
@@ -27,8 +27,8 @@ Milestone::Milestone(VStream& payload) {
 }
 
 void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
-    auto sumTxns = [](const VertexWPtr& recPtr) -> uint32_t {
-        const std::vector<uint8_t>& validity = (*recPtr.lock()).validity;
+    auto sumTxns = [](const VertexWPtr& vtxPtr) -> uint32_t {
+        const std::vector<uint8_t>& validity = (*vtxPtr.lock()).validity;
         return std::accumulate(validity.begin(), validity.end(), 0,
                                [](const size_t& sum, const uint8_t& v) { return sum + (v & Vertex::Validity::VALID); });
     };
@@ -45,8 +45,8 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         auto cursor = DAG->GetState(GetMilestone()->cblock->GetMilestoneHash());
 
         while (!cursor->snapshot->IsDiffTransition()) {
-            for (const auto& recPtr : DAG->GetLevelSet(cursor->cblock->GetHash(), false)) {
-                nTxnsCounter_ += sumTxns(recPtr);
+            for (const auto& vtxPtr : DAG->GetLevelSet(cursor->cblock->GetHash(), false)) {
+                nTxnsCounter_ += sumTxns(vtxPtr);
                 nBlkCounter_ += cursor->snapshot->lvs_.size();
             }
             cursor = DAG->GetState(cursor->snapshot->GetMilestone()->cblock->GetMilestoneHash());
@@ -71,8 +71,8 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
 
     // Count the total number of valid transactions and blocks
     // in the period with exponential smoothing
-    for (const auto& recPtr : lvs_) {
-        nTxnsCounter_ += sumTxns(recPtr);
+    for (const auto& vtxPtr : lvs_) {
+        nTxnsCounter_ += sumTxns(vtxPtr);
         nBlkCounter_ += lvs_.size();
     }
 
@@ -143,20 +143,20 @@ const uint256& Milestone::GetMilestoneHash() const {
 }
 
 MilestonePtr CreateNextMilestone(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs) {
-    auto pcs = std::make_shared<Milestone>(previous, vertex.cblock, std::move(lvs));
-    vertex.LinkMilestone(pcs);
-    return pcs;
+    auto pms = std::make_shared<Milestone>(previous, vertex.cblock, std::move(lvs));
+    vertex.LinkMilestone(pms);
+    return pms;
 }
 
-std::string std::to_string(const Milestone& cs) {
+std::string std::to_string(const Milestone& ms) {
     std::string s = "Chain State {\n";
-    s += strprintf("   height:                %s \n", cs.height);
-    s += strprintf("   chainwork:             %s \n", cs.chainwork.GetCompact());
-    s += strprintf("   last update time:      %s \n", cs.lastUpdateTime);
-    s += strprintf("   ms target:             %s \n", cs.milestoneTarget.GetCompact());
-    s += strprintf("   block target:          %s \n", cs.blockTarget.GetCompact());
-    s += strprintf("   hash rate:             %s \n", cs.hashRate);
-    s += strprintf("   avg. # txns per block: %s \n", cs.GetAverageTxnsPerBlock());
+    s += strprintf("   height:                %s \n", ms.height);
+    s += strprintf("   chainwork:             %s \n", ms.chainwork.GetCompact());
+    s += strprintf("   last update time:      %s \n", ms.lastUpdateTime);
+    s += strprintf("   ms target:             %s \n", ms.milestoneTarget.GetCompact());
+    s += strprintf("   block target:          %s \n", ms.blockTarget.GetCompact());
+    s += strprintf("   hash rate:             %s \n", ms.hashRate);
+    s += strprintf("   avg. # txns per block: %s \n", ms.GetAverageTxnsPerBlock());
     s += "   }\n";
     return s;
 }

@@ -87,24 +87,24 @@ size_t Vertex::GetOptimalStorageSize() {
     return optimalStorageSize_;
 }
 
-std::string std::to_string(const Vertex& rec, bool showtx) {
+std::string std::to_string(const Vertex& vtx, bool showtx) {
     std::string s = "Vertex {\n";
-    s += strprintf("   at height :   %i \n", rec.height);
-    s += strprintf("   is milestone: %s \n\n", rec.isMilestone);
+    s += strprintf("   at height :   %i \n", vtx.height);
+    s += strprintf("   is milestone: %s \n\n", vtx.isMilestone);
 
-    if (rec.snapshot) {
+    if (vtx.snapshot) {
         s += "   with snapshot of ";
-        s += to_string(*(rec.snapshot));
+        s += to_string(*(vtx.snapshot));
     }
 
-    if (rec.cblock) {
-        s += strprintf("   contains%s \n", std::to_string(*(rec.cblock), showtx, rec.validity));
+    if (vtx.cblock) {
+        s += strprintf("   contains%s \n", std::to_string(*(vtx.cblock), showtx, vtx.validity));
     }
 
-    s += strprintf("   miner chain height: %s \n", rec.minerChainHeight);
-    s += strprintf("   cumulative reward:  %s \n", rec.cumulativeReward.GetValue());
+    s += strprintf("   miner chain height: %s \n", vtx.minerChainHeight);
+    s += strprintf("   cumulative reward:  %s \n", vtx.cumulativeReward.GetValue());
 
     const std::array<std::string, 3> enumRedeemption{"IS_NOT_REDEMPTION", "NOT_YET_REDEEMED", "IS_REDEEMED"};
-    s += strprintf("   redemption status:  %s \n", enumRedeemption[rec.isRedeemed]);
+    s += strprintf("   redemption status:  %s \n", enumRedeemption[vtx.isRedeemed]);
     return s;
 }

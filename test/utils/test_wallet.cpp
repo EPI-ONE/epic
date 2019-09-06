@@ -176,13 +176,13 @@ TEST_F(TestWallet, workflow) {
     auto tx = WALLET->CreateTx({{10, CKeyID()}});
     ASSERT_EQ(WALLET->GetBalance().GetValue(), 0);
     ASSERT_TRUE(WALLET->SendTxToMemPool(tx));
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
-    ASSERT_EQ(WALLET->GetPending().size(), 1);
+  ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
+  ASSERT_EQ(WALLET->GetPending().size(), 1);
 
-    // receive the change of last transaction
+  // receive the change of last transaction
 
-    while (WALLET->GetSpent().empty()) {
-        usleep(50000);
+  while (WALLET->GetSpent().empty()) {
+      usleep(50000);
     }
 
     EXPECT_EQ(WALLET->GetUnspent().size(), 1);
@@ -206,12 +206,12 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Start();
     MINER->Run();
 
-    WALLET->CreateRandomTx(4);
+  WALLET->CreateRandomTx(4);
 
-    // receive the change of last transaction
-    while (WALLET->GetSpent().size() != 1) {
-        usleep(500000);
-    }
+  // receive the change of last transaction
+  while (WALLET->GetSpent().size() != 1) {
+      usleep(500000);
+  }
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 3);
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);

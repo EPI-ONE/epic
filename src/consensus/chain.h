@@ -55,7 +55,7 @@ public:
 
     /**
      * Create a forked chain from $chain which has the new fork in $fork;
-     * In other words, the last common chain state is the record of the previous milestone of $fork.
+     * In other words, the last common milestone is the vertex of the previous milestone of $fork.
      * Moreover, it does not contain the corresponding chain state of this $fork.
      * We have to further verify it to update chain state.
      */
@@ -117,8 +117,8 @@ public:
      * Removes oldest chain state as well as corresponding data
      */
     void PopOldest(const std::vector<uint256>&, const TXOC&);
-    std::tuple<std::vector<RecordWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
-        GetDataToSTORE(ChainStatePtr);
+    std::tuple<std::vector<VertexWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
+        GetDataToSTORE(MilestonePtr);
 
     bool IsMilestone(const uint256&) const;
     bool IsTxFitsLedger(const ConstTxPtr& tx) const;
@@ -180,8 +180,8 @@ private:
     TXOC ValidateTxns(Vertex&);
     void CheckTxPartition(Vertex&, const arith_uint256&);
 
-    Coin GetPrevReward(const Vertex& rec) const {
-        return GetVertex(rec.cblock->GetPrevHash())->cumulativeReward;
+    Coin GetPrevReward(const Vertex& vtx) const {
+        return GetVertex(vtx.cblock->GetPrevHash())->cumulativeReward;
     }
 
     uint256 GetPrevRedempHash(const uint256& h) const;

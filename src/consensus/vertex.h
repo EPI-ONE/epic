@@ -72,9 +72,9 @@ public:
             auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
             isMilestone = (msFlag == IS_TRUE_MILESTONE);
             if (msFlag > 0) {
-                Milestone cs{};
-                ::Deserialize(s, cs);
-                snapshot = std::make_shared<Milestone>(std::move(cs));
+                Milestone ms{};
+                ::Deserialize(s, ms);
+                snapshot = std::make_shared<Milestone>(std::move(ms));
                 if (snapshot->IsDiffTransition() && cblock) {
                     snapshot->lastUpdateTime = cblock->GetTime();
                 }
@@ -118,7 +118,7 @@ typedef std::shared_ptr<Vertex> VertexPtr;
 typedef std::weak_ptr<Vertex> VertexWPtr;
 
 namespace std {
-string to_string(const Vertex& rec, bool showtx = false);
+string to_string(const Vertex& vtx, bool showtx = false);
 } // namespace std
 
 extern Vertex GENESIS_VERTEX;

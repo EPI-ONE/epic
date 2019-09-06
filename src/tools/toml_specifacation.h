@@ -134,12 +134,12 @@ auto VertexToToml(const VertexPtr& vertex) {
     return root;
 }
 
-auto LvsWithRecToToml(std::vector<VertexPtr>& vertices) {
+auto LvsWithVtxToToml(std::vector<VertexPtr>& vertices) {
     auto root  = cpptoml::make_table();
     auto array = cpptoml::make_table_array(false);
     std::swap(vertices.front(), vertices.back());
-    for (auto& rec : vertices) {
-        array->push_back(VertexToToml(rec));
+    for (auto& vtx : vertices) {
+        array->push_back(VertexToToml(vtx));
     }
     root->insert("vertices", array);
     return root;

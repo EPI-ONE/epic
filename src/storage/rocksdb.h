@@ -22,40 +22,40 @@ public:
 
     /**
      * Gets the milesonte file posisionts at height
-     * Returns {ms hash, blk FilePos, rec FilePos}
+     * Returns {ms hash, blk FilePos, vtx FilePos}
      */
     std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint64_t& height) const;
     std::optional<FilePos> GetMsBlockPos(const uint64_t& height) const;
 
     /**
      * Gets the milesonte file posisionts at height of blk
-     * Returns {blk FilePos, rec FilePos}
+     * Returns {blk FilePos, vtx FilePos}
      */
     std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint256& blk) const;
 
     /**
      * Gets the file posisionts of the hash.
-     * Returns {blk FilePos, rec FilePos}
+     * Returns {blk FilePos, vtx FilePos}
      */
     std::optional<std::pair<FilePos, FilePos>> GetVertexPos(const uint256&) const;
 
     /**
      * Writes the file offsets of the milestone hash
-     * key = ms height, value = {ms hash, ms blk FilePos, ms rec FilePos}
+     * key = ms height, value = {ms hash, ms blk FilePos, ms vtx FilePos}
      */
     bool WriteMsPos(const uint64_t&, const uint256&, const FilePos&, const FilePos&) const;
 
     /**
      * Writes the file offsets of the hash with
-     * key = hash, value = {height, blk offset, rec offset}
+     * key = hash, value = {height, blk offset, vtx offset}
      */
-    bool WriteRecPos(const uint256&, const uint64_t&, const uint32_t&, const uint32_t&) const;
-    bool WriteRecPoses(const std::vector<uint256>&,
+    bool WriteVtxPos(const uint256&, const uint64_t&, const uint32_t&, const uint32_t&) const;
+    bool WriteVtxPoses(const std::vector<uint256>&,
                        const std::vector<uint64_t>&,
                        const std::vector<uint32_t>&,
                        const std::vector<uint32_t>&) const;
 
-    bool DeleteRecPos(const uint256&) const;
+    bool DeleteVtxPos(const uint256&) const;
     bool DeleteMsPos(const uint256&) const;
 
     bool ExistsUTXO(const uint256&) const;

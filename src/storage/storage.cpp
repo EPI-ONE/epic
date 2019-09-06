@@ -8,11 +8,11 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), dbStore_(dbPa
     obcThread_.Start();
 
     currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
-    currentRecEpoch_ = dbStore_.GetInfo<uint32_t>("recE");
+    currentVtxEpoch_ = dbStore_.GetInfo<uint32_t>("vtxE");
     currentBlkName_  = dbStore_.GetInfo<uint16_t>("blkN");
-    currentRecName_  = dbStore_.GetInfo<uint16_t>("recN");
+    currentVtxName_  = dbStore_.GetInfo<uint16_t>("vtxN");
     currentBlkSize_  = dbStore_.GetInfo<uint32_t>("blkS");
-    currentRecSize_  = dbStore_.GetInfo<uint32_t>("recS");
+    currentVtxSize_  = dbStore_.GetInfo<uint32_t>("vtxS");
 }
 
 BlockStore::~BlockStore() {
@@ -76,22 +76,22 @@ ConstBlockPtr BlockStore::FindBlock(const uint256& blkHash) const {
 }
 
 VertexPtr BlockStore::GetMilestoneAt(size_t height) const {
-    VertexPtr rec = ConstructNRFromFile(dbStore_.GetMsPos(height));
-    rec->snapshot->PushBlkToLvs(rec);
-    return rec;
+    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetMsPos(height));
+    vtx->snapshot->PushBlkToLvs(vtx);
+    return vtx;
 }
 
 VertexPtr BlockStore::GetVertex(const uint256& blkHash, bool withBlock) const {
-    VertexPtr rec = ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock);
-    if (rec && rec->isMilestone) {
-        rec->snapshot->PushBlkToLvs(rec);
+    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock);
+    if (vtx && vtx->isMilestone) {
+        vtx->snapshot->PushBlkToLvs(vtx);
     }
-    return rec;
+    return vtx;
 }
 
-std::vector<VertexPtr> BlockStore::GetLevelSetRecsAt(size_t height, bool withBlock) const {
-    // Get recs
-    auto vs = GetRawLevelSetAt(height, file::FileType::REC);
+std::vector<VertexPtr> BlockStore::GetLevelSetVtcsAt(size_t height, bool withBlock) const {
+    // Get vertices
+    auto vs = GetRawLevelSetAt(height, file::FileType::VTX);
 
     if (vs.empty()) {
         return {};
@@ -127,7 +127,7 @@ StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
         return ret;
     }
 
-    auto [blkPos, recPos] = *value;
+    auto [blkPos, vtxPos] = *value;
 
     std::shared_ptr<Block> blk = nullptr;
     if (withBlock) {
@@ -138,19 +138,19 @@ StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
     }
 
     StoredVertex vertex =
-        std::unique_ptr<Vertex, std::function<void(Vertex*)>>(new Vertex{std::move(blk)}, [pos = recPos](Vertex* ptr) {
+        std::unique_ptr<Vertex, std::function<void(Vertex*)>>(new Vertex{std::move(blk)}, [pos = vtxPos](Vertex* ptr) {
             if (pos == FilePos{}) {
                 return;
             }
             if (ptr->isRedeemed == Vertex::IS_REDEEMED) {
-                FileModifier recmod{file::REC, pos};
-                recmod << *ptr;
+                FileModifier vtxmod{file::VTX, pos};
+                vtxmod << *ptr;
             }
             delete ptr;
         });
 
-    FileReader recReader{file::REC, recPos};
-    recReader >> *vertex;
+    FileReader vtxReader{file::VTX, vtxPos};
+    vtxReader >> *vertex;
 
     return vertex;
 }
@@ -188,7 +188,7 @@ VStream BlockStore::GetRawLevelSetBetween(size_t height1, size_t height2, file::
         if (right) {
             rightPos = right->first;
         }
-    } else if (fType == file::FileType::REC) {
+    } else if (fType == file::FileType::VTX) {
         if (left) {
             leftPos = left->second;
         }
@@ -197,7 +197,7 @@ VStream BlockStore::GetRawLevelSetBetween(size_t height1, size_t height2, file::
         }
     } else {
         spdlog::error(
-            "Wrong argument: the third argument can only be either file::FileType::BLK or file::FileType::REC.");
+            "Wrong argument: the third argument can only be either file::FileType::BLK or file::FileType::VTX.");
         return {};
     }
 
@@ -263,15 +263,15 @@ bool BlockStore::SaveHeadHeight(uint64_t height) const {
     return dbStore_.WriteInfo("headHeight", height);
 }
 
-uint256 Caterpillar::GetBestChainWork() const {
+uint256 BlockStore::GetBestChainWork() const {
     return dbStore_.GetInfo<uint256>("chainwork");
 }
 
-bool Caterpillar::SaveBestChainWork(const uint256& chainwork) const {
+bool BlockStore::SaveBestChainWork(const uint256& chainwork) const {
     return dbStore_.WriteInfo("chainwork", chainwork);
 }
 
-uint256 Caterpillar::GetMinerChainHead() const {
+uint256 BlockStore::GetMinerChainHead() const {
     return dbStore_.GetInfo<uint256>("minerHead");
 }
 
@@ -308,11 +308,11 @@ bool BlockStore::RollBackPrevRedemHashes(const RegChange& change) const {
 
 bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
     try {
-        // Function to sum up storage sizes for blk and rec in this lvs
+        // Function to sum up storage sizes for blk and vtx in this lvs
         auto sumSize = [](const std::pair<uint32_t, uint32_t>& prevSum,
-                          const VertexWPtr& rec) -> std::pair<uint32_t, uint32_t> {
-            return std::make_pair(prevSum.first + (*rec.lock()).cblock->GetOptimalEncodingSize(),
-                                  prevSum.second + (*rec.lock()).GetOptimalStorageSize());
+                          const VertexWPtr& vtx) -> std::pair<uint32_t, uint32_t> {
+            return std::make_pair(prevSum.first + (*vtx.lock()).cblock->GetOptimalEncodingSize(),
+                                  prevSum.second + (*vtx.lock()).GetOptimalStorageSize());
         };
 
         // pair of (total block size, total vertex size)
@@ -322,34 +322,34 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         CarryOverFileName(totalSize);
 
         FilePos msBlkPos{loadCurrentBlkEpoch(), loadCurrentBlkName(), loadCurrentBlkSize()};
-        FilePos msRecPos{loadCurrentRecEpoch(), loadCurrentRecName(), loadCurrentRecSize()};
+        FilePos msVtxPos{loadCurrentVtxEpoch(), loadCurrentVtxName(), loadCurrentVtxSize()};
         FileWriter blkFs{file::BLK, msBlkPos};
-        FileWriter recFs{file::REC, msRecPos};
+        FileWriter vtxFs{file::VTX, msVtxPos};
 
         uint32_t blkOffset;
-        uint32_t recOffset;
+        uint32_t vtxOffset;
         uint32_t msBlkOffset = msBlkPos.nOffset;
-        uint32_t msRecOffset = msRecPos.nOffset;
+        uint32_t msVtxOffset = msVtxPos.nOffset;
 
         const auto& ms  = (*lvs.front().lock());
         uint64_t height = ms.snapshot->height;
 
-        for (const auto& rec_wpt : lvs) {
+        for (const auto& vtx_wpt : lvs) {
             // Write to file
-            const auto& rec = (*rec_wpt.lock());
+            const auto& vtx = (*vtx_wpt.lock());
             blkOffset       = blkFs.GetOffset() - msBlkOffset;
-            recOffset       = recFs.GetOffset() - msRecOffset;
-            blkFs << *(rec.cblock);
+            vtxOffset       = vtxFs.GetOffset() - msVtxOffset;
+            blkFs << *(vtx.cblock);
             blkFs.Flush();
-            recFs << rec;
-            recFs.Flush();
+            vtxFs << vtx;
+            vtxFs.Flush();
 
             // Write positions to db
-            dbStore_.WriteRecPos(rec.cblock->GetHash(), height, blkOffset, recOffset);
+            dbStore_.WriteVtxPos(vtx.cblock->GetHash(), height, blkOffset, vtxOffset);
         }
 
         // Write ms position at last to enable search for all blocks in the lvs
-        dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msRecPos);
+        dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msVtxPos);
 
         AddCurrentSize(totalSize);
 
@@ -431,24 +431,24 @@ uint32_t BlockStore::loadCurrentBlkEpoch() {
     return currentBlkEpoch_.load(std::memory_order_seq_cst);
 }
 
-uint32_t BlockStore::loadCurrentRecEpoch() {
-    return currentRecEpoch_.load(std::memory_order_seq_cst);
+uint32_t BlockStore::loadCurrentVtxEpoch() {
+    return currentVtxEpoch_.load(std::memory_order_seq_cst);
 }
 
 uint16_t BlockStore::loadCurrentBlkName() {
     return currentBlkName_.load(std::memory_order_seq_cst);
 }
 
-uint16_t BlockStore::loadCurrentRecName() {
-    return currentRecName_.load(std::memory_order_seq_cst);
+uint16_t BlockStore::loadCurrentVtxName() {
+    return currentVtxName_.load(std::memory_order_seq_cst);
 }
 
 uint32_t BlockStore::loadCurrentBlkSize() {
     return currentBlkSize_.load(std::memory_order_seq_cst);
 }
 
-uint32_t BlockStore::loadCurrentRecSize() {
-    return currentRecSize_.load(std::memory_order_seq_cst);
+uint32_t BlockStore::loadCurrentVtxSize() {
+    return currentVtxSize_.load(std::memory_order_seq_cst);
 }
 
 void BlockStore::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
@@ -465,26 +465,26 @@ void BlockStore::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
         dbStore_.WriteInfo("blkN", loadCurrentBlkName());
     }
 
-    if (loadCurrentRecSize() > 0 && loadCurrentRecSize() + addon.second > fileCapacity_) {
-        currentRecName_.fetch_add(1, std::memory_order_seq_cst);
-        currentRecSize_.store(0, std::memory_order_seq_cst);
-        dbStore_.WriteInfo("recS", (uint32_t) 0);
-        if (loadCurrentRecName() == epochCapacity_) {
-            currentRecEpoch_.fetch_add(1, std::memory_order_seq_cst);
-            currentRecName_.store(0, std::memory_order_seq_cst);
-            dbStore_.WriteInfo("recE", loadCurrentRecEpoch());
+    if (loadCurrentVtxSize() > 0 && loadCurrentVtxSize() + addon.second > fileCapacity_) {
+        currentVtxName_.fetch_add(1, std::memory_order_seq_cst);
+        currentVtxSize_.store(0, std::memory_order_seq_cst);
+        dbStore_.WriteInfo("vtxS", (uint32_t) 0);
+        if (loadCurrentVtxName() == epochCapacity_) {
+            currentVtxEpoch_.fetch_add(1, std::memory_order_seq_cst);
+            currentVtxName_.store(0, std::memory_order_seq_cst);
+            dbStore_.WriteInfo("vtxE", loadCurrentVtxEpoch());
         }
 
-        dbStore_.WriteInfo("recN", loadCurrentRecName());
+        dbStore_.WriteInfo("vtxN", loadCurrentVtxName());
     }
 }
 
 void BlockStore::AddCurrentSize(std::pair<uint32_t, uint32_t> size) {
     currentBlkSize_.fetch_add(size.first, std::memory_order_seq_cst);
-    currentRecSize_.fetch_add(size.second, std::memory_order_seq_cst);
+    currentVtxSize_.fetch_add(size.second, std::memory_order_seq_cst);
 
     dbStore_.WriteInfo("blkS", loadCurrentBlkSize());
-    dbStore_.WriteInfo("recS", loadCurrentRecSize());
+    dbStore_.WriteInfo("vtxS", loadCurrentVtxSize());
 }
 
 FilePos& BlockStore::NextFile(FilePos& pos) const {

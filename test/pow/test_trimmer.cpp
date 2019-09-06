@@ -99,12 +99,12 @@ TEST_F(TestTrimmer, GPU) {
     SolverParams params;
     FillDefaultGPUParams(&params);
 
-    spdlog::info("SolverParams: cuckaroo{} -d {} -h \"\" -m {} -n {} -U {} -u "
-                 "{} -v {} -w {} -y {} -Z {} -z {}",
-                 EDGEBITS, params.device, tp.ntrims, nonce, tp.genA.blocks, tp.genA.tpb, tp.genB.tpb, tp.trim.tpb,
-                 tp.tail.tpb, tp.recover.blocks, tp.recover.tpb);
+  spdlog::info("SolverParams: cuckaroo{} -d {} -h \"\" -m {} -n {} -U {} -u "
+               "{} -v {} -w {} -y {} -Z {} -z {}",
+               EDGEBITS, params.device, tp.ntrims, nonce, tp.genA.blocks, tp.genA.tpb, tp.genB.tpb, tp.trim.tpb,
+               tp.tail.tpb, tp.recover.blocks, tp.recover.tpb);
 
-    cudaDeviceReset();
+  cudaDeviceReset();
 
     int nDevices;
     checkCudaErrors(cudaGetDeviceCount(&nDevices));

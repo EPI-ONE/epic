@@ -10,7 +10,7 @@
 #include <secp256k1_recovery.h>
 
 namespace {
-/* Global secp256k1_context object used for verification. */
+/*Global secp256k1_context object used for verification. */
 secp256k1_context* secp256k1_context_verify = nullptr;
 } // namespace
 

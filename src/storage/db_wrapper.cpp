@@ -11,7 +11,7 @@ DBWrapper::DBWrapper(std::string dbPath, std::vector<std::string> columnNames) {
     this->dbpath_ = dbPath;
     // Make directory DBPATH if missing
     if (!CheckDirExist(dbpath_)) {
-        Mkdir_recursive(dbpath_);
+        MkdirRecursive(dbpath_);
     }
 
     // Create column families

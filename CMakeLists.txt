@@ -10,7 +10,7 @@ add_compile_options(-Wall -Wthread-safety)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fstandalone-debug ")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g ")
 option(ADDRESS_DETECT  "sanitizer flag" ON)
 if (ADDRESS-DETECT)
     STRING(APPEND CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -fno-omit-frame-pointer")
@@ -80,17 +80,17 @@ set(UTIL_DIR src/utils)
 set(HASH_DIR src/hash)
 set(KEY_DIR src/key)
 set(COMPAT_DIR src/compat)
-set(MEMORY_DIR src/memory)
+set(MEMORY_DIR src/utils/memory)
 set(TASM_DIR src/tasm)
-set(SPDLOG_DIR src/spdlog)
+set(SPDLOG_DIR src/utils/spdlog)
 set(WALLET_DIR src/wallet)
-set(CORE_DIR src)
+set(ROOT_DIR src)
 set(TOOLS_DIR src/tools)
-set(CUCKAROO_DIR src/cuckaroo)
+set(CUCKAROO_DIR src/pow/cuckaroo)
 set(CUDA_DIR ${CUCKAROO_DIR}/cuda)
 set(CONSENSUS_DIR src/consensus)
 set(MESSAGES_DIR src/messages)
-set(MINER_DIR src/miner)
+set(POW_DIR src/pow)
 set(STORAGE_DIR src/storage)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
@@ -99,17 +99,18 @@ aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${TASM_DIR} TASM_SRCS)
 aux_source_directory(${HASH_DIR} HASH_SRCS)
 aux_source_directory(${KEY_DIR} KEY_SRCS)
-aux_source_directory(${CORE_DIR} CORE_SRCS)
+aux_source_directory(${ROOT_DIR} ROOT_SRCS)
 aux_source_directory(${MEMORY_DIR} MEMORY_SRCS)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
 aux_source_directory(${WALLET_DIR} WALLET_SRCS)
 aux_source_directory(${CUCKAROO_DIR} CUCKAROO_SRCS)
 aux_source_directory(${CONSENSUS_DIR} CONSENSUS_SRCS)
 aux_source_directory(${MESSAGES_DIR} MESSAGES_SRCS)
-aux_source_directory(${MINER_DIR} MINER_SRCS)
+aux_source_directory(${POW_DIR} POW_SRCS)
 aux_source_directory(${STORAGE_DIR} STORAGE_SRCS)
 
-list(REMOVE_ITEM CORE_SRCS src/main.cpp)
+list(REMOVE_ITEM ROOT_SRCS src/epic.cpp)
+list(REMOVE_ITEM ROOT_SRCS src/epic-cli.cpp)
 
 include_directories(src
         ${RPC_DIR}
@@ -120,7 +121,7 @@ include_directories(src
         ${HASH_DIR}
         ${KEY_DIR}
         ${COMPAT_DIR}
-        ${CORE_DIR}
+        ${ROOT_DIR}
         ${TASM_DIR}
         ${SPDLOG_DIR}
         ${MEMORY_DIR}
@@ -130,7 +131,7 @@ include_directories(src
         ${CUDA_DIR}
         ${CONSENSUS_DIR}
         ${MESSAGES_DIR}
-        ${MINER_DIR}
+        ${POW_DIR}
         ${STORAGE_DIR}
         )
 
@@ -143,7 +144,7 @@ set(SRC_CODE
         ${UTIL_SRCS}
         ${HASH_SRCS}
         ${KEY_SRCS}
-        ${CORE_SRCS}
+        ${ROOT_SRCS}
         ${TASM_SRCS}
         ${MEMORY_SRCS}
         ${INTERFACE_SRCS}
@@ -151,7 +152,7 @@ set(SRC_CODE
         ${CUCKAROO_SRCS}
         ${CONSENSUS_SRCS}
         ${MESSAGES_SRCS}
-        ${MINER_SRCS}
+        ${POW_SRCS}
         ${STORAGE_SRCS}
         )
 
@@ -250,7 +251,8 @@ target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest epiccore)
 add_dependencies(epictest epiccore)
 
-add_executable(parseBlocks ${TOOLS_SRCS})
+set(SRC_PARSER_MAIN src/tools/blockParser.cpp)
+add_executable(parseBlocks ${SRC_PARSER_MAIN})
 target_link_libraries(parseBlocks epiccore)
 add_dependencies(parseBlocks epiccore)
 

@@ -18,7 +18,7 @@ bool CheckFileExist(const std::string& filePath) {
 }
 
 // used c like way to implement this
-bool Mkdir_recursive(const std::string& path) {
+bool MkdirRecursive(const std::string& path) {
     if (path.empty()) {
         return true;
     }

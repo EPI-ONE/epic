@@ -7,7 +7,7 @@
 
 #include "config.h"
 #include "cpptoml.h"
-#include "cxxopts.hpp"
+#include "cxxopts.h"
 #include "file_utils.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "storage.h"

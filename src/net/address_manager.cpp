@@ -126,7 +126,7 @@ std::optional<NetAddress> AddressManager::GetOneAddress(bool onlyNew) {
 void AddressManager::SaveAddress(const std::string& path, const std::string& filename) {
     if (!CheckDirExist(path)) {
         std::cerr << "The address dir \"" << path << "\" not found, try to create the directory..." << std::endl;
-        if (Mkdir_recursive(path)) {
+        if (MkdirRecursive(path)) {
             std::cerr << path << " has been created" << std::endl;
         } else {
             throw spdlog::spdlog_ex("fail to create the address path");
