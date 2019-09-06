@@ -26,7 +26,7 @@ TEST_F(TestTrimmer, CPU) {
     params.nthreads = 16; // should be powers of 2
     params.ntrims   = EDGEBITS >= 30 ? 96 : 68;
 
-    auto ctx = CreateCSolverCtx(&params);
+    auto ctx = CreateCSolverCtx(params);
 
     VStream header(GENESIS);
 
@@ -51,9 +51,9 @@ TEST_F(TestTrimmer, CPU) {
 
     time0 = timestamp();
 
-    ctx->setheader(header);
-    spdlog::trace("nonce {} k0 k1 k2 k3 {:X} {:X} {:X} {:X}", nonce, ctx->trimmer.sip_keys.k0, ctx->trimmer.sip_keys.k1,
-                  ctx->trimmer.sip_keys.k2, ctx->trimmer.sip_keys.k3);
+    ctx->SetHeader(header);
+    spdlog::trace("nonce {} k0 k1 k2 k3 {:X} {:X} {:X} {:X}", nonce, ctx->trimmer.sipkeys.k0, ctx->trimmer.sipkeys.k1,
+                  ctx->trimmer.sipkeys.k2, ctx->trimmer.sipkeys.k3);
     uint32_t nsols = ctx->solve();
 
     time1  = timestamp();
@@ -67,13 +67,13 @@ TEST_F(TestTrimmer, CPU) {
         for (uint32_t i = 0; i < PROOFSIZE; i++)
             spdlog::trace(" {}", (uintmax_t) prf[i]);
         spdlog::trace("\n");
-        int pow_rc = verify(prf, ctx->trimmer.sip_keys);
+        int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys);
         if (pow_rc == POW_OK) {
             spdlog::trace("Verified with cyclehash ");
-            auto cyclehash = HashBLAKE2<256>(prf, sizeof(proof));
+            auto cyclehash = HashBLAKE2<256>(prf, sizeof(Proof));
             spdlog::trace("cycle hash {}", std::to_string(cyclehash));
         } else {
-            spdlog::trace("FAILED due to {}", errstr[pow_rc]);
+            spdlog::trace("FAILED due to {}", ErrStr[pow_rc]);
             ASSERT_TRUE(false);
         }
     }
@@ -97,7 +97,7 @@ TEST_F(TestTrimmer, GPU) {
 
     // Check GPU status and create solver context
     SolverParams params;
-    FillDefaultGPUParams(&params);
+    FillDefaultGPUParams(params);
 
     spdlog::info("SolverParams: cuckaroo{} -d {} -h \"\" -m {} -n {} -U {} -u "
                  "{} -v {} -w {} -y {} -Z {} -z {}",
@@ -123,7 +123,7 @@ TEST_F(TestTrimmer, GPU) {
                  "thread blocks.",
                  PROOFSIZE, EDGEBITS, header.str().c_str(), nonce, NX, NY, params.ntrims, NX);
 
-    auto ctx = CreateGSolverCtx(&params);
+    auto ctx = CreateGSolverCtx(params);
 
     uint64_t bytes = ctx->trimmer.globalbytes();
     int unit;
@@ -142,7 +142,7 @@ TEST_F(TestTrimmer, GPU) {
     // Generate graph and start trimming
     time0 = timestamp();
 
-    ctx->setheader(header.data(), header.size());
+    ctx->SetHeader(header.data(), header.size());
     spdlog::trace("nonce {} k0 k1 k2 k3 {:X} {:X} {:X} {:X}", nonce, ctx->trimmer.sipkeys.k0, ctx->trimmer.sipkeys.k1,
                   ctx->trimmer.sipkeys.k2, ctx->trimmer.sipkeys.k3);
     uint32_t nsols = ctx->solve();
@@ -157,15 +157,15 @@ TEST_F(TestTrimmer, GPU) {
         uint32_t* prf = &ctx->sols[s * PROOFSIZE];
         for (uint32_t i = 0; i < PROOFSIZE; i++)
             spdlog::trace(" {}", (uintmax_t) prf[i]);
-        int pow_rc = verify(prf, ctx->trimmer.sipkeys);
+        int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys);
         if (pow_rc == POW_OK) {
             spdlog::trace("Verified with cyclehash ");
             unsigned char cyclehash[32];
-            HashBLAKE2((char*) prf, sizeof(proof), cyclehash, sizeof(cyclehash));
+            HashBLAKE2((char*) prf, sizeof(Proof), cyclehash, sizeof(cyclehash));
             for (int i = 0; i < 32; i++)
                 spdlog::trace("{}", cyclehash[i]);
         } else {
-            spdlog::trace("FAILED due to {}", errstr[pow_rc]);
+            spdlog::trace("FAILED due to {}", ErrStr[pow_rc]);
             ASSERT_TRUE(false);
         }
     }

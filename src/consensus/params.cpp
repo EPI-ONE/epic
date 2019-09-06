@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "params.h"
+#include "block.h"
+#include "mean.cuh"
 #include "vertex.h"
 
 // 1 day per diffculty cycle on average
@@ -30,6 +32,16 @@ static constexpr uint32_t REWARD_COEFFICIENT = 50;
 static constexpr size_t CACHE_STATES         = 100;
 // capacity of transactions in a block
 static constexpr size_t BLK_CAPACITY = 128;
+
+Params::Params() {
+    solverParams = std::make_unique<SolverParams>();
+#ifndef __CUDA_ENABLED__
+    solverParams->nthreads = nSipThreads;
+    solverParams->ntrims   = EDGEBITS >= 30 ? 96 : 68;
+#else
+    FillDefaultGPUParams(*solverParams);
+#endif
+}
 
 const Block& Params::GetGenesis() const {
     return *genesis_;
@@ -157,7 +169,7 @@ UnitTestParams::UnitTestParams() {
     const std::string genesisHexStr{
         "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
         "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
-        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002103000000149a400376d45e05bac7991494d1421c0101e3b0c44298"
+        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002027040000470c4209aee0d80e089deb111bb6a1130101e3b0c44298"
         "fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f77"
         "2074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101"
         "4200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};

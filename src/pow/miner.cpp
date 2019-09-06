@@ -4,6 +4,30 @@
 
 #include "miner.h"
 
+Miner::Miner() : solverPool_(1) {}
+
+Miner::Miner(size_t nThreads, size_t nSipThreads) {
+#ifndef __CUDA_ENABLED__
+    if ((nSipThreads & (nSipThreads - 1)) != 0) { // make sure it's power of 2
+        // Round it to the largest power of 2 less than nSipThreads
+        uint32_t n = 1 << (sizeof(uint32_t) * 8 - 1);
+        while ((nSipThreads & n) == 0 && n != 0) {
+            n >>= 1;
+        }
+        nSipThreads = n;
+    }
+    spdlog::info("Miner using CPU. {} threads in solver pool.", nThreads);
+#else
+    int nGPUDevices{};
+    checkCudaErrors_V(cudaGetDeviceCount(&nGPUDevices));
+    spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
+
+    nThreads = std::min(nThreads, (size_t) nGPUDevices);
+#endif
+
+    solverPool_.SetThreadSize(nThreads);
+}
+
 bool Miner::Start() {
     bool flag = false;
     if (enabled_.compare_exchange_strong(flag, true)) {
@@ -87,37 +111,43 @@ void Miner::SolveCuckaroo(Block& b) {
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
-            SolverParams _params = this->params;
-            Block blk(b);
-            blk.SetNonce(i + 1);
+            Block::Header blk(b);
+            blk.nonce = i + 1;
             VStream vs(blk);
 
-            _params.device  = i;
-            ctx_q[i]        = CreateSolverCtx(&_params);
-            const auto& ctx = ctx_q[i];
+            SolverParams _params = *GetParams().solverParams;
+            _params.device       = i;
+            ctx_q[i]             = std::unique_ptr<CTX>(CreateSolverCtx(_params));
+            const auto& ctx      = ctx_q[i];
 
             while (final_nonce.load() == 0 && enabled_.load()) {
-                ctx->setheader(vs.data(), HEADERLEN);
+                if (blk.nonce % 128 == 0) {
+                    std::cout << "Solving for nonce " << blk.nonce << std::endl;
+                }
+
+                ctx->SetHeader(vs.data(), vs.size());
 
                 if (ctx->solve()) {
-                    uint256 cyclehash = HashBLAKE2<256>(ctx->sols.data(), sizeof(proof));
-                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", blk.GetNonce(),
-                                  cyclehash.to_substr(), ArithToUint256(target).to_substr());
+                    uint256 cyclehash = HashBLAKE2<256>(ctx->sols.data(), sizeof(Proof));
+                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", blk.nonce, cyclehash.to_substr(),
+                                  ArithToUint256(target).to_substr());
                     if (UintToArith256(cyclehash) <= target) {
                         size_t minus_one = -1;
                         if (final_ctx_index.compare_exchange_strong(minus_one, i)) {
-                            final_nonce = blk.GetNonce();
-                            final_time  = blk.GetTime();
+                            final_nonce = blk.nonce;
+                            final_time  = blk.timestamp;
                         }
                         break;
                     }
                 }
 
-                if (blk.GetNonce() >= UINT_LEAST32_MAX - nthreads) {
-                    blk.SetTime(time(nullptr));
-                    blk.SetNonce(i);
+                if (blk.nonce >= UINT_LEAST32_MAX - nthreads) {
+                    blk.timestamp = time(nullptr);
+                    blk.nonce     = i;
+                    vs            = VStream(blk);
                 } else {
-                    blk.SetNonce(blk.GetNonce() + nthreads);
+                    blk.nonce += nthreads;
+                    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &blk.nonce, sizeof(uint32_t));
                 }
             }
         });
@@ -130,17 +160,17 @@ void Miner::SolveCuckaroo(Block& b) {
     // Abort unfinished tasks
     solverPool_.ClearAndDisableTasks();
     for (const auto& ctx : ctx_q) {
-        StopSolver(ctx);
+        ctx->abort();
     }
     solverPool_.Abort();
 
     spdlog::trace("Final nonce {}", final_nonce.load());
     b.SetNonce(final_nonce.load());
     b.SetProof(ctx_q[final_ctx_index]->sols.data());
-    assert(verify(b.GetProof(), ctx_q[final_ctx_index]->trimmer.sipkeys) == POW_OK);
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
+    assert(b.CheckPOW());
 }
 
 void Miner::Run() {

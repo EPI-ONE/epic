@@ -8,11 +8,6 @@
 #include "siphash.h"
 #include "spdlog.h"
 
-// arbitrary length of header hashed into siphash key
-#ifndef HEADERLEN
-#define HEADERLEN 142
-#endif
-
 #ifndef MAXSOLS
 #define MAXSOLS 4
 #endif
@@ -50,6 +45,8 @@ typedef uint16_t word_t;
 #define NODEMASK EDGEMASK
 #define NODE1MASK NODEMASK
 
+typedef word_t Proof[PROOFSIZE];
+
 // Common Solver parameters, to return to caller
 struct SolverParams {
     uint32_t nthreads = 1;
@@ -85,29 +82,8 @@ struct SolverSolutions {
     Solution sols[MAXSOLS];
 };
 
-#define MAX_NAME_LEN 256
-
-// last error reason, to be picked up by stats
-// to be returned to caller
-static char LAST_ERROR_REASON[MAX_NAME_LEN];
-
-// Solver statistics, to be instantiated by caller
-// and filled by solver if desired
-struct SolverStats {
-    uint32_t device_id = 0;
-    uint32_t edge_bits = 0;
-    char plugin_name[MAX_NAME_LEN]; // will be filled in caller-side
-    char device_name[MAX_NAME_LEN];
-    bool has_errored = false;
-    char error_reason[MAX_NAME_LEN];
-    uint32_t iterations         = 0;
-    uint64_t last_start_time    = 0;
-    uint64_t last_end_time      = 0;
-    uint64_t last_solution_time = 0;
-};
-
 enum verify_code {
-    POW_OK,
+    POW_OK = 0,
     POW_HEADER_LENGTH,
     POW_TOO_BIG,
     POW_TOO_SMALL,
@@ -117,24 +93,20 @@ enum verify_code {
     POW_SHORT_CYCLE
 };
 
-static const char* errstr[] = {"OK",
-                               "wrong header length",
-                               "edge too big",
-                               "edges not ascending",
-                               "endpoints don't match up",
-                               "branch in cycle",
-                               "cycle dead ends",
-                               "cycle too short"};
-
-// fills buffer with EDGE_BLOCK_SIZE siphash outputs for block containing edge in cuckaroo graph
-// returns siphash output for given edge
-uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf);
+static const std::string ErrStr[] = {"OK",
+                                     "wrong header length",
+                                     "edge too big",
+                                     "edges not ascending",
+                                     "endpoints don't match up",
+                                     "branch in cycle",
+                                     "cycle dead ends",
+                                     "cycle too short"};
 
 // verify that edges are ascending and form a cycle in header-generated graph
-int verify(const word_t edges[PROOFSIZE], const siphash_keys& keys);
+int VerifyProof(const word_t edges[PROOFSIZE], const siphash_keys& keys);
 
 // convenience function for extracting siphash keys from header
-void setheader(const char* header, uint32_t headerlen, siphash_keys* keys);
+void SetHeader(const char* header, uint32_t headerlen, siphash_keys* keys);
 
 inline uint64_t timestamp() {
     using namespace std::chrono;

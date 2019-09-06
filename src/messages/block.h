@@ -16,7 +16,7 @@
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 // exact number of size of a block without counting transaction
-static constexpr size_t HEADER_SIZE = HEADERLEN + PROOFSIZE * sizeof(word_t);
+static constexpr size_t HEADER_SIZE = 142 + sizeof(Proof);
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 
@@ -81,7 +81,7 @@ public:
           std::array<word_t, PROOFSIZE> proof = {0})
         : NetMessage(BLOCK),
           header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce) {
-        memcpy(proof_, proof.data(), PROOFSIZE * sizeof(word_t));
+        memcpy(proof_, proof.data(), sizeof(Proof));
         CalculateOptimalEncodingSize();
     }
 
@@ -107,8 +107,12 @@ public:
     void SetDifficultyTarget(uint32_t target);
     void SetTime(uint32_t);
     void SetNonce(uint32_t);
-    void SetProof(const word_t (&proof)[PROOFSIZE]);
+    void SetProof(const Proof&);
     void SetProof(word_t* begin);
+
+    void ResetProof() {
+        memset(proof_, 0, PROOFSIZE);
+    }
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
@@ -213,15 +217,10 @@ protected:
 
 private:
     Header header_;
-    word_t proof_[PROOFSIZE] = {};
+    Proof proof_ = {};
     std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
-    bool mutated                = false;
-
-    void ResetProof() {
-        memset(proof_, 0, PROOFSIZE);
-    }
 
 public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };

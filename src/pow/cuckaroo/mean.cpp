@@ -76,7 +76,7 @@ void CEdgeTrimmer::genUVnodes(const uint32_t& id) {
         dst.matrixv(my);
         for (; edge0 < endedge0; edge0 += NEBS) {
 #if NSIPHASH == 1
-            siphash_state<> shs(sip_keys);
+            siphash_state<> shs(sipkeys);
             for (uint32_t e = 0; e < NEBS; e += NSIPHASH) {
                 shs.hash24(edge0 + e);
                 buf[e] = shs.xor_lanes();
@@ -85,10 +85,10 @@ void CEdgeTrimmer::genUVnodes(const uint32_t& id) {
             const uint64_t e1        = edge0;
             const __m128i vpacketinc = _mm_set1_epi64x(1);
             __m128i v0, v1, v2, v3, v4, v5, v6, v7;
-            v7 = v3 = _mm_set1_epi64x(sip_keys.k3);
-            v4 = v0 = _mm_set1_epi64x(sip_keys.k0);
-            v5 = v1 = _mm_set1_epi64x(sip_keys.k1);
-            v6 = v2          = _mm_set1_epi64x(sip_keys.k2);
+            v7 = v3 = _mm_set1_epi64x(sipkeys.k3);
+            v4 = v0 = _mm_set1_epi64x(sipkeys.k0);
+            v5 = v1 = _mm_set1_epi64x(sipkeys.k1);
+            v6 = v2          = _mm_set1_epi64x(sipkeys.k2);
             __m128i vpacket0 = _mm_set_epi64x(e1 + EDGE_BLOCK_SIZE, e1 + 0);
             __m128i vpacket1 = _mm_set_epi64x(e1 + 3 * EDGE_BLOCK_SIZE, e1 + 2 * EDGE_BLOCK_SIZE);
             for (uint32_t e = 0; e < NEBS; e += NSIPHASH) {
@@ -111,7 +111,7 @@ void CEdgeTrimmer::genUVnodes(const uint32_t& id) {
             }
 #elif NSIPHASH == 8
             const uint64_t e1        = edge0;
-            const __m256i vinit      = _mm256_load_si256((__m256i*) &sip_keys);
+            const __m256i vinit      = _mm256_load_si256((__m256i*) &sipkeys);
             const __m256i vpacketinc = _mm256_set1_epi64x(1);
             __m256i v0, v1, v2, v3, v4, v5, v6, v7;
             v7 = v3 = _mm256_permute4x64_epi64(vinit, 0xFF);
@@ -305,13 +305,13 @@ CSolverCtx::CSolverCtx(uint32_t nthreads, uint32_t n_trims, bool allrounds)
                                                                    // fit in tbucket's memory
 }
 
-void CSolverCtx::setheader(const char* header, uint32_t len) {
-    ::setheader(header, len, &trimmer.sip_keys);
+void CSolverCtx::SetHeader(const char* header, uint32_t len) {
+    ::SetHeader(header, len, &trimmer.sipkeys);
     sols.clear();
 }
 
-void CSolverCtx::setheader(const VStream& header) {
-    setheader(header.data(), header.size());
+void CSolverCtx::SetHeader(const VStream& header) {
+    SetHeader(header.data(), header.size());
 }
 
 uint64_t CSolverCtx::sharedbytes() const {
@@ -338,7 +338,7 @@ void CSolverCtx::recordedge(const uint32_t& i, const uint32_t& u1, const uint32_
     uxymap[u >> ZBITS]            = 1;
 }
 
-void CSolverCtx::solution(const proof& sol) {
+void CSolverCtx::solution(const Proof& sol) {
     for (uint32_t i = 0; i < PROOFSIZE; i++)
         recordedge(i, cg.links[2 * sol[i]].to, cg.links[2 * sol[i] + 1].to);
     sols.resize(sols.size() + PROOFSIZE);
@@ -403,7 +403,7 @@ void* CSolverCtx::matchUnodes(match_ctx* mc) {
     for (uint32_t my = starty; my < endy; my++, endedge0 += NYZ) {
         for (; edge0 < endedge0; edge0 += NEBS) {
 #if NSIPHASH == 1
-            siphash_state<> shs(trimmer.sip_keys);
+            siphash_state<> shs(trimmer.sipkeys);
             for (uint32_t e = 0; e < NEBS; e += NSIPHASH) {
                 shs.hash24(edge0 + e);
                 buf[e] = shs.xor_lanes();
@@ -412,10 +412,10 @@ void* CSolverCtx::matchUnodes(match_ctx* mc) {
             const uint64_t e1        = edge0;
             const __m128i vpacketinc = _mm_set1_epi64x(1);
             __m128i v0, v1, v2, v3, v4, v5, v6, v7;
-            v7 = v3 = _mm_set1_epi64x(trimmer.sip_keys.k3);
-            v4 = v0 = _mm_set1_epi64x(trimmer.sip_keys.k0);
-            v5 = v1 = _mm_set1_epi64x(trimmer.sip_keys.k1);
-            v6 = v2          = _mm_set1_epi64x(trimmer.sip_keys.k2);
+            v7 = v3 = _mm_set1_epi64x(trimmer.sipkeys.k3);
+            v4 = v0 = _mm_set1_epi64x(trimmer.sipkeys.k0);
+            v5 = v1 = _mm_set1_epi64x(trimmer.sipkeys.k1);
+            v6 = v2          = _mm_set1_epi64x(trimmer.sipkeys.k2);
             __m128i vpacket0 = _mm_set_epi64x(e1 + EDGE_BLOCK_SIZE, e1 + 0);
             __m128i vpacket1 = _mm_set_epi64x(e1 + 3 * EDGE_BLOCK_SIZE, e1 + 2 * EDGE_BLOCK_SIZE);
             for (uint32_t e = 0; e < NEBS; e += NSIPHASH) {
@@ -438,7 +438,7 @@ void* CSolverCtx::matchUnodes(match_ctx* mc) {
             }
 #elif NSIPHASH == 8
             const uint64_t e1        = edge0;
-            const __m256i vinit      = _mm256_load_si256((__m256i*) &trimmer.sip_keys);
+            const __m256i vinit      = _mm256_load_si256((__m256i*) &trimmer.sipkeys);
             const __m256i vpacketinc = _mm256_set1_epi64x(1);
             __m256i v0, v1, v2, v3, v4, v5, v6, v7;
             v7 = v3 = _mm256_permute4x64_epi64(vinit, 0xFF);

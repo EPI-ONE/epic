@@ -237,7 +237,7 @@ void* matchworker(void* vp);
 // maintains set of trimmable edges
 class CEdgeTrimmer {
 public:
-    siphash_keys sip_keys;
+    siphash_keys sipkeys;
     yzbucket<ZBUCKETSIZE>* buckets;
     yzbucket<TBUCKETSIZE>* tbuckets;
     zbucket8* tdegs   = nullptr;
@@ -599,8 +599,6 @@ inline int nonce_cmp(const void* a, const void* b) {
     return *(uint32_t*) a - *(uint32_t*) b;
 }
 
-typedef word_t proof[PROOFSIZE];
-
 // break circular reference with forward declaration
 class CSolverCtx;
 
@@ -614,8 +612,8 @@ class CSolverCtx {
 public:
     CEdgeTrimmer trimmer;
     graph<word_t> cg;
-    proof cycleus;
-    proof cyclevs;
+    Proof cycleus;
+    Proof cyclevs;
     std::bitset<NXY> uxymap;
     std::vector<word_t> sols; // concatanation of all proof's indices
 
@@ -624,7 +622,7 @@ public:
 
 #if NSIPHASH > 4
     /* ensure correct alignment for _mm256_load_si256
-     * of sip_keys at start of trimmer struct
+     * of sipkeys at start of trimmer struct
      */
     void* operator new(size_t size) noexcept {
         void* newobj;
@@ -639,14 +637,14 @@ public:
     }
 #endif
 
-    void setheader(const VStream& header);
-    void setheader(const char* header, uint32_t len);
+    void SetHeader(const VStream& header);
+    void SetHeader(const char* header, uint32_t len);
     uint64_t sharedbytes() const;
     uint32_t threadbytes() const;
 
     void recordedge(const uint32_t& i, const uint32_t& u1, const uint32_t& v2);
 
-    void solution(const proof& sol);
+    void solution(const Proof& sol);
     void findcycles();
     int solve();
 

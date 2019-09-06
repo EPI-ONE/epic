@@ -9,7 +9,7 @@
 #include "siphash.cuh"
 #include "spdlog.h"
 
-typedef uint32_t proof[PROOFSIZE];
+typedef uint32_t Proof[PROOFSIZE];
 
 int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 
@@ -23,7 +23,7 @@ int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 #define checkCudaErrors_N(ans)                                           \
     ({                                                                   \
         if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return NULL;                                                 \
+            return nullptr;                                                 \
     })
 
 #define checkCudaErrors_V(ans)                                           \
@@ -83,8 +83,8 @@ struct GSolverCtx {
         delete[] edges;
     }
 
-    void setheader(char* header, uint32_t len) {
-        ::setheader(header, len, &trimmer.sipkeys);
+    void SetHeader(char* header, uint32_t len) {
+        ::SetHeader(header, len, &trimmer.sipkeys);
         sols.clear();
     }
 
@@ -95,5 +95,5 @@ struct GSolverCtx {
     }
 };
 
-extern void FillDefaultGPUParams(SolverParams* params);
-extern std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params);
+extern void FillDefaultGPUParams(SolverParams& params);
+extern GSolverCtx* CreateGSolverCtx(SolverParams& params);

@@ -4,6 +4,7 @@
 
 #include "block.h"
 #include "merkle.h"
+#include "trimmer.h"
 
 #include <unordered_set>
 
@@ -134,10 +135,16 @@ bool Block::Verify() const {
         return false;
     }
 
-    // check for duplicated transactions
-    spdlog::trace("Block::Verify mutation {}", hash_.to_substr());
+    // check merkle
+    spdlog::trace("Block::Verify merkle {}", hash_.to_substr());
+    bool mutated;
+    auto root = ComputeMerkleRoot(&mutated);
     if (mutated) {
         spdlog::info("Block contains duplicated transactions in a merkle tree branch. [{}]", std::to_string(hash_));
+        return false;
+    }
+    if (root != header_.merkleRoot) {
+        spdlog::info("Block contains invalid merkle root. [{}]", std::to_string(hash_));
         return false;
     }
 
@@ -273,12 +280,14 @@ uint32_t Block::GetNonce() const {
     return header_.nonce;
 }
 
-void Block::SetProof(const word_t (&proof)[PROOFSIZE]) {
-    memcpy(proof_, proof, PROOFSIZE * sizeof(word_t));
+void Block::SetProof(const Proof& p) {
+    UnCache();
+    memcpy(proof_, p, sizeof(Proof));
 }
 
 void Block::SetProof(word_t* begin) {
-    memcpy(proof_, begin, PROOFSIZE * sizeof(word_t));
+    UnCache();
+    memcpy(proof_, begin, sizeof(Proof));
 }
 
 const word_t* Block::GetProof() const {
@@ -301,7 +310,7 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     if (HasTransaction() && header_.merkleRoot.IsNull()) {
-        header_.merkleRoot = ComputeMerkleRoot(&mutated);
+        header_.merkleRoot = ComputeMerkleRoot();
     }
 
     VStream s;
@@ -381,14 +390,26 @@ bool Block::CheckPOW() const {
         return false;
     }
 
+    static const std::unique_ptr<CSolverCtx> ctx(CreateCSolverCtx(*GetParams().solverParams));
+    VStream vs(header_);
+    ctx->SetHeader(vs.data(), vs.size());
+
+    auto status = VerifyProof(proof_, ctx->trimmer.sipkeys);
+    if (status != POW_OK) {
+        spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
+        return false;
+    }
+
     arith_uint256 target = GetTargetAsInteger();
     if (target <= 0 || target > GetParams().maxTarget) {
         spdlog::info("Bad difficulty target: " + std::to_string(target));
         return false;
     }
 
-    if (UintToArith256(hash_) > target) {
-        spdlog::info("Hash {} is higher than target {}", std::to_string(GetHash()), std::to_string(target));
+    auto proofHash = HashBLAKE2<256>(proof_, sizeof(Proof));
+    if (UintToArith256(proofHash) > target) {
+        spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash), std::to_string(target),
+                     std::to_string(hash_));
         return false;
     }
 

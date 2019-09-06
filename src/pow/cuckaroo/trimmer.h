@@ -5,23 +5,20 @@
 
 #include <memory>
 
-extern inline std::unique_ptr<CSolverCtx> CreateCSolverCtx(SolverParams* params) {
-    if (params->nthreads == 0)
-        params->nthreads = 1;
-    if (params->ntrims == 0)
-        params->ntrims = EDGEBITS >= 30 ? 96 : 68;
+extern inline CSolverCtx* CreateCSolverCtx(SolverParams& params) {
+    if (params.nthreads == 0) {
+        params.nthreads = 1;
+    }
+    if (params.ntrims == 0) {
+        params.ntrims = EDGEBITS >= 30 ? 96 : 68;
+    }
 
-    return std::make_unique<CSolverCtx>(params->nthreads, params->ntrims, params->allrounds);
+    return new CSolverCtx(params.nthreads, params.ntrims, params.allrounds);
 }
 
 template <typename CTX>
-extern inline void DestroySolverCtx(std::unique_ptr<CTX>& ctx) {
-    ctx.reset(nullptr);
-}
-
-template <typename CTX>
-extern inline void StopSolver(const std::unique_ptr<CTX>& ctx) {
-    ctx->abort();
+extern inline void DestroySolverCtx(CTX* ctx) {
+    delete ctx;
 }
 
 #ifdef __CUDA_ENABLED__
@@ -35,7 +32,7 @@ typedef CSolverCtx CTX;
 
 #endif // __CUDA_ENABLED__
 
-extern inline std::unique_ptr<CTX> CreateSolverCtx(SolverParams* params) {
+extern inline CTX* CreateSolverCtx(SolverParams& params) {
 #ifndef __CUDA_ENABLED__
     return CreateCSolverCtx(params);
 #else

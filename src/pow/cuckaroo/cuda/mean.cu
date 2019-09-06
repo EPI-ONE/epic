@@ -581,33 +581,33 @@ int GSolverCtx::solve() {
     return sols.size() / PROOFSIZE;
 }
 
-void FillDefaultGPUParams(SolverParams* params) {
+void FillDefaultGPUParams(SolverParams& params) {
     trimparams tp;
-    params->device        = 0;
-    params->ntrims        = tp.ntrims;
-    params->genablocks    = min(tp.genA.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.genA.tpb);
-    params->genatpb       = tp.genA.tpb;
-    params->genbtpb       = tp.genB.tpb;
-    params->trimtpb       = tp.trim.tpb;
-    params->tailtpb       = tp.tail.tpb;
-    params->recoverblocks = min(tp.recover.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.recover.tpb);
-    params->recovertpb    = tp.recover.tpb;
-    params->cpuload       = false;
+    params.device        = 0;
+    params.ntrims        = tp.ntrims;
+    params.genablocks    = min(tp.genA.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.genA.tpb);
+    params.genatpb       = tp.genA.tpb;
+    params.genbtpb       = tp.genB.tpb;
+    params.trimtpb       = tp.trim.tpb;
+    params.tailtpb       = tp.tail.tpb;
+    params.recoverblocks = min(tp.recover.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.recover.tpb);
+    params.recovertpb    = tp.recover.tpb;
+    params.cpuload       = false;
 }
 
-std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params) {
+GSolverCtx* CreateGSolverCtx(SolverParams& params) {
     trimparams tp;
-    tp.ntrims         = params->ntrims;
-    tp.genA.blocks    = params->genablocks;
-    tp.genA.tpb       = params->genatpb;
-    tp.genB.tpb       = params->genbtpb;
-    tp.trim.tpb       = params->trimtpb;
-    tp.tail.tpb       = params->tailtpb;
-    tp.recover.blocks = params->recoverblocks;
-    tp.recover.tpb    = params->recovertpb;
+    tp.ntrims         = params.ntrims;
+    tp.genA.blocks    = params.genablocks;
+    tp.genA.tpb       = params.genatpb;
+    tp.genB.tpb       = params.genbtpb;
+    tp.trim.tpb       = params.trimtpb;
+    tp.tail.tpb       = params.tailtpb;
+    tp.recover.blocks = params.recoverblocks;
+    tp.recover.tpb    = params.recovertpb;
 
     cudaDeviceProp prop;
-    checkCudaErrors_N(cudaGetDeviceProperties(&prop, params->device));
+    checkCudaErrors_N(cudaGetDeviceProperties(&prop, params.device));
 
     assert(tp.genA.tpb <= prop.maxThreadsPerBlock);
     assert(tp.genB.tpb <= prop.maxThreadsPerBlock);
@@ -621,10 +621,10 @@ std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params) {
     assert(tp.genA.tpb / NX <= FLUSHA);                                     // check ROWS_LIMIT_LOSSES
     assert(tp.genB.tpb / NX <= FLUSHB);                                     // check COLS_LIMIT_LOSSES
 
-    checkCudaErrors_N(cudaSetDevice(params->device));
-    if (!params->cpuload) {
+    checkCudaErrors_N(cudaSetDevice(params.device));
+    if (!params.cpuload) {
         checkCudaErrors_N(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
     }
 
-    return std::make_unique<GSolverCtx>(tp);
+    return new GSolverCtx(tp);
 }

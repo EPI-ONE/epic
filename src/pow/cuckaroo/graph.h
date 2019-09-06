@@ -8,8 +8,6 @@
 #include <cstdlib>
 #include <new>
 
-typedef word_t proof[PROOFSIZE];
-
 // cuck(ar)oo graph with given limit on number of edges (and on single partition nodes)
 template <typename word_t>
 class graph {
@@ -32,7 +30,7 @@ public:
     compressor<word_t>* compressv = nullptr;
     bitmap<uint32_t> visited;
     uint32_t maxSols;
-    proof* sols = nullptr;
+    Proof* sols = nullptr;
     uint32_t nsols;
 
     graph(){};
@@ -44,7 +42,7 @@ public:
         links     = new link[2 * maxEdges];
         compressu = compressv = 0;
         sharedmem             = false;
-        sols                  = new proof[maxSols + 1]; // extra one for current path
+        sols                  = new Proof[maxSols + 1]; // extra one for current path
         visited.clear();
     }
 
@@ -57,7 +55,7 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits);
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
-        sols      = new proof[maxSols];
+        sols      = new Proof[maxSols];
         visited.clear();
     }
 
@@ -69,7 +67,7 @@ public:
         links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
         compressu = compressv = 0;
         sharedmem             = true;
-        sols                  = new proof[maxSols];
+        sols                  = new Proof[maxSols];
         visited.clear();
     }
 
@@ -83,7 +81,7 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits, bytes += sizeof(link[2 * maxEdges]));
         compressv = new compressor<word_t>(EDGEBITS, compressbits, bytes + compressu->bytes());
         sharedmem = true;
-        sols      = new proof[maxSols];
+        sols      = new Proof[maxSols];
         visited.clear();
     }
 

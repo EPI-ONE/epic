@@ -110,9 +110,9 @@ TEST_F(TestMiner, MineGenesis) {
      * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
      */
 
-    // std::vector<uint16_t> versions     = {100, 10, 1};
-    // std::vector<uint32_t> difficulties = {0x1f00ffffL, 0x1e00ffffL, 0x1d00ffffL};
-    std::vector<uint16_t> versions     = {100};
+    // std::vector<uint16_t> versions     = {100 [>, 10, 1<]};
+    // std::vector<uint32_t> difficulties = {0x2000ffffL [>, 0x1e00ffffL, 0x1d00ffffL<]};
+    std::vector<uint16_t> versions     = {10};
     std::vector<uint32_t> difficulties = {0x1f00ffffL};
 
     Transaction tx;
@@ -162,7 +162,8 @@ TEST_F(TestMiner, MineGenesis) {
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    // genesisBlocks[0].SetNonce(15649);     // UnitTest
+    // genesisBlocks[0].SetNonce(1063);
+    // genesisBlocks[0].SetProof({155323463, 249094318, 300653832, 329365019}); // UnitTest
     // genesisBlocks[1].SetNonce(37692687);  // TestNet
     // genesisBlocks[2].SetNonce(984142618); // MainNet
 

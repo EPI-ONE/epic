@@ -20,7 +20,7 @@ uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf) {
     return buf[edge & EDGE_BLOCK_MASK];
 }
 
-int verify(const word_t edges[PROOFSIZE], const siphash_keys& keys) {
+int VerifyProof(const word_t edges[PROOFSIZE], const siphash_keys& keys) {
     word_t xor0 = 0, xor1 = 0;
     uint64_t sips[EDGE_BLOCK_SIZE];
     word_t uvs[2 * PROOFSIZE];
@@ -65,7 +65,7 @@ int verify(const word_t edges[PROOFSIZE], const siphash_keys& keys) {
     return n == PROOFSIZE ? POW_OK : POW_SHORT_CYCLE;
 }
 
-void setheader(const char* header, uint32_t headerlen, siphash_keys* keys) {
+void SetHeader(const char* header, uint32_t headerlen, siphash_keys* keys) {
     // SHA256((unsigned char *)header, headerlen, (unsigned char *)hdrkey);
     unsigned char hdrkey[32];
     HashBLAKE2(header, headerlen, hdrkey, sizeof(hdrkey));

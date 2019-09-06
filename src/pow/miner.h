@@ -15,32 +15,8 @@
 
 class Miner {
 public:
-    Miner() : solverPool_(1) {}
-    Miner(size_t nThreads, size_t nSipThreads = 0) {
-#ifndef __CUDA_ENABLED__
-        if ((nSipThreads & (nSipThreads - 1)) != 0) { // make sure it's power of 2
-            // Round it to the largest power of 2 less than nSipThreads
-            uint32_t n = 1 << (sizeof(uint32_t) * 8 - 1);
-            while ((nSipThreads & n) == 0 && n != 0) {
-                n >>= 1;
-            }
-            nSipThreads = n;
-        }
-
-        params.nthreads = nSipThreads;
-        params.ntrims   = EDGEBITS >= 30 ? 96 : 68;
-        spdlog::info("Miner using CPU. {} threads in solver pool.", nThreads);
-#else
-        FillDefaultGPUParams(&params);
-        int nGPUDevices{};
-        checkCudaErrors_V(cudaGetDeviceCount(&nGPUDevices));
-        spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
-
-        nThreads = std::min(nThreads, (size_t) nGPUDevices);
-#endif
-
-        solverPool_.SetThreadSize(nThreads);
-    }
+    Miner();
+    Miner(size_t nThreads, size_t nSipThreads = 0);
 
     bool Start();
     bool Stop();
