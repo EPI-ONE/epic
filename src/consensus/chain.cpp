@@ -5,8 +5,8 @@
 #include "chain.h"
 #include "mempool.h"
 #include "storage.h"
-#include "tasm/functors.h"
-#include "tasm/tasm.h"
+#include "functors.h"
+#include "tasm.h"
 
 template <typename K, typename V>
 bool UpdateKey(std::unordered_map<K, V>& m, const K& oldKey, const K& newKey) {

@@ -39,4 +39,5 @@ using rpc::StopMinerRequest;
 using rpc::StopMinerResponse;
 using rpc::StopRequest;
 using rpc::StopResponse;
+
 #endif // EPIC_RPC_HEADER_H

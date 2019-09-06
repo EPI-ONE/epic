@@ -41,7 +41,7 @@ public:
               uint32_t lastUpdateTime,
               std::vector<std::weak_ptr<Vertex>>&& lvs,
               uint32_t nTxnsCounter = 0,
-              uint32_t nBlkCounter = 0)
+              uint32_t nBlkCounter  = 0)
         : height(height), chainwork(chainwork), milestoneTarget(milestoneTarget), blockTarget(blockTarget),
           hashRate(hashRate), lastUpdateTime(lastUpdateTime), nTxnsCounter_(nTxnsCounter), nBlkCounter_(nBlkCounter),
           lvs_(std::move(lvs)) {}
@@ -92,11 +92,9 @@ public:
         READWRITE(VARINT(height));
         READWRITE(VARINT(hashRate));
         if (ser_action.ForRead()) {
-            chainwork.SetCompact(ser_readdata32(s));
             milestoneTarget.SetCompact(ser_readdata32(s));
             blockTarget.SetCompact(ser_readdata32(s));
         } else {
-            ::Serialize(s, chainwork.GetCompact());
             ::Serialize(s, milestoneTarget.GetCompact());
             ::Serialize(s, blockTarget.GetCompact());
         }
@@ -134,9 +132,7 @@ private:
 
 typedef std::shared_ptr<Milestone> MilestonePtr;
 
-MilestonePtr CreateNextMilestone(MilestonePtr previous,
-                                 Vertex& vertex,
-                                 std::vector<std::weak_ptr<Vertex>>&& lvs);
+MilestonePtr CreateNextMilestone(MilestonePtr previous, Vertex& vertex, std::vector<std::weak_ptr<Vertex>>&& lvs);
 
 namespace std {
 string to_string(const Milestone&);
