@@ -1,5 +1,4 @@
-#ifndef __SRC_UTILS_CUCKAROO_BITMAP_H__
-#define __SRC_UTILS_CUCKAROO_BITMAP_H__
+#pragma once
 
 #include <cassert>
 #include <cstdint>
@@ -71,5 +70,3 @@ public:
         return bits[idx];
     }
 };
-
-#endif // __SRC_UTILS_CUCKAROO_BITMAP_H__

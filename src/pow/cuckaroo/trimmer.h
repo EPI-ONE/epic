@@ -1,5 +1,5 @@
-#ifndef __SRC_UTILS_CUCKAROO_TRIMMER_H__
-#define __SRC_UTILS_CUCKAROO_TRIMMER_H__
+#ifndef EPIC_CUCKAROO_TRIMMER_H
+#define EPIC_CUCKAROO_TRIMMER_H
 
 #include "mean.h"
 
@@ -48,4 +48,4 @@ extern inline std::unique_ptr<CTX> CreateSolverCtx(SolverParams* params) {
 #endif
 }
 
-#endif // __SRC_UTILS_CUCKAROO_TRIMMER_H__
+#endif // EPIC_CUCKAROO_TRIMMER_H

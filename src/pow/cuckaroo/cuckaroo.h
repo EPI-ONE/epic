@@ -1,8 +1,7 @@
 // Cuck(at)oo Cycle, a memory-hard proof-of-work
 // Copyright (c) 2013-2019 John Tromp
 
-#ifndef __SRC_UTILS_CUCKAROO_CUCKAROO_H__
-#define __SRC_UTILS_CUCKAROO_CUCKAROO_H__
+#pragma once
 
 #include "blake2b.h"
 #include "siphash.h"
@@ -139,5 +138,3 @@ inline uint64_t timestamp() {
     auto dn                               = now.time_since_epoch();
     return dn.count();
 }
-
-#endif /* ifndef __SRC_UTILS_CUCKAROO_CUCKAROO_H__ */

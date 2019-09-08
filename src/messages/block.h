@@ -82,12 +82,12 @@ public:
     void FinalizeHash();
 
     size_t CalculateOptimalEncodingSize();
-  size_t GetOptimalEncodingSize() const;
+    size_t GetOptimalEncodingSize() const;
 
-  /*
-   * Checks whether the block is correct in format.
-   */
-  bool Verify() const;
+    /*
+     * Checks whether the block is correct in format.
+     */
+    bool Verify() const;
 
     /*
      * Checks whether the block is a registration block.

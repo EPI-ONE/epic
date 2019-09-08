@@ -1,5 +1,4 @@
-#ifndef __SRC_UTILS_CUCKAROO_GRAPH_H__
-#define __SRC_UTILS_CUCKAROO_GRAPH_H__
+#pragma once
 
 #include "bitmap.h"
 #include "compress.h"
@@ -168,5 +167,3 @@ public:
         add_edge(compressu->compress(u), compressv->compress(v));
     }
 };
-
-#endif /* ifndef __SRC_UTILS_CUCKAROO_GRAPH_H__ */
