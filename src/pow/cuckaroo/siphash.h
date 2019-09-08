@@ -1,5 +1,4 @@
-#ifndef __SRC_CRYPTO_SIPHASH_H__
-#define __SRC_CRYPTO_SIPHASH_H__
+#pragma once
 
 #include "portable_endian.h" // for htole32/64
 
@@ -77,5 +76,3 @@ public:
         sip_round();
     }
 };
-
-#endif /* ifndef __SRC_CRYPTO_SIPHASH_H__ */

@@ -161,13 +161,13 @@ public:
     //! Get the KeyID of this public key (hash of its serialization)
     CKeyID GetID() const {
         return CKeyID(Hash160<1>(vch, size()));
-   }
+    }
 
-   /*
-    * Check syntactic correctness.
-    *
-    * Note that this is consensus critical as CheckSig() calls it!
-    */
+    /*
+     * Check syntactic correctness.
+     *
+     * Note that this is consensus critical as CheckSig() calls it!
+     */
     bool IsValid() const {
         return size() > 0;
     }
@@ -189,14 +189,14 @@ public:
 
     /**
      * Check whether a signature is normalized (lower-S).
-    */
-   static bool CheckLowS(const std::vector<unsigned char>& vchSig);
+     */
+    static bool CheckLowS(const std::vector<unsigned char>& vchSig);
 
-   //! Recover a public key from a compact signature.
-   bool RecoverCompact(const uint256& hash, const std::vector<unsigned char>& vchSig);
+    //! Recover a public key from a compact signature.
+    bool RecoverCompact(const uint256& hash, const std::vector<unsigned char>& vchSig);
 
-   //! Turn this public key into an uncompressed public key.
-   bool Decompress();
+    //! Turn this public key into an uncompressed public key.
+    bool Decompress();
 };
 
 std::string EncodeAddress(const CKeyID& addr);

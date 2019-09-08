@@ -7,8 +7,7 @@
 // my own cycle finding is run single threaded to avoid losing cycles
 // to race conditions (typically takes under 1% of runtime)
 
-#ifndef __SRC_UTILS_CUCKAROO_MEAN_H__
-#define __SRC_UTILS_CUCKAROO_MEAN_H__
+#pragma once
 
 #include "barrier.h"
 #include "cuckaroo.h"
@@ -657,5 +656,3 @@ public:
 
     void* matchUnodes(match_ctx* mc);
 };
-
-#endif // __SRC_UTILS_CUCKAROO_MEAN_H__

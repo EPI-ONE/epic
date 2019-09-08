@@ -1,5 +1,4 @@
-#ifndef __SRC_UTILS_CUCKAROO_COMPRESS_H__
-#define __SRC_UTILS_CUCKAROO_COMPRESS_H__
+#pragma once
 
 #include "cuckaroo.h"
 
@@ -78,5 +77,3 @@ public:
         }
     }
 };
-
-#endif /* ifndef __SRC_UTILS_CUCKAROO_COMPRESS_H__ */
