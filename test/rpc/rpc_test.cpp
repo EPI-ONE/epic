@@ -1,13 +1,16 @@
-#include <chrono>
-#include <gtest/gtest.h>
-#include <iostream>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "rpc_client.h"
-#include "rpc_server.h"
+#include <gtest/gtest.h>
 
 #include "key.h"
+#include "rpc_client.h"
+#include "rpc_server.h"
 #include "rpc_tools.h"
 #include "test_env.h"
+
+#include <chrono>
 
 class TestRPCServer : public testing::Test {
 public:
@@ -42,7 +45,7 @@ std::string TestRPCServer::adr = "";
 TEST_F(TestRPCServer, GetBlock) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
-    auto req_hash = std::to_string(GENESIS_RECORD.cblock->GetHash());
+    auto req_hash = std::to_string(GENESIS_VERTEX.cblock->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
 
@@ -59,21 +62,21 @@ TEST_F(TestRPCServer, GetBlock) {
 
 TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     int size = 1;
-    std::vector<RecordPtr> lvs;
+    std::vector<VertexPtr> lvs;
     lvs.reserve(size);
-    auto ms = fac.CreateRecordPtr(1, 1, true);
-    fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, ms);
+    auto ms = fac.CreateVertexPtr(1, 1, true);
+    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, ms);
     ms->isMilestone      = true;
     ms->snapshot->height = 1;
     ms->height           = 1;
     lvs.push_back(ms);
     for (int i = 1; i < size; ++i) {
-        auto b         = fac.CreateRecordPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
+        auto b         = fac.CreateVertexPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
         b->isMilestone = false;
         b->height      = ms->height;
         lvs.push_back(b);
     }
-    ASSERT_TRUE(CAT->StoreLevelSet(lvs));
+    ASSERT_TRUE(STORE->StoreLevelSet(lvs));
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
@@ -95,7 +98,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
 
 TEST_F(TestRPCServer, GetLatestMilestone) {
     int size       = 5;
-    auto chain     = fac.CreateChain(GENESIS_RECORD, size);
+    auto chain     = fac.CreateChain(GENESIS_VERTEX, size);
     auto latest_ms = chain.back().back();
     for (auto lvs : chain) {
         for (auto elem : lvs) {
@@ -117,33 +120,33 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
 
 TEST_F(TestRPCServer, GetNewMilestoneSince) {
     int size = 5;
-    std::vector<RecordPtr> mss;
-    std::vector<RecordPtr> mss_to_check;
-    auto first_ms = fac.CreateRecordPtr(1, 1, true);
-    fac.CreateChainStatePtr(GENESIS_RECORD.snapshot, first_ms);
+    std::vector<VertexPtr> mss;
+    std::vector<VertexPtr> mss_to_check;
+    auto first_ms = fac.CreateVertexPtr(1, 1, true);
+    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, first_ms);
     first_ms->isMilestone      = true;
     first_ms->snapshot->height = 1;
     first_ms->height           = 1;
     mss.push_back(first_ms);
     mss_to_check.push_back(first_ms);
-    ASSERT_TRUE(CAT->StoreLevelSet(mss));
+    ASSERT_TRUE(STORE->StoreLevelSet(mss));
     mss.clear();
     auto prev = first_ms->snapshot;
     for (int i = 2; i < size; ++i) {
-        auto ms = fac.CreateRecordPtr(i, i, true);
-        fac.CreateChainStatePtr(prev, ms);
+        auto ms = fac.CreateVertexPtr(i, i, true);
+        fac.CreateMilestonePtr(prev, ms);
         ms->isMilestone            = true;
         first_ms->snapshot->height = i;
         ms->height                 = i;
         mss.push_back(ms);
         mss_to_check.push_back(ms);
-        ASSERT_TRUE(CAT->StoreLevelSet(mss));
+        ASSERT_TRUE(STORE->StoreLevelSet(mss));
         mss.clear();
         prev = ms->snapshot;
     }
 
     usleep(50000);
-    CAT->Stop();
+    STORE->Stop();
     DAG->Stop();
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));

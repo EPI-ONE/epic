@@ -1,4 +1,9 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "test_factory.h"
+
 #include <cstring>
 #include <memory>
 
@@ -59,7 +64,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
     Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), uint256(),
-                    timeGenerator.NextTime(), GENESIS_RECORD.snapshot->blockTarget.GetCompact(), 0);
+                    timeGenerator.NextTime(), GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0);
 
     if (numTxInput && numTxOutput) {
         for (int i = 0; i < maxTxns; ++i) {
@@ -82,50 +87,48 @@ ConstBlockPtr TestFactory::CreateBlockPtr(int numTxInput, int numTxOutput, bool 
     return std::make_shared<const Block>(CreateBlock(numTxInput, numTxOutput, finalize, maxTxns));
 }
 
-NodeRecord TestFactory::CreateNodeRecord(ConstBlockPtr b) {
-    NodeRecord rec(b);
+Vertex TestFactory::CreateVertex(ConstBlockPtr b) {
+    Vertex vtx(b);
     // Set extra info
-    rec.minerChainHeight = GetRand();
-    rec.cumulativeReward = Coin(GetRand());
+    vtx.minerChainHeight = GetRand();
+    vtx.cumulativeReward = Coin(GetRand());
 
     if (GetRand() % 2) {
-        rec.validity.push_back(NodeRecord::VALID);
+        vtx.validity.push_back(Vertex::VALID);
     } else {
-        rec.validity.push_back(NodeRecord::INVALID);
+        vtx.validity.push_back(Vertex::INVALID);
     }
 
-    return rec;
+    return vtx;
 }
 
-RecordPtr TestFactory::CreateRecordPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
-    return std::make_shared<NodeRecord>(CreateNodeRecord(CreateBlockPtr(numTxInput, numTxOutput, finalize, maxTxns)));
+VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
+    return std::make_shared<Vertex>(CreateVertex(CreateBlockPtr(numTxInput, numTxOutput, finalize, maxTxns)));
 }
 
-RecordPtr TestFactory::CreateConsecutiveRecordPtr(uint32_t timeToset) {
+VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
     Block b = CreateBlock(0, 0, false);
     b.SetTime(timeToset);
     do {
         b.SetNonce(b.GetNonce() + 1);
         b.Solve();
-    } while (UintToArith256(b.GetHash()) > GENESIS_RECORD.snapshot->milestoneTarget);
+    } while (UintToArith256(b.GetHash()) > GENESIS_VERTEX.snapshot->milestoneTarget);
 
-    return std::make_shared<NodeRecord>(std::move(b));
+    return std::make_shared<Vertex>(std::move(b));
 }
 
-ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous,
-                                               NodeRecord& record,
-                                               std::vector<RecordWPtr>&& lvs) {
-    return CreateNextChainState(previous, record, std::move(lvs));
+MilestonePtr TestFactory::CreateMilestonePtr(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs) {
+    return CreateNextMilestone(previous, vertex, std::move(lvs));
 }
 
-ChainStatePtr TestFactory::CreateChainStatePtr(ChainStatePtr previous, RecordPtr& pRec) {
-    return CreateNextChainState(previous, *pRec, std::vector<RecordWPtr>{pRec});
+MilestonePtr TestFactory::CreateMilestonePtr(MilestonePtr previous, VertexPtr& pVtx) {
+    return CreateNextMilestone(previous, *pVtx, std::vector<VertexWPtr>{pVtx});
 }
 
-TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool tx) {
+TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool tx) {
     assert(height);
-    RecordPtr lastMs    = startMs;
-    RecordPtr prevBlock = startMs;
+    VertexPtr lastMs    = startMs;
+    VertexPtr prevBlock = startMs;
 
     TestChain testChain{{}};
 
@@ -156,26 +159,26 @@ TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool
         b.Solve();
 
         ConstBlockPtr blkptr = std::make_shared<const Block>(std::move(b));
-        RecordPtr node       = std::make_shared<NodeRecord>(blkptr);
+        VertexPtr node       = std::make_shared<Vertex>(blkptr);
 
         // Set proper info in node
         node->height           = lastMs->height + 1;
         node->minerChainHeight = prevBlock->minerChainHeight + 1;
         node->validity.resize(blkptr->GetTransactionSize());
-        memset(node->validity.data(), NodeRecord::Validity::VALID, blkptr->GetTransactionSize());
+        memset(node->validity.data(), Vertex::Validity::VALID, blkptr->GetTransactionSize());
 
         prevBlock = node;
         testChain.back().emplace_back(node);
 
         if (CheckMsPOW(blkptr, lastMs->snapshot)) {
             // Prepare the lvs of the milestone
-            std::vector<RecordWPtr> lvs;
-            const auto& lvs_recs = testChain.back();
-            lvs.reserve(lvs_recs.size());
-            std::transform(lvs_recs.begin(), lvs_recs.end(), std::back_inserter(lvs),
-                           [](RecordPtr p) -> RecordWPtr { return RecordWPtr(p); });
+            std::vector<VertexWPtr> lvs;
+            const auto& lvs_vtcs = testChain.back();
+            lvs.reserve(lvs_vtcs.size());
+            std::transform(lvs_vtcs.begin(), lvs_vtcs.end(), std::back_inserter(lvs),
+                           [](VertexPtr p) -> VertexWPtr { return VertexWPtr(p); });
 
-            CreateNextChainState(lastMs->snapshot, *node, std::move(lvs));
+            CreateNextMilestone(lastMs->snapshot, *node, std::move(lvs));
             lastMs = std::move(node);
 
             if (count++ < height - 1) {
@@ -187,36 +190,36 @@ TestChain TestFactory::CreateChain(const RecordPtr& startMs, size_t height, bool
     return testChain;
 }
 
-TestChain TestFactory::CreateChain(const NodeRecord& startMs, size_t height, bool tx) {
-    return CreateChain(std::make_shared<NodeRecord>(startMs), height, tx);
+TestChain TestFactory::CreateChain(const Vertex& startMs, size_t height, bool tx) {
+    return CreateChain(std::make_shared<Vertex>(startMs), height, tx);
 }
 
-std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const RecordPtr& startMs,
+std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(const VertexPtr& startMs,
                                                                              size_t height,
                                                                              bool tx) {
     auto chain = CreateChain(startMs, height, tx);
 
     TestRawChain rawChain;
     rawChain.reserve(chain.size());
-    std::vector<RecordPtr> milestons;
+    std::vector<VertexPtr> milestons;
     milestons.reserve(chain.size());
 
-    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetRecs lvs) {
+    std::transform(chain.begin(), chain.end(), std::back_inserter(rawChain), [&milestons](LevelSetVtxs lvs) {
         // extract milestone
         milestons.emplace_back(lvs.back());
 
-        // convert each block from RecordPtr to ConstBlockPtr
+        // convert each block from VertexPtr to ConstBlockPtr
         LevelSetBlks rawLvs;
         rawLvs.reserve(lvs.size());
-        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](RecordPtr rec) { return rec->cblock; });
+        std::transform(lvs.begin(), lvs.end(), std::back_inserter(rawLvs), [](VertexPtr vtx) { return vtx->cblock; });
         return rawLvs;
     });
 
     return {rawChain, milestons};
 }
 
-std::tuple<TestRawChain, std::vector<RecordPtr>> TestFactory::CreateRawChain(const NodeRecord& startMs,
+std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(const Vertex& startMs,
                                                                              size_t height,
                                                                              bool tx) {
-    return CreateRawChain(std::make_shared<NodeRecord>(startMs), height, tx);
+    return CreateRawChain(std::make_shared<Vertex>(startMs), height, tx);
 }

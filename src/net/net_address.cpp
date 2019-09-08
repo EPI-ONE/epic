@@ -1,7 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "net_address.h"
 
 // for IPv4 address (4 bytes) expressed in 16 bytes, the first 12 bytes should be set to the value below
@@ -13,7 +15,6 @@ IPAddress::IPAddress(const struct in_addr& ip4) {
 
 IPAddress::IPAddress(const struct in6_addr& ip6) {
     SetIP((const uint8_t*) &(ip6.s6_addr), NET_IPV6);
-    //    setIP((const uint8_t *) &(ip6.__u6_addr.__u6_addr8), NET_IPV6);
 }
 
 std::optional<IPAddress> IPAddress::GetByIP(const std::string& ip_string) {
@@ -73,15 +74,15 @@ std::optional<IPAddress> IPAddress::GetByHostname(const std::string& hostname) {
 
 void IPAddress::SetIP(const uint8_t* p, NetworkType type) {
     switch (type) {
-    case NET_IPV4:
-        memcpy(ip, pchIPv4, 12);
-        memcpy(ip + 12, p, 4);
-        break;
-    case NET_IPV6:
-        memcpy(ip, p, 16);
-        break;
-    default:
-        assert("invalid network");
+        case NET_IPV4:
+            memcpy(ip, pchIPv4, 12);
+            memcpy(ip + 12, p, 4);
+            break;
+        case NET_IPV6:
+            memcpy(ip, p, 16);
+            break;
+        default:
+            assert("invalid network");
     }
 }
 
@@ -111,8 +112,8 @@ std::string IPAddress::ToStringIP() const {
         return strprintf("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
     } else {
         return strprintf("%x:%x:%x:%x:%x:%x:%x:%x", GetByte(15) << 8 | GetByte(14), GetByte(13) << 8 | GetByte(12),
-            GetByte(11) << 8 | GetByte(10), GetByte(9) << 8 | GetByte(8), GetByte(7) << 8 | GetByte(6),
-            GetByte(5) << 8 | GetByte(4), GetByte(3) << 8 | GetByte(2), GetByte(1) << 8 | GetByte(0));
+                         GetByte(11) << 8 | GetByte(10), GetByte(9) << 8 | GetByte(8), GetByte(7) << 8 | GetByte(6),
+                         GetByte(5) << 8 | GetByte(4), GetByte(3) << 8 | GetByte(2), GetByte(1) << 8 | GetByte(0));
     }
 }
 
@@ -126,7 +127,7 @@ uint32_t IPAddress::GetIpInt() const {
 
 bool IPAddress::IsRFC1918() const {
     return IsIPv4() && (GetByte(3) == 10 || (GetByte(3) == 192 && GetByte(2) == 168) ||
-                           (GetByte(3) == 172 && (GetByte(2) >= 16 && GetByte(2) <= 31)));
+                        (GetByte(3) == 172 && (GetByte(2) >= 16 && GetByte(2) <= 31)));
 }
 
 bool IPAddress::IsRFC2544() const {
@@ -139,8 +140,8 @@ bool IPAddress::IsRFC6598() const {
 
 bool IPAddress::IsRFC5737() const {
     return IsIPv4() && ((GetByte(3) == 192 && GetByte(2) == 0 && GetByte(1) == 2) ||
-                           (GetByte(3) == 198 && GetByte(2) == 51 && GetByte(1) == 100) ||
-                           (GetByte(3) == 203 && GetByte(2) == 0 && GetByte(1) == 113));
+                        (GetByte(3) == 198 && GetByte(2) == 51 && GetByte(1) == 100) ||
+                        (GetByte(3) == 203 && GetByte(2) == 0 && GetByte(1) == 113));
 }
 
 bool IPAddress::IsRFC3849() const {
@@ -180,7 +181,7 @@ bool IPAddress::IsRFC6145() const {
 
 bool IPAddress::IsRoutable() const {
     return IsValid() && !(IsRFC1918() || IsRFC2544() || IsRFC3927() || IsRFC4862() || IsRFC6598() || IsRFC5737() ||
-                            IsRFC4843() || IsLocal());
+                          IsRFC4843() || IsLocal());
 }
 
 bool IPAddress::IsValid() const {

@@ -1,12 +1,16 @@
-#ifndef __SRC_INIT_H__
-#define __SRC_INIT_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "caterpillar.h"
+#ifndef EPIC_INIT_H
+#define EPIC_INIT_H
+
 #include "config.h"
 #include "cpptoml.h"
-#include "cxxopts.hpp"
+#include "cxxopts.h"
 #include "file_utils.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include "storage.h"
 
 extern std::atomic_bool b_shutdown;
 extern ECCVerifyHandle handle;
@@ -34,4 +38,4 @@ void UseFileLogger(const std::string& path, const std::string& filename);
 void InitLogger();
 
 void CreateDaemon();
-#endif // __SRC_INIT_H__
+#endif // EPIC_INIT_H

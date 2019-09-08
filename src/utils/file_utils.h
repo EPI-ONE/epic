@@ -1,5 +1,11 @@
-#ifndef __SRC_UTILS_FILE_UTILS_H__
-#define __SRC_UTILS_FILE_UTILS_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_FILE_UTILS_H
+#define EPIC_FILE_UTILS_H
+
+#include "stream.h"
 
 #include <array>
 #include <cerrno>
@@ -11,12 +17,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "stream.h"
-
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);
 bool CheckFileExist(const std::string& filePath);
-bool Mkdir_recursive(const std::string& path);
+bool MkdirRecursive(const std::string& path);
 void DeleteDir(const std::string& dirpath);
 
 struct FilePos;
@@ -32,10 +36,10 @@ std::string to_string(FileModifier&);
 } // namespace std
 
 namespace file {
-enum FileType : uint8_t { BLK = 0, REC = 1 };
+enum FileType : uint8_t { BLK = 0, VTX = 1 };
 static std::string prefix = "data/";
 void SetDataDirPrefix(std::string strprefix);
-static const std::array<std::string, 2> typestr{"BLK", "REC"};
+static const std::array<std::string, 2> typestr{"BLK", "VTX"};
 std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
 std::string GetFilePath(FileType type, const FilePos&);
@@ -155,7 +159,7 @@ public:
     FileWriter(file::FileType type, const FilePos& pos) {
         std::string dir = file::GetEpochPath(type, pos.nEpoch);
         if (!CheckDirExist(dir)) {
-            Mkdir_recursive(dir);
+            MkdirRecursive(dir);
         }
         std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
         fbuf_.open(filename_, std::ios_base::out | std::ios_base::binary | std::ios_base::app);
@@ -202,4 +206,4 @@ public:
     }
 };
 
-#endif // __SRC_UTILS_FILE_UTILS_H__
+#endif // EPIC_FILE_UTILS_H

@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "wallet.h"
 #include "mempool.h"
 
@@ -73,12 +77,12 @@ void Wallet::SendingStorageTask(uint32_t period) {
     }
 }
 
-void Wallet::OnLvsConfirmed(std::vector<RecordPtr> records,
+void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
                             std::unordered_map<uint256, UTXOPtr> UTXOs,
                             std::unordered_set<uint256> STXOs) {
-    threadPool_.Execute([=, records = std::move(records), UTXOs = std::move(UTXOs), STXOs = std::move(STXOs)]() {
-        for (auto& record : records) {
-            ProcessRecord(record);
+    threadPool_.Execute([=, vertices = std::move(vertices), UTXOs = std::move(UTXOs), STXOs = std::move(STXOs)]() {
+        for (auto& vertex : vertices) {
+            ProcessVertex(vertex);
         }
         for (auto& [utxokey, utxo] : UTXOs) {
             ProcessUTXO(utxokey, utxo);
@@ -111,26 +115,26 @@ void Wallet::ProcessSTXO(const UTXOKey& stxo) {
     }
 }
 
-void Wallet::ProcessRecord(const RecordPtr& record) {
+void Wallet::ProcessVertex(const VertexPtr& vertex) {
     // update miner info
-    if (record->cblock->source == Block::Source::MINER) {
-        UpdateMinerInfo(record->cblock->GetHash(), record->cumulativeReward);
+    if (vertex->cblock->source == Block::Source::MINER) {
+        UpdateMinerInfo(vertex->cblock->GetHash(), vertex->cumulativeReward);
     }
 
-    if (!record->cblock->HasTransaction()) {
+    if (!vertex->cblock->HasTransaction()) {
         return;
     }
 
-    const auto& txns = record->cblock->GetTransactions();
+    const auto& txns = vertex->cblock->GetTransactions();
     for (size_t i = 0; i < txns.size(); ++i) {
         const auto& tx       = txns[i];
-        const auto& validity = record->validity[i];
+        const auto& validity = vertex->validity[i];
 
         auto it = pendingTx.find(tx->GetHash());
         if (it != pendingTx.end()) {
-            if (validity != record->VALID) {
+            if (validity != vertex->VALID) {
                 spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}",
-                             std::to_string(record->cblock->GetHash()));
+                             std::to_string(vertex->cblock->GetHash()));
 
                 // release all relavent utxos from pending
                 for (auto& input : tx->GetInputs()) {

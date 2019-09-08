@@ -6,6 +6,8 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
+#include "portable_endian.h"
+
 #include <cstdint>
 #include <cstring>
 #include <ios>
@@ -16,8 +18,6 @@
 #include <set>
 #include <string>
 #include <vector>
-
-#include "portable_endian.h"
 
 static const unsigned int MAX_SIZE = 0x02000000;
 

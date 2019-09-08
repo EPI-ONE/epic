@@ -155,25 +155,25 @@ This is required by `libevent` and `secp256k1`. Version 1.1.1c can be installed 
 ```bash
 brew install openssl@1.1
 # The following is needed for libevent install
-export OPENSSL_ROOT_DIR="/usr/local/Cellar/openssl@1.1/1.1.1c"
-```
+port OPENSSL_ROOT_DIR="/usr/local/Cellar/openssl@1.1/1.1.1c"
+`
 
-For recent version, you need to install it from source on linux.
+r recent version, you need to install it from source on linux.
 
-```bash
-git clone -b OpenSSL_1_1_1c https://github.com/openssl/openssl.git
+`bash
+t clone -b OpenSSL_1_1_1c https://github.com/openssl/openssl.git
 cd openssl
 ./config && make -j && sudo make install
 ```
 
 #### secp256k1
 
-```bash
-git clone https://github.com/bitcoin-core/secp256k1.git 
-cd secp256k1
-./autogen.sh && ./configure --enable-module-recovery=yes
-make -j && sudo make install
-```
+`bash
+t clone https://github.com/bitcoin-core/secp256k1.git 
+ secp256k1
+autogen.sh && ./configure --enable-module-recovery=yes
+ke -j && sudo make install
+`
 
 #### libevent
 
@@ -203,24 +203,24 @@ make -j && sudo make install
 `protobuf` version 3.7.0 can be installed simply via brew on Mac
 
 ```bash
-brew install protobuf@3.7
-```
+ew install protobuf@3.7
+`
 
-For recent version, you need to install it from srouce on linux. 
+r recent version, you need to install it from srouce on linux. 
 
-```bash
-git clone -b v3.7.0 --single-branch https://github.com/protocolbuffers/protobuf.git
-cd protobuf
-git submodule update --init --recursive
-./autogen.sh && ./configure && make -j 
-make check
-sudo make install
-sudo ldconfig # refresh shared library cache.
-```
+`bash
+t clone -b v3.7.0 --single-branch https://github.com/protocolbuffers/protobuf.git
+ protobuf
+t submodule update --init --recursive
+autogen.sh && ./configure && make -j 
+ke check
+do make install
+do ldconfig # refresh shared library cache.
+`
 
-If "make check" fails, you can still install, but it is likely that some features of this library will not work correctly on your system. Proceed at your own risk.[https://github.com/protocolbuffers/protobuf/blob/master/src/README.md](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md)
+ "make check" fails, you can still install, but it is likely that some features of this library will not work correctly on your system. Proceed at your own risk.[https://github.com/protocolbuffers/protobuf/blob/master/src/README.md](https://github.com/protocolbuffers/protobuf/blob/master/src/README.md)
 
-#### gRPC
+## gRPC
 
 The following instruction is from [https://github.com/grpc/grpc/blob/master/BUILDING.md](https://github.com/grpc/grpc/blob/master/BUILDING.md)
 
@@ -236,10 +236,10 @@ make -j
 sudo make install
 ```
 
-<aside class="warning">
-The brew-installed `gRPC` on Mac does not work. So please compile as instructed in the above. 
-Also, `gRPC` v1.22.x seems to have issues. So we still use v1.20.0 for now despite the existence of more recent releases. 
-</aside>
+side class="warning">
+e brew-installed `gRPC` on Mac does not work. So please compile as instructed in the above. 
+so, `gRPC` v1.22.x seems to have issues. So we still use v1.20.0 for now despite the existence of more recent releases. 
+aside>
 
 
 #### RocksDB

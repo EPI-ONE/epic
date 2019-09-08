@@ -1,12 +1,9 @@
 // Copyright (c) 2012-2018 The Bitcoin Core developers
-// Copyright (c) 2019 EPIC
+// Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <cstdio>
 #include <gtest/gtest.h>
-#include <string>
-#include <vector>
 
 #include "base58.h"
 #include "big_uint.h"
@@ -14,6 +11,9 @@
 #include "key.h"
 #include "tinyformat.h"
 #include "utilstrencodings.h"
+
+#include <string>
+#include <vector>
 
 class TestECKey : public testing::Test {
 protected:
@@ -143,26 +143,26 @@ TEST_F(TestECKey, key_regular_test) {
 
         ASSERT_TRUE(!pubkey2C.Verify(hashMsg, sign1));
         ASSERT_TRUE(pubkey2C.Verify(hashMsg, sign2));
-        ASSERT_TRUE(!pubkey2C.Verify(hashMsg, sign1C));
-        ASSERT_TRUE(pubkey2C.Verify(hashMsg, sign2C));
+      ASSERT_TRUE(!pubkey2C.Verify(hashMsg, sign1C));
+      ASSERT_TRUE(pubkey2C.Verify(hashMsg, sign2C));
 
-        // compact signatures (with key recovery)
-        std::vector<unsigned char> csign1, csign2, csign1C, csign2C;
+      // compact signatures (with key recovery)
+      std::vector<unsigned char> csign1, csign2, csign1C, csign2C;
 
-        ASSERT_TRUE(key1.SignCompact(hashMsg, csign1));
+      ASSERT_TRUE(key1.SignCompact(hashMsg, csign1));
         ASSERT_TRUE(key2.SignCompact(hashMsg, csign2));
         ASSERT_TRUE(key1C.SignCompact(hashMsg, csign1C));
         ASSERT_TRUE(key2C.SignCompact(hashMsg, csign2C));
 
-        CPubKey rkey1, rkey2, rkey1C, rkey2C;
+      CPubKey rkey1, rkey2, rkey1C, rkey2C;
 
-        ASSERT_TRUE(rkey1.RecoverCompact(hashMsg, csign1));
-        ASSERT_TRUE(rkey2.RecoverCompact(hashMsg, csign2));
-        ASSERT_TRUE(rkey1C.RecoverCompact(hashMsg, csign1C));
-        ASSERT_TRUE(rkey2C.RecoverCompact(hashMsg, csign2C));
+      ASSERT_TRUE(rkey1.RecoverCompact(hashMsg, csign1));
+      ASSERT_TRUE(rkey2.RecoverCompact(hashMsg, csign2));
+      ASSERT_TRUE(rkey1C.RecoverCompact(hashMsg, csign1C));
+      ASSERT_TRUE(rkey2C.RecoverCompact(hashMsg, csign2C));
 
-        ASSERT_EQ(rkey1, pubkey1);
-        ASSERT_EQ(rkey2, pubkey2);
+      ASSERT_EQ(rkey1, pubkey1);
+      ASSERT_EQ(rkey2, pubkey2);
         ASSERT_EQ(rkey1C, pubkey1C);
         ASSERT_EQ(rkey2C, pubkey2C);
     }

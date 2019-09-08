@@ -1,10 +1,15 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include <gtest/gtest.h>
+
 #include "mempool.h"
 #include "miner.h"
 #include "test_env.h"
 #include "wallet.h"
 
 #include <chrono>
-#include <gtest/gtest.h>
 
 class TestWallet : public testing::Test {
 public:
@@ -16,7 +21,7 @@ public:
     void SetUp() override {}
 
     void TearDown() override {
-        std::string cmd = "exec rm -r " + dir;
+        std::string cmd = "exec rm -rf " + dir;
         system(cmd.c_str());
     }
 };
@@ -39,9 +44,9 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         block.SetParents();
 
         auto utxo           = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[0], 0, 0);
-        auto record         = std::make_shared<NodeRecord>(block);
-        record->validity[0] = NodeRecord::VALID;
-        wallet.OnLvsConfirmed({record}, {{utxo->GetKey(), utxo}}, {});
+        auto vertex         = std::make_shared<Vertex>(block);
+        vertex->validity[0] = Vertex::VALID;
+        wallet.OnLvsConfirmed({vertex}, {{utxo->GetKey(), utxo}}, {});
 
         while (wallet.GetBalance() != init_money) {
             std::this_thread::yield();
@@ -87,10 +92,10 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
             index++;
         }
 
-        auto new_record         = std::make_shared<NodeRecord>(new_block);
-        new_record->validity[0] = NodeRecord::VALID;
+        auto new_vertex         = std::make_shared<Vertex>(new_block);
+        new_vertex->validity[0] = Vertex::VALID;
 
-        wallet.OnLvsConfirmed({new_record}, std::move(utxos), {stxokey});
+        wallet.OnLvsConfirmed({new_vertex}, std::move(utxos), {stxokey});
         while (wallet.GetBalance() == init_money - spent_money - MIN_FEE) {
             std::this_thread::yield();
         }
@@ -171,13 +176,13 @@ TEST_F(TestWallet, workflow) {
     auto tx = WALLET->CreateTx({{10, CKeyID()}});
     ASSERT_EQ(WALLET->GetBalance().GetValue(), 0);
     ASSERT_TRUE(WALLET->SendTxToMemPool(tx));
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
-    ASSERT_EQ(WALLET->GetPending().size(), 1);
+  ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
+  ASSERT_EQ(WALLET->GetPending().size(), 1);
 
-    // receive the change of last transaction
+  // receive the change of last transaction
 
-    while (WALLET->GetSpent().empty()) {
-        usleep(50000);
+  while (WALLET->GetSpent().empty()) {
+      usleep(50000);
     }
 
     EXPECT_EQ(WALLET->GetUnspent().size(), 1);
@@ -188,7 +193,7 @@ TEST_F(TestWallet, workflow) {
     MINER->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
@@ -201,12 +206,12 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Start();
     MINER->Run();
 
-    WALLET->CreateRandomTx(4);
+  WALLET->CreateRandomTx(4);
 
-    // receive the change of last transaction
-    while (WALLET->GetSpent().size() != 1) {
-        usleep(500000);
-    }
+  // receive the change of last transaction
+  while (WALLET->GetSpent().size() != 1) {
+      usleep(500000);
+  }
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 3);
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
@@ -216,6 +221,6 @@ TEST_F(TestWallet, normal_workflow) {
     MINER->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }

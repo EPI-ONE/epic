@@ -1,5 +1,10 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_RPC_HEADER_H
 #define EPIC_RPC_HEADER_H
+
 #include <grpc++/grpc++.h>
 #include <rpc.grpc.pb.h>
 #include <rpc.pb.h>
@@ -34,4 +39,5 @@ using rpc::StopMinerRequest;
 using rpc::StopMinerResponse;
 using rpc::StopRequest;
 using rpc::StopResponse;
+
 #endif // EPIC_RPC_HEADER_H

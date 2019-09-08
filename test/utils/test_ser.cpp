@@ -1,9 +1,13 @@
-#include <gtest/gtest.h>
-#include <optional>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "consensus.h"
-#include "key.h"
+#include <gtest/gtest.h>
+
 #include "test_env.h"
+#include "vertex.h"
+
+#include <optional>
 
 typedef Tasm::Listing Listing;
 
@@ -223,7 +227,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     ASSERT_EQ(VStream(block2).size(), block2.GetOptimalEncodingSize());
 }
 
-TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
+TEST_F(TestSer, SerializeEqDeserializeVertex) {
     Block blk = Block(1, rand1, zeros, rand2, zeros, time(nullptr), 1, 1);
 
     // Add a tx into the block
@@ -235,15 +239,15 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     blk.AddTransaction(tx);
     blk.FinalizeHash();
 
-    // Construct NodeRecord
-    NodeRecord block(std::move(blk));
+    // Construct Vertex
+    Vertex block(std::move(blk));
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 
     // Link the chain state
-    auto pstate = std::make_shared<ChainState>(100, arith_uint256(0), arith_uint256(0X3E8), arith_uint256(0X3E8),
-                                               100000, fac.NextTime(), std::vector<RecordWPtr>{});
-    block.LinkChainState(pstate);
+    auto pstate = std::make_shared<Milestone>(100, arith_uint256(0), arith_uint256(0X3E8), arith_uint256(0X3E8), 100000,
+                                              fac.NextTime(), std::vector<VertexWPtr>{});
+    block.LinkMilestone(pstate);
 
     // Make it a fake milestone
     block.isMilestone = false;
@@ -252,7 +256,7 @@ TEST_F(TestSer, SerializeEqDeserializeNodeRecord) {
     block.Serialize(sinput);
     std::string s = sinput.str();
 
-    NodeRecord block1;
+    Vertex block1;
     block1.Deserialize(sinput);
     block1.cblock = block.cblock;
 

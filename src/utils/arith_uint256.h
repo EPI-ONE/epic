@@ -319,4 +319,5 @@ public:
 uint256 ArithToUint256(const arith_uint256&);
 arith_uint256 UintToArith256(const uint256&);
 bool PartitionCmp(const arith_uint256& a, const arith_uint256& b);
+
 #endif // BITCOIN_ARITH_UINT256_H

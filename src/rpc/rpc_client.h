@@ -1,9 +1,11 @@
-#ifndef __SRC_RPCCLIENT_H__
-#define __SRC_RPCCLIENT_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_RPC_CLIENT_H
+#define EPIC_RPC_CLIENT_H
 
 #include "rpc_header.h"
-#include "spdlog/sinks/basic_file_sink.h"
-
 
 class RPCClient {
     using option_string = std::optional<std::string>;
@@ -42,4 +44,4 @@ private:
     std::unique_ptr<CommanderRPC::Stub> commander_stub_;
 };
 
-#endif //__SRC_RPCCLIENT_H__
+#endif // EPIC_RPC_CLIENT_H

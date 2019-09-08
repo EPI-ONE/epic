@@ -1,21 +1,23 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "init.h"
-
-#include <atomic>
-#include <csignal>
-#include <net/peer_manager.h>
-#include <spawn.h>
-
 #include "dag_manager.h"
 #include "mempool.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
 #include "wallet.h"
 
+#include <atomic>
+#include <csignal>
+#include <spawn.h>
+
 Block GENESIS;
-NodeRecord GENESIS_RECORD;
+Vertex GENESIS_VERTEX;
 std::unique_ptr<Config> CONFIG;
 std::unique_ptr<PeerManager> PEERMAN;
-std::unique_ptr<Caterpillar> CAT;
+std::unique_ptr<BlockStore> STORE;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
@@ -49,7 +51,7 @@ void InitSignal() {
 
 void CreateRoot(const std::string& path) {
     if (!CheckDirExist(path)) {
-        if (Mkdir_recursive(path)) {
+        if (MkdirRecursive(path)) {
             spdlog::info("root {} has been created", path);
         } else {
             throw spdlog::spdlog_ex("fail to create the path " + path);
@@ -120,16 +122,16 @@ int Init(int argc, char* argv[]) {
         // delete old block data
         DeleteDir(CONFIG->GetDBPath());
         DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::BLK]);
-        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::REC]);
+        DeleteDir(CONFIG->GetRoot() + file::typestr[file::FileType::VTX]);
         DeleteDir(CONFIG->GetWalletPath());
     }
 
-    CAT = std::make_unique<Caterpillar>(CONFIG->GetDBPath());
+    STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
-    if (!CAT->DBExists(GENESIS.GetHash())) {
+    if (!STORE->DBExists(GENESIS.GetHash())) {
         // put genesis block into cat
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreLevelSet(genesisLvs);
+        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        STORE->StoreLevelSet(genesisLvs);
     }
 
     DAG = std::make_unique<DAGManager>();
@@ -355,7 +357,7 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
     try {
         if (!CheckDirExist(path)) {
             std::cerr << "The logger dir \"" << path << "\" not found, try to create the directory..." << std::endl;
-            if (Mkdir_recursive(path)) {
+            if (MkdirRecursive(path)) {
                 std::cerr << path << " has been created" << std::endl;
             } else {
                 throw spdlog::spdlog_ex("fail to create the logger file");
@@ -396,12 +398,12 @@ void ShutDown() {
     PEERMAN->Stop();
     WALLET->Stop();
     DAG->Stop();
-    CAT->Stop();
+    STORE->Stop();
     if (MINER->IsRunning()) {
         MINER->Stop();
     }
 
-    CAT.reset();
+    STORE.reset();
     DAG.reset();
     MEMPOOL.reset();
     PEERMAN.reset();

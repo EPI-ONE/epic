@@ -7,7 +7,7 @@ Epic is a pow chain that achives an order of magnitude improvement on the throug
 
 ## Design
 
-The design of this chain is based on the [paper](https://arxiv.org/abs/1901.02755). 
+The design of this chain is based on the [paper](https://arxiv.org/abs/1901.02755).
 
 ## Implementation
 
@@ -47,14 +47,16 @@ We test this project on Ubuntu (18.04), CentOS (7.6) and MacOS X (10.14.6). See 
 git clone https://github.com/epi-one/epic/
 cd epic && mkdir build && cd build
 # Debug mode by default
-cmake ..  
+cmake ..
 # Release mode
 # cmake -DCAMKE_BUILD_TYPE=Release ..
 make -j
 # you may run the following test
 ../bin/epictest
-# runing a node
+# runing the daemon
 ../bin/epic
+# send rpc command to daemon
+../bin/epicc [OPTIONS] [COMMAND]
 ```
 
 ### GPU mining
@@ -69,3 +71,8 @@ If you are experiencing the following runtime error: `GPUassert(2): out of memor
 ``` shell
 $ export ASAN_OPTIONS="protect_shadow_gap=0"
 ```
+
+## License
+
+EPIC project is released under the terms of the MIT license. See [COPYING](COPYING) for more
+information or see [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT). For the submodule [Cuckaroo](src/cuckaroo), we follow the original license from the source [Cuckoo](https://github.com/tromp/cuckoo/blob/master/LICENSE.txt).

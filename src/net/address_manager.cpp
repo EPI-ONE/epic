@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "address_manager.h"
 
 AddressManager::AddressManager() {
@@ -122,7 +126,7 @@ std::optional<NetAddress> AddressManager::GetOneAddress(bool onlyNew) {
 void AddressManager::SaveAddress(const std::string& path, const std::string& filename) {
     if (!CheckDirExist(path)) {
         std::cerr << "The address dir \"" << path << "\" not found, try to create the directory..." << std::endl;
-        if (Mkdir_recursive(path)) {
+        if (MkdirRecursive(path)) {
             std::cerr << path << " has been created" << std::endl;
         } else {
             throw spdlog::spdlog_ex("fail to create the address path");

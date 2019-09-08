@@ -1,18 +1,20 @@
-#ifndef __SRC_RPC_SERVER_H__
-#define __SRC_RPC_SERVER_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-
-#include <rpc_tools.h>
-#include <thread>
+#ifndef EPIC_RPC_SERVER_H
+#define EPIC_RPC_SERVER_H
 
 #include "block.h"
 #include "init.h"
 #include "miner.h"
 #include "net_address.h"
 #include "rpc_header.h"
+#include "rpc_tools.h"
 #include "spdlog.h"
 #include "wallet.h"
 
+#include <thread>
 
 class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Service {
     grpc::Status GetBlock(grpc::ServerContext* context,
@@ -86,4 +88,5 @@ private:
 };
 
 extern std::unique_ptr<RPCServer> RPC;
-#endif //__SRC_RPC_SERVER_H__
+
+#endif // EPIC_RPC_SERVER_H

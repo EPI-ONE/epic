@@ -1,5 +1,18 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_ADDRESS_MANAGER_H
 #define EPIC_ADDRESS_MANAGER_H
+
+#include "address_message.h"
+#include "config.h"
+#include "cpptoml.h"
+#include "file_utils.h"
+#include "net_address.h"
+#include "spdlog/spdlog.h"
+#include "stream.h"
+
 #include <arpa/inet.h>
 #include <fstream>
 #include <ifaddrs.h>
@@ -11,14 +24,6 @@
 #include <time.h>
 #include <unordered_map>
 #include <unordered_set>
-
-#include "address_message.h"
-#include "config.h"
-#include "cpptoml.h"
-#include "file_utils.h"
-#include "net_address.h"
-#include "spdlog/spdlog.h"
-#include "stream.h"
 
 class NetAddressInfo {
 public:

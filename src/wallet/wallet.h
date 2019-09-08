@@ -1,12 +1,16 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EPIC_WALLET_H
 #define EPIC_WALLET_H
 
 #include "concurrent_container.h"
-#include "consensus.h"
 #include "key.h"
 #include "scheduler.h"
 #include "tasm.h"
 #include "threadpool.h"
+#include "vertex.h"
 #include "wallet_store.h"
 
 #include <atomic>
@@ -37,7 +41,7 @@ public:
     void Stop();
     void Load();
 
-    void OnLvsConfirmed(std::vector<RecordPtr> records,
+    void OnLvsConfirmed(std::vector<VertexPtr> vertices,
                         std::unordered_map<uint256, UTXOPtr> UTXOs,
                         std::unordered_set<uint256> STXOs);
 
@@ -101,7 +105,7 @@ private:
 
     void ProcessUTXO(const UTXOKey& utxokey, const UTXOPtr& utxo);
     void ProcessSTXO(const UTXOKey& stxo);
-    void ProcessRecord(const RecordPtr& record);
+    void ProcessVertex(const VertexPtr& vertex);
 
     void AddInput(Transaction& tx, const utxo_info& utxo);
 
@@ -123,4 +127,5 @@ private:
 };
 
 extern std::shared_ptr<Wallet> WALLET;
+
 #endif // EPIC_WALLET_H

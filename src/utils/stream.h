@@ -3,13 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef __SRC_UTILS_STREAM_H__
-#define __SRC_UTILS_STREAM_H__
-
-#include <cstring>
+#ifndef EPIC_STREAM_H
+#define EPIC_STREAM_H
 
 #include "serialize.h"
 #include "zeroafterfree.h"
+
+#include <cstring>
 
 // Byte-vector that sets contents to 0's before deallocation.
 typedef std::vector<char, zero_after_free_allocator<char>> byte_vector;
@@ -241,4 +241,4 @@ protected:
     unsigned int readPos_;
 };
 
-#endif // ifndef __SRC_UTILS_STREAM_H__
+#endif // EPIC_STREAM_H

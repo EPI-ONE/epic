@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <gtest/gtest.h>
 
 #include "chains.h"
@@ -19,14 +23,14 @@ TEST_F(TestChains, BasicFunctions) {
     std::vector<ChainPtr> random_chains;
     for (int i = 0; i < testSize; ++i) {
         auto chain = std::make_unique<Chain>();
-        chain->AddNewState(GENESIS_RECORD);
+        chain->AddNewState(GENESIS_VERTEX);
         chainworkOf(chain) = rand() % mcw;
         random_chains.push_back(std::move(chain));
     }
 
     // Replace a random element in random_chains with mcw
     auto best_chain = std::make_unique<Chain>();
-    best_chain->AddNewState(GENESIS_RECORD);
+    best_chain->AddNewState(GENESIS_VERTEX);
     chainworkOf(best_chain)          = mcw;
     random_chains[rand() % testSize] = std::unique_ptr<Chain>(std::move(best_chain));
 
@@ -43,7 +47,7 @@ TEST_F(TestChains, BasicFunctions) {
     // Replace the first chain by a better chain
     uint64_t new_mcw = mcw + 1;
     auto new_best    = std::make_unique<Chain>();
-    new_best->AddNewState(GENESIS_RECORD);
+    new_best->AddNewState(GENESIS_VERTEX);
     chainworkOf(new_best) = new_mcw;
     *q.begin()            = std::move(new_best);
     q.update_best(q.begin());

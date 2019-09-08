@@ -1,16 +1,20 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <gtest/gtest.h>
-#include <ostream>
-#include <vector>
 
 #include "address_message.h"
 #include "net_message.h"
 #include "ping.h"
 #include "pong.h"
 #include "sync_messages.h"
+#include "task.h"
 #include "test_factory.h"
-#include "version_ack.h"
 #include "version_message.h"
 
+#include <ostream>
+#include <vector>
 
 class TestNetMsg : public testing::Test {
 public:

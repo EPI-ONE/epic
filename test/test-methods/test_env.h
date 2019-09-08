@@ -1,14 +1,19 @@
-#ifndef __TEST_ENV__
-#define __TEST_ENV__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_TEST_ENV_H
+#define EPIC_TEST_ENV_H
 
 #include <gtest/gtest.h>
-#include <memory>
 
-#include "caterpillar.h"
 #include "miner.h"
 #include "params.h"
+#include "storage.h"
 #include "test_factory.h"
 #include "wallet.h"
+
+#include <memory>
 
 class EpicTestEnvironment : public ::testing::Environment {
 public:
@@ -31,12 +36,12 @@ public:
         std::ostringstream os;
         os << time(nullptr);
         file::SetDataDirPrefix(dirPath + os.str());
-        CAT = std::make_unique<Caterpillar>(dirPath + os.str());
-        DAG = std::make_unique<DAGManager>();
+        STORE = std::make_unique<BlockStore>(dirPath + os.str());
+        DAG   = std::make_unique<DAGManager>();
 
         // Initialize DB with genesis
-        std::vector<RecordPtr> genesisLvs = {std::make_shared<NodeRecord>(GENESIS_RECORD)};
-        CAT->StoreLevelSet(genesisLvs);
+        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        STORE->StoreLevelSet(genesisLvs);
 
         if (enable_miner) {
             MEMPOOL = std::make_unique<MemPool>();
@@ -51,7 +56,7 @@ public:
     }
 
     static void TearDownDAG(std::string dirPath) {
-        CAT.reset();
+        STORE.reset();
         DAG.reset();
         MEMPOOL.reset();
         MINER.reset();
@@ -73,4 +78,4 @@ inline void ResetLogLevel() {
     SetLogLevel(SPDLOG_LEVEL_INFO);
 }
 
-#endif // __TEST_ENV__
+#endif // EPIC_TEST_ENV_H

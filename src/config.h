@@ -1,12 +1,16 @@
-#ifndef __SRC_CONFIG_H__
-#define __SRC_CONFIG_H__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_CONIFG_H
+#define EPIC_CONIFG_H
+
+#include "net_address.h"
+#include "spdlog.h"
 
 #include <memory>
 #include <sstream>
 #include <string>
-
-#include "net_address.h"
-#include "spdlog.h"
 
 class Config {
 public:
@@ -254,11 +258,10 @@ private:
     std::string walletPath_ = "wallet/";
     uint32_t backupPeriod_;
 
-
     // daemon
     bool daemon_;
 };
 
 extern std::unique_ptr<Config> CONFIG;
 
-#endif // __SRC_CONFIG_H__
+#endif // EPIC_CONIFG_H

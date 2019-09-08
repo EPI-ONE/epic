@@ -1,5 +1,9 @@
-#ifndef __SRC_WALLET_WALLET_STORE__
-#define __SRC_WALLET_WALLET_STORE__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_WALLET_STORE_H
+#define EPIC_WALLET_STORE_H
 
 #include "concurrent_container.h"
 #include "db_wrapper.h"
@@ -39,4 +43,4 @@ private:
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> GetAllUTXO(uint8_t);
 };
 
-#endif // __SRC_WALLET_WALLET_STORE__
+#endif // EPIC_WALLET_STORE_H

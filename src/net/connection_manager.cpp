@@ -1,13 +1,17 @@
-#include <arpa/inet.h>
-#include <event2/bufferevent.h>
-#include <event2/thread.h>
-#include <iostream>
-#include <pthread.h>
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "connection_manager.h"
 #include "crc32.h"
 #include "message_header.h"
 #include "spdlog.h"
+
+#include <arpa/inet.h>
+#include <event2/bufferevent.h>
+#include <event2/thread.h>
+#include <iostream>
+#include <pthread.h>
 
 typedef struct sockaddr sockaddr_t;
 typedef struct sockaddr_in sockaddr_in_t;
