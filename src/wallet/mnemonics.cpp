@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "mnemonics.h"
 
 #include "big_uint.h"
@@ -96,7 +100,7 @@ void Mnemonics::BitsToWords() {
     uint256 checksum = HashSHA2<1>(entropy_.data(), entropy_.size());
 
     SecureString binaryStr;
-    binaryStr.reserve(132);
+    binaryStr.reserve(LENGTH * WORD_SIZE);
 
     char singleByte[9];
     memset(singleByte, 0, 9 * sizeof(char));

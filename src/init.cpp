@@ -3,13 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
+#include "config.h"
 #include "dag_manager.h"
+#include "file_utils.h"
 #include "mempool.h"
+#include "miner.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "storage.h"
 #include "wallet.h"
 
-#include <atomic>
 #include <csignal>
 #include <spawn.h>
 

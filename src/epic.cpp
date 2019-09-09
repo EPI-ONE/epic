@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
+#include "spdlog/spdlog.h"
 
 int main(int argc, char** argv) {
     int init_result = Init(argc, argv);
@@ -13,8 +14,7 @@ int main(int argc, char** argv) {
     }
 
     if (Start()) {
-        // start some applications, such as miner, visualization...
-        // TODO
+        // TODO: start some applications, such as miner, visualization...
         spdlog::set_level(spdlog::level::level_enum::debug);
         WaitShutdown();
     } else {

@@ -3,6 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpc_server.h"
+#include "block.h"
+#include "init.h"
+#include "miner.h"
+#include "spdlog.h"
+#include "wallet.h"
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
                                                         const GetBlockRequest* request,
@@ -180,11 +185,11 @@ grpc::Status CommanderRPCServiceImpl::SetPassphrase(grpc::ServerContext* context
     if (!WALLET) {
         reply->set_responseinfo("Wallet has not been started");
     } else if (WALLET->IsCrypted()) {
-        reply->set_responseinfo("Wallet has already be encrypted with passphrase");
+        reply->set_responseinfo("Wallet has already be encrypted with a passphrase");
     } else if (!WALLET->SetPassphrase(SecureString{request->passphrase()})) {
         reply->set_responseinfo("Fail to set passphrase");
     } else {
-        reply->set_responseinfo("Your passphrase has been successfully set as [" + request->passphrase() + "]!");
+        reply->set_responseinfo("Your passphrase has been successfully set!");
     }
     return grpc::Status::OK;
 }

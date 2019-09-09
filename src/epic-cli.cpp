@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     uint16_t rpc_port;
     const auto commandMap = InitCommand();
     // clang-format off
-    cxxopts::Options options("epicc", "epic client");
+    cxxopts::Options options("epic-cli", "epic client");
     options.positional_help(
             "COMMAND \n\n"
             "Available commands: \n"
@@ -101,17 +101,17 @@ int main(int argc, char** argv) {
             "   2. start-miner \n"
             "   3. stop-miner \n"
             "   4. stop \n"
-            "   5. create-randomtx, args=size: uint64 (the size of transactions you want to create) \n"
+            "   5. create-randomtx      args=size: uint64 (the size of transactions you want to create) \n"
             "   6. generate-newkey \n"
             "   7. get-balance \n"
-            "   8. create-tx args=fee: uint64 (optional, default to be 1), \\\n"
-            "                     outputValue1: uint64, outputAddr1: string, \\\n"
-            "                     outputValue2: uint64, outputAddr2: string, \\\n"
-            "                     ...\n\n"
-            "   9. set-passphrase, arg = string : your new passphrase \n"
-            "   10. change-passphrase, args = string : your old passphrase, your new passphrase \n"
-            "   11. login, arg = string : your current passphrase \n"
-            "Available options:"
+            "   8. create-tx            args=fee: uint64 (optional, default to be 1),   \n"
+            "                                outputValue1: uint64, outputAddr1: string, \n"
+            "                                outputValue2: uint64, outputAddr2: string, \n"
+            "                                ...\n"
+            "   9. set-passphrase       arg=string: your new passphrase \n"
+            "   10. change-passphrase   args=string: your old passphrase, your new passphrase \n"
+            "   11. login               arg=string: your current passphrase \n"
+            "\nAvailable options:"
             ).show_positional_help();
 
     std::vector<std::string> more_args;

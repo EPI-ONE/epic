@@ -5,14 +5,9 @@
 #ifndef EPIC_RPC_SERVER_H
 #define EPIC_RPC_SERVER_H
 
-#include "block.h"
-#include "init.h"
-#include "miner.h"
 #include "net_address.h"
 #include "rpc_header.h"
 #include "rpc_tools.h"
-#include "spdlog.h"
-#include "wallet.h"
 
 #include <thread>
 

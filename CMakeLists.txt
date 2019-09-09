@@ -58,10 +58,10 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 find_package(Secp256k1 REQUIRED)
 find_library(GMP_LIBRARY NAMES gmp libgmp)
 if (GMP_LIBRARY)
-    MESSAGE(STATUS "GMP FOUND")
+    MESSAGE(STATUS "Found libgmp")
     set(GMP_FOUND true)
 else()
-    MESSAGE(STATUS "GMP NOT FOUND")
+    MESSAGE(STATUS "Not found libgmp")
 endif()
 include_directories(${Secp256k1_INCLUDE_DIR})
 
@@ -82,7 +82,7 @@ set(NET_DIR src/net)
 set(PEER_DIR src/peer)
 set(UTIL_DIR src/utils)
 set(HASH_DIR src/hash)
-set(KEY_DIR src/key)
+set(CRYPTO_DIR src/crypto)
 set(COMPAT_DIR src/compat)
 set(MEMORY_DIR src/utils/memory)
 set(TASM_DIR src/tasm)
@@ -102,7 +102,7 @@ aux_source_directory(${PEER_DIR} PEER_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
 aux_source_directory(${TASM_DIR} TASM_SRCS)
 aux_source_directory(${HASH_DIR} HASH_SRCS)
-aux_source_directory(${KEY_DIR} KEY_SRCS)
+aux_source_directory(${CRYPTO_DIR} CRYPTO_SRCS)
 aux_source_directory(${ROOT_DIR} ROOT_SRCS)
 aux_source_directory(${MEMORY_DIR} MEMORY_SRCS)
 aux_source_directory(${TOOLS_DIR} TOOLS_SRCS)
@@ -123,7 +123,7 @@ include_directories(src
         ${PEER_DIR}
         ${UTIL_DIR}
         ${HASH_DIR}
-        ${KEY_DIR}
+        ${CRYPTO_DIR}
         ${COMPAT_DIR}
         ${ROOT_DIR}
         ${TASM_DIR}
@@ -147,7 +147,7 @@ set(SRC_CODE
         ${PEER_SRCS}
         ${UTIL_SRCS}
         ${HASH_SRCS}
-        ${KEY_SRCS}
+        ${CRYPTO_SRCS}
         ${ROOT_SRCS}
         ${TASM_SRCS}
         ${MEMORY_SRCS}
@@ -227,13 +227,13 @@ else()
 endif()
 
 add_executable(epic ${SRC_MAIN})
-add_executable(epicc ${SRC_CLIENT_MAIN}
+add_executable(epic-cli ${SRC_CLIENT_MAIN}
     ${RPC_DIR}/rpc_client.cpp
     ${PROTO_SRCS}
     ${GRPC_SRCS}
     )
-target_link_libraries(epicc protobuf::libprotobuf)
-target_link_libraries(epicc gRPC::grpc++_reflection)
+target_link_libraries(epic-cli protobuf::libprotobuf)
+target_link_libraries(epic-cli gRPC::grpc++_reflection)
 
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
 

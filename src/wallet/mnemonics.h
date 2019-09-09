@@ -1,5 +1,9 @@
-#ifndef __SRC_WALLET_MNEMONICS__
-#define __SRC_WALLET_MNEMONICS__
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_WALLET_MNEMONICS_H
+#define EPIC_WALLET_MNEMONICS_H
 
 #include "secure.h"
 
@@ -44,4 +48,4 @@ private:
     bool WordsToBits();
 };
 
-#endif // __SRC_WALLET_MNEMONICS__
+#endif // EPIC_WALLET_MNEMONICS_H

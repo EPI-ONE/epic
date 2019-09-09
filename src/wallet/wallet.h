@@ -7,7 +7,6 @@
 
 #include "concurrent_container.h"
 #include "crypter.h"
-#include "interfaces/dag_service.h"
 #include "key.h"
 #include "mnemonics.h"
 #include "scheduler.h"
@@ -96,7 +95,6 @@ public:
         return rpcLoggedin_;
     }
     bool GenerateMaster();
-    bool LoadMaster(const std::array<std::string, 12>&);
 
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
