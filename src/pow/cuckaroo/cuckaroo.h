@@ -24,6 +24,7 @@
 // i.e. the 2-log of the number of edges
 #define EDGEBITS 29
 #endif
+
 #ifndef PROOFSIZE
 // the next most important parameter is the (even) length
 // of the cycle to be found. a minimum of 12 is recommended
@@ -38,14 +39,14 @@ typedef uint32_t word_t;
 typedef uint16_t word_t;
 #endif
 
+typedef word_t Proof[PROOFSIZE];
+
 // number of edges
 #define NEDGES ((word_t) 1 << EDGEBITS)
 // used to mask siphash output
 #define EDGEMASK ((word_t) NEDGES - 1)
 #define NODEMASK EDGEMASK
 #define NODE1MASK NODEMASK
-
-typedef word_t Proof[PROOFSIZE];
 
 // Common Solver parameters, to return to caller
 struct SolverParams {
@@ -66,20 +67,6 @@ struct SolverParams {
     uint32_t tailtpb       = 0;
     uint32_t recoverblocks = 0;
     uint32_t recovertpb    = 0;
-};
-
-// Solutions result structs to be instantiated by caller,
-// and filled by solver if desired
-struct Solution {
-    uint64_t id    = 0;
-    uint64_t nonce = 0;
-    uint64_t proof[PROOFSIZE];
-};
-
-struct SolverSolutions {
-    uint32_t edge_bits = 0;
-    uint32_t num_sols  = 0;
-    Solution sols[MAXSOLS];
 };
 
 enum verify_code {
@@ -103,14 +90,7 @@ static const std::string ErrStr[] = {"OK",
                                      "cycle too short"};
 
 // verify that edges are ascending and form a cycle in header-generated graph
-int VerifyProof(const word_t edges[PROOFSIZE], const siphash_keys& keys);
+int VerifyProof(const word_t* edges, const siphash_keys& keys);
 
 // convenience function for extracting siphash keys from header
 void SetHeader(const char* header, uint32_t headerlen, siphash_keys* keys);
-
-inline uint64_t timestamp() {
-    using namespace std::chrono;
-    high_resolution_clock::time_point now = high_resolution_clock::now();
-    auto dn                               = now.time_since_epoch();
-    return dn.count();
-}

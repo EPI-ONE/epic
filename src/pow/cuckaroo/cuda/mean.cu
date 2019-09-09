@@ -54,7 +54,7 @@ const uint32_t EDGES_B = NZ * NEPS_B / NEPS;
 const uint32_t ROW_EDGES_A = EDGES_A * NY;
 const uint32_t ROW_EDGES_B = EDGES_B * NY;
 
-__constant__ uint2 recoveredges[PROOFSIZE];
+__constant__ uint2 recoveredges[42];
 __constant__ uint2 e0 = {0, 0};
 
 __device__ uint64_t dipblock(const siphash_keys& keys, const word_t edge, uint64_t* buf) {
@@ -333,11 +333,12 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
     const int lid      = threadIdx.x;
     const int nthreads = blockDim.x * gridDim.x;
     const int loops    = NEDGES / nthreads;
-    __shared__ uint32_t nonces[PROOFSIZE];
+    __shared__ uint32_t nonces[42];
     uint64_t buf[EDGE_BLOCK_SIZE];
 
-    if (lid < PROOFSIZE)
+    if (lid < PROOFSIZE) {
         nonces[lid] = 0;
+    }
     __syncthreads();
     for (int blk = 0; blk < loops; blk += EDGE_BLOCK_SIZE) {
         uint32_t nonce0     = gid * loops + blk;
@@ -355,8 +356,9 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
     }
     __syncthreads();
     if (lid < PROOFSIZE) {
-        if (nonces[lid] > 0)
+        if (nonces[lid] > 0) {
             indexes[lid] = nonces[lid];
+        }
     }
 }
 
@@ -539,11 +541,12 @@ uint32_t GEdgeTrimmer::trim() {
     return nedges;
 }
 
-GSolverCtx::GSolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
+SolverCtx::SolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
     edges = new uint2[MAXEDGES];
+    soledges = new uint2[PROOFSIZE];
 }
 
-int GSolverCtx::findcycles(uint2* edges, uint32_t nedges) {
+int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     cg.reset();
     for (uint32_t i = 0; i < nedges; i++) {
         cg.add_compress_edge(edges[i].x, edges[i].y);
@@ -566,7 +569,7 @@ int GSolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     return 0;
 }
 
-int GSolverCtx::solve() {
+int SolverCtx::solve() {
     trimmer.abort   = false;
     uint32_t nedges = trimmer.trim();
     if (!nedges)
@@ -595,7 +598,7 @@ void FillDefaultGPUParams(SolverParams& params) {
     params.cpuload       = false;
 }
 
-GSolverCtx* CreateGSolverCtx(SolverParams& params) {
+SolverCtx* CreateSolverCtx(SolverParams& params) {
     trimparams tp;
     tp.ntrims         = params.ntrims;
     tp.genA.blocks    = params.genablocks;
@@ -626,5 +629,5 @@ GSolverCtx* CreateGSolverCtx(SolverParams& params) {
         checkCudaErrors_N(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
     }
 
-    return new GSolverCtx(tp);
+    return new SolverCtx(tp);
 }

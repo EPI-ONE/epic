@@ -15,7 +15,6 @@
 
 class Block;
 class Vertex;
-struct SolverParams;
 
 enum ParamsType : uint8_t {
     MAINNET = 1,
@@ -29,8 +28,6 @@ public:
 
 // proof-of-work parameters
 #define EDGEBITS 29
-#define PROOFSIZE 4
-    std::unique_ptr<SolverParams> solverParams;
 
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
@@ -56,6 +53,7 @@ public:
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
 
+    const int proofSize = 4;
     uint64_t initialDifficulty;
     arith_uint256 initialMsTarget;
 
@@ -68,7 +66,7 @@ public:
     const Vertex& GetGenesisVertex() const;
 
 protected:
-    Params();
+    Params() = default;
 
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
 

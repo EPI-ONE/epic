@@ -30,7 +30,7 @@ public:
     compressor<word_t>* compressv = nullptr;
     bitmap<uint32_t> visited;
     uint32_t maxSols;
-    Proof* sols = nullptr;
+    word_t** sols = nullptr;
     uint32_t nsols;
 
     graph(){};
@@ -42,7 +42,10 @@ public:
         links     = new link[2 * maxEdges];
         compressu = compressv = 0;
         sharedmem             = false;
-        sols                  = new Proof[maxSols + 1]; // extra one for current path
+        sols                  = new word_t*[maxSols + 1]; // extra one for current path
+        for (int i = 0; i < PROOFSIZE; ++i) {
+            sols[i] = new word_t[PROOFSIZE];
+        }
         visited.clear();
     }
 
@@ -55,7 +58,10 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits);
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
-        sols      = new Proof[maxSols];
+        sols      = new word_t*[maxSols];
+        for (int i = 0; i < PROOFSIZE; ++i) {
+            sols[i] = new word_t[PROOFSIZE];
+        }
         visited.clear();
     }
 
@@ -67,7 +73,10 @@ public:
         links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
         compressu = compressv = 0;
         sharedmem             = true;
-        sols                  = new Proof[maxSols];
+        sols                  = new word_t*[maxSols];
+        for (int i = 0; i < PROOFSIZE; ++i) {
+            sols[i] = new word_t[PROOFSIZE];
+        }
         visited.clear();
     }
 
@@ -81,7 +90,10 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits, bytes += sizeof(link[2 * maxEdges]));
         compressv = new compressor<word_t>(EDGEBITS, compressbits, bytes + compressu->bytes());
         sharedmem = true;
-        sols      = new Proof[maxSols];
+        sols      = new word_t*[maxSols];
+        for (int i = 0; i < PROOFSIZE; ++i) {
+            sols[i] = new word_t[PROOFSIZE];
+        }
         visited.clear();
     }
 
@@ -89,6 +101,10 @@ public:
         if (!sharedmem) {
             delete[] adjlist;
             delete[] links;
+        }
+
+        for (int i = 0; i < PROOFSIZE; ++i) {
+            delete[] sols[i];
         }
         delete[] sols;
         delete compressu;

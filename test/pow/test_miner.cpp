@@ -105,15 +105,16 @@ TEST_F(TestMiner, Restart) {
 
 TEST_F(TestMiner, MineGenesis) {
     /**
-     * MainNet: {version: 1, difficulty target: 0x1d00ffffL}
-     * TestNet: {version:10, difficulty target: 0x1e00ffffL}
-     * UnitTest: {version:100, difficulty target: 0x1f00ffffL}
+     * MainNet: {version: 1, PROOFSIZE: 4}
+     * TestNet: {version:10, PROOFSIZE: 14}
+     * UnitTest: {version:100, PROOFSIZE: 42}
      */
 
-    // std::vector<uint16_t> versions     = {100 [>, 10, 1<]};
-    // std::vector<uint32_t> difficulties = {0x2000ffffL [>, 0x1e00ffffL, 0x1d00ffffL<]};
-    std::vector<uint16_t> versions     = {10};
-    std::vector<uint32_t> difficulties = {0x1f00ffffL};
+    // std::vector<uint16_t> versions = {100, 10, 1};
+
+#undef PROOFSIZE
+#define PROOFSIZE 4
+    std::vector<uint16_t> versions = {100};
 
     Transaction tx;
 
@@ -136,7 +137,7 @@ TEST_F(TestMiner, MineGenesis) {
     for (int i = 0; i < versions.size(); ++i) {
         Block b{versions[i]};
         b.AddTransaction(tx);
-        b.SetDifficultyTarget(difficulties[i]);
+        b.SetDifficultyTarget(0x2000ffffL);
         b.SetTime(1559859000L);
         b.SetNonce(0);
         b.FinalizeHash();
@@ -147,29 +148,31 @@ TEST_F(TestMiner, MineGenesis) {
     /////////////////////////////////////////////////////////////////////
     // Uncomment the following lines to mine
     /////////////////////////////////////////////////////////////////////
-    int numThreads = 44;
-    Miner m(numThreads);
-    m.Start();
-    for (auto& genesisBlock : genesisBlocks) {
-        m.SolveCuckaroo(genesisBlock);
-        std::cout << std::to_string(genesisBlock) << std::endl;
-        VStream gvs(genesisBlock);
-        std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
-                  << HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
-        EXPECT_TRUE(genesisBlock.CheckPOW());
-    }
-    m.Stop();
+    // int numThreads = 44;
+    // Miner m(numThreads);
+    // m.Start();
+    // for (auto& genesisBlock : genesisBlocks) {
+    // m.SolveCuckaroo(genesisBlock);
+    // std::cout << std::to_string(genesisBlock) << std::endl;
+    // VStream gvs(genesisBlock);
+    // std::cout << "HEX string for version [" << genesisBlock.GetVersion() << "]: \n"
+    //<< HexStr(gvs.cbegin(), gvs.cend()) << std::endl;
+    // EXPECT_TRUE(genesisBlock.CheckPOW());
+    //}
+    // m.Stop();
     /////////////////////////////////////////////////////////////////////
 
     // Last mining result
-    // genesisBlocks[0].SetNonce(1063);
-    // genesisBlocks[0].SetProof({155323463, 249094318, 300653832, 329365019}); // UnitTest
-    // genesisBlocks[1].SetNonce(37692687);  // TestNet
-    // genesisBlocks[2].SetNonce(984142618); // MainNet
+    genesisBlocks[0].SetNonce(1063);
+    genesisBlocks[0].SetProof({155323463, 249094318, 300653832, 329365019}); // UnitTest
+    genesisBlocks[1].SetNonce(608);
+    genesisBlocks[1].SetProof({138505277, 226668951, 481608353, 487218457}); // TestNet
+    genesisBlocks[2].SetNonce(1430);
+    genesisBlocks[2].SetProof({161077755, 430449326, 494942486, 513180537}); // MainNet
 
-    // for (auto& genesisBlock : genesisBlocks) {
-    // genesisBlock.FinalizeHash();
-    //}
+    for (auto& genesisBlock : genesisBlocks) {
+        genesisBlock.FinalizeHash();
+    }
 
-    // EXPECT_TRUE(GENESIS.Verify());
+    EXPECT_TRUE(GENESIS.Verify());
 }

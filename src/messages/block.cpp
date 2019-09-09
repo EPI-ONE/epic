@@ -390,11 +390,11 @@ bool Block::CheckPOW() const {
         return false;
     }
 
-    static const std::unique_ptr<CSolverCtx> ctx(CreateCSolverCtx(*GetParams().solverParams));
     VStream vs(header_);
-    ctx->SetHeader(vs.data(), vs.size());
+    siphash_keys sipkeys;
+    SetHeader(vs.data(), vs.size(), &sipkeys);
 
-    auto status = VerifyProof(proof_, ctx->trimmer.sipkeys);
+    auto status = VerifyProof(proof_, sipkeys);
     if (status != POW_OK) {
         spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
         return false;

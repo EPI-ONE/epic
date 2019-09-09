@@ -8,16 +8,9 @@ Miner::Miner() : solverPool_(1) {}
 
 Miner::Miner(size_t nThreads, size_t nSipThreads) {
 #ifndef __CUDA_ENABLED__
-    if ((nSipThreads & (nSipThreads - 1)) != 0) { // make sure it's power of 2
-        // Round it to the largest power of 2 less than nSipThreads
-        uint32_t n = 1 << (sizeof(uint32_t) * 8 - 1);
-        while ((nSipThreads & n) == 0 && n != 0) {
-            n >>= 1;
-        }
-        nSipThreads = n;
-    }
-    spdlog::info("Miner using CPU. {} threads in solver pool.", nThreads);
+    spdlog::info("No CUDA support. Miner aborted.");
 #else
+    FillDefaultGPUParams(solverParams);
     int nGPUDevices{};
     checkCudaErrors_V(cudaGetDeviceCount(&nGPUDevices));
     spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
@@ -100,6 +93,7 @@ void Miner::Solve(Block& b) {
 }
 
 void Miner::SolveCuckaroo(Block& b) {
+#ifdef __CUDA_ENABLED__
     arith_uint256 target = b.GetTargetAsInteger();
     size_t nthreads      = solverPool_.GetThreadSize();
 
@@ -107,7 +101,7 @@ void Miner::SolveCuckaroo(Block& b) {
     final_ctx_index = -1;
     final_time      = b.GetTime();
 
-    std::vector<std::unique_ptr<CTX>> ctx_q(nthreads);
+    std::vector<std::unique_ptr<SolverCtx>> ctx_q(nthreads);
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
@@ -115,10 +109,10 @@ void Miner::SolveCuckaroo(Block& b) {
             blk.nonce = i + 1;
             VStream vs(blk);
 
-            SolverParams _params = *GetParams().solverParams;
-            _params.device       = i;
-            ctx_q[i]             = std::unique_ptr<CTX>(CreateSolverCtx(_params));
-            const auto& ctx      = ctx_q[i];
+            auto _params    = solverParams;
+            _params.device  = i;
+            ctx_q[i]        = std::unique_ptr<SolverCtx>(CreateSolverCtx(_params));
+            const auto& ctx = ctx_q[i];
 
             while (final_nonce.load() == 0 && enabled_.load()) {
                 if (blk.nonce % 128 == 0) {
@@ -171,9 +165,13 @@ void Miner::SolveCuckaroo(Block& b) {
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
     assert(b.CheckPOW());
+#endif
 }
 
 void Miner::Run() {
+#ifndef __CUDA_ENABLED__
+    spdlog::info("No CUDA support. Abort.");
+#else
     if (Start()) {
         // Restore miner chain head
         auto headHash = STORE->GetMinerChainHead();
@@ -277,6 +275,7 @@ void Miner::Run() {
             counter++;
         }
     });
+#endif
 }
 
 uint256 Miner::SelectTip() {

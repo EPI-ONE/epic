@@ -37,6 +37,7 @@ private:
     ThreadPool solverPool_;
     std::atomic<bool> enabled_ = false;
 
+    SolverParams solverParams;
     std::atomic<uint32_t> final_nonce;
     std::atomic<uint64_t> final_time;
     std::atomic<size_t> final_ctx_index;

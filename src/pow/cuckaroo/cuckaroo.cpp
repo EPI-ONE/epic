@@ -20,13 +20,13 @@ uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf) {
     return buf[edge & EDGE_BLOCK_MASK];
 }
 
-int VerifyProof(const word_t edges[PROOFSIZE], const siphash_keys& keys) {
+int VerifyProof(const word_t* edges, const siphash_keys& keys) {
     word_t xor0 = 0, xor1 = 0;
     uint64_t sips[EDGE_BLOCK_SIZE];
     word_t uvs[2 * PROOFSIZE];
 
     for (uint32_t n = 0; n < PROOFSIZE; n++) {
-        if (edges[n] > EDGEMASK) {
+        if (*(edges + n) > EDGEMASK) {
             return POW_TOO_BIG;
         }
 
@@ -34,10 +34,11 @@ int VerifyProof(const word_t edges[PROOFSIZE], const siphash_keys& keys) {
             return POW_TOO_SMALL;
         }
 
-        uint64_t edge          = sipblock(keys, edges[n], sips);
+        uint64_t edge          = sipblock(keys, *(edges + n), sips);
         xor0 ^= uvs[2 * n]     = edge & EDGEMASK;
         xor1 ^= uvs[2 * n + 1] = (edge >> 32) & EDGEMASK;
     }
+    std::cout << std::endl;
 
     if (xor0 | xor1) {
         return POW_NON_MATCHING; // optional check for obviously bad proofs

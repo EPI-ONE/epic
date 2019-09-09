@@ -9,8 +9,6 @@
 #include "siphash.cuh"
 #include "spdlog.h"
 
-typedef uint32_t Proof[PROOFSIZE];
-
 int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 
 #define checkCudaErrors(ans)                                       \
@@ -23,7 +21,7 @@ int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 #define checkCudaErrors_N(ans)                                           \
     ({                                                                   \
         if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return nullptr;                                                 \
+            return nullptr;                                              \
     })
 
 #define checkCudaErrors_V(ans)                                           \
@@ -70,17 +68,18 @@ struct GEdgeTrimmer {
     uint32_t trim();
 };
 
-struct GSolverCtx {
+struct SolverCtx {
     GEdgeTrimmer trimmer;
     uint2* edges;
     graph<word_t> cg;
-    uint2 soledges[PROOFSIZE];
+    uint2* soledges;
     std::vector<uint32_t> sols; // concatenation of all proof's indices
 
-    GSolverCtx(const trimparams&);
+    SolverCtx(const trimparams&);
 
-    ~GSolverCtx() {
+    ~SolverCtx() {
         delete[] edges;
+        delete[] soledges;
     }
 
     void SetHeader(char* header, uint32_t len) {
@@ -94,6 +93,3 @@ struct GSolverCtx {
         trimmer.abort = true;
     }
 };
-
-extern void FillDefaultGPUParams(SolverParams& params);
-extern GSolverCtx* CreateGSolverCtx(SolverParams& params);
