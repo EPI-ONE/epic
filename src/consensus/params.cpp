@@ -43,7 +43,9 @@ const Vertex& Params::GetGenesisVertex() const {
 void Params::CreateGenesis(const std::string& genesisHexStr) {
     const std::vector<unsigned char> parsed = ParseHex(genesisHexStr);
     VStream vs(parsed);
-    Block genesisBlock{vs};
+    Block genesisBlock;
+    genesisBlock.SetProof(std::vector<word_t>(cycleLen));
+    vs >> genesisBlock;
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
@@ -77,6 +79,7 @@ MainNetParams::MainNetParams() {
     maxMoney             = MAX_MONEY;
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
+    cycleLen             = 42;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
@@ -111,6 +114,7 @@ TestNetParams::TestNetParams() {
     maxMoney             = MAX_MONEY;
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
+    cycleLen             = 14;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
@@ -145,6 +149,7 @@ UnitTestParams::UnitTestParams() {
     maxMoney             = MAX_MONEY;
     reward               = 10;
     msRewardCoefficient  = 1;
+    cycleLen             = 4;
     initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;

@@ -43,8 +43,8 @@ public:
         compressu = compressv = 0;
         sharedmem             = false;
         sols                  = new word_t*[maxSols + 1]; // extra one for current path
-        for (int i = 0; i < PROOFSIZE; ++i) {
-            sols[i] = new word_t[PROOFSIZE];
+        for (int i = 0; i < CYCLELEN; ++i) {
+            sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
     }
@@ -59,8 +59,8 @@ public:
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
         sols      = new word_t*[maxSols];
-        for (int i = 0; i < PROOFSIZE; ++i) {
-            sols[i] = new word_t[PROOFSIZE];
+        for (int i = 0; i < CYCLELEN; ++i) {
+            sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
     }
@@ -74,8 +74,8 @@ public:
         compressu = compressv = 0;
         sharedmem             = true;
         sols                  = new word_t*[maxSols];
-        for (int i = 0; i < PROOFSIZE; ++i) {
-            sols[i] = new word_t[PROOFSIZE];
+        for (int i = 0; i < CYCLELEN; ++i) {
+            sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
     }
@@ -91,8 +91,8 @@ public:
         compressv = new compressor<word_t>(EDGEBITS, compressbits, bytes + compressu->bytes());
         sharedmem = true;
         sols      = new word_t*[maxSols];
-        for (int i = 0; i < PROOFSIZE; ++i) {
-            sols[i] = new word_t[PROOFSIZE];
+        for (int i = 0; i < CYCLELEN; ++i) {
+            sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
     }
@@ -103,7 +103,7 @@ public:
             delete[] links;
         }
 
-        for (int i = 0; i < PROOFSIZE; ++i) {
+        for (int i = 0; i < CYCLELEN; ++i) {
             delete[] sols[i];
         }
         delete[] sols;
@@ -140,13 +140,13 @@ public:
             return;
         if (u == dest) {
             spdlog::trace("  {}-cycle found", len);
-            if (len == PROOFSIZE && nsols < maxSols) {
-                qsort(sols[nsols++], PROOFSIZE, sizeof(word_t), nonce_cmp);
+            if (len == CYCLELEN && nsols < maxSols) {
+                qsort(sols[nsols++], CYCLELEN, sizeof(word_t), nonce_cmp);
                 memcpy(sols[nsols], sols[nsols - 1], sizeof(sols[0]));
             }
             return;
         }
-        if (len == PROOFSIZE)
+        if (len == CYCLELEN)
             return;
         word_t au1 = adjlist[u];
         if (au1 != NIL) {

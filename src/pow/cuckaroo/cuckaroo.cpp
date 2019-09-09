@@ -23,9 +23,9 @@ uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf) {
 int VerifyProof(const word_t* edges, const siphash_keys& keys) {
     word_t xor0 = 0, xor1 = 0;
     uint64_t sips[EDGE_BLOCK_SIZE];
-    word_t uvs[2 * PROOFSIZE];
+    word_t uvs[2 * CYCLELEN];
 
-    for (uint32_t n = 0; n < PROOFSIZE; n++) {
+    for (uint32_t n = 0; n < CYCLELEN; n++) {
         if (*(edges + n) > EDGEMASK) {
             return POW_TOO_BIG;
         }
@@ -46,7 +46,7 @@ int VerifyProof(const word_t* edges, const siphash_keys& keys) {
 
     uint32_t n = 0, i = 0, j;
     do { // follow cycle
-        for (uint32_t k = j = i; (k = (k + 2) % (2 * PROOFSIZE)) != i;) {
+        for (uint32_t k = j = i; (k = (k + 2) % (2 * CYCLELEN)) != i;) {
             if (uvs[k] == uvs[i]) { // find other edge endpoint identical to one at i
                 if (j != i) {
                     return POW_BRANCH; // already found one before
@@ -63,7 +63,7 @@ int VerifyProof(const word_t* edges, const siphash_keys& keys) {
         n++;
     } while (i != 0); // must cycle back to start or we would have found branch
 
-    return n == PROOFSIZE ? POW_OK : POW_SHORT_CYCLE;
+    return n == CYCLELEN ? POW_OK : POW_SHORT_CYCLE;
 }
 
 void SetHeader(const char* header, uint32_t headerlen, siphash_keys* keys) {

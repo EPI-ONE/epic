@@ -655,14 +655,6 @@ inline void Deserialize(Stream& is, T&& a) {
     a.Deserialize(is);
 }
 
-/**
- * array
- */
-template <typename Stream, typename T, int N>
-void Serialize(Stream& os, const T a[N]);
-template <typename Stream, typename T, int N>
-void Deserialize(Stream& os, T a[N]);
-
 //////////////////////////// Implementation ///////////////////////////////////
 
 /**
@@ -823,23 +815,6 @@ void Serialize(Stream& os, const std::shared_ptr<const T>& p) {
 template <typename Stream, typename T>
 void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
     p = std::make_shared<const T>(is);
-}
-
-/**
- * array
- */
-template <typename Stream, typename T, int N>
-void Serialize(Stream& os, const T (&a)[N]) {
-    for (int i = 0; i < N; ++i) {
-        Serialize(os, a[i]);
-    }
-}
-
-template <typename Stream, typename T, int N>
-void Deserialize(Stream& os, T (&a)[N]) {
-    for (int i = 0; i < N; ++i) {
-        Deserialize(os, a[i]);
-    }
 }
 
 /**

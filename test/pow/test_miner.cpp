@@ -105,15 +105,15 @@ TEST_F(TestMiner, Restart) {
 
 TEST_F(TestMiner, MineGenesis) {
     /**
-     * MainNet: {version: 1, PROOFSIZE: 4}
-     * TestNet: {version:10, PROOFSIZE: 14}
-     * UnitTest: {version:100, PROOFSIZE: 42}
+     * MainNet: {version: 1, CYCLELEN: 4}
+     * TestNet: {version:10, CYCLELEN: 14}
+     * UnitTest: {version:100, CYCLELEN: 42}
      */
 
     // std::vector<uint16_t> versions = {100, 10, 1};
 
-#undef PROOFSIZE
-#define PROOFSIZE 4
+#undef CYCLELEN
+#define CYCLELEN 4
     std::vector<uint16_t> versions = {100};
 
     Transaction tx;

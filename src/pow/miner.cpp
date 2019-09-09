@@ -122,7 +122,7 @@ void Miner::SolveCuckaroo(Block& b) {
                 ctx->SetHeader(vs.data(), vs.size());
 
                 if (ctx->solve()) {
-                    uint256 cyclehash = HashBLAKE2<256>(ctx->sols.data(), sizeof(Proof));
+                    uint256 cyclehash = HashBLAKE2<256>(&ctx->sols[ctx->sols.size() - CYCLELEN], PROOFSIZE);
                     spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", blk.nonce, cyclehash.to_substr(),
                                   ArithToUint256(target).to_substr());
                     if (UintToArith256(cyclehash) <= target) {
@@ -160,7 +160,8 @@ void Miner::SolveCuckaroo(Block& b) {
 
     spdlog::trace("Final nonce {}", final_nonce.load());
     b.SetNonce(final_nonce.load());
-    b.SetProof(ctx_q[final_ctx_index]->sols.data());
+    auto& final_sols = ctx_q[final_ctx_index]->sols;
+    b.SetProof(final_sols.data() + final_sols.size() - GetParams().cycleLen);
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();

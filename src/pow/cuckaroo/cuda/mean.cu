@@ -54,7 +54,7 @@ const uint32_t EDGES_B = NZ * NEPS_B / NEPS;
 const uint32_t ROW_EDGES_A = EDGES_A * NY;
 const uint32_t ROW_EDGES_B = EDGES_B * NY;
 
-__constant__ uint2 recoveredges[42];
+__constant__ uint2 recoveredges[16];
 __constant__ uint2 e0 = {0, 0};
 
 __device__ uint64_t dipblock(const siphash_keys& keys, const word_t edge, uint64_t* buf) {
@@ -328,15 +328,15 @@ __global__ void Tail(const uint2* source, uint2* destination, const uint32_t* sr
         destination[destIdx + lid] = source[group * maxIn + lid];
 }
 
-__global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* indexes) {
+__global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* indexes, int proofsize) {
     const int gid      = blockDim.x * blockIdx.x + threadIdx.x;
     const int lid      = threadIdx.x;
     const int nthreads = blockDim.x * gridDim.x;
     const int loops    = NEDGES / nthreads;
-    __shared__ uint32_t nonces[42];
+    __shared__ uint32_t nonces[4];
     uint64_t buf[EDGE_BLOCK_SIZE];
 
-    if (lid < PROOFSIZE) {
+    if (lid < proofsize) {
         nonces[lid] = 0;
     }
     __syncthreads();
@@ -347,7 +347,7 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
             uint64_t edge = buf[i] ^ last;
             uint32_t u    = edge & EDGEMASK;
             uint32_t v    = (edge >> 32) & EDGEMASK;
-            for (int p = 0; p < PROOFSIZE; p++) { // YO
+            for (int p = 0; p < proofsize; p++) { // YO
                 if (recoveredges[p].x == u && recoveredges[p].y == v) {
                     nonces[p] = nonce0 + i;
                 }
@@ -355,7 +355,7 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
         }
     }
     __syncthreads();
-    if (lid < PROOFSIZE) {
+    if (lid < proofsize) {
         if (nonces[lid] > 0) {
             indexes[lid] = nonces[lid];
         }
@@ -392,7 +392,7 @@ trimparams::trimparams() {
 GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
     : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t)), indexesE(new uint32_t*[1 + NB]) {
     checkCudaErrors_V(cudaMalloc((void**) &dt, sizeof(GEdgeTrimmer)));
-    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, PROOFSIZE * 2 * sizeof(uint32_t)));
+    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, CYCLELEN * 2 * sizeof(uint32_t)));
     checkCudaErrors_V(cudaMalloc((void**) &dipkeys, sizeof(siphash_keys)));
     for (int i = 0; i < 1 + NB; i++) {
         checkCudaErrors_V(cudaMalloc((void**) &indexesE[i], indexesSize));
@@ -410,7 +410,7 @@ GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
 }
 
 uint64_t GEdgeTrimmer::globalbytes() const {
-    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + PROOFSIZE * 2 * sizeof(uint32_t) +
+    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + CYCLELEN * 2 * sizeof(uint32_t) +
            sizeof(GEdgeTrimmer);
 }
 
@@ -542,8 +542,8 @@ uint32_t GEdgeTrimmer::trim() {
 }
 
 SolverCtx::SolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
-    edges = new uint2[MAXEDGES];
-    soledges = new uint2[PROOFSIZE];
+    edges    = new uint2[MAXEDGES];
+    soledges = new uint2[CYCLELEN];
 }
 
 int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
@@ -553,19 +553,20 @@ int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     }
 
     for (uint32_t s = 0; s < cg.nsols; s++) {
-        for (uint32_t j = 0; j < PROOFSIZE; j++) {
+        for (uint32_t j = 0; j < CYCLELEN; j++) {
             soledges[j] = edges[cg.sols[s][j]];
         }
-        sols.resize(sols.size() + PROOFSIZE);
-        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(soledges));
+        sols.resize(sols.size() + CYCLELEN);
+        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(uint2) * CYCLELEN);
         cudaMemset(trimmer.indexesE[1], 0, trimmer.indexesSize);
         Recovery<<<trimmer.tp.recover.blocks, trimmer.tp.recover.tpb>>>(*trimmer.dipkeys, (ulonglong4*) trimmer.bufferA,
-                                                                        (int*) trimmer.indexesE[1]);
-        cudaMemcpy(&sols[sols.size() - PROOFSIZE], trimmer.indexesE[1], PROOFSIZE * sizeof(uint32_t),
+                                                                        (int*) trimmer.indexesE[1], CYCLELEN);
+        cudaMemcpy(&sols[sols.size() - CYCLELEN], trimmer.indexesE[1], CYCLELEN * sizeof(uint32_t),
                    cudaMemcpyDeviceToHost);
         checkCudaErrors(cudaDeviceSynchronize());
-        qsort(&sols[sols.size() - PROOFSIZE], PROOFSIZE, sizeof(uint32_t), cg.nonce_cmp);
+        qsort(&sols[sols.size() - CYCLELEN], CYCLELEN, sizeof(uint32_t), cg.nonce_cmp);
     }
+
     return 0;
 }
 
@@ -581,7 +582,7 @@ int SolverCtx::solve() {
     cudaMemcpy(edges, trimmer.bufferB, sizeof(uint2[nedges]), cudaMemcpyDeviceToHost);
     findcycles(edges, nedges);
     spdlog::trace("findcycles edges {}", nedges);
-    return sols.size() / PROOFSIZE;
+    return sols.size() / CYCLELEN;
 }
 
 void FillDefaultGPUParams(SolverParams& params) {

@@ -15,10 +15,12 @@
 
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
-// exact number of size of a block without counting transaction
-static constexpr size_t HEADER_SIZE = 142 + sizeof(Proof);
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
+// exact number of size of a block without counting transaction
+static constexpr uint32_t HEADER_SIZE = 142;
+// size of the cuckaroo proof in bytes
+#define PROOFSIZE (GetParams().cycleLen * sizeof(word_t))
 
 namespace std {
 string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validity = {});
@@ -78,10 +80,10 @@ public:
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce,
-          std::array<word_t, PROOFSIZE> proof = {0})
+          std::vector<word_t> proof = std::vector<word_t>(PROOFSIZE))
         : NetMessage(BLOCK),
-          header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce) {
-        memcpy(proof_, proof.data(), sizeof(Proof));
+          header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce),
+          proof_(std::move(proof)) {
         CalculateOptimalEncodingSize();
     }
 
@@ -99,7 +101,6 @@ public:
     uint32_t GetDifficultyTarget() const;
     uint32_t GetTime() const;
     uint32_t GetNonce() const;
-    const word_t* GetProof() const;
 
     void SetMilestoneHash(const uint256&);
     void SetPrevHash(const uint256&);
@@ -107,12 +108,8 @@ public:
     void SetDifficultyTarget(uint32_t target);
     void SetTime(uint32_t);
     void SetNonce(uint32_t);
-    void SetProof(const Proof&);
     void SetProof(word_t* begin);
-
-    void ResetProof() {
-        memset(proof_, 0, PROOFSIZE);
-    }
+    void SetProof(std::vector<word_t>&&);
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
@@ -130,12 +127,12 @@ public:
     void FinalizeHash();
 
     size_t CalculateOptimalEncodingSize();
-   size_t GetOptimalEncodingSize() const;
+    size_t GetOptimalEncodingSize() const;
 
-   /*
-    * Checks whether the block is correct in format.
-    */
-   bool Verify() const;
+    /*
+     * Checks whether the block is correct in format.
+     */
+    bool Verify() const;
 
     /*
      * Checks whether the block is a registration block.
@@ -189,8 +186,19 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(header_);
-        READWRITE(proof_);
+
+        if (ser_action.ForRead()) {
+            for (size_t i = 0; i < proof_.size(); ++i) {
+                s >> proof_[i];
+            }
+        } else {
+            for (size_t i = 0; i < proof_.size(); ++i) {
+                s << proof_[i];
+            }
+        }
+
         READWRITE(transactions_);
+
         if (ser_action.ForRead()) {
             SetParents();
             FinalizeHash();
@@ -210,14 +218,12 @@ public:
         return !(*this == another);
     }
 
-    friend std::string std::to_string(const Block& b, bool showtx, std::vector<uint8_t> validity);
-
 protected:
     uint256 hash_;
 
 private:
     Header header_;
-    Proof proof_ = {};
+    std::vector<word_t> proof_;
     std::vector<ConstTxPtr> transactions_;
 
     size_t optimalEncodingSize_ = 0;
@@ -225,6 +231,8 @@ private:
 public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
     Source source = UNKNOWN;
+
+    friend std::string std::to_string(const Block& b, bool showtx, std::vector<uint8_t> validity);
 };
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;

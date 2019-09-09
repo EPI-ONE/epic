@@ -26,9 +26,6 @@ class Params {
 public:
 #define INITIAL_MS_TARGET "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21"
 
-// proof-of-work parameters
-#define EDGEBITS 29
-
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
         SECRET_KEY,
@@ -53,7 +50,9 @@ public:
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
 
-    const int proofSize = 4;
+// proof-of-work parameters
+#define EDGEBITS 29
+    int cycleLen;
     uint64_t initialDifficulty;
     arith_uint256 initialMsTarget;
 

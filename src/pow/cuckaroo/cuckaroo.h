@@ -25,10 +25,10 @@
 #define EDGEBITS 29
 #endif
 
-#ifndef PROOFSIZE
+#ifndef CYCLELEN
 // the next most important parameter is the (even) length
 // of the cycle to be found. a minimum of 12 is recommended
-#define PROOFSIZE 4
+#define CYCLELEN GetParams().cycleLen
 #endif
 
 #if EDGEBITS > 30
@@ -38,8 +38,6 @@ typedef uint32_t word_t;
 #else // if EDGEBITS <= 14
 typedef uint16_t word_t;
 #endif
-
-typedef word_t Proof[PROOFSIZE];
 
 // number of edges
 #define NEDGES ((word_t) 1 << EDGEBITS)

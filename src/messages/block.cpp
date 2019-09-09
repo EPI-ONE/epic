@@ -41,15 +41,14 @@ Block::Block() : NetMessage(BLOCK) {
 }
 
 Block::Block(const Block& b)
-    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), transactions_(b.transactions_),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(b.proof_), transactions_(b.transactions_),
       optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
-    SetProof(b.proof_);
     SetParents();
 };
 
 Block::Block(Block&& b) noexcept
-    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), transactions_(std::move(b.transactions_)),
-      optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(std::move(b.proof_)),
+      transactions_(std::move(b.transactions_)), optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     b.SetNull();
     SetParents();
 }
@@ -69,7 +68,7 @@ Block::Block(VStream& payload) : NetMessage(BLOCK) {
 
 void Block::SetNull() {
     header_.SetNull();
-    ResetProof();
+    proof_.clear();
     transactions_.clear();
     source = Source::UNKNOWN;
 }
@@ -280,18 +279,14 @@ uint32_t Block::GetNonce() const {
     return header_.nonce;
 }
 
-void Block::SetProof(const Proof& p) {
-    UnCache();
-    memcpy(proof_, p, sizeof(Proof));
-}
-
 void Block::SetProof(word_t* begin) {
     UnCache();
-    memcpy(proof_, begin, sizeof(Proof));
+    memcpy(proof_.data(), begin, PROOFSIZE);
 }
 
-const word_t* Block::GetProof() const {
-    return &proof_[0];
+void Block::SetProof(std::vector<word_t>&& p) {
+    UnCache();
+    proof_ = p;
 }
 
 uint256 Block::ComputeMerkleRoot(bool* mutated) const {
@@ -331,7 +326,8 @@ std::vector<uint256> Block::GetTxHashes() const {
 }
 
 size_t Block::CalculateOptimalEncodingSize() {
-    optimalEncodingSize_ = HEADER_SIZE + ::GetSizeOfCompactSize(transactions_.size());
+    optimalEncodingSize_ =
+        HEADER_SIZE + (sizeof(word_t) * proof_.size()) + ::GetSizeOfCompactSize(transactions_.size());
 
     for (const auto& tx : transactions_) {
         optimalEncodingSize_ += ::GetSizeOfCompactSize(tx->GetInputs().size());
@@ -394,7 +390,7 @@ bool Block::CheckPOW() const {
     siphash_keys sipkeys;
     SetHeader(vs.data(), vs.size(), &sipkeys);
 
-    auto status = VerifyProof(proof_, sipkeys);
+    auto status = VerifyProof(proof_.data(), sipkeys);
     if (status != POW_OK) {
         spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
         return false;
@@ -406,7 +402,7 @@ bool Block::CheckPOW() const {
         return false;
     }
 
-    auto proofHash = HashBLAKE2<256>(proof_, sizeof(Proof));
+    auto proofHash = HashBLAKE2<256>(proof_.data(), PROOFSIZE);
     if (UintToArith256(proofHash) > target) {
         spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash), std::to_string(target),
                      std::to_string(hash_));
@@ -449,7 +445,7 @@ std::string std::to_string(const Block& block, bool showtx, std::vector<uint8_t>
     s += strprintf("      difficulty target: %d \n", std::to_string(block.header_.diffTarget));
     s += strprintf("      nonce: %d \n", std::to_string(block.header_.nonce));
     s += strprintf("      proof: [ ");
-    for (int i = 0; i < PROOFSIZE; ++i) {
+    for (int i = 0; i < CYCLELEN; ++i) {
         s += strprintf("%d ", block.proof_[i]);
     }
     s += strprintf("] \n");
