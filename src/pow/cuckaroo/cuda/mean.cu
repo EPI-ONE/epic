@@ -54,7 +54,7 @@ const uint32_t EDGES_B = NZ * NEPS_B / NEPS;
 const uint32_t ROW_EDGES_A = EDGES_A * NY;
 const uint32_t ROW_EDGES_B = EDGES_B * NY;
 
-__constant__ uint2 recoveredges[16];
+__constant__ uint2 recoveredges[MAXCYCLELEN];
 __constant__ uint2 e0 = {0, 0};
 
 __device__ uint64_t dipblock(const siphash_keys& keys, const word_t edge, uint64_t* buf) {
@@ -333,7 +333,7 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
     const int lid      = threadIdx.x;
     const int nthreads = blockDim.x * gridDim.x;
     const int loops    = NEDGES / nthreads;
-    __shared__ uint32_t nonces[4];
+    __shared__ uint32_t nonces[MAXCYCLELEN];
     uint64_t buf[EDGE_BLOCK_SIZE];
 
     if (lid < proofsize) {

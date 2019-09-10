@@ -31,6 +31,8 @@
 #define CYCLELEN GetParams().cycleLen
 #endif
 
+#define MAXCYCLELEN 42
+
 #if EDGEBITS > 30
 typedef uint64_t word_t;
 #elif EDGEBITS > 14

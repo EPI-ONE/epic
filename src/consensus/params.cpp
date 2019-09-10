@@ -44,7 +44,7 @@ void Params::CreateGenesis(const std::string& genesisHexStr) {
     const std::vector<unsigned char> parsed = ParseHex(genesisHexStr);
     VStream vs(parsed);
     Block genesisBlock;
-    genesisBlock.SetProof(std::vector<word_t>(cycleLen));
+    genesisBlock.InitProofSize(cycleLen);
     vs >> genesisBlock;
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
@@ -68,7 +68,7 @@ unsigned char Params::GetKeyPrefix(KeyPrefixType type) const {
     return keyPrefixes[type];
 }
 
-MainNetParams::MainNetParams() {
+MainNetParams::MainNetParams(bool withGenesis) {
     version              = GENESIS_BLOCK_VERSION;
     targetTimespan       = TARGET_TIMESPAN;
     timeInterval         = TIME_INTERVAL;
@@ -92,18 +92,20 @@ MainNetParams::MainNetParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
-        "0100e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
-        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002096050000fbd99909ae22a8191639801d7983961e0101e3b0c44298"
-        "fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f77"
-        "2074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101"
-        "4200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+    if (withGenesis) {
+        const std::string genesisHexStr{
+            "0100e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
+            "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
+            "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002096050000fbd99909ae22a8191639801d7983961e01"
+            "01e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
+            "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c"
+            "20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
-    CreateGenesis(genesisHexStr);
+        CreateGenesis(genesisHexStr);
+    }
 }
 
-TestNetParams::TestNetParams() {
+TestNetParams::TestNetParams(bool withGenesis) {
     version              = 10;
     targetTimespan       = 100;
     timeInterval         = TIME_INTERVAL;
@@ -127,18 +129,21 @@ TestNetParams::TestNetParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
-        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
-        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0020600200003d6c410897b1820da1c2b41c195d0a1d0101e3b0c44298"
-        "fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f77"
-        "2074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101"
-        "4200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+    if (withGenesis) {
+        const std::string genesisHexStr{
+            "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
+            "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
+            "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002108000000a1558500319c0d033f3ab00375d44804df"
+            "85a109883be5099fc65c0b935c9611af460a164e6919168ecbde1a749f581b90957c1b6034df1d0101e3b0c44298fc1c149afbf4c8"
+            "996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f772074656e20"
+            "706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101420014"
+            "2ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
-    CreateGenesis(genesisHexStr);
+        CreateGenesis(genesisHexStr);
+    }
 }
 
-UnitTestParams::UnitTestParams() {
+UnitTestParams::UnitTestParams(bool withGenesis) {
     version              = 100;
     targetTimespan       = 99;
     timeInterval         = 3; // cannot be less than 3
@@ -162,19 +167,21 @@ UnitTestParams::UnitTestParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
-        "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
-        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002027040000470c4209aee0d80e089deb111bb6a1130101e3b0c44298"
-        "fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f77"
-        "2074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101"
-        "4200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+    if (withGenesis) {
+        const std::string genesisHexStr{
+            "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
+            "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
+            "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff002101000000848b0803338f6013b6ab1915b9b5751501"
+            "01e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
+            "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c"
+            "20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
 
-    CreateGenesis(genesisHexStr);
+        CreateGenesis(genesisHexStr);
 
-    genesisVertex_->snapshot->hashRate    = 1;
-    genesisVertex_->snapshot->blockTarget = maxTarget;
-    genesisVertex_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
+        genesisVertex_->snapshot->hashRate    = 1;
+        genesisVertex_->snapshot->blockTarget = maxTarget;
+        genesisVertex_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
+    }
 }
 
 static std::unique_ptr<const Params> pparams;
@@ -184,17 +191,19 @@ const Params& GetParams() {
     return *pparams;
 }
 
-void SelectParams(ParamsType type) {
+void SelectParams(ParamsType type, bool withGenesis) {
     if (type == ParamsType::MAINNET) {
-        pparams = std::make_unique<MainNetParams>();
+        pparams = std::make_unique<MainNetParams>(withGenesis);
     } else if (type == ParamsType::TESTNET) {
-        pparams = std::make_unique<TestNetParams>();
+        pparams = std::make_unique<TestNetParams>(withGenesis);
     } else if (type == ParamsType::UNITTEST) {
-        pparams = std::make_unique<UnitTestParams>();
+        pparams = std::make_unique<UnitTestParams>(withGenesis);
     } else {
-        throw std::invalid_argument("Invalid Param Type!");
+        throw std::invalid_argument("Invalid param type!");
     }
 
-    GENESIS        = pparams->GetGenesis();
-    GENESIS_VERTEX = pparams->GetGenesisVertex();
+    if (withGenesis) {
+        GENESIS        = pparams->GetGenesis();
+        GENESIS_VERTEX = pparams->GetGenesisVertex();
+    }
 }

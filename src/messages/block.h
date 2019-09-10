@@ -110,6 +110,7 @@ public:
     void SetNonce(uint32_t);
     void SetProof(word_t* begin);
     void SetProof(std::vector<word_t>&&);
+    void InitProofSize(size_t);
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);

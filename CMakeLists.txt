@@ -226,6 +226,7 @@ else()
     message(STATUS "CUDA disabled. Using CPU miner.")
 endif()
 
+# daemon and cli executables
 add_executable(epic ${SRC_MAIN})
 add_executable(epic-cli ${SRC_CLIENT_MAIN}
     ${RPC_DIR}/rpc_client.cpp
@@ -235,6 +236,7 @@ add_executable(epic-cli ${SRC_CLIENT_MAIN}
 target_link_libraries(epic-cli protobuf::libprotobuf)
 target_link_libraries(epic-cli gRPC::grpc++_reflection)
 
+# test executable
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
 
 target_link_libraries(epiccore ${OPENSSL_CRYPTO_LIBRARY})
@@ -258,11 +260,16 @@ target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest epiccore)
 add_dependencies(epictest epiccore)
 
-set(SRC_PARSER_MAIN src/tools/blockParser.cpp)
-add_executable(parseBlocks ${SRC_PARSER_MAIN})
+# tools executables
+add_executable(parseBlocks src/tools/blockParser.cpp)
 target_link_libraries(parseBlocks epiccore)
 add_dependencies(parseBlocks epiccore)
 
+add_executable(mineGenesis src/tools/mineGenesis.cpp)
+target_link_libraries(mineGenesis epiccore)
+add_dependencies(mineGenesis epiccore)
+
+# coverage
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)
     target_compile_options(epictest PUBLIC --coverage)

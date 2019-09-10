@@ -280,13 +280,23 @@ uint32_t Block::GetNonce() const {
 }
 
 void Block::SetProof(word_t* begin) {
+    assert(!proof_.empty());
+
     UnCache();
     memcpy(proof_.data(), begin, PROOFSIZE);
 }
 
 void Block::SetProof(std::vector<word_t>&& p) {
+    assert(!p.empty());
+
     UnCache();
     proof_ = p;
+}
+
+void Block::InitProofSize(size_t s) {
+    UnCache();
+    proof_.clear();
+    proof_.resize(s);
 }
 
 uint256 Block::ComputeMerkleRoot(bool* mutated) const {
@@ -381,10 +391,8 @@ arith_uint256 Block::GetTargetAsInteger() const {
 }
 
 bool Block::CheckPOW() const {
-    if (hash_.IsNull()) {
-        spdlog::info("No hash in this block!");
-        return false;
-    }
+    assert(!hash_.IsNull());
+    assert(!proof_.empty());
 
     VStream vs(header_);
     siphash_keys sipkeys;
@@ -402,7 +410,7 @@ bool Block::CheckPOW() const {
         return false;
     }
 
-    auto proofHash = HashBLAKE2<256>(proof_.data(), PROOFSIZE);
+    auto proofHash = HashBLAKE2<256>(proof_.data(), proof_.size());
     if (UintToArith256(proofHash) > target) {
         spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash), std::to_string(target),
                      std::to_string(hash_));
@@ -445,8 +453,8 @@ std::string std::to_string(const Block& block, bool showtx, std::vector<uint8_t>
     s += strprintf("      difficulty target: %d \n", std::to_string(block.header_.diffTarget));
     s += strprintf("      nonce: %d \n", std::to_string(block.header_.nonce));
     s += strprintf("      proof: [ ");
-    for (int i = 0; i < CYCLELEN; ++i) {
-        s += strprintf("%d ", block.proof_[i]);
+    for (int i = 0; i < block.proof_.size(); ++i) {
+        s += strprintf("%d%s ", block.proof_[i], i == block.proof_.size() - 1 ? "" : ",");
     }
     s += strprintf("] \n");
 

@@ -17,9 +17,15 @@ class Block;
 class Vertex;
 
 enum ParamsType : uint8_t {
-    MAINNET = 1,
+    MAINNET = 0,
     TESTNET,
     UNITTEST,
+};
+
+static const std::string ParamsTypeStr[] = {
+    "MAINNET",
+    "TESTNET",
+    "UNITTEST",
 };
 
 class Params {
@@ -76,21 +82,21 @@ protected:
 
 class MainNetParams : public Params {
 public:
-    MainNetParams();
+    MainNetParams(bool withGenesis = true);
 };
 
 class TestNetParams : public Params {
 public:
-    TestNetParams();
+    TestNetParams(bool withGenesis = true);
 };
 
 class UnitTestParams : public Params {
 public:
-    UnitTestParams();
+    UnitTestParams(bool withGenesis = true);
 };
 
 // instance of the parameters for usage throughout the project
 const Params& GetParams();
-void SelectParams(ParamsType type);
+void SelectParams(ParamsType type, bool withGenesis = true);
 
 #endif // EPIC_PARAMS_H

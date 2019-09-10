@@ -33,22 +33,6 @@ public:
     word_t** sols = nullptr;
     uint32_t nsols;
 
-    graph(){};
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols) : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new word_t[2 * maxNodes]; // index into links array
-        links     = new link[2 * maxEdges];
-        compressu = compressv = 0;
-        sharedmem             = false;
-        sols                  = new word_t*[maxSols + 1]; // extra one for current path
-        for (int i = 0; i < CYCLELEN; ++i) {
-            sols[i] = new word_t[CYCLELEN];
-        }
-        visited.clear();
-    }
-
     graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits) : visited(2 * maxnodes) {
         maxEdges  = maxedges;
         maxNodes  = maxnodes;
@@ -59,39 +43,7 @@ public:
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
         sols      = new word_t*[maxSols];
-        for (int i = 0; i < CYCLELEN; ++i) {
-            sols[i] = new word_t[CYCLELEN];
-        }
-        visited.clear();
-    }
-
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, char* bytes) : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new (bytes) word_t[2 * maxNodes]; // index into links array
-        links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
-        compressu = compressv = 0;
-        sharedmem             = true;
-        sols                  = new word_t*[maxSols];
-        for (int i = 0; i < CYCLELEN; ++i) {
-            sols[i] = new word_t[CYCLELEN];
-        }
-        visited.clear();
-    }
-
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits, char* bytes)
-        : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new (bytes) word_t[2 * maxNodes]; // index into links array
-        links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
-        compressu = new compressor<word_t>(EDGEBITS, compressbits, bytes += sizeof(link[2 * maxEdges]));
-        compressv = new compressor<word_t>(EDGEBITS, compressbits, bytes + compressu->bytes());
-        sharedmem = true;
-        sols      = new word_t*[maxSols];
-        for (int i = 0; i < CYCLELEN; ++i) {
+        for (int i = 0; i < maxSols; ++i) {
             sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
@@ -103,10 +55,11 @@ public:
             delete[] links;
         }
 
-        for (int i = 0; i < CYCLELEN; ++i) {
+        for (int i = 0; i < maxSols; ++i) {
             delete[] sols[i];
         }
         delete[] sols;
+
         delete compressu;
         delete compressv;
     }

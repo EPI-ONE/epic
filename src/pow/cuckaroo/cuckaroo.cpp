@@ -26,7 +26,7 @@ int VerifyProof(const word_t* edges, const siphash_keys& keys) {
     word_t uvs[2 * CYCLELEN];
 
     for (uint32_t n = 0; n < CYCLELEN; n++) {
-        if (*(edges + n) > EDGEMASK) {
+        if (edges[n] > EDGEMASK) {
             return POW_TOO_BIG;
         }
 
@@ -34,7 +34,7 @@ int VerifyProof(const word_t* edges, const siphash_keys& keys) {
             return POW_TOO_SMALL;
         }
 
-        uint64_t edge          = sipblock(keys, *(edges + n), sips);
+        uint64_t edge          = sipblock(keys, edges[n], sips);
         xor0 ^= uvs[2 * n]     = edge & EDGEMASK;
         xor1 ^= uvs[2 * n + 1] = (edge >> 32) & EDGEMASK;
     }
