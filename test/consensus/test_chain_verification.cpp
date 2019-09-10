@@ -51,7 +51,7 @@ public:
         return c->ValidateTxns(vertex);
     }
 
-    bool IsValidDistance(Chain* c, Vertex& vtx, const arith_uint256& msHashRate) {
+    bool IsValidDistance(Chain* c, Vertex& vtx, uint64_t msHashRate) {
         c->CheckTxPartition(vtx, msHashRate);
         for (size_t i = 0; i < vtx.validity.size(); ++i) {
             if (vtx.validity[i] == Vertex::Validity::INVALID) {

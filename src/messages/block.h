@@ -49,7 +49,8 @@ public:
                uint32_t diffTarget_,
                uint32_t nonce_);
 
-        Header(const Block& b);
+        explicit Header(const Block& b);
+        explicit Header(VStream&);
 
         void SetNull();
 
@@ -64,6 +65,8 @@ public:
             READWRITE(diffTarget);
             READWRITE(nonce);
         }
+
+        std::string to_string() const;
     };
 
     Block();
@@ -80,7 +83,7 @@ public:
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce,
-          std::vector<word_t> proof = std::vector<word_t>(PROOFSIZE))
+          std::vector<word_t> proof = std::vector<word_t>(CYCLELEN))
         : NetMessage(BLOCK),
           header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce),
           proof_(std::move(proof)) {
@@ -102,14 +105,15 @@ public:
     uint32_t GetDifficultyTarget() const;
     uint32_t GetTime() const;
     uint32_t GetNonce() const;
+    const std::vector<uint32_t>& GetProof() const;
 
     void SetMilestoneHash(const uint256&);
     void SetPrevHash(const uint256&);
     void SetTipHash(const uint256&);
+    void SetMerkle(const uint256& h = uint256());
     void SetDifficultyTarget(uint32_t target);
     void SetTime(uint32_t);
     void SetNonce(uint32_t);
-    void SetProof(word_t* begin);
     void SetProof(std::vector<word_t>&&);
     void InitProofSize(size_t);
 
@@ -125,6 +129,7 @@ public:
     uint256 ComputeMerkleRoot(bool* mutated = nullptr) const;
 
     const uint256& GetHash() const;
+    const uint256& GetProofHash() const;
     void CalculateHash();
     void FinalizeHash();
 
@@ -190,12 +195,12 @@ public:
         READWRITE(header_);
 
         if (ser_action.ForRead()) {
-            for (size_t i = 0; i < proof_.size(); ++i) {
-                s >> proof_[i];
+            for (auto& i : proof_) {
+                ::Deserialize(s, i);
             }
         } else {
-            for (size_t i = 0; i < proof_.size(); ++i) {
-                s << proof_[i];
+            for (auto& i : proof_) {
+                ::Serialize(s, i);
             }
         }
 
@@ -228,6 +233,7 @@ private:
     std::vector<word_t> proof_;
     std::vector<ConstTxPtr> transactions_;
 
+    uint256 proofHash_;
     size_t optimalEncodingSize_ = 0;
 
 public:

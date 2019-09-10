@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "miner.h"
+#include "test_factory.h"
 
 int main(int argc, char* argv[]) {
     std::map<std::string, uint32_t> targets = {{"1", 0x2100ffffL}, {"10", 0x2100ffffL}, {"100", 0x2100ffffL}};
@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     if (argc == 1) {
         spdlog::info("No params type passed. Using the default: UNITTEST");
         version = "100";
-        SelectParams(ParamsType::UNITTEST);
+        SelectParams(ParamsType::UNITTEST, false);
     } else {
         version          = argv[1];
         auto params_type = version == "1" ? ParamsType::MAINNET :
@@ -21,9 +21,9 @@ int main(int argc, char* argv[]) {
         try {
             SelectParams(params_type, false);
             std::stringstream targetStr;
-            targetStr << std::hex << (int) targets[version];
+            targetStr << std::hex << targets[version];
             spdlog::info("Selected params type: {}. cycleLen = {}, target = 0x{}L", ParamsTypeStr[params_type],
-                         GetParams().cycleLen, targetStr.str());
+                         CYCLELEN, targetStr.str());
         } catch (const std::invalid_argument& e) {
             spdlog::error(
                 "{} Please input a valid version number: \n   '1' (MAINNET), '10' (TESTNET), or '100' (UNITTEST). ",
@@ -49,23 +49,24 @@ int main(int argc, char* argv[]) {
     tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     Block genesisBlock{GetParams().version};
-    genesisBlock.InitProofSize(GetParams().cycleLen);
-    genesisBlock.AddTransaction(tx);
     genesisBlock.SetDifficultyTarget(targets[version]);
     genesisBlock.SetTime(1559859000L);
     genesisBlock.SetNonce(0);
+    genesisBlock.InitProofSize(CYCLELEN);
+    genesisBlock.AddTransaction(tx);
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
-    int numThreads = std::thread::hardware_concurrency() / 2;
-    Miner m(numThreads);
-    m.Start();
-    m.SolveCuckaroo(genesisBlock);
+    int numThreads = std::thread::hardware_concurrency() / 10;
+    auto* m        = CYCLELEN ? new Miner(numThreads) : new CPUMiner(numThreads);
+    m->Start();
+    m->Solve(genesisBlock);
     spdlog::info("Mined Genesis\n{}", std::to_string(genesisBlock));
     VStream gvs(genesisBlock);
     spdlog::info("HEX string for version [{}]: \n{}", genesisBlock.GetVersion(), HexStr(gvs.cbegin(), gvs.cend()));
     assert(genesisBlock.Verify());
-    m.Stop();
+    m->Stop();
+    delete m;
 
     return 0;
 
@@ -79,11 +80,10 @@ int main(int argc, char* argv[]) {
                   349758923, 370329272, 375881440, 410271724, 411860289, 415421890, 425097674,
                   465253991, 471572753, 480185136, 480539041, 482914708, 495008315, 523604902}
      TESTNET:
-         nonce = 8
-         proof = {8738209, 51223601, 61880895, 71881845, 161580511, 166017928, 190629535,
-                  295066771, 369772207, 370764110, 450808718, 458792820, 461149584, 501167200}
+         nonce = 2
+         proof = {110002832, 187793670, 201366278, 448514938}
      UNITTEST:
-         nonce = 1
-         proof = {50891652, 325095219, 354003894, 360035769}
+         nonce = 0
+         proof = { }
     *********************************************************************************/
 }

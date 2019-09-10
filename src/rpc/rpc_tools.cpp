@@ -95,23 +95,27 @@ rpc::Hash* ToRPCHash(const uint256& h) {
 rpc::Block* ToRPCBlock(const Block& b) {
     // message Block
     auto rpcb = new rpc::Block();
-    // uint32 version = 2;
+    // uint32 version = 1;
     rpcb->set_version(b.GetVersion());
-    // Hash milestoneBlockHash = 3;
+    // Hash milestoneBlockHash = 2;
     auto milestoneBlockHash = ToRPCHash(b.GetMilestoneHash());
     rpcb->set_allocated_milestoneblockhash(milestoneBlockHash);
-    // Hash prevBlockHash = 4;
+    // Hash prevBlockHash = 3;
     auto prevBlockHash = ToRPCHash(b.GetPrevHash());
     rpcb->set_allocated_prevblockhash(prevBlockHash);
-    // Hash tipBlockHash = 5;
+    // Hash tipBlockHash = 4;
     auto tipBlockHash = ToRPCHash(b.GetTipHash());
     rpcb->set_allocated_tipblockhash(tipBlockHash);
-    // uint32 diffTarget = 6;
+    // uint32 diffTarget = 5;
     rpcb->set_difftarget(b.GetDifficultyTarget());
-    // uint32 nonce = 7;
+    // uint32 nonce = 6;
     rpcb->set_nonce(b.GetNonce());
-    // uint64 time = 8;
+    // uint64 time = 7;
     rpcb->set_time(b.GetTime());
+    // repeated uint32 proof = 8;
+    for (auto e : b.GetProof()) {
+        rpcb->add_proof(e);
+    }
     // Transaction transactions = 9;
     auto txns = b.GetTransactions();
     if (!txns.empty()) {
@@ -125,8 +129,13 @@ rpc::Block* ToRPCBlock(const Block& b) {
 }
 
 Block ToBlock(const rpc::Block& rb) {
+    std::vector<word_t> proof;
+    proof.reserve(rb.proof().Capacity());
+    for (auto e : rb.proof()) {
+        proof.emplace_back(e);
+    }
     Block blk(rb.version(), ToHash(rb.milestoneblockhash()), ToHash(rb.prevblockhash()), ToHash(rb.tipblockhash()),
-              uint256(), rb.time(), rb.difftarget(), rb.nonce());
+              uint256(), rb.time(), rb.difftarget(), rb.nonce(), std::move(proof));
     blk.AddTransactions(ToTxns(rb.transactions()));
     blk.FinalizeHash();
     return blk;

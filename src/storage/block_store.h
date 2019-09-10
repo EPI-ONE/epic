@@ -22,6 +22,7 @@ class BlockStore {
 public:
     BlockStore() = delete;
     explicit BlockStore(const std::string& dbPath);
+    ~BlockStore() = default;
 
     /**
      * DB API for other modules
@@ -105,8 +106,6 @@ public:
      */
     void Wait();
     void Stop();
-
-    ~BlockStore();
 
 private:
     ThreadPool obcThread_;

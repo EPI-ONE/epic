@@ -16,6 +16,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* con
     if (!vertex) {
         return grpc::Status::OK;
     }
+
     rpc::Block* b = ToRPCBlock(*(vertex->cblock));
     reply->set_allocated_block(b);
     return grpc::Status::OK;
@@ -161,7 +162,7 @@ grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* contex
     if (!WALLET) {
         reply->set_address("Wallet has not been started");
     } else {
-        auto key = WALLET->CreateNewKey(false);
+        auto key = WALLET->CreateNewKey(true);
         reply->set_address(EncodeAddress(key));
     }
     return grpc::Status::OK;

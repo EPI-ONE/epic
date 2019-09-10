@@ -16,12 +16,12 @@
 class Miner {
 public:
     Miner();
-    Miner(size_t nThreads, size_t nSipThreads = 0);
+    Miner(size_t nThreads);
+    virtual ~Miner() {}
 
     bool Start();
     bool Stop();
-    void Solve(Block&);
-    void SolveCuckaroo(Block&);
+    virtual void Solve(Block&);
     void Run();
 
     bool IsRunning() {
@@ -32,23 +32,33 @@ public:
         return selfChainHead;
     }
 
-private:
-    std::thread runner_;
-    ThreadPool solverPool_;
+protected:
     std::atomic<bool> enabled_ = false;
 
-    SolverParams solverParams;
+    ThreadPool solverPool_;
     std::atomic<uint32_t> final_nonce;
     std::atomic<uint64_t> final_time;
-    std::atomic<size_t> final_ctx_index;
+    std::atomic<bool> found_sols;
+
+private:
+    std::thread runner_;
+
+    SolverParams solverParams;
 
     ConstBlockPtr selfChainHead = nullptr;
     Cumulator distanceCal;
-
-    SolverParams params;
 
     uint256 SelectTip();
 };
 
 extern std::unique_ptr<Miner> MINER;
+
+inline void SetNonce(VStream& vs, uint32_t nonce) {
+    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
+}
+
+inline void SetTimestamp(VStream& vs, uint32_t t) {
+    memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
+}
+
 #endif // EPIC_MINER_H

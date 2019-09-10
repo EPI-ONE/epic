@@ -230,7 +230,7 @@ private:
     std::string root_ = "data/";
 
     // logger
-    bool useFileLogger_         = true;
+    bool useFileLogger_         = false;
     std::string loggerPath_     = "logs/";
     std::string loggerFilename_ = "Debug.log";
 

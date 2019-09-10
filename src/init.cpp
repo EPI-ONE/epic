@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
+#include "block_store.h"
 #include "config.h"
 #include "dag_manager.h"
 #include "file_utils.h"
@@ -11,7 +12,6 @@
 #include "peer_manager.h"
 #include "rpc_server.h"
 #include "spdlog/sinks/basic_file_sink.h"
-#include "storage.h"
 #include "wallet.h"
 
 #include <csignal>
@@ -398,19 +398,19 @@ bool Start() {
 }
 
 void ShutDown() {
-    spdlog::info("shutdown start");
+    spdlog::info("Starting to shutdown...");
 
     if (!(CONFIG->GetDisableRPC())) {
         RPC->Shutdown();
     }
 
+    if (MINER) {
+        MINER->Stop();
+    }
     PEERMAN->Stop();
     WALLET->Stop();
     DAG->Stop();
     STORE->Stop();
-    if (MINER->IsRunning()) {
-        MINER->Stop();
-    }
 
     STORE.reset();
     DAG.reset();
@@ -421,7 +421,7 @@ void ShutDown() {
     ECC_Stop();
     handle.~ECCVerifyHandle();
 
-    spdlog::info("shutdown finish");
+    spdlog::info("Shutdown successful.");
     spdlog::shutdown();
 }
 

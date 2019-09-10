@@ -3,6 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "test_factory.h"
+#include "miner.h"
+#include "test_env.h"
 
 #include <cstring>
 #include <memory>
@@ -72,6 +74,7 @@ Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize, i
         }
     }
 
+    b.SetMerkle();
     b.CalculateOptimalEncodingSize();
 
     if (finalize) {
@@ -132,6 +135,10 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
 
     TestChain testChain{{}};
 
+    SetLogLevel(SPDLOG_LEVEL_OFF);
+    CPUMiner m(1);
+    m.Start();
+
     size_t count = 0;
     TimeGenerator timeg{startMs->cblock->GetTime(), 1, GetRand() % 10 + 2, GetRand()};
     while (count < height) {
@@ -155,8 +162,9 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
                 b.AddTransaction(CreateTx(GetRand() % 10 + 1, GetRand() % 10 + 1));
             }
         }
+        b.SetMerkle();
         b.CalculateOptimalEncodingSize();
-        b.Solve();
+        m.Solve(b);
 
         ConstBlockPtr blkptr = std::make_shared<const Block>(std::move(b));
         VertexPtr node       = std::make_shared<Vertex>(blkptr);
@@ -186,6 +194,9 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
             }
         }
     }
+
+    m.Stop();
+    ResetLogLevel();
     // PrintChain(testChain);
     return testChain;
 }
@@ -222,4 +233,58 @@ std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(con
                                                                              size_t height,
                                                                              bool tx) {
     return CreateRawChain(std::make_shared<Vertex>(startMs), height, tx);
+}
+
+void CPUMiner::Solve(Block& b) {
+    arith_uint256 target = b.GetTargetAsInteger();
+    size_t nthreads      = solverPool_.GetThreadSize();
+
+    final_nonce = 0;
+    final_time  = b.GetTime();
+    found_sols  = false;
+    VStream vs(b.GetHeader());
+
+    for (std::size_t i = 0; i < nthreads; ++i) {
+        solverPool_.Execute([&, i]() {
+            auto blkStream     = vs;
+            uint32_t nonce     = i - nthreads;
+            uint32_t timestamp = final_time.load();
+
+            while (enabled_.load()) {
+                nonce += nthreads;
+                SetNonce(blkStream, nonce);
+
+                if (nonce >= i - nthreads) {
+                    timestamp = time(nullptr);
+                    SetTimestamp(blkStream, timestamp);
+                }
+
+                if (found_sols.load()) {
+                    return;
+                }
+
+                uint256 blkHash = HashBLAKE2<256>(blkStream.data(), blkStream.size());
+                if (UintToArith256(blkHash) <= target) {
+                    bool f = false;
+                    if (found_sols.compare_exchange_strong(f, true)) {
+                        final_nonce = nonce;
+                        final_time  = timestamp;
+                    }
+                    break;
+                }
+            }
+        });
+    }
+
+    // Block the main thread until a nonce is solved
+    while (!found_sols.load() && enabled_.load()) {
+        std::this_thread::yield();
+    }
+
+    solverPool_.Abort();
+
+    b.SetNonce(final_nonce.load());
+    b.SetTime(final_time.load());
+    b.CalculateHash();
+    b.CalculateOptimalEncodingSize();
 }

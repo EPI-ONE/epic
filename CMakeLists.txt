@@ -235,6 +235,8 @@ add_executable(epic-cli ${SRC_CLIENT_MAIN}
     )
 target_link_libraries(epic-cli protobuf::libprotobuf)
 target_link_libraries(epic-cli gRPC::grpc++_reflection)
+target_link_libraries(epic epiccore)
+add_dependencies(epic epiccore)
 
 # test executable
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
@@ -253,9 +255,6 @@ if (NOT CMAKE_HOST_APPLE)
     target_link_libraries(epiccore atomic)
 endif ()
 
-target_link_libraries(epic epiccore)
-add_dependencies(epic epiccore)
-
 target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(epictest epiccore)
 add_dependencies(epictest epiccore)
@@ -265,7 +264,7 @@ add_executable(parseBlocks src/tools/blockParser.cpp)
 target_link_libraries(parseBlocks epiccore)
 add_dependencies(parseBlocks epiccore)
 
-add_executable(mineGenesis src/tools/mineGenesis.cpp)
+add_executable(mineGenesis src/tools/mineGenesis.cpp ${TEST_METHODS_SRCS})
 target_link_libraries(mineGenesis epiccore)
 add_dependencies(mineGenesis epiccore)
 

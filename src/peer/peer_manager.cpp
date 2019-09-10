@@ -62,6 +62,7 @@ void PeerManager::Stop() {
     DisconnectAllPeer();
     ClearPeers();
     connectionManager_->Stop();
+    spdlog::info("Peer Manager stopped.");
 }
 
 bool PeerManager::Init(std::unique_ptr<Config>& config) {

@@ -8,10 +8,9 @@
 #include "spdlog.h"
 
 #include <arpa/inet.h>
-#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#include <event2/listener.h>
 #include <event2/thread.h>
-#include <iostream>
-#include <pthread.h>
 
 typedef struct sockaddr sockaddr_t;
 typedef struct sockaddr_in sockaddr_in_t;
@@ -186,11 +185,11 @@ bool ConnectionManager::Connect(uint32_t ip, uint16_t port) {
 
     if (bufferevent_socket_connect(bev, &sock_addr, sizeof(sock_addr)) != 0) {
         handle->Release();
-        spdlog::info("[net] Fail to connect: {}", remote);
+        spdlog::info("[net] Failed to connect: {}", remote);
         return false;
     }
 
-    spdlog::info("[net] Try to connect: {}", remote);
+    spdlog::info("[net] Trying to connect: {}", remote);
     return true;
 }
 

@@ -6,13 +6,8 @@
 #define EPIC_DAG_MANAGER_H
 
 #include "chains.h"
-#include "concurrent_container.h"
 #include "sync_messages.h"
 #include "threadpool.h"
-
-#include <atomic>
-#include <functional>
-#include <list>
 
 class Peer;
 typedef std::shared_ptr<Peer> PeerPtr;
@@ -20,7 +15,7 @@ typedef std::shared_ptr<Peer> PeerPtr;
 class DAGManager {
 public:
     DAGManager();
-    ~DAGManager();
+    ~DAGManager() = default;
 
     /**
      * Delete the genesis state in the chains if last head height >0, maybe reload some blocks as cache later

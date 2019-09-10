@@ -32,7 +32,7 @@ public:
 TEST_F(TestMiner, Solve) {
     Block block = fac.CreateBlock(1, 1);
 
-    Miner m(4);
+    CPUMiner m(4);
     m.Start();
     m.Solve(block);
     m.Stop();
@@ -42,23 +42,27 @@ TEST_F(TestMiner, Solve) {
 
 #ifdef __CUDA_ENABLED__
 TEST_F(TestMiner, SolveCuckaroo) {
-    SetLogLevel(SPDLOG_LEVEL_TRACE);
+    SetLogLevel(SPDLOG_LEVEL_DEBUG);
+    SelectParams(ParamsType::TESTNET);
 
-    Block b = fac.CreateBlock();
+    Block b = fac.CreateBlock(2, 2, false, 5);
 
-    Miner m(5, 16);
+    Miner m(5);
     m.Start();
-    m.SolveCuckaroo(b);
+    m.Solve(b);
     m.Stop();
 
+    ASSERT_TRUE(b.CheckPOW());
+
     ResetLogLevel();
+    SelectParams(ParamsType::UNITTEST);
 }
 #endif
 
 TEST_F(TestMiner, Run) {
     SetUpEnv();
 
-    Miner m(2);
+    CPUMiner m(2);
     m.Run();
     usleep(500000);
     m.Stop();
@@ -75,7 +79,7 @@ TEST_F(TestMiner, Run) {
 TEST_F(TestMiner, Restart) {
     SetUpEnv();
 
-    Miner m(2);
+    CPUMiner m(2);
     m.Run();
     usleep(100000);
     m.Stop();

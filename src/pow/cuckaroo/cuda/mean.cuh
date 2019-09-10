@@ -11,23 +11,23 @@
 
 int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 
-#define checkCudaErrors(ans)                                       \
-    ({                                                             \
-        int retval = gpuAssert((ans), (char*) __FILE__, __LINE__); \
-        if (retval != cudaSuccess)                                 \
-            return retval;                                         \
+#define checkCudaErrors(ans)                                            \
+    ({                                                                  \
+        int retval = gpuAssert(ans, (char*) __FILE__, __LINE__, false); \
+        if (retval != cudaSuccess)                                      \
+            return retval;                                              \
     })
 
-#define checkCudaErrors_N(ans)                                           \
-    ({                                                                   \
-        if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return nullptr;                                              \
+#define checkCudaErrors_N(ans)                                                \
+    ({                                                                        \
+        if (gpuAssert(ans, (char*) __FILE__, __LINE__, false) != cudaSuccess) \
+            return nullptr;                                                   \
     })
 
-#define checkCudaErrors_V(ans)                                           \
-    ({                                                                   \
-        if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return;                                                      \
+#define checkCudaErrors_V(ans)                                                \
+    ({                                                                        \
+        if (gpuAssert(ans, (char*) __FILE__, __LINE__, false) != cudaSuccess) \
+            return;                                                           \
     })
 
 struct blockstpb {
@@ -59,7 +59,7 @@ struct GEdgeTrimmer {
     uint32_t nedges;
     uint32_t* uvnodes;
     siphash_keys sipkeys, *dipkeys;
-    bool abort;
+    std::atomic<bool> abort;
     bool initsuccess = false;
 
     GEdgeTrimmer(const trimparams _tp);

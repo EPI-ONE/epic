@@ -4,27 +4,22 @@
 
 #include "miner.h"
 
-void SetNonce(VStream& vs, uint32_t nonce) {
-    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
-}
+Miner::Miner() : Miner(4) {}
 
-void SetTimestamp(VStream& vs, uint32_t t) {
-    memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
-}
-
-Miner::Miner() : solverPool_(1) {}
-
-Miner::Miner(size_t nThreads, size_t nSipThreads) {
+Miner::Miner(size_t nThreads) {
+    if (CYCLELEN) {
 #ifndef __CUDA_ENABLED__
-    spdlog::info("No CUDA support. Miner aborted.");
+        spdlog::info("No CUDA support.");
 #else
-    FillDefaultGPUParams(solverParams);
-    int nGPUDevices{};
-    checkCudaErrors_V(cudaGetDeviceCount(&nGPUDevices));
-    spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
+        FillDefaultGPUParams(solverParams);
+        int nGPUDevices{};
+        gpuAssert(cudaGetDeviceCount(&nGPUDevices), (char*) __FILE__, __LINE__);
+        spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
 
-    nThreads = std::min(nThreads, (size_t) nGPUDevices);
+        nThreads = std::max(nThreads, (size_t) 1);
+        nThreads = std::min(nThreads, (size_t) nGPUDevices);
 #endif
+    }
 
     solverPool_.SetThreadSize(nThreads);
 }
@@ -56,134 +51,97 @@ bool Miner::Stop() {
 }
 
 void Miner::Solve(Block& b) {
-    arith_uint256 target = b.GetTargetAsInteger();
-    size_t nthreads      = solverPool_.GetThreadSize();
-
-    std::atomic<uint64_t> final_time = b.GetTime();
-    final_nonce                      = 0;
-
-    for (std::size_t i = 1; i <= nthreads; ++i) {
-        solverPool_.Execute([&, i]() {
-            Block blk(b);
-            blk.SetNonce(i);
-            blk.FinalizeHash();
-
-            while (final_nonce.load() == 0 && enabled_.load()) {
-                if (UintToArith256(blk.GetHash()) <= target) {
-                    final_nonce = blk.GetNonce();
-                    final_time  = blk.GetTime();
-                    break;
-                }
-
-                if (blk.GetNonce() >= UINT_LEAST32_MAX - nthreads) {
-                    blk.SetTime(time(nullptr));
-                    blk.SetNonce(i);
-                } else {
-                    blk.SetNonce(blk.GetNonce() + nthreads);
-                }
-
-                blk.CalculateHash();
-            }
-        });
-    }
-
-    // Block the main thread until a nonce is solved
-    while (final_nonce.load() == 0 && enabled_.load()) {
-        std::this_thread::yield();
-    }
-
-    solverPool_.Abort();
-
-    b.SetNonce(final_nonce.load());
-    b.SetTime(final_time.load());
-    b.CalculateHash();
-    b.CalculateOptimalEncodingSize();
-}
-
-void Miner::SolveCuckaroo(Block& b) {
 #ifdef __CUDA_ENABLED__
     arith_uint256 target = b.GetTargetAsInteger();
     size_t nthreads      = solverPool_.GetThreadSize();
 
-    final_nonce     = 0;
-    final_ctx_index = -1;
-    final_time      = b.GetTime();
-    VStream vs(b.GetHeader());
+    final_nonce = 0;
+    final_time  = b.GetTime();
+    found_sols  = false;
+    std::vector<uint32_t> final_sol(CYCLELEN);
 
-    std::vector<std::unique_ptr<SolverCtx>> ctx_q(nthreads);
+    std::vector<SolverCtx*> ctx_q(nthreads);
+    VStream vs(b.GetHeader());
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
+            auto _params   = solverParams;
+            _params.device = i;
+            SolverCtx* ctx = nullptr;
+            while (!found_sols.load() && !ctx) {
+                ctx = CreateSolverCtx(_params);
+            }
+            ctx_q[i] = ctx;
+
             auto blkStream     = vs;
-            uint32_t nonce     = i;
-            uint32_t timestamp = time(nullptr);
-            SetNonce(blkStream, nonce);
-            SetTimestamp(blkStream, time(nullptr));
+            uint32_t nonce     = i - nthreads;
+            uint32_t timestamp = final_time.load();
 
-            auto _params    = solverParams;
-            _params.device  = i;
-            ctx_q[i]        = std::unique_ptr<SolverCtx>(CreateSolverCtx(_params));
-            const auto& ctx = ctx_q[i];
+            while (enabled_.load()) {
+                nonce += nthreads;
+                SetNonce(blkStream, nonce);
 
-            while (final_nonce.load() == 0 && enabled_.load()) {
-                if (nonce % 128 == 0) {
-                    std::cout << "Solving for nonce " << nonce << std::endl;
+                if (nonce >= i - nthreads) {
+                    timestamp = time(nullptr);
+                    SetTimestamp(blkStream, timestamp);
                 }
 
                 ctx->SetHeader(blkStream.data(), blkStream.size());
 
+                if (found_sols.load()) {
+                    return;
+                }
+
                 if (ctx->solve()) {
-                    uint256 cyclehash = HashBLAKE2<256>(&ctx->sols[ctx->sols.size() - CYCLELEN], PROOFSIZE);
-                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", nonce, cyclehash.to_substr(),
-                                  ArithToUint256(target).to_substr());
+                    std::vector<uint32_t> sol(ctx->sols.end() - CYCLELEN, ctx->sols.end()); // the last solution
+                    uint256 cyclehash = HashBLAKE2<256>(sol.data(), PROOFSIZE);
                     if (UintToArith256(cyclehash) <= target) {
-                        size_t minus_one = -1;
-                        if (final_ctx_index.compare_exchange_strong(minus_one, i)) {
+                        bool f = false;
+                        if (found_sols.compare_exchange_strong(f, true)) {
                             final_nonce = nonce;
                             final_time  = timestamp;
+                            final_sol   = std::move(sol);
+                            spdlog::trace("Found solution: thread {}, nonce {}, time {}, cycle hash {}", i, nonce,
+                                          timestamp, cyclehash.to_substr());
                         }
                         break;
                     }
-                }
-
-                if (nonce >= UINT_LEAST32_MAX - nthreads) {
-                    nonce = i;
-                    SetNonce(blkStream, nonce);
-                    SetTimestamp(blkStream, time(nullptr));
-                } else {
-                    nonce += nthreads;
-                    memcpy(blkStream.data() + blkStream.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
                 }
             }
         });
     }
 
-    while (final_nonce.load() == 0 && enabled_.load()) {
+    while (!found_sols.load() && enabled_.load()) {
         usleep(500000);
     }
 
     // Abort unfinished tasks
     solverPool_.ClearAndDisableTasks();
     for (const auto& ctx : ctx_q) {
-        ctx->abort();
+        if (ctx) {
+            ctx->abort();
+        }
     }
     solverPool_.Abort();
 
-    spdlog::trace("Final nonce {}", final_nonce.load());
     b.SetNonce(final_nonce.load());
-    auto& final_sols = ctx_q[final_ctx_index]->sols;
-    b.SetProof(final_sols.data() + final_sols.size() - GetParams().cycleLen);
+    b.SetProof(std::move(final_sol));
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
-    assert(b.CheckPOW());
+
+    for (auto& ctx : ctx_q) {
+        if (ctx) {
+            DestroySolverCtx(ctx);
+        }
+    }
 #endif
 }
 
 void Miner::Run() {
 #ifndef __CUDA_ENABLED__
-    spdlog::info("No CUDA support. Abort.");
-#else
+    spdlog::info("No CUDA support.");
+#endif
     if (Start()) {
         // Restore miner chain head
         auto headHash = STORE->GetMinerChainHead();
@@ -232,11 +190,10 @@ void Miner::Run() {
             } else {
                 prevHash = selfChainHead->GetHash();
                 if (distanceCal.Full()) {
-                    auto timeInterval = distanceCal.TimeSpan();
-                    double percentage =
-                        distanceCal.Sum().GetDouble() / (timeInterval + 1) / (head->snapshot->hashRate + 1);
-                    if (counter % 2000 == 0) {
-                        std::cout << "Hashing power percentage " << percentage << std::endl;
+                    if (counter % 10 == 0) {
+                        spdlog::debug("Hashing power percentage {}", distanceCal.Sum().GetDouble() /
+                                                                         (distanceCal.TimeSpan() + 1) /
+                                                                         (head->snapshot->hashRate + 1));
                     }
 
                     auto tx = MEMPOOL->GetRedemptionTx(false);
@@ -244,9 +201,7 @@ void Miner::Run() {
                         b.AddTransaction(std::move(tx));
                     }
 
-                    auto allowed = (distanceCal.Sum() / (distanceCal.TimeSpan() + 1)) /
-                                   GetParams().sortitionCoefficient *
-                                   (GetParams().maxTarget / (head->snapshot->hashRate + 1));
+                    auto allowed = CalculateAllowedDist(distanceCal, head->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
                 }
             }
@@ -287,7 +242,6 @@ void Miner::Run() {
             counter++;
         }
     });
-#endif
 }
 
 uint256 Miner::SelectTip() {

@@ -8,6 +8,7 @@
 #include "block.h"
 #include "dag_manager.h"
 #include "key.h"
+#include "miner.h"
 #include "tasm.h"
 #include "vertex.h"
 
@@ -117,6 +118,12 @@ private:
             hash_ = fac->CreateRandomHash();
         }
     };
+};
+
+class CPUMiner : public Miner {
+public:
+    using Miner::Miner;
+    void Solve(Block&) override;
 };
 
 #endif // EPIC_TEST_FACTORY_H

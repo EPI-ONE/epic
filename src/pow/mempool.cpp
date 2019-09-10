@@ -40,7 +40,7 @@ std::size_t MemPool::Size() const {
     return mempool_.size();
 }
 
-bool MemPool::IsEmpty() const {
+bool MemPool::Empty() const {
     return Size() == 0;
 }
 

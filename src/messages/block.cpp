@@ -24,6 +24,9 @@ Block::Header::Header(const Block& b)
       prevBlockHash(b.header_.prevBlockHash), tipBlockHash(b.header_.tipBlockHash), merkleRoot(b.header_.merkleRoot),
       timestamp(b.header_.timestamp), diffTarget(b.header_.diffTarget), nonce(b.header_.nonce) {}
 
+Block::Header::Header(VStream& payload) {
+    payload >> *this;
+}
 
 void Block::Header::SetNull() {
     milestoneBlockHash.SetNull();
@@ -34,6 +37,19 @@ void Block::Header::SetNull() {
     timestamp  = 0;
     diffTarget = 0;
     nonce      = 0;
+}
+
+std::string Block::Header::to_string() const {
+    std::string s;
+    s += strprintf("      version: %s \n", version);
+    s += strprintf("      milestone block: %s \n", std::to_string(milestoneBlockHash));
+    s += strprintf("      previous block: %s \n", std::to_string(prevBlockHash));
+    s += strprintf("      tip block: %s \n", std::to_string(tipBlockHash));
+    s += strprintf("      merkle root: %s \n", std::to_string(merkleRoot));
+    s += strprintf("      time: %d \n", std::to_string(timestamp));
+    s += strprintf("      difficulty target: %d \n", std::to_string(diffTarget));
+    s += strprintf("      nonce: %d \n", std::to_string(nonce));
+    return s;
 }
 
 Block::Block() : NetMessage(BLOCK) {
@@ -113,6 +129,14 @@ void Block::SetTipHash(const uint256& h) {
     header_.tipBlockHash = h;
 }
 
+void Block::SetMerkle(const uint256& h) {
+    if (h.IsNull()) {
+        header_.merkleRoot = ComputeMerkleRoot();
+    } else {
+        header_.merkleRoot = h;
+    }
+}
+
 void Block::UnCache() {
     optimalEncodingSize_ = 0;
     hash_.SetNull();
@@ -126,10 +150,6 @@ bool Block::Verify() const {
         spdlog::info("Block with wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
                      std::to_string(hash_));
         return false;
-    }
-
-    if (!HasTransaction()) {
-        assert(header_.merkleRoot.IsNull());
     }
 
     // check pow
@@ -215,6 +235,7 @@ void Block::AddTransaction(const Transaction& tx) {
     auto tx_ptr = std::make_shared<Transaction>(tx);
     tx_ptr->SetParent(this);
     transactions_.emplace_back(std::move(tx_ptr));
+    SetMerkle();
     CalculateOptimalEncodingSize();
 }
 
@@ -227,6 +248,7 @@ void Block::AddTransaction(ConstTxPtr tx) {
     UnCache();
     tx->SetParent(this);
     transactions_.emplace_back(std::move(tx));
+    SetMerkle();
     CalculateOptimalEncodingSize();
 }
 
@@ -238,6 +260,7 @@ void Block::AddTransactions(std::vector<ConstTxPtr>&& txns) {
     }
     transactions_.insert(transactions_.end(), std::make_move_iterator(txns.begin()),
                          std::make_move_iterator(txns.end()));
+    SetMerkle();
     CalculateOptimalEncodingSize();
 }
 
@@ -283,22 +306,17 @@ uint32_t Block::GetNonce() const {
     return header_.nonce;
 }
 
-void Block::SetProof(word_t* begin) {
-    assert(!proof_.empty());
-
-    UnCache();
-    memcpy(proof_.data(), begin, PROOFSIZE);
+const std::vector<uint32_t>& Block::GetProof() const {
+    return proof_;
 }
 
 void Block::SetProof(std::vector<word_t>&& p) {
-    assert(!p.empty());
-
     UnCache();
     proof_ = p;
 }
 
 void Block::InitProofSize(size_t s) {
-    UnCache();
+    hash_.SetNull();
     proof_.clear();
     proof_.resize(s);
 }
@@ -309,6 +327,10 @@ uint256 Block::ComputeMerkleRoot(bool* mutated) const {
 
 const uint256& Block::GetHash() const {
     return hash_;
+}
+
+const uint256& Block::GetProofHash() const {
+    return proofHash_;
 }
 
 void Block::FinalizeHash() {
@@ -325,7 +347,8 @@ void Block::CalculateHash() {
     VStream s;
     s << header_ << proof_;
 
-    hash_ = HashSHA2<1>(s);
+    hash_      = HashSHA2<1>(s);
+    proofHash_ = HashBLAKE2<256>(proof_.data(), proof_.size() * sizeof(word_t));
 }
 
 std::vector<uint256> Block::GetTxHashes() const {
@@ -396,27 +419,36 @@ arith_uint256 Block::GetTargetAsInteger() const {
 
 bool Block::CheckPOW() const {
     assert(!hash_.IsNull());
-    assert(!proof_.empty());
 
-    VStream vs(header_);
-    siphash_keys sipkeys;
-    SetHeader(vs.data(), vs.size(), &sipkeys);
-
-    auto status = VerifyProof(proof_.data(), sipkeys);
-    if (status != POW_OK) {
-        spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
+    if (proof_.size() != CYCLELEN) {
+        spdlog::info("Bad proof size: {} [{}]", proof_.size(), std::to_string(hash_));
         return false;
     }
 
+    // Initilize siphash keys by block header
+    VStream vs(header_);
+    if (CYCLELEN) {
+        siphash_keys sipkeys;
+        SetHeader(vs.data(), vs.size(), &sipkeys);
+
+        // Verify cuckaroo pow
+        auto status = VerifyProof(proof_.data(), sipkeys);
+        if (status != POW_OK) {
+            spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
+            return false;
+        }
+    }
+
+    // Verify target validity
     arith_uint256 target = GetTargetAsInteger();
     if (target <= 0 || target > GetParams().maxTarget) {
         spdlog::info("Bad difficulty target: " + std::to_string(target));
         return false;
     }
 
-    auto proofHash = HashBLAKE2<256>(proof_.data(), proof_.size());
-    if (UintToArith256(proofHash) > target) {
-        spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash), std::to_string(target),
+    // Verify proof target
+    if (UintToArith256(CYCLELEN ? proofHash_ : (uint256) HashBLAKE2<256>(vs)) > target) {
+        spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash_), std::to_string(target),
                      std::to_string(hash_));
         return false;
     }
@@ -448,14 +480,7 @@ std::string std::to_string(const Block& block, bool showtx, std::vector<uint8_t>
     std::string s;
     s += " Block { \n";
     s += strprintf("      hash: %s \n", std::to_string(block.GetHash()));
-    s += strprintf("      version: %s \n", block.header_.version);
-    s += strprintf("      milestone block: %s \n", std::to_string(block.header_.milestoneBlockHash));
-    s += strprintf("      previous block: %s \n", std::to_string(block.header_.prevBlockHash));
-    s += strprintf("      tip block: %s \n", std::to_string(block.header_.tipBlockHash));
-    s += strprintf("      merkle root: %s \n", std::to_string(block.header_.merkleRoot));
-    s += strprintf("      time: %d \n", std::to_string(block.header_.timestamp));
-    s += strprintf("      difficulty target: %d \n", std::to_string(block.header_.diffTarget));
-    s += strprintf("      nonce: %d \n", std::to_string(block.header_.nonce));
+    s += block.header_.to_string();
     s += strprintf("      proof: [ ");
     for (int i = 0; i < block.proof_.size(); ++i) {
         s += strprintf("%d%s ", block.proof_[i], i == block.proof_.size() - 1 ? "" : ",");

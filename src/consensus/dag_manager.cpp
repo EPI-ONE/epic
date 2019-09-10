@@ -5,7 +5,6 @@
 #include "dag_manager.h"
 #include "block_store.h"
 #include "peer_manager.h"
-#include "wallet.h"
 
 DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
     milestoneChains.push(std::make_unique<Chain>());
@@ -15,10 +14,6 @@ DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
     verifyThread_.Start();
     syncPool_.Start();
     storagePool_.Start();
-}
-
-DAGManager::~DAGManager() {
-    Stop();
 }
 
 bool DAGManager::Init() {
@@ -522,10 +517,12 @@ Chain& DAGManager::GetBestChain() const {
 }
 
 void DAGManager::Stop() {
+    spdlog::info("Stopping DAG...");
     Wait();
     syncPool_.Stop();
     verifyThread_.Stop();
     storagePool_.Stop();
+    spdlog::info("DAG stopped.");
 }
 
 void DAGManager::Wait() {
@@ -635,7 +632,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
-    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+    return !(UintToArith256(b->GetProofHash()) > m->milestoneTarget);
 }
 
 VertexPtr DAGManager::GetMilestoneHead() const {
@@ -658,11 +655,7 @@ bool DAGManager::IsMainChainMS(const uint256& blkHash) const {
 }
 
 VertexPtr DAGManager::GetMainChainVertex(const uint256& blkHash) const {
-    auto vtx = GetBestChain().GetVertex(blkHash);
-    if (!vtx) {
-        vtx = STORE->GetVertex(blkHash);
-    }
-    return vtx;
+    return GetBestChain().GetVertex(blkHash);
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {

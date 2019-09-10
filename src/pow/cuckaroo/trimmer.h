@@ -7,7 +7,7 @@
 extern SolverCtx* CreateSolverCtx(SolverParams& params);
 extern void FillDefaultGPUParams(SolverParams& params);
 
-static inline void DestroySolverCtx(SolverCtx* ctx) {
+inline void DestroySolverCtx(SolverCtx* ctx) {
     delete ctx;
 }
 

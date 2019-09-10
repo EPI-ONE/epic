@@ -5,21 +5,8 @@
 #ifndef EPIC_PEER_MANAGER_H
 #define EPIC_PEER_MANAGER_H
 
-#include "address_manager.h"
-#include "connection_manager.h"
-#include "net_address.h"
 #include "peer.h"
 #include "scheduler.h"
-#include "spdlog.h"
-
-#include <ctime>
-#include <functional>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <shared_mutex>
-#include <unordered_map>
-#include <unordered_set>
 
 class PeerManager {
 public:

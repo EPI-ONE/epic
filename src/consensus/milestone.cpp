@@ -85,6 +85,9 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         return;
     }
 
+    uint64_t oldMsDiff  = GetMsDifficulty();
+    uint64_t oldBlkDiff = GetBlockDifficulty();
+
     milestoneTarget = milestoneTarget / targetTimespan * timespan;
     milestoneTarget.Round(sizeof(uint32_t));
 
@@ -128,6 +131,9 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
             blockTarget = GetParams().maxTarget;
         }
     }
+
+    spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.", oldMsDiff, GetMsDifficulty(),
+                 oldBlkDiff, GetBlockDifficulty());
 
     lastUpdateTime = blockUpdateTime;
     nTxnsCounter_  = 0;

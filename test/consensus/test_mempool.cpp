@@ -36,7 +36,7 @@ TEST_F(TestMemPool, simple_get_and_set) {
     EXPECT_EQ(pool.Size(), 3);
 
     /* check if IsEmpty returns the right value */
-    EXPECT_FALSE(pool.IsEmpty());
+    EXPECT_FALSE(pool.Empty());
 
     /* check if all elements are found
      * when passing the ptr */
@@ -77,10 +77,10 @@ TEST_F(TestMemPool, ExtractTransactions) {
     pool.Insert(transactions[0]);
     pool.Insert(transactions[1]);
 
-    static auto cmpt = [&](uint256 n) -> arith_uint256 { return (UintToArith256(n) ^ UintToArith256(blkHash)) << 32; };
+    static auto cmpt = [&](uint256 n) -> arith_uint256 { return UintToArith256(n) ^ UintToArith256(blkHash); };
 
     // case 1
-    arith_uint256 threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
+    auto threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
     ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
     // case 2
@@ -91,7 +91,7 @@ TEST_F(TestMemPool, ExtractTransactions) {
     // case 3
     threshold++;
     ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 2);
-    ASSERT_TRUE(pool.IsEmpty());
+    ASSERT_TRUE(pool.Empty());
 }
 
 TEST_F(TestMemPool, receive_and_release) {
@@ -189,7 +189,7 @@ TEST_F(TestMemPool, receive_and_release) {
     ASSERT_EQ(pool.Size(), 2);
 
     pool.ReleaseTxFromConfirmed(ptx_normal_1, true);
-    ASSERT_TRUE(pool.IsEmpty());
+    ASSERT_TRUE(pool.Empty());
 
     EpicTestEnvironment::TearDownDAG(dir);
 }

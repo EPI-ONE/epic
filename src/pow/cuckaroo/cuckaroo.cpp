@@ -38,7 +38,6 @@ int VerifyProof(const word_t* edges, const siphash_keys& keys) {
         xor0 ^= uvs[2 * n]     = edge & EDGEMASK;
         xor1 ^= uvs[2 * n + 1] = (edge >> 32) & EDGEMASK;
     }
-    std::cout << std::endl;
 
     if (xor0 | xor1) {
         return POW_NON_MATCHING; // optional check for obviously bad proofs

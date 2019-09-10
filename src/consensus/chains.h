@@ -7,11 +7,6 @@
 
 #include "chain.h"
 
-#include <algorithm>
-#include <functional>
-#include <iterator>
-#include <vector>
-
 class Chains {
 private:
     typedef std::vector<ChainPtr> container_type;

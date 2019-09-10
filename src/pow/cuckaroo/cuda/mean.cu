@@ -444,7 +444,7 @@ uint32_t GEdgeTrimmer::trim() {
     cudaEventRecord(stop, NULL);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&durationA, start, stop);
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
     cudaEventRecord(start, NULL);
@@ -456,7 +456,7 @@ uint32_t GEdgeTrimmer::trim() {
     for (uint32_t i = 0; i < NA; i++) {
         SeedB<EDGES_A><<<tp.genB.blocks / NA, tp.genB.tpb>>>(
             (uint2*) (bufferAB + i * qA), (ulonglong4*) (bufferA + i * qA), indexesE[1] + i * qE, indexesE[0] + i * qE);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }
@@ -468,7 +468,7 @@ uint32_t GEdgeTrimmer::trim() {
     checkCudaErrors(cudaEventDestroy(start));
     checkCudaErrors(cudaEventDestroy(stop));
     spdlog::trace("Seeding completed in {} + {} ms", durationA, durationB);
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -482,7 +482,7 @@ uint32_t GEdgeTrimmer::trim() {
         Round<1, EDGES_A, EDGES_B / NB>
             <<<tp.trim.blocks / NB, tp.trim.tpb>>>(0, (uint2*) (bufferA + i * qA), (uint2*) (bufferB + i * qB),
                                                    indexesE[0] + i * qE, indexesE[1 + i]); // to .632
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }
@@ -492,7 +492,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<NB, EDGES_B / NB, EDGES_B / 2><<<tp.trim.blocks, tp.trim.tpb>>>(1, (const uint2*) bufferB, (uint2*) bufferA,
                                                                           indexesE[1],
                                                                           indexesE[0]); // to .296
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -501,7 +501,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<1, EDGES_B / 2, EDGES_A / 4><<<tp.trim.blocks, tp.trim.tpb>>>(2, (const uint2*) bufferA, (uint2*) bufferB,
                                                                         indexesE[0],
                                                                         indexesE[1]); // to .176
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -510,7 +510,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<1, EDGES_A / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(3, (const uint2*) bufferB, (uint2*) bufferA,
                                                                         indexesE[1],
                                                                         indexesE[0]); // to .117
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -520,13 +520,13 @@ uint32_t GEdgeTrimmer::trim() {
         cudaMemset(indexesE[1], 0, indexesSize);
         Round<1, EDGES_B / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(round, (const uint2*) bufferA,
                                                                             (uint2*) bufferB, indexesE[0], indexesE[1]);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
         cudaMemset(indexesE[0], 0, indexesSize);
         Round<1, EDGES_B / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(round + 1, (const uint2*) bufferB,
                                                                             (uint2*) bufferA, indexesE[1], indexesE[0]);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }

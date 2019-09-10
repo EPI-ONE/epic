@@ -151,16 +151,6 @@ TEST_F(TestSer, SerializeEqDeserializeTransaction) {
     soutput << txFromDeserialization;
 
     ASSERT_EQ(s, soutput.str());
-
-    // Transaction txx(std::move(tx));
-    // std::optional<Transaction> ot(std::forward<Transaction>(txx)), ots;
-    // VStream vs;
-    // vs << ot;
-    // vs >> ots;
-
-    // ASSERT_TRUE(ot.has_value());
-    // ASSERT_TRUE(ots.has_value());
-    // ASSERT_EQ(ot, ots);
 }
 
 TEST_F(TestSer, SerializeEqDeserializeBlock) {

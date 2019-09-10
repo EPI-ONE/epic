@@ -30,8 +30,6 @@ static const std::string ParamsTypeStr[] = {
 
 class Params {
 public:
-#define INITIAL_MS_TARGET "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21"
-
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
         SECRET_KEY,
@@ -59,8 +57,6 @@ public:
 // proof-of-work parameters
 #define EDGEBITS 29
     int cycleLen;
-    uint64_t initialDifficulty;
-    arith_uint256 initialMsTarget;
 
     size_t cacheStatesSize;
 

@@ -2,12 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "net_message.h"
 #include "address_message.h"
-#include "block.h"
 #include "ping.h"
 #include "pong.h"
-#include "spdlog.h"
 #include "sync_messages.h"
 #include "version_message.h"
 

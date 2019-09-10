@@ -22,13 +22,6 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
     scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));
 }
 
-BlockStore::~BlockStore() {
-    obcThread_.Abort();
-    obcThread_.Stop();
-    interrupt = true;
-    scheduler_.join();
-}
-
 void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
     obcThread_.Execute([blk = std::move(blk), mask, this]() mutable {
         spdlog::trace("AddBlockToOBC {}", blk->GetHash().to_substr());
@@ -430,8 +423,13 @@ void BlockStore::Wait() {
 }
 
 void BlockStore::Stop() {
+    spdlog::info("Stopping store...");
     Wait();
+    obcThread_.Abort();
     obcThread_.Stop();
+    interrupt = true;
+    scheduler_.join();
+    spdlog::info("Store stopped.");
 }
 
 void BlockStore::SetFileCapacities(uint32_t fileCapacity, uint16_t epochCapacity) {
