@@ -228,6 +228,36 @@ bool CPubKey::Decompress() {
     return true;
 }
 
+bool CPubKey::CheckLowS(const std::vector<unsigned char>& vchSig) {
+    secp256k1_ecdsa_signature sig;
+    if (!ecdsa_signature_parse_der_lax(secp256k1_context_verify, &sig, vchSig.data(), vchSig.size())) {
+        return false;
+    }
+    return (!secp256k1_ecdsa_signature_normalize(secp256k1_context_verify, nullptr, &sig));
+}
+
+bool CPubKey::Derive(CPubKey& pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc) const {
+    assert(IsValid());
+    assert((nChild >> 31) == 0);
+    assert(size() == COMPRESSED_PUBLIC_KEY_SIZE);
+    unsigned char out[64];
+    BIP32Hash(cc, nChild, *begin(), begin()+1, out);
+    memcpy(ccChild.begin(), out+32, 32);
+    secp256k1_pubkey pubkey;
+    if (!secp256k1_ec_pubkey_parse(secp256k1_context_verify, &pubkey, vch, size())) {
+        return false;
+    }
+    if (!secp256k1_ec_pubkey_tweak_add(secp256k1_context_verify, &pubkey, out)) {
+        return false;
+    }
+    unsigned char pub[COMPRESSED_PUBLIC_KEY_SIZE];
+    size_t publen = COMPRESSED_PUBLIC_KEY_SIZE;
+    secp256k1_ec_pubkey_serialize(secp256k1_context_verify, pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED);
+    pubkeyChild.Set(pub, pub + publen);
+    return true;
+}
+
+
 std::string EncodeAddress(const CKeyID& addr) {
     std::vector<unsigned char> data(1, GetParams().GetKeyPrefix(Params::KeyPrefixType::PUBKEY_ADDRESS));
     data.insert(data.end(), addr.begin(), addr.end());
@@ -252,15 +282,7 @@ std::optional<CKeyID> DecodeAddress(const std::string& str) {
     return {};
 }
 
-/* static */ bool CPubKey::CheckLowS(const std::vector<unsigned char>& vchSig) {
-    secp256k1_ecdsa_signature sig;
-    if (!ecdsa_signature_parse_der_lax(secp256k1_context_verify, &sig, vchSig.data(), vchSig.size())) {
-        return false;
-    }
-    return (!secp256k1_ecdsa_signature_normalize(secp256k1_context_verify, nullptr, &sig));
-}
-
-/* static */ int ECCVerifyHandle::refcount = 0;
+int ECCVerifyHandle::refcount = 0;
 
 ECCVerifyHandle::ECCVerifyHandle() {
     if (refcount == 0) {

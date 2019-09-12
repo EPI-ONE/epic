@@ -284,6 +284,27 @@ bool CKey::Load(const CPrivKey& privkey, const CPubKey& vchPubKey, bool fSkipChe
     return VerifyPubKey(vchPubKey);
 }
 
+bool CKey::Derive(CKey& keyChild, ChainCode& ccChild, unsigned int nChild, const ChainCode& cc) const
+{
+    assert(IsValid());
+    assert(IsCompressed());
+    std::vector<unsigned char, secure_allocator<unsigned char>> vout(64);
+    if ((nChild >> 31) == 0) { // normal
+        CPubKey pubkey = GetPubKey();
+        assert(pubkey.size() == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+        BIP32Hash(cc, nChild, *pubkey.begin(), pubkey.begin() + 1, vout.data());
+    } else { // hardened
+        assert(size() == 32);
+        BIP32Hash(cc, nChild, 0, begin(), vout.data());
+    }
+    memcpy(ccChild.begin(), vout.data() + 32, 32);
+    memcpy((unsigned char*)keyChild.begin(), begin(), 32);
+    bool ret = secp256k1_ec_privkey_tweak_add(secp256k1_context_sign, (unsigned char*)keyChild.begin(), vout.data());
+    keyChild.fCompressed = true;
+    keyChild.fValid = ret;
+    return ret;
+}
+
 bool ECC_InitSanityCheck() {
     CKey key;
     key.MakeNewKey(true);

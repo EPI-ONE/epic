@@ -140,6 +140,9 @@ public:
      */
     bool VerifyPubKey(const CPubKey& vchPubKey) const;
 
+    //! Derive BIP32 child key.
+    bool Derive(CKey& keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc) const;
+
     //! Load private key and check that public key matches.
     bool Load(const CPrivKey& privkey, const CPubKey& vchPubKey, bool fSkipCheck = false);
 };

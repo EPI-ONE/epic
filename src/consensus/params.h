@@ -37,6 +37,8 @@ public:
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
         SECRET_KEY,
+        EXT_PUBLIC_KEY,
+        EXT_SECRET_KEY,
 
         MAX_KEY_PREFIX_TYPES
     };
