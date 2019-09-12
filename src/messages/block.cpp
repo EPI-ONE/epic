@@ -77,6 +77,10 @@ bool Block::IsNull() const {
     return header_.timestamp == 0;
 }
 
+Block::Header Block::GetHeader() const {
+    return header_;
+}
+
 uint16_t Block::GetVersion() const {
     return header_.version;
 }

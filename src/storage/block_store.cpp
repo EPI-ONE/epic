@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "storage.h"
+#include "block_store.h"
 
 BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
     currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
@@ -67,8 +67,8 @@ const OrphanBlocksContainer& BlockStore::GetOBC() const {
 }
 
 ConstBlockPtr BlockStore::GetBlockCache(const uint256& blkHash) const {
-    auto cache_iter = blockCache_.find(blkHash);
-    if (cache_iter != blockCache_.end()) {
+    auto cache_iter = blockPool_.find(blkHash);
+    if (cache_iter != blockPool_.end()) {
         return cache_iter->second;
     }
 
@@ -387,7 +387,7 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexPtr>& lvs) {
 }
 
 void BlockStore::UnCache(const uint256& blkHash) {
-    blockCache_.erase(blkHash);
+    blockPool_.erase(blkHash);
 }
 
 bool BlockStore::DBExists(const uint256& blkHash) const {
@@ -395,7 +395,7 @@ bool BlockStore::DBExists(const uint256& blkHash) const {
 }
 
 bool BlockStore::DAGExists(const uint256& blkHash) const {
-    return blockCache_.contains(blkHash) || DBExists(blkHash);
+    return blockPool_.contains(blkHash) || DBExists(blkHash);
 }
 
 bool BlockStore::Exists(const uint256& blkHash) const {
@@ -420,7 +420,7 @@ bool BlockStore::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
 }
 
 void BlockStore::Cache(const ConstBlockPtr& blk) {
-    blockCache_.emplace(blk->GetHash(), blk);
+    blockPool_.emplace(blk->GetHash(), blk);
 }
 
 void BlockStore::Wait() {

@@ -93,6 +93,7 @@ public:
     bool IsNull() const;
     void UnCache();
 
+    Header GetHeader() const;
     uint16_t GetVersion() const;
     uint256 GetMilestoneHash() const;
     uint256 GetPrevHash() const;

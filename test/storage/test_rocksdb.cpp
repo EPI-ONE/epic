@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "rocksdb.h"
+#include "db.h"
 #include "test_env.h"
 
 #include <cstdio>
@@ -15,7 +15,7 @@ class TestRocksDB : public testing::Test {
 public:
     // Shared resource across all test cases
     static std::string prefix;
-    static RocksDBStore* db;
+    static DBStore* db;
     TestFactory fac = EpicTestEnvironment::GetFactory();
 
 protected:
@@ -24,7 +24,7 @@ protected:
         // Get the current time and make into a temp file name
         std::ostringstream os;
         os << time(nullptr);
-        db = new RocksDBStore(prefix + os.str());
+        db = new DBStore(prefix + os.str());
     }
 
     // One tear down after all test cases
@@ -37,7 +37,7 @@ protected:
 };
 
 std::string TestRocksDB::prefix = "test_rocks/"; // temporary db folder prefix
-RocksDBStore* TestRocksDB::db   = nullptr;
+DBStore* TestRocksDB::db   = nullptr;
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     // Consturct a milestone file position

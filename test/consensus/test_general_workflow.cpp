@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "key.h"
-#include "storage.h"
 #include "test_env.h"
 #include "vertex.h"
 

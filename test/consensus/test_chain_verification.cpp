@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "chain.h"
-#include "storage.h"
 #include "test_env.h"
 
 #include <algorithm>

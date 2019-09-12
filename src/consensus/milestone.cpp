@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "block_store.h"
 #include "dag_manager.h"
-#include "storage.h"
 #include "vertex.h"
 
 #include <algorithm>

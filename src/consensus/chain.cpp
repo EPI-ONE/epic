@@ -3,9 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
+#include "block_store.h"
 #include "functors.h"
 #include "mempool.h"
-#include "storage.h"
 #include "tasm.h"
 
 template <typename K, typename V>

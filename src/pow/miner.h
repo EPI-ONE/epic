@@ -5,10 +5,10 @@
 #ifndef EPIC_MINER_H
 #define EPIC_MINER_H
 
+#include "block_store.h"
 #include "key.h"
 #include "mempool.h"
 #include "peer_manager.h"
-#include "storage.h"
 #include "trimmer.h"
 
 #include <atomic>

@@ -3,8 +3,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "dag_manager.h"
+#include "block_store.h"
 #include "peer_manager.h"
-#include "storage.h"
 #include "wallet.h"
 
 DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {

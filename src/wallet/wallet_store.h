@@ -6,7 +6,7 @@
 #define EPIC_WALLET_STORE_H
 
 #include "concurrent_container.h"
-#include "db_wrapper.h"
+#include "rocksdb.h"
 
 #include <optional>
 
@@ -18,7 +18,7 @@ class uint256;
 
 using CiphertextKey = std::vector<unsigned char>;
 
-class WalletStore : public DBWrapper {
+class WalletStore : public RocksDB {
 public:
     explicit WalletStore(std::string dbPath);
 

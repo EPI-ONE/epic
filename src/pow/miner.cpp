@@ -4,6 +4,14 @@
 
 #include "miner.h"
 
+void SetNonce(VStream& vs, uint32_t nonce) {
+    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
+}
+
+void SetTimestamp(VStream& vs, uint32_t t) {
+    memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
+}
+
 Miner::Miner() : solverPool_(1) {}
 
 Miner::Miner(size_t nThreads, size_t nSipThreads) {
@@ -100,14 +108,17 @@ void Miner::SolveCuckaroo(Block& b) {
     final_nonce     = 0;
     final_ctx_index = -1;
     final_time      = b.GetTime();
+    VStream vs(b.GetHeader());
 
     std::vector<std::unique_ptr<SolverCtx>> ctx_q(nthreads);
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
-            Block::Header blk(b);
-            blk.nonce = i + 1;
-            VStream vs(blk);
+            auto blkStream     = vs;
+            uint32_t nonce     = i;
+            uint32_t timestamp = time(nullptr);
+            SetNonce(blkStream, nonce);
+            SetTimestamp(blkStream, time(nullptr));
 
             auto _params    = solverParams;
             _params.device  = i;
@@ -115,33 +126,33 @@ void Miner::SolveCuckaroo(Block& b) {
             const auto& ctx = ctx_q[i];
 
             while (final_nonce.load() == 0 && enabled_.load()) {
-                if (blk.nonce % 128 == 0) {
-                    std::cout << "Solving for nonce " << blk.nonce << std::endl;
+                if (nonce % 128 == 0) {
+                    std::cout << "Solving for nonce " << nonce << std::endl;
                 }
 
-                ctx->SetHeader(vs.data(), vs.size());
+                ctx->SetHeader(blkStream.data(), blkStream.size());
 
                 if (ctx->solve()) {
                     uint256 cyclehash = HashBLAKE2<256>(&ctx->sols[ctx->sols.size() - CYCLELEN], PROOFSIZE);
-                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", blk.nonce, cyclehash.to_substr(),
+                    spdlog::trace("Found solution with nonce {}: {} v.s. target {}.", nonce, cyclehash.to_substr(),
                                   ArithToUint256(target).to_substr());
                     if (UintToArith256(cyclehash) <= target) {
                         size_t minus_one = -1;
                         if (final_ctx_index.compare_exchange_strong(minus_one, i)) {
-                            final_nonce = blk.nonce;
-                            final_time  = blk.timestamp;
+                            final_nonce = nonce;
+                            final_time  = timestamp;
                         }
                         break;
                     }
                 }
 
-                if (blk.nonce >= UINT_LEAST32_MAX - nthreads) {
-                    blk.timestamp = time(nullptr);
-                    blk.nonce     = i;
-                    vs            = VStream(blk);
+                if (nonce >= UINT_LEAST32_MAX - nthreads) {
+                    nonce = i;
+                    SetNonce(blkStream, nonce);
+                    SetTimestamp(blkStream, time(nullptr));
                 } else {
-                    blk.nonce += nthreads;
-                    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &blk.nonce, sizeof(uint32_t));
+                    nonce += nthreads;
+                    memcpy(blkStream.data() + blkStream.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
                 }
             }
         });

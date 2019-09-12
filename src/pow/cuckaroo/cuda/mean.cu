@@ -4,6 +4,19 @@
 
 #include "mean.cuh"
 
+int gpuAssert(cudaError_t code, char* file, int line, bool abort) {
+    int device_id;
+    cudaGetDevice(&device_id);
+    if (code != cudaSuccess) {
+        cudaDeviceReset();
+        if (abort) {
+            spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+            exit(code);
+        }
+    }
+    return code;
+}
+
 #ifndef MAXSOLS
 #define MAXSOLS 4
 #endif
@@ -360,19 +373,6 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
             indexes[lid] = nonces[lid];
         }
     }
-}
-
-int gpuAssert(cudaError_t code, char* file, int line, bool abort) {
-    int device_id;
-    cudaGetDevice(&device_id);
-    if (code != cudaSuccess) {
-        spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
-
-        cudaDeviceReset();
-        if (abort)
-            exit(code);
-    }
-    return code;
 }
 
 trimparams::trimparams() {

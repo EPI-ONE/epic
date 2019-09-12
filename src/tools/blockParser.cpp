@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "block_store.h"
 #include "cxxopts.h"
-#include "storage.h"
 #include "toml_specifacation.h"
 
 #include <iostream>

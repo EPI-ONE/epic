@@ -7,9 +7,9 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "miner.h"
 #include "params.h"
-#include "storage.h"
 #include "test_factory.h"
 #include "wallet.h"
 

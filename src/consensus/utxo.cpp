@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "utxo.h"
-#include "storage.h"
+#include "block_store.h"
 
 //////////////////////
 // UTXO
