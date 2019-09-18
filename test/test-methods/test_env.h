@@ -49,9 +49,9 @@ public:
         }
 
         if (enable_wallet) {
-            WALLET = std::make_shared<Wallet>(dirPath + "/data/", 0);
-            DAG->RegisterOnLvsConfirmedCallback(std::bind(&Wallet::OnLvsConfirmed, WALLET, std::placeholders::_1,
-                                                          std::placeholders::_2, std::placeholders::_3));
+            WALLET = std::make_unique<Wallet>(dirPath + "/data/", 1);
+            DAG->RegisterOnLvsConfirmedCallback(
+                [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
         }
     }
 

@@ -28,7 +28,7 @@ public:
 
     std::optional<bool> StartMiner();
 
-    std::optional<bool> StopMiner();
+    option_string StopMiner();
 
     option_string CreateRandomTx(size_t size);
 

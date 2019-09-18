@@ -201,7 +201,7 @@ set(TEST_MAIN test/main.cpp)
 
 add_library(epiccore STATIC ${SRC_CODE})
 
-# Cuda
+# CUDA
 option(EPIC_ENABLE_CUDA "Enable GPU mining when possible" ON)
 find_package(CUDA)
 if (CUDA_FOUND AND EPIC_ENABLE_CUDA)

@@ -260,10 +260,12 @@ void DAGManager::EnableOBC() {
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         if (*blk == *GENESIS) {
+            spdlog::trace("Adding new block aborted: genesis");
             return;
         }
 
         if (STORE->Exists(blk->GetHash())) {
+            spdlog::trace("Adding new block aborted: existed");
             return;
         }
 
@@ -491,6 +493,7 @@ void DAGManager::DeleteFork() {
                 }
                 globalStates_.erase((*it)->GetMilestoneHash());
             }
+            spdlog::info("Deleting fork with chain head {}", (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr());
             chain_it = milestoneChains.erase(chain_it);
         } else {
             chain_it++;
@@ -509,8 +512,9 @@ VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
         return pvtx;
     }
 
-    // cannot happen for in-dag workflow
+    // will happen only for finding ms of nonsolid block
     // may return nullptr when rpc is requesting some non-existing states
+    spdlog::trace("Milestone with hash {} is not found", msHash.to_substr());
     return nullptr;
 }
 
@@ -582,7 +586,6 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         std::vector<VertexPtr> blocksToListener;
         blocksToListener.reserve(vtxToStore.size());
 
-
         std::swap(vtxToStore.front(), vtxToStore.back());
         const auto& ms = *vtxToStore.front().lock();
 
@@ -594,7 +597,6 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
             blocksToListener.emplace_back(vtx.lock());
             STORE->UnCache((*vtx.lock()).cblock->GetHash());
         }
-        globalStates_.erase(ms.cblock->GetHash());
 
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             STORE->AddUTXO(utxoKey, utxoPtr);
@@ -624,7 +626,9 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
 
-        verifyThread_.Execute([=, vtxHashes = std::move(vtxHashes), txocToRemove = std::move(txocToRemove)]() {
+        verifyThread_.Execute([=, msHash = std::move(ms.cblock->GetHash()), vtxHashes = std::move(vtxHashes),
+                               txocToRemove = std::move(txocToRemove)]() {
+            globalStates_.erase(msHash);
             for (auto& chain : milestoneChains) {
                 chain->PopOldest(vtxHashes, txocToRemove);
             }

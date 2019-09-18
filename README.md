@@ -50,12 +50,13 @@ cmake ..
 # Release mode
 # cmake -DCAMKE_BUILD_TYPE=Release ..
 make -j
+cd ../bin
 # you may run the following test
-../bin/epictest
+./epictest
 # runing the daemon
-../bin/epic
+./epic
 # send rpc command to daemon
-../bin/epicc [OPTIONS] [COMMAND]
+./epicc [OPTIONS] [COMMAND]
 ```
 
 ### GPU mining

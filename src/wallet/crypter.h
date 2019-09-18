@@ -107,7 +107,6 @@ public:
     ~Crypter() {
         CleanKey();
         memory_cleanse(master_.data(), master_.size());
-        fMaster_ = false;
     }
 };
 

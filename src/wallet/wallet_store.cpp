@@ -4,8 +4,10 @@
 
 #include "wallet_store.h"
 #include "big_uint.h"
+#include "crypter.h"
 #include "file_utils.h"
 #include "key.h"
+#include "spdlog/spdlog.h"
 #include "stream.h"
 #include "transaction.h"
 
@@ -20,6 +22,10 @@ const std::string kTx         = "pending_tx";
 const std::string kUnspentTXO = "utxo";
 const std::string kPendingTXO = "pending_utxo";
 const std::string kSpentTXO   = "spent_txo";
+const std::string kInfo       = "info";
+const std::string kMasterInfo = "master_info";
+const std::string kFirstReg   = "first_reg";
+const std::string kLastRedem  = "last_redem_addr";
 
 const std::array<std::string, 3> utxoStr{kUnspentTXO, kPendingTXO, kSpentTXO};
 
@@ -36,7 +42,11 @@ static const std::vector<std::string> COLUMN_NAMES = {
     // (key) utxo key: outpoint hash ^ outpoint index
     // (value) {address (20B) + outpoint index (4B) + utxo coin value (8B)}
     kUnspentTXO, kPendingTXO, // force update periodically
-    kSpentTXO                 // update on each changes
+    kSpentTXO,                // update on each changes
+
+    kInfo // (key) name of the information
+          // (value) serialized info
+          // store encrypted information of master key
 };
 
 inline bool put(DB* db, ColumnFamilyHandle* handle, const VStream& key, const VStream& value) {
@@ -53,7 +63,6 @@ bool WalletStore::StoreTx(const Transaction& tx) {
 
 ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() {
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kTx));
-    // TODO: may get an estimated num of keys
     ConcurrentHashMap<uint256, ConstTxPtr> result;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         uint256 txhash;
@@ -64,7 +73,7 @@ ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() {
             key >> txhash;
             ptx = std::make_shared<const Transaction>(value);
         } catch (std::exception& e) {
-            std::cout << "err tx\n";
+            spdlog::info("Fail when reading tx from wallet store with error {}", e.what());
         }
         result.emplace(txhash, ptx);
     }
@@ -90,7 +99,7 @@ bool WalletStore::IsExistKey(const CKeyID& addr) {
 
 std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKeyID& addr) {
     VStream key;
-    key << addr;
+    key << EncodeAddress(addr);
     PinnableSlice valueSlice;
     if (db_->Get(ReadOptions(), handleMap_.at(kKeyBook), Slice{key.data(), key.size()}, &valueSlice).ok()) {
         try {
@@ -102,7 +111,7 @@ std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKey
                 return std::tuple{privkey, pubkey};
             }
         } catch (const std::exception& e) {
-            std::cout << "err key\n";
+            spdlog::info("Fail when reading private keys from wallet store with error {}", e.what());
         }
     }
 
@@ -127,7 +136,7 @@ ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> WalletStore::GetAl
                 result.emplace(addr, std::forward_as_tuple(privkey, pubkey));
             }
         } catch (std::exception& e) {
-            std::cout << "err all key\n";
+            spdlog::info("Fail when reading private keys from wallet store with error {}", e.what());
         }
     }
     assert(iter->status().ok());
@@ -168,8 +177,7 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
                 addr = *oAddr;
             }
         } catch (std::exception& e) {
-            std::cout << e.what();
-            std::cout << "err utxo\n";
+            spdlog::info("Fail when reading UTXO from wallet store with error {}", e.what());
         }
         result.emplace(utxokey, std::make_tuple(addr, txIndex, outputIndex, coinvalue));
     }
@@ -202,6 +210,66 @@ ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> Wal
     return GetAllUTXO(SPENT);
 }
 
+bool WalletStore::StoreMasterInfo(const MasterInfo& info) {
+    VStream key, value;
+    key << kMasterInfo;
+    value << info;
+    return put(db_, handleMap_.at(kInfo), key, value);
+}
+
+std::optional<MasterInfo> WalletStore::GetMasterInfo() {
+    VStream key;
+    key << kMasterInfo;
+    PinnableSlice valueSlice;
+    if (db_->Get(ReadOptions(), handleMap_.at(kInfo), Slice{key.data(), key.size()}, &valueSlice).ok()) {
+        try {
+            VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+            MasterInfo info{};
+            value >> info;
+            return info;
+        } catch (const std::exception& e) {
+            spdlog::info("Fail when reading master information from wallet store with error {}", e.what());
+        }
+    }
+    return {};
+}
+
+bool WalletStore::StoreLastRedemAddr(const CKeyID& addr) {
+    VStream key, value;
+    key << kLastRedem;
+    value << addr;
+    return put(db_, handleMap_.at(kInfo), key, value);
+}
+
+std::optional<CKeyID> WalletStore::GetLastRedemAddr() {
+    VStream key;
+    key << kLastRedem;
+    PinnableSlice valueSlice;
+    if (db_->Get(ReadOptions(), handleMap_.at(kInfo), Slice{key.data(), key.size()}, &valueSlice).ok()) {
+        try {
+            VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+            CKeyID addr{};
+            value >> addr;
+            return addr;
+        } catch (const std::exception& e) {
+            spdlog::info("Fail when reading last redemption hash from wallet store with error {}", e.what());
+        }
+    }
+    return {};
+}
+
+bool WalletStore::StoreFirstRegInfo() {
+    VStream key;
+    std::cout << key.str() << std::endl;
+    return put(db_, handleMap_.at(kInfo), key, VStream{true});
+}
+
+bool WalletStore::GetFirstRegInfo() {
+    VStream key;
+    std::cout << key.str() << std::endl;
+    return !RocksDB::Get(kInfo, Slice{key.data(), key.size()}).empty();
+}
+
 // get encoded pubkeys
 int WalletStore::KeysToFile(std::string filePath) {
     // get all data
@@ -216,7 +284,7 @@ int WalletStore::KeysToFile(std::string filePath) {
             keyList.emplace_back(valuestr);
             ciphertext.clear();
         } catch (std::exception& e) {
-            std::cout << "err file\n";
+            spdlog::info("Fail when writing private keys to file {} with error {}", filePath, e.what());
         }
     }
     assert(iter->status().ok());

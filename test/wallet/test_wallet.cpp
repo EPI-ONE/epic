@@ -21,7 +21,7 @@ public:
     void SetUp() override {}
 
     void TearDown() override {
-        std::string cmd = "exec rm -rf " + dir;
+        std::string cmd = "exec rm -rf " + dir + " " + path;
         system(cmd.c_str());
     }
 };
@@ -124,37 +124,45 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 }
 
 TEST_F(TestWallet, test_wallet_store) {
-    WalletStore store{dir};
-    // very simple tx tests
-    auto tx = fac.CreateTx(fac.GetRand() % 10, fac.GetRand() % 10);
-    store.StoreTx(tx);
+    CKeyID addr;
+    {
+        WalletStore store{dir};
+        // very simple tx tests
+        auto tx = fac.CreateTx(fac.GetRand() % 10, fac.GetRand() % 10);
+        store.StoreTx(tx);
 
-    auto txs = store.GetAllTx();
-    ASSERT_EQ(tx, *(txs.at(tx.GetHash())));
+        auto txs = store.GetAllTx();
+        ASSERT_EQ(tx, *(txs.at(tx.GetHash())));
 
-    // very simple key tests
-    auto [priv, pub] = fac.CreateKeyPair();
-    auto addr        = pub.GetID();
-    auto testCipher  = ParseHex("f5f7228bfe8d771c7f860338cf6fa2d609aa1fdf8167046cc3f4ebdc3169d6ad");
-    store.StoreKeys(addr, testCipher, pub);
+        // very simple key tests
+        auto [priv, pub] = fac.CreateKeyPair();
+        addr             = pub.GetID();
+        auto testCipher  = ParseHex("f5f7228bfe8d771c7f860338cf6fa2d609aa1fdf8167046cc3f4ebdc3169d6ad");
+        store.StoreKeys(addr, testCipher, pub);
 
-    auto keys = store.GetAllKey();
-    ASSERT_EQ(keys.count(addr), 1);
-    ASSERT_TRUE(store.IsExistKey(addr));
+        auto keys = store.GetAllKey();
+        ASSERT_EQ(keys.count(addr), 1);
+        ASSERT_TRUE(store.IsExistKey(addr));
 
-    ASSERT_EQ(store.KeysToFile("keys"), 0);
+        uint256 fakeHash = fac.CreateRandomHash();
+        store.StoreUnspent(fakeHash, addr, 0, 0, 5);
+        auto unspent = store.GetAllUnspent();
+        ASSERT_FALSE(unspent.empty());
+        ASSERT_EQ(unspent.size(), 1);
+        ASSERT_EQ(unspent.count(fakeHash), 1);
+        ASSERT_TRUE(std::get<3>(unspent.at(fakeHash)) == 5);
 
-    std::ifstream input{"keys"};
-    std::string line;
-    ASSERT_TRUE(std::getline(input, line));
-    VStream stm;
-    stm << pub;
-    std::string pubstr;
-    stm >> pubstr;
-    ASSERT_EQ(line, pubstr);
+        ASSERT_EQ(store.KeysToFile("keys"), 0);
+        ASSERT_TRUE(store.StoreFirstRegInfo());
+        ASSERT_TRUE(store.GetFirstRegInfo());
 
-    store.ClearOldData();
-    ASSERT_EQ(store.GetAllTx().size(), 0);
+        store.ClearOldData();
+        ASSERT_EQ(store.GetAllTx().size(), 0);
+    }
+
+    WalletStore newStore{dir};
+    ASSERT_TRUE(newStore.IsExistKey(addr));
+    ASSERT_TRUE(newStore.GetFirstRegInfo());
 
     std::string cmd = "exec rm keys";
     system(cmd.c_str());
@@ -226,14 +234,61 @@ TEST_F(TestWallet, normal_workflow) {
     while (WALLET->GetSpent().size() != 1) {
         usleep(500000);
     }
+    MINER->Stop();
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 3);
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
     ASSERT_EQ(WALLET->GetPending().size(), 0);
     ASSERT_EQ(WALLET->GetSpent().size(), 1);
 
+    // check wallet restart
+    auto balance = WALLET->GetBalance();
+    ASSERT_GT(balance.GetValue(), 0);
+    WALLET.reset(nullptr);
+
+    usleep(100000);
+
+    WALLET.reset(new Wallet("test_wallet_data//data/", 0));
+    DAG->RegisterOnLvsConfirmedCallback(
+        [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
+    WALLET->CheckPassphrase("");
+    WALLET->Start();
+
+    ASSERT_EQ(balance, WALLET->GetBalance());
+
+    MINER->Start();
+    MINER->Run();
+
+    WALLET->CreateRandomTx(1);
+    usleep(500000);
+    while (WALLET->GetPending().size() != 0 || WALLET->GetPendingTx().size() != 0) {
+        usleep(500000);
+    }
     MINER->Stop();
-    WALLET->Stop();
+
+    ASSERT_GE(WALLET->GetUnspent().size(), 3);
+    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
+    ASSERT_EQ(WALLET->GetPending().size(), 0);
+    ASSERT_LE(WALLET->GetSpent().size(), 3);
+
+    SecureString newPhrase = "realone";
+    ASSERT_TRUE(WALLET->ChangePassphrase("", newPhrase));
+    ASSERT_TRUE(WALLET->CheckPassphrase(newPhrase));
+    WALLET->CreateRandomTx(1);
+
+    MINER->Start();
+    MINER->Run();
+
+    usleep(500000);
+    while (WALLET->GetPending().size() != 0 || WALLET->GetPendingTx().size() != 0) {
+        usleep(500000);
+    }
+    MINER->Stop();
+
+    ASSERT_GE(WALLET->GetUnspent().size(), 3);
+    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
+    ASSERT_EQ(WALLET->GetPending().size(), 0);
+    ASSERT_LE(WALLET->GetSpent().size(), 4);
     DAG->Stop();
     STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);

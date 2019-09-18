@@ -283,14 +283,14 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
 }
 
 TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
-    const size_t HEIGHT    = GetParams().cacheStatesSize + 5;
+    const size_t HEIGHT    = GetParams().cacheStatesSize + 3;
     constexpr size_t hfork = 15;
     auto [chain1, vMsVtx]  = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
     std::array<TestRawChain, 3> chains;
     chains[0]                        = std::move(chain1);
-    std::tie(chains[1], std::ignore) = fac.CreateRawChain(vMsVtx[hfork], HEIGHT - hfork + 5);
-    std::tie(chains[2], std::ignore) = fac.CreateRawChain(vMsVtx.back(), 5);
+    std::tie(chains[1], std::ignore) = fac.CreateRawChain(vMsVtx[hfork], HEIGHT - hfork + 8);
+    std::tie(chains[2], std::ignore) = fac.CreateRawChain(vMsVtx.back(), 3);
 
     // add blocks in a carefully assigned sequence
     for (int i : {0, 1, 2}) {

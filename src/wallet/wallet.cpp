@@ -33,6 +33,11 @@ void Wallet::Stop() {
     spdlog::info("Wallet stopped.");
 }
 
+Wallet::~Wallet() {
+    Stop();
+    spdlog::trace("Destructing wallet");
+}
+
 void Wallet::Load() {
     // an old wallet should always have keys
     auto keysMap = walletStore_.GetAllKey();
@@ -42,6 +47,16 @@ void Wallet::Load() {
 
     for (auto& [addr, encryptedPair] : keysMap) {
         keyBook.emplace(addr, std::make_pair(std::get<0>(encryptedPair), std::get<1>(encryptedPair)));
+    }
+
+    if (auto info = walletStore_.GetMasterInfo()) {
+        masterInfo_  = std::move(*info);
+        cryptedFlag_ = true;
+    }
+
+    hasSentFirstRegistration_ = walletStore_.GetFirstRegInfo();
+    if (auto last_redem_addr = walletStore_.GetLastRedemAddr()) {
+        lastRedemAddress_ = *last_redem_addr;
     }
 
     pendingTx = walletStore_.GetAllTx();
@@ -60,6 +75,7 @@ void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
     scheduler_.AddPeriodTask(storagePeriod, [&]() {
         threadPool_.Execute([&]() {
             walletStore_.ClearOldData();
+            spdlog::debug("Back up wallet data...");
 
             for (const auto& pairTx : pendingTx) {
                 walletStore_.StoreTx(*pairTx.second);
@@ -79,7 +95,7 @@ void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
         threadPool_.Execute([&]() {
             if (rpcLoggedin_) {
                 rpcLoggedin_ = false;
-                std::cout << "wallet login session expired!\n";
+                spdlog::debug("wallet login session expired!\n");
             }
         });
     });
@@ -151,7 +167,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
         auto it = pendingTx.find(tx->GetHash());
         if (it != pendingTx.end()) {
             if (validity != vertex->VALID) {
-                spdlog::warn("[Wallet] tx failed to be confirmed, block hash = {}",
+                spdlog::warn("[Wallet] Tx failed to be confirmed, block hash = {}",
                              std::to_string(vertex->cblock->GetHash()));
 
                 // release all relavent utxos from pending
@@ -198,10 +214,16 @@ CKeyID Wallet::CreateNewKey(bool compressed) {
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {
     auto hashMsg = HashSHA2<1>(msg.data(), msg.size());
     // get keys and sign
-    const auto& [ciphertext, pubkey] = keyBook.at(targetAddr);
+    CiphertextKey ciphertext;
+    CPubKey pubkey;
+    try {
+        std::tie(ciphertext, pubkey) = keyBook.at(targetAddr);
+    } catch (std::exception& e) {
+        std::cout << e.what() << " when creating signed vin\n";
+    }
     CKey privkey{};
     if (!crypter_.DecryptKey(pubkey, ciphertext, privkey)) {
-        std::cout << "fail to decrypt private keys\n";
+        spdlog::error("[Wallet] Fail to decrypt private keys");
         return TxInput{};
     }
 
@@ -232,6 +254,7 @@ void Wallet::CreateRedemption(const CKeyID& key) {
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     auto reg                  = std::make_shared<const Transaction>(address);
     hasSentFirstRegistration_ = true;
+    walletStore_.StoreFirstRegInfo();
     SetLastRedemAddress(address);
     return reg;
 }
@@ -241,7 +264,7 @@ ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs,
                                      [](Coin prev, auto pair) { return prev + pair.first; });
     totalCost      = totalCost + (fee < MIN_FEE ? MIN_FEE : fee);
     if (totalCost > totalBalance_) {
-        spdlog::warn("[Wallet] too much money that we can't afford. Current balance = {}", totalBalance_);
+        spdlog::info("[Wallet] too much money that we can't afford. Current balance = {}", totalBalance_);
         return nullptr;
     }
 
@@ -368,6 +391,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                 spdlog::info("[Wallet] Created tx {}, index = {}", std::to_string(tx->GetHash()), i);
             }
         }
+        spdlog::info("Creating {} random transaction task completed", sizeTx);
     });
 }
 
@@ -390,6 +414,7 @@ CKeyID Wallet::GetLastRedemAddress() const {
 void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     lastRedemAddress_ = lastRedemAddress;
+    walletStore_.StoreLastRedemAddr(lastRedemAddress_);
 }
 
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
@@ -440,6 +465,8 @@ bool Wallet::SetPassphrase(const SecureString& phrase) {
         return false;
     }
 
+    // store master information
+    walletStore_.StoreMasterInfo(masterInfo_);
     // TODO: set HD wallet
     cryptedFlag_ = true;
     return true;
@@ -450,21 +477,71 @@ bool Wallet::ChangePassphrase(const SecureString& oldPhrase, const SecureString&
         return false;
     }
 
-    if (!CheckPassphrase(oldPhrase)) {
+    Crypter oldCrypter{};
+    if (auto oCrypter = CheckPassphraseMatch(oldPhrase)) {
+        oldCrypter = *oCrypter;
+    } else {
         return false;
     }
 
     cryptedFlag_ = false;
-    return SetPassphrase(newPhrase);
+    if (!SetPassphrase(newPhrase)) {
+        return false;
+    }
+
+    // change all encrypted content
+    for (auto it = keyBook.begin(); it != keyBook.end(); it++) {
+        auto value = it->second;
+        CKey priv{};
+        oldCrypter.DecryptKey(value.second, value.first, priv);
+        CiphertextKey newCiphterText{};
+        crypter_.EncryptKey(value.second, priv, newCiphterText);
+        value.first = newCiphterText;
+
+        if (!walletStore_.StoreKeys(it->first, value.first, value.second)) {
+            spdlog::error("[Wallet] Fail to store key with key-id {}", it->first.GetHex());
+        }
+        std::tie(it, std::ignore) = keyBook.insert_or_assign(it->first, std::move(value));
+    }
+
+    return true;
 }
 
 bool Wallet::CheckPassphrase(const SecureString& phrase) {
-    // check if the old pass phrase matches
-    Crypter tmpcrypter{master_};
+    if (auto oCrypter = CheckPassphraseMatch(phrase)) {
+        if (!master_.empty()) {
+            return true;
+        } else {
+            // when there is no available master key, i.e. loading data, we do decryption to get one
+            if (!oCrypter->IsReady()) {
+                return false;
+            }
+
+            crypter_ = std::move(*oCrypter);
+            return crypter_.IsReady();
+        }
+    } else {
+        return false;
+    }
+}
+
+std::optional<Crypter> Wallet::CheckPassphraseMatch(const SecureString& phrase) {
+    Crypter tmpcrypter{};
+    if (!tmpcrypter.SetKeyFromPassphrase(phrase, masterInfo_.salt, masterInfo_.nDeriveIterations)) {
+        return {};
+    }
+
+    if (master_.empty() && tmpcrypter.DecryptMaster(masterInfo_.cryptedMaster)) {
+        return tmpcrypter;
+    }
+
     std::vector<unsigned char> ciphertext{};
-    return (tmpcrypter.SetKeyFromPassphrase(phrase, masterInfo_.salt, masterInfo_.nDeriveIterations) &&
-            tmpcrypter.EncryptMaster(ciphertext) &&
-            memcmp(ciphertext.data(), masterInfo_.cryptedMaster.data(), ciphertext.size()) == 0);
+    tmpcrypter.SetMaster(master_);
+    if (tmpcrypter.EncryptMaster(ciphertext) &&
+        memcmp(ciphertext.data(), masterInfo_.cryptedMaster.data(), ciphertext.size()) == 0) {
+        return tmpcrypter;
+    }
+    return {};
 }
 
 bool Wallet::IsCrypted() {

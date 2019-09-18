@@ -110,6 +110,17 @@ std::vector<ConstTxPtr> MemPool::ExtractTransactions(const uint256& blkHash,
         }
     }
 
+    if (!result.empty()) {
+        spdlog::debug("Transactions {}are packed", [&result]() -> std::string {
+            std::string txHashes{};
+            for (auto& tx : result) {
+                txHashes += tx->GetHash().to_substr();
+                txHashes += " ";
+            }
+            return txHashes;
+        }());
+    }
+
     return result;
 }
 
