@@ -132,6 +132,10 @@ public:
         c.reserve(n);
     }
 
+    std::shared_mutex& get_mutex() const {
+        return mutex_;
+    }
+
 protected:
     mutable std::shared_mutex mutex_;
     container_type c;
@@ -372,7 +376,7 @@ public:
         base::c.pop_front();
     }
 
-    void drain_to(std::vector<T>& dest, size_t n) {
+    size_t drain_to(std::vector<T>& dest, size_t n) {
         WRITER_LOCK(base::mutex_)
         n = std::min(n, base::c.size());
 
@@ -381,6 +385,7 @@ public:
             dest.back() = std::move(base::c.front());
             base::c.pop_front();
         }
+        return n;
     }
 
     // Hide invalid functions from base class

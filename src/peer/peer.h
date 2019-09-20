@@ -69,6 +69,10 @@ public:
         getDataTasks.Push(task);
     }
 
+    bool InvTaskContains(uint32_t task_id);
+
+    bool InvTaskEmpty();
+
     size_t GetDataTaskSize() {
         return getDataTasks.Size();
     }
@@ -138,8 +142,6 @@ public:
     std::atomic_bool isFullyConnected = false;
 
     std::atomic_bool isSyncAvailable = false;
-
-    std::atomic_bool isSyncing = false;
 
     std::atomic_uint64_t last_bundle_ms_time = 0;
 

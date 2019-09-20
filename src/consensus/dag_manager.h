@@ -69,8 +69,8 @@ public:
      * Starting from the given hash, traverses the main milestone chain
      * backward/forward by the given length
      */
-    std::vector<uint256> TraverseMilestoneBackward(const Vertex&, size_t) const;
-    std::vector<uint256> TraverseMilestoneForward(const Vertex&, size_t) const;
+    std::vector<uint256> TraverseMilestoneBackward(VertexPtr, size_t) const;
+    std::vector<uint256> TraverseMilestoneForward(const VertexPtr, size_t) const;
 
     // Checkout states either in different chain or in db
     VertexPtr GetState(const uint256&, bool withBlock = true) const;
@@ -96,8 +96,8 @@ public:
         return downloading.empty();
     }
 
-    void EraseDownloading(uint256& h) {
-        downloading.erase(h);
+    bool EraseDownloading(const uint256& h) {
+        return downloading.erase(h);
     }
 
     /**
@@ -116,9 +116,6 @@ private:
     ThreadPool verifyThread_;
     ThreadPool syncPool_;
     ThreadPool storagePool_;
-
-    /** Indicator of whether the DAG manager is doing off-line verification */
-    std::atomic<bool> isVerifying;
 
     /**
      * A list of hashes we've sent out in GetData requests.
@@ -151,13 +148,6 @@ private:
      * Whenever a task is sent to peer, add the hash of the task in the downloading list.
      */
     void RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom);
-
-    /**
-     * Removes a verified ms hash from the downloading queue, and start another
-     * round of batch sync when the downloading queue is empty.
-     * Returns whether the hash is removed successfully.
-     */
-    bool UpdateDownloadingQueue(const uint256&);
 
     /** Delete the chain who loses in the race competition */
     void DeleteFork();
@@ -194,6 +184,9 @@ private:
     void FlushTrigger();
 
     void FlushToSTORE(MilestonePtr); // flush the oldest chain states
+
+    void EnableOBC();
+
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);
