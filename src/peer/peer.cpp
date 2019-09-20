@@ -239,12 +239,11 @@ void Peer::ProcessGetInv(GetInv& getInv) {
 
 void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
     spdlog::debug("received inventory message, size = {}, from {} ", inv->hashes.size(), address.ToString());
-    if (!RemovePendingGetInvTask(inv->nonce)) {
+    if (!InvTaskContains(inv->nonce)) {
         spdlog::debug("unknown inv, nonce = {}", inv->nonce);
         return;
-    } else {
-        spdlog::debug("Size of getInvsTasks = {}, removed successfully", GetInvTaskSize());
     }
+
     DAG->CallbackRequestInv(std::move(inv), weak_peer_.lock());
 }
 
@@ -292,7 +291,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
             for (auto& block : front->bundle->blocks) {
                 DAG->AddNewBlock(block, weak_peer_.lock());
             }
-            spdlog::info("receive levelset ms = {}", std::to_string(front->bundle->blocks.back()->GetHash()));
+            spdlog::info("receive levelset ms = {}", front->bundle->blocks.back()->GetHash().to_substr());
         } else if (front->type == GetDataTask::PENDING_SET) {
             for (auto& block : bundle->blocks) {
                 DAG->AddNewBlock(block, nullptr);
@@ -301,11 +300,6 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
         }
 
         getDataTasks.Pop();
-    }
-
-    if (getDataTasks.Empty()) {
-        spdlog::info("Syncing finished");
-        isSyncing = false;
     }
 }
 
@@ -321,6 +315,16 @@ void Peer::AddPendingGetInvTask(std::shared_ptr<GetInvTask> task) {
 bool Peer::RemovePendingGetInvTask(uint32_t task_id) {
     std::unique_lock<std::shared_mutex> writer(inv_task_mutex_);
     return getInvsTasks.erase(task_id);
+}
+
+bool Peer::InvTaskContains(uint32_t task_id) {
+    std::shared_lock<std::shared_mutex> reader(inv_task_mutex_);
+    return getInvsTasks.find(task_id) != getInvsTasks.end();
+}
+
+bool Peer::InvTaskEmpty() {
+    std::shared_lock<std::shared_mutex> reader(inv_task_mutex_);
+    return getInvsTasks.empty();
 }
 
 size_t Peer::GetInvTaskSize() {
@@ -352,13 +356,10 @@ void Peer::StartSync() {
         return;
     }
 
-    if (isSyncing) {
-        return;
+    if (getDataTasks.Empty() && InvTaskEmpty()) {
+        spdlog::info("Syncing start");
+        DAG->RequestInv(uint256(), 5, weak_peer_.lock());
     }
-
-    spdlog::info("Syncing start");
-    isSyncing = true;
-    DAG->RequestInv(uint256(), 5, weak_peer_.lock());
 }
 
 bool Peer::IsSyncTimeout() {

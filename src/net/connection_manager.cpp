@@ -41,6 +41,7 @@ static int NewSocket(uint32_t ip) {
         return -1;
     }
 
+    evutil_make_socket_nonblocking(fd);
     return fd;
 }
 

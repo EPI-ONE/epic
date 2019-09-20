@@ -47,7 +47,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::Server
     if (!vertex) {
         return grpc::Status::OK;
     }
-    auto milestone_hashes = DAG->TraverseMilestoneForward(*vertex, request->number());
+    auto milestone_hashes = DAG->TraverseMilestoneForward(vertex, request->number());
     for (size_t i = 0; i < milestone_hashes.size(); ++i) {
         auto vtx        = DAG->GetState(milestone_hashes[i]);
         auto newBlock   = reply->add_blocks();

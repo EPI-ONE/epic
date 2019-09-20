@@ -120,6 +120,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     peer_server->ProcessMessage(message.second);
 
     // check GetInv task size after receiving Inv
+    usleep(50000);
     ASSERT_EQ(peer_server->GetInvTaskSize(), 0);
 
     // send GetData

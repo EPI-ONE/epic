@@ -7,7 +7,7 @@
 #include "storage.h"
 #include "wallet.h"
 
-DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1), isVerifying(false) {
+DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
     milestoneChains.push(std::make_unique<Chain>());
     globalStates_.emplace(GENESIS.GetHash(), std::make_shared<Vertex>(GENESIS_VERTEX));
 
@@ -74,6 +74,8 @@ void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer) {
         } else {
             RequestData(result, peer);
         }
+
+        peer->RemovePendingGetInvTask(inv->nonce);
     });
 }
 
@@ -95,7 +97,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
                 spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->snapshot->height);
-                hashes = TraverseMilestoneForward(*startMs, Inv::kMaxInventorySize);
+                hashes = TraverseMilestoneForward(startMs, Inv::kMaxInventorySize);
                 break;
             }
         }
@@ -172,7 +174,7 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
 void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
     auto message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
     for (auto& h : requests) {
-        if (downloading.contains(h) || STORE->Exists(h)) {
+        if (downloading.contains(h) || STORE->DAGExists(h)) {
             continue;
         }
 
@@ -182,12 +184,15 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
         downloading.insert(h);
 
         if (message->hashes.size() >= maxGetDataSize) {
+            spdlog::debug("request lvs {} to {}", message->hashes.front().to_substr(),
+                          message->hashes.back().to_substr());
             requestFrom->SendMessage(std::move(message));
             message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
         }
     }
 
     if (!message->hashes.empty()) {
+        spdlog::debug("request lvs {} to {}", message->hashes.front().to_substr(), message->hashes.back().to_substr());
         requestFrom->SendMessage(std::move(message));
     }
 }
@@ -198,96 +203,60 @@ std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_
         return {};
     }
 
-    return TraverseMilestoneBackward(*startMilestone, length);
+    return TraverseMilestoneBackward(startMilestone, length);
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneBackward(const Vertex& cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneBackward(VertexPtr cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
 
-    const auto& bestChain    = milestoneChains.best();
-    size_t leastHeightCached = bestChain->GetLeastHeightCached();
-    size_t cursorHeight      = GetHeight(cursor.cblock->GetHash());
-
-    if (cursorHeight > GetBestMilestoneHeight()) {
-        return result;
-    }
-
-    // If the cursor height is within the cache range,
-    // traverse the best chain cache.
-    while (cursorHeight >= leastHeightCached && result.size() < length) {
-        result.push_back(bestChain->GetStates()[cursorHeight - leastHeightCached]->GetMilestoneHash());
-        --cursorHeight;
-    }
-
-    // If we have reached the least height in cache and still don't get enough hashes,
-    // continue to traverse DB until we reach the capacity.
-    while (result.size() < length) {
-        if (cursorHeight == 0) {
-            result.push_back(GENESIS.GetHash());
+    for (int i = 0; i < length; ++i) {
+        assert(cursor);
+        assert(cursor->isMilestone);
+        result.push_back(cursor->cblock->GetHash());
+        if (cursor->cblock->GetHash() == GENESIS.GetHash()) {
             break;
         }
-        result.push_back(STORE->GetMilestoneAt(cursorHeight)->cblock->GetHash());
-        --cursorHeight;
+        cursor = GetState(cursor->cblock->GetMilestoneHash());
     }
 
     return result;
 }
 
-std::vector<uint256> DAGManager::TraverseMilestoneForward(const Vertex& cursor, size_t length) const {
+std::vector<uint256> DAGManager::TraverseMilestoneForward(const VertexPtr cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
+    const auto& bestChain = milestoneChains.best();
+    std::shared_lock<std::shared_mutex> reader(bestChain->GetStates().get_mutex());
 
-    const auto& bestChain    = milestoneChains.best();
-    size_t leastHeightCached = bestChain->GetLeastHeightCached();
-    size_t cursorHeight      = GetHeight(cursor.cblock->GetHash()) + 1;
-
-    if (cursorHeight == 0) {
-        return result;
-    }
+    size_t cursorHeight = cursor->height + 1;
 
     // If the cursor height is less than the least height in cache, traverse DB.
-    while (cursorHeight <= STORE->GetHeadHeight() && result.size() < length) {
+    while (cursorHeight <= STORE->GetHeadHeight() && result.size() <= length) {
         result.push_back(STORE->GetMilestoneAt(cursorHeight)->cblock->GetHash());
         ++cursorHeight;
     }
 
-    // If we have reached the hightest milestone in DB and still don't get enough hashes,
-    // continue to traverse the best chain cache until we reach the head or the capacity.
-    while (result.size() < length && leastHeightCached != UINT64_MAX &&
-           cursorHeight < leastHeightCached + bestChain->GetStates().size()) {
-        result.push_back(bestChain->GetStates()[cursorHeight - leastHeightCached]->GetMilestoneHash());
-        ++cursorHeight;
-    }
-
-    return result;
-}
-
-bool DAGManager::UpdateDownloadingQueue(const uint256& hash) {
-    auto size     = downloading.size();
-    bool contains = bool(downloading.erase(hash));
-    if (contains) {
-        spdlog::debug("Size of downloading = {}, removed successfully", size - 1);
-    } else if (!downloading.empty()) {
-        spdlog::debug("Update downloading failed when processing the ms {}", std::to_string(hash));
-        for (auto it = downloading.begin(); it != downloading.end();) {
-            if (ExistsNode(*it)) {
-                spdlog::trace("Removing existing {} from downloading.", std::to_string(*it));
-                it = downloading.erase(it);
-            } else {
-                spdlog::trace("Remaining hash {} in downloading.", std::to_string(*it));
-                ++it;
-            }
+    if (!bestChain->GetStates().empty()) {
+        uint64_t min_height = bestChain->GetStates().front()->height;
+        uint64_t max_height = bestChain->GetStates().back()->height;
+        // If we have reached the hightest milestone in DB and still don't get enough hashes,
+        // continue to traverse the best chain cache until we reach the head or the capacity.
+        while (cursorHeight <= max_height && result.size() <= length) {
+            result.push_back(bestChain->GetStates()[cursorHeight - min_height]->GetMilestoneHash());
+            ++cursorHeight;
         }
     }
 
+    return result;
+}
+
+void DAGManager::EnableOBC() {
     time_t now      = time(nullptr);
     time_t headTime = GetMilestoneHead()->cblock->GetTime();
     if (now - headTime < obcEnableThreshold) {
         STORE->EnableOBC();
     }
-
-    return contains;
 }
 
 /////////////////////////////////////
@@ -439,12 +408,14 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("update main chain MS block {} pre MS {}", block->GetHash().to_substr(),
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
+                EnableOBC();
                 DeleteFork();
                 FlushTrigger();
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {} pre MS {}", block->GetHash().to_substr(),
-                              block->GetMilestoneHash().to_substr());
+                spdlog::debug("A fork created which points to MS block {} pre main chain MS {} total chains {}",
+                              block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
+                              milestoneChains.size());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -482,8 +453,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 return;
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {} pre MS {}", block->GetHash().to_substr(),
-                              block->GetMilestoneHash().to_substr());
+                spdlog::debug("A fork created which points to MS block {} pre forked chain MS {} total chains {}",
+                              block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
+                              milestoneChains.size());
                 auto new_fork = std::make_unique<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains.emplace(std::move(new_fork));
@@ -494,15 +466,13 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 }
 
 void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& block) {
-    isVerifying = true;
-
     auto newMs = chain->Verify(block);
     globalStates_.emplace(block->GetHash(), newMs);
     chain->AddNewState(*newMs);
 
-    isVerifying = false;
-
-    UpdateDownloadingQueue(block->GetHash());
+    if (EraseDownloading(block->GetHash())) {
+        spdlog::debug("Size of downloading = {}, removed successfully", downloading.size());
+    }
 }
 
 void DAGManager::DeleteFork() {
@@ -518,6 +488,12 @@ void DAGManager::DeleteFork() {
         }
         // try delete
         if ((*chain_it)->GetChainHead()->chainwork < targetChainWork) {
+            for (auto it = (*chain_it)->GetStates().rbegin(); it != (*chain_it)->GetStates().rend(); ++it) {
+                if (GetBestChain().GetMsVertexCache((*it)->GetMilestoneHash()) != nullptr) {
+                    break;
+                }
+                globalStates_.erase((*it)->GetMilestoneHash());
+            }
             chain_it = milestoneChains.erase(chain_it);
         } else {
             chain_it++;
