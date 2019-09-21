@@ -1,3 +1,5 @@
+#include <utility>
+
 // Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -233,6 +235,13 @@ public:
         return backupPeriod_;
     }
 
+    void SetSolverAddr(std::string addr){
+        solver_addr = std::move(addr);
+    }
+
+    std::string GetSolverAddr() const{
+        return solver_addr;
+    }
 private:
     // config file
     std::string configFilePath_;
@@ -270,6 +279,9 @@ private:
 
     // daemon
     bool daemon_;
+
+    // miner
+    std::string solver_addr = "";
 };
 
 extern std::unique_ptr<Config> CONFIG;

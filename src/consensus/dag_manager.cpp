@@ -179,7 +179,7 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
         downloading.insert(h);
 
         if (message->hashes.size() >= maxGetDataSize) {
-            spdlog::debug("request lvs {} to {}", message->hashes.front().to_substr(),
+            spdlog::debug("Requesting lvs {} to {}", message->hashes.front().to_substr(),
                           message->hashes.back().to_substr());
             requestFrom->SendMessage(std::move(message));
             message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
@@ -187,7 +187,7 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
     }
 
     if (!message->hashes.empty()) {
-        spdlog::debug("request lvs {} to {}", message->hashes.front().to_substr(), message->hashes.back().to_substr());
+        spdlog::debug("Requesting lvs {} to {}", message->hashes.front().to_substr(), message->hashes.back().to_substr());
         requestFrom->SendMessage(std::move(message));
     }
 }
@@ -402,7 +402,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
-                spdlog::debug("update main chain MS block {} pre MS {}", block->GetHash().to_substr(),
+                spdlog::debug("Updating main chain MS block {} pre MS {}", block->GetHash().to_substr(),
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
                 EnableOBC();
@@ -444,7 +444,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
                 if (milestoneChains.update_best(chainIt)) {
-                    spdlog::debug("switch best chain: head = {}",
+                    spdlog::debug("Switched to the best chain: head = {}",
                                   milestoneChains.best()->GetChainHead()->GetMilestoneHash().to_substr());
                 }
                 return;
@@ -524,7 +524,6 @@ void DAGManager::Stop() {
     syncPool_.Stop();
     verifyThread_.Stop();
     storagePool_.Stop();
-    spdlog::info("DAG stopped.");
 }
 
 void DAGManager::Wait() {
@@ -576,7 +575,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
     auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
     ms->stored                                   = true;
 
-    spdlog::debug("flushing at height {}", ms->height);
+    spdlog::debug("Flushing at height {}", ms->height);
 
     storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {

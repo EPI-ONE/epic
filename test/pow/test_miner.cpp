@@ -7,6 +7,7 @@
 #include "miner.h"
 #include "test_env.h"
 #include "utilstrencodings.h"
+#include "solver_manager.h"
 
 class TestMiner : public testing::Test {
     void SetUp() override {}
@@ -46,14 +47,25 @@ TEST_F(TestMiner, SolveCuckaroo) {
     SelectParams(ParamsType::TESTNET);
 
     Block b = fac.CreateBlock(2, 2, false, 5);
-
-    Miner m(5);
-    m.Start();
-    m.Solve(b);
-    m.Stop();
+    SolverManager solverManager(1);
+    solverManager.Start();
+    auto task = std::make_shared<SolverTask>();
+    task->step= 1;
+    task->target = b.GetTargetAsInteger();
+    task->cycle_length = GetParams().cycleLen;
+    task->blockHeader = VStream(b.GetHeader());
+    task->init_time = b.GetTime();
+    task->init_nonce = 0;
+    task->id = 0;
+    auto res = solverManager.Solve(task);
+    ASSERT_TRUE(res.first);
+    b.SetProof(std::move(res.first->proof));
+    b.SetNonce(res.first->final_nonce);
+    b.SetTime(res.first->final_time);
+    b.FinalizeHash();
 
     ASSERT_TRUE(b.CheckPOW());
-
+    solverManager.Stop();
     ResetLogLevel();
     SelectParams(ParamsType::UNITTEST);
 }

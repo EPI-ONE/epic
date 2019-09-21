@@ -166,14 +166,15 @@ int Init(int argc, char* argv[]) {
     /*
      * Initialize miner
      */
-    MINER = std::make_unique<Miner>(4);
+    MINER = std::make_unique<Miner>();
 
     /*
      * Create rpc instance
      */
     if (!(CONFIG->GetDisableRPC())) {
         auto rpcAddress = NetAddress::GetByIP("0.0.0.0:" + std::to_string(CONFIG->GetRPCPort()));
-        RPC             = std::make_unique<RPCServer>(*rpcAddress);
+        std::vector<RPCServiceType> types{RPCServiceType::BLOCK_EXPLORER_SERVER, RPCServiceType::COMMAND_LINE_SERVER};
+        RPC = std::make_unique<RPCServer>(*rpcAddress, types);
     }
 
     std::cout << "Finish initializing...\n" << std::endl;
@@ -346,6 +347,15 @@ void LoadConfigFile() {
         auto wallet_backup = wallet_config->get_as<uint32_t>("backup_period");
         if (wallet_backup) {
             CONFIG->SetWalletBackup(*wallet_backup);
+        }
+    }
+
+    // miner
+    auto miner_config = configContent->get_table("miner");
+    if (miner_config) {
+        auto solver_path = miner_config->get_as<std::string>("solver_addr");
+        if (solver_path) {
+            CONFIG->SetSolverAddr(*solver_path);
         }
     }
 }

@@ -206,8 +206,6 @@ TEST_F(TestWallet, workflow) {
     EXPECT_EQ(WALLET->GetSpent().size(), 1);
 
     WALLET->Stop();
-    DAG->Stop();
-    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
@@ -220,7 +218,6 @@ TEST_F(TestWallet, normal_workflow) {
     WALLET->CreateNewKey(false);
     WALLET->DisableRedemptions();
 
-    MINER->Start();
     MINER->Run();
 
     WALLET->CreateRandomTx(4);

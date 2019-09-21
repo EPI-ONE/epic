@@ -25,12 +25,6 @@
 #define EDGEBITS 29
 #endif
 
-#ifndef CYCLELEN
-// the next most important parameter is the (even) length
-// of the cycle to be found. a minimum of 12 is recommended
-#define CYCLELEN GetParams().cycleLen
-#endif
-
 #define MAXCYCLELEN 42
 
 #if EDGEBITS > 30

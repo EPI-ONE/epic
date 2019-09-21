@@ -176,3 +176,34 @@ message LoginRequest {
 message LoginResponse {
     string responseInfo = 1;
 }
+
+service RemoteSolver {
+    rpc SendPOWTask (POWTask) returns (POWResult);
+    rpc StopTask (StopTaskRequest) returns (StopTaskResponse);
+}
+
+message POWTask{
+    uint32 task_id = 1;
+    uint32 cycle_length = 2;
+    uint32 init_nonce =3;
+    uint32 init_time = 4;
+    uint32 step = 5;
+    bytes header = 6;
+    string target = 7;
+}
+
+message POWResult{
+    uint32 task_id = 1;
+    uint32 nonce = 2;
+    uint32 time = 3;
+    repeated uint32 proof = 4;
+    uint32 error_code = 5;
+}
+
+message StopTaskRequest{
+    uint32 task_id = 1;
+}
+
+message StopTaskResponse{
+    string result = 1 ;
+}

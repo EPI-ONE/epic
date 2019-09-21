@@ -5,7 +5,7 @@
 #ifndef EPIC_RPC_CLIENT_H
 #define EPIC_RPC_CLIENT_H
 
-#include "rpc_header.h"
+#include "rpc/service/rpc_service.h"
 
 class RPCClient {
     using option_string = std::optional<std::string>;

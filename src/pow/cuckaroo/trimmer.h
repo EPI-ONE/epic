@@ -4,7 +4,7 @@
 #ifdef __CUDA_ENABLED__
 #include "mean.cuh"
 
-extern SolverCtx* CreateSolverCtx(SolverParams& params);
+extern SolverCtx* CreateSolverCtx(SolverParams& params, int cyclelen);
 extern void FillDefaultGPUParams(SolverParams& params);
 
 inline void DestroySolverCtx(SolverCtx* ctx) {

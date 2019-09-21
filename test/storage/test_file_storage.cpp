@@ -13,7 +13,7 @@
 class TestFileStorage : public testing::Test {
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
-    CPUMiner m{};
+    CPUMiner m{1};
     std::string prefix = "test_file_store/";
 
     void SetUp() override {

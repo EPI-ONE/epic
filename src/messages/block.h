@@ -83,7 +83,7 @@ public:
           uint32_t time,
           uint32_t difficultyTarget,
           uint32_t nonce,
-          std::vector<word_t> proof = std::vector<word_t>(CYCLELEN))
+          std::vector<word_t> proof = std::vector<word_t>(GetParams().cycleLen))
         : NetMessage(BLOCK),
           header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce),
           proof_(std::move(proof)) {
@@ -189,7 +189,7 @@ public:
         READWRITE(header_);
 
         if (ser_action.ForRead()) {
-            InitProofSize(CYCLELEN);
+            InitProofSize(GetParams().cycleLen);
             for (auto& i : proof_) {
                 ::Deserialize(s, i);
             }

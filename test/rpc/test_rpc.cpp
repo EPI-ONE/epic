@@ -26,7 +26,7 @@ public:
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
         auto netAddress = NetAddress::GetByIP(adr);
-        RPC             = std::make_unique<RPCServer>(*netAddress);
+        RPC             = std::make_unique<RPCServer>(*netAddress, std::vector{RPCServiceType::BLOCK_EXPLORER_SERVER});
         RPC->Start();
 
         while (!RPC->IsRunning()) {
@@ -146,7 +146,6 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     }
 
     usleep(50000);
-    STORE->Stop();
     DAG->Stop();
 
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));

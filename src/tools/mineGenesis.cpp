@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     genesisBlock.CalculateOptimalEncodingSize();
 
     int numThreads = std::thread::hardware_concurrency() / 10;
-    auto* m        = CYCLELEN ? new Miner(numThreads) : new CPUMiner(numThreads);
+    auto* m        = CYCLELEN ? new Miner() : new CPUMiner(numThreads);
     m->Start();
     m->Solve(genesisBlock);
     spdlog::info("Mined Genesis\n{}", std::to_string(genesisBlock));

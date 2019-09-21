@@ -52,7 +52,7 @@ public:
             close(fd);
         }
 
-        spdlog::info("get free port = {}", port);
+        spdlog::info("Got free port {}", port);
         return port;
     }
 

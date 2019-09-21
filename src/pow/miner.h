@@ -10,23 +10,41 @@
 #include "key.h"
 #include "mempool.h"
 #include "peer_manager.h"
+#include "service/rpc_service.h"
 #include "trimmer.h"
-
 #include <atomic>
+#include <grpcpp/support/status.h>
 
 template <typename>
 class CircularQueue;
 
+class MinerRPCClient {
+public:
+    explicit MinerRPCClient(const std::string& address)
+        : stub(grpc::CreateChannel(address, grpc::InsecureChannelCredentials())) {}
+    grpc::Status SendTask(grpc::ClientContext* context, POWTask request, POWResult* reply) {
+        return stub.SendPOWTask(context, request, reply);
+    }
+
+    grpc::Status AbortTask(grpc::ClientContext* context, StopTaskRequest request, StopTaskResponse* reply) {
+        return stub.StopTask(context, request, reply);
+    }
+
+private:
+    RemoteSolver::Stub stub;
+};
+
 class Miner {
 public:
     Miner();
-    Miner(size_t nThreads);
     virtual ~Miner() {}
 
-    bool Start();
-    bool Stop();
-    virtual void Solve(Block&);
+    virtual bool Start();
+    virtual bool Stop();
+    virtual bool Solve(Block&);
     void Run();
+
+    void AbortTask(uint32_t task_id);
 
     bool IsRunning() {
         return enabled_.load();
@@ -39,23 +57,18 @@ public:
 protected:
     std::atomic_bool enabled_ = false;
     std::atomic_bool abort_   = false;
-
-    ThreadPool solverPool_;
-    std::atomic<uint32_t> final_nonce;
-    std::atomic<uint64_t> final_time;
-    std::atomic<bool> found_sols;
-
-private:
     std::thread runner_;
     std::thread inspector_;
 
-    SolverParams solverParams_;
-
+private:
     ConstBlockPtr selfChainHead_ = nullptr;
     VertexPtr chainHead_         = nullptr;
     Cumulator distanceCal_;
     CircularQueue<uint256> selfChainHeads_;
+    std::unique_ptr<MinerRPCClient> client;
 
+    std::atomic<uint32_t> current_task_id_;
+    std::atomic_bool sent_task_{false};
     uint256 SelectTip();
 };
 

@@ -163,7 +163,7 @@ void AddressManager::SaveAddress(const std::string& path, const std::string& fil
 
     file << *root;
     file.close();
-    spdlog::info("save all addresses to {}", path + filename);
+    spdlog::info("Saved all addresses to {}", path + filename);
 }
 
 void AddressManager::LoadAddress(const std::string& path, const std::string& filename) {
@@ -249,7 +249,7 @@ void AddressManager::LoadLocalAddresses() {
             score++;
         }
         localAddresses_.insert(std::make_pair(ip, score));
-        //        spdlog::info("find local address: {} --> {}", ifa->ifa_name, ip.ToString());
+        spdlog::debug("Found local address: {} --> {}", ifa->ifa_name, ip.ToString());
     }
     if (ifAddrStruct != nullptr)
         freeifaddrs(ifAddrStruct);

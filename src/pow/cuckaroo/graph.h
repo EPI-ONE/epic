@@ -20,6 +20,8 @@ public:
         word_t to;
     };
 
+    int cycle_len;
+
     word_t maxEdges;
     word_t maxNodes;
     word_t nlinks;             // aka halfedges, twice number of edges
@@ -33,7 +35,8 @@ public:
     word_t** sols = nullptr;
     uint32_t nsols;
 
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits) : visited(2 * maxnodes) {
+    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits, int cyclelen) : visited(2 * maxnodes) {
+        cycle_len = cyclelen;
         maxEdges  = maxedges;
         maxNodes  = maxnodes;
         maxSols   = maxsols;
@@ -44,7 +47,7 @@ public:
         sharedmem = false;
         sols      = new word_t*[maxSols + 1];
         for (int i = 0; i < maxSols + 1; ++i) {
-            sols[i] = new word_t[CYCLELEN];
+            sols[i] = new word_t[cycle_len];
         }
         visited.clear();
     }
@@ -92,13 +95,13 @@ public:
             return;
         if (u == dest) {
             spdlog::trace("  {}-cycle found", len);
-            if (len == CYCLELEN && nsols < maxSols) {
-                qsort(sols[nsols++], CYCLELEN, sizeof(word_t), nonce_cmp);
-                memcpy(sols[nsols], sols[nsols - 1], sizeof(word_t) * CYCLELEN);
+            if (len == cycle_len && nsols < maxSols) {
+                qsort(sols[nsols++], cycle_len, sizeof(word_t), nonce_cmp);
+                memcpy(sols[nsols], sols[nsols - 1], sizeof(word_t) * cycle_len);
             }
             return;
         }
-        if (len == CYCLELEN)
+        if (len == cycle_len)
             return;
         word_t au1 = adjlist[u];
         if (au1 != NIL) {
