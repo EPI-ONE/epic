@@ -39,7 +39,7 @@ void PeerManager::Start() {
 }
 
 void PeerManager::Stop() {
-    spdlog::info("Stopping the Peer Manager...");
+    spdlog::info("Stopping peer manager...");
     interrupt_ = true;
     connectionManager_->QuitQueue();
 
@@ -62,16 +62,15 @@ void PeerManager::Stop() {
     DisconnectAllPeer();
     ClearPeers();
     connectionManager_->Stop();
-    spdlog::info("Peer Manager stopped.");
 }
 
 bool PeerManager::Init(std::unique_ptr<Config>& config) {
     if (!Bind(config->GetBindAddress())) {
-        spdlog::warn("bind ip [{}] failed", config->GetBindAddress());
+        spdlog::warn("Failed to bind ip [{}].", config->GetBindAddress());
         return false;
     }
     if (!Listen(config->GetBindPort())) {
-        spdlog::warn("listen port {} failed", config->GetBindPort());
+        spdlog::warn("Failed to listen port {}.", config->GetBindPort());
         return false;
     }
 
@@ -85,8 +84,8 @@ void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
     auto peer = CreatePeer(connection, *net_address);
 
     AddPeer(connection, peer);
-    spdlog::info("{} {}   ({} connected)", connection->IsInbound() ? "Accept" : "Connect to", connection->GetRemote(),
-                 GetConnectedPeerSize());
+    spdlog::info("{} {}   ({} connected)", connection->IsInbound() ? "Accepted" : "Connected to",
+                 connection->GetRemote(), GetConnectedPeerSize());
 
     // send version message
     if (!peer->IsInbound()) {
@@ -232,11 +231,11 @@ void PeerManager::CheckTimeout() {
         if (peer->isFullyConnected) {
             // check ping timeout
             if (peer->GetLastPingTime() + kPingWaitTimeout < now || peer->GetNPingFailed() > kMaxPingFailures) {
-                spdlog::info("[NET:disconnect]: fully connected peer {} ping timeout", peer->address.ToString());
+                spdlog::info("[NET:disconnect]: Fully connected peer {}: ping timeout", peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
             } else if (peer->IsSyncTimeout()) {
-                spdlog::info("[NET:disconnect]: fully connected peer {} sync timeout", peer->address.ToString());
+                spdlog::info("[NET:disconnect]: Fully connected peer {}: sync timeout", peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
             } else {
@@ -245,7 +244,7 @@ void PeerManager::CheckTimeout() {
         } else {
             // check version timeout
             if (peer->connected_time + kConnectionSetupTimeout < now) {
-                spdlog::info("[NET:disconnect]: non-fully connected peer {} version handshake timeout",
+                spdlog::info("[NET:disconnect]: Non-fully connected peer {}: version handshake timeout",
                              peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);

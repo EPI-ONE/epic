@@ -381,10 +381,10 @@ trimparams::trimparams() {
     recover.tpb    = 1024;
 }
 
-GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
-    : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t))/*, indexesE(new uint32_t*[1 + NB])*/ {
+GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp, int cyclelen)
+    : cycle_len(cyclelen), tp(_tp), indexesSize(NX * NY * sizeof(uint32_t)) /*, indexesE(new uint32_t*[1 + NB])*/ {
     checkCudaErrors_V(cudaMalloc((void**) &dt, sizeof(GEdgeTrimmer)));
-    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, CYCLELEN * 2 * sizeof(uint32_t)));
+    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, cycle_len * 2 * sizeof(uint32_t)));
     checkCudaErrors_V(cudaMalloc((void**) &dipkeys, sizeof(siphash_keys)));
     for (int i = 0; i < 1 + NB; i++) {
         checkCudaErrors_V(cudaMalloc((void**) &indexesE[i], indexesSize));
@@ -402,7 +402,7 @@ GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
 }
 
 uint64_t GEdgeTrimmer::globalbytes() const {
-    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + CYCLELEN * 2 * sizeof(uint32_t) +
+    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + cycle_len * 2 * sizeof(uint32_t) +
            sizeof(GEdgeTrimmer);
 }
 
@@ -533,9 +533,11 @@ uint32_t GEdgeTrimmer::trim() {
     return nedges;
 }
 
-SolverCtx::SolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
-    edges    = new uint2[MAXEDGES];
-    soledges = new uint2[CYCLELEN];
+SolverCtx::SolverCtx(const trimparams& tp, int cyclelen)
+    : trimmer(tp, 0), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT, cyclelen) {
+    cycle_len = cyclelen;
+    edges     = new uint2[MAXEDGES];
+    soledges  = new uint2[cycle_len];
 }
 
 int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
@@ -545,18 +547,18 @@ int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     }
 
     for (uint32_t s = 0; s < cg.nsols; s++) {
-        for (uint32_t j = 0; j < CYCLELEN; j++) {
+        for (uint32_t j = 0; j < cycle_len; j++) {
             soledges[j] = edges[cg.sols[s][j]];
         }
-        sols.resize(sols.size() + CYCLELEN);
-        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(uint2) * CYCLELEN);
+        sols.resize(sols.size() + cycle_len);
+        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(uint2) * cycle_len);
         cudaMemset(trimmer.indexesE[1], 0, trimmer.indexesSize);
         Recovery<<<trimmer.tp.recover.blocks, trimmer.tp.recover.tpb>>>(*trimmer.dipkeys, (ulonglong4*) trimmer.bufferA,
-                                                                        (int*) trimmer.indexesE[1], CYCLELEN);
-        cudaMemcpy(&sols[sols.size() - CYCLELEN], trimmer.indexesE[1], CYCLELEN * sizeof(uint32_t),
+                                                                        (int*) trimmer.indexesE[1], cycle_len);
+        cudaMemcpy(&sols[sols.size() - cycle_len], trimmer.indexesE[1], cycle_len * sizeof(uint32_t),
                    cudaMemcpyDeviceToHost);
         checkCudaErrors(cudaDeviceSynchronize());
-        qsort(&sols[sols.size() - CYCLELEN], CYCLELEN, sizeof(uint32_t), cg.nonce_cmp);
+        qsort(&sols[sols.size() - cycle_len], cycle_len, sizeof(uint32_t), cg.nonce_cmp);
     }
 
     return 0;
@@ -574,7 +576,7 @@ int SolverCtx::solve() {
     cudaMemcpy(edges, trimmer.bufferB, sizeof(uint2[nedges]), cudaMemcpyDeviceToHost);
     findcycles(edges, nedges);
     spdlog::trace("findcycles edges {}", nedges);
-    return sols.size() / CYCLELEN;
+    return sols.size() / cycle_len;
 }
 
 void FillDefaultGPUParams(SolverParams& params) {
@@ -591,7 +593,7 @@ void FillDefaultGPUParams(SolverParams& params) {
     params.cpuload       = false;
 }
 
-SolverCtx* CreateSolverCtx(SolverParams& params) {
+SolverCtx* CreateSolverCtx(SolverParams& params, int cyclelen) {
     trimparams tp;
     tp.ntrims         = params.ntrims;
     tp.genA.blocks    = params.genablocks;
@@ -622,5 +624,5 @@ SolverCtx* CreateSolverCtx(SolverParams& params) {
         checkCudaErrors_N(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
     }
 
-    return new SolverCtx(tp);
+    return new SolverCtx(tp, cyclelen);
 }

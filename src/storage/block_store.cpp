@@ -433,7 +433,6 @@ void BlockStore::Stop() {
     if (scheduler_.joinable()) {
         scheduler_.join();
     }
-    spdlog::info("Store stopped.");
 }
 
 void BlockStore::SetFileCapacities(uint32_t fileCapacity, uint16_t epochCapacity) {

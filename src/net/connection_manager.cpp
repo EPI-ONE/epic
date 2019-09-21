@@ -98,7 +98,7 @@ static void EventCallback(bufferevent_t* bev, short events, void* ctx) {
         }
         cmptr->DeleteConnectionCallback(handle->GetHandlePtr());
         handle->Release();
-        spdlog::info("[net] socket exception: {} event {:x} error {}", remote, events,
+        spdlog::info("[net] Socket exception: {} event {:x} error {}", remote, events,
                      evutil_socket_error_to_string(EVUTIL_SOCKET_ERROR()));
     }
 }
@@ -225,7 +225,7 @@ void ConnectionManager::Stop() {
     serialize_pool_.Stop();
     deserialize_pool_.Stop();
 
-    spdlog::info("[net] Connection manager stop");
+    spdlog::info("[net] Connection manager stopped.");
 }
 
 bool ConnectionManager::ReceiveMessage(connection_message_t& message) {
@@ -247,7 +247,7 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         header.checksum = header.magic + header.type + header.length;
 
         if (header.length + MESSAGE_HEADER_LENGTH > MAX_MESSAGE_LENGTH) {
-            spdlog::info("[net] ignore send message which length {} exceeds max bytes {}",
+            spdlog::info("[net] Ignoring message with length {} exceeds max bytes {}",
                          header.length + MESSAGE_HEADER_LENGTH, MAX_MESSAGE_LENGTH);
             return;
         }

@@ -69,7 +69,7 @@ TEST_F(TestTrimmer, GPU) {
     spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.", CYCLELEN,
                  EDGEBITS, header.str().c_str(), nonce, params.ntrims);
 
-    auto* ctx = CreateSolverCtx(params);
+    auto* ctx = CreateSolverCtx(params, CYCLELEN);
 
     uint64_t bytes = ctx->trimmer.globalbytes();
     int unit;

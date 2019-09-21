@@ -138,6 +138,7 @@ include_directories(src
         ${MESSAGES_DIR}
         ${POW_DIR}
         ${STORAGE_DIR}
+        ${TOOLS_DIR}
         )
 
 set(SRC_CODE
@@ -222,7 +223,15 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     file(GLOB headers "${CUDA_DIR}/*.cuh")
     cuda_add_library(epiccuda STATIC ${sources} ${headers})
     set_target_properties(epiccuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+    set(SRC_SOLVER  src/tools/solver_manager.cpp ${GRPC_SRCS})
+    add_library(solver_lib STATIC ${SRC_SOLVER})
+    target_link_libraries(epiccore solver_lib)
     target_link_libraries(epiccore epiccuda)
+
+    add_executable(solver src/tools/epic_solver.cpp)
+    target_link_libraries(solver epiccore)
+
 else ()
     message(STATUS "CUDA disabled. Using CPU miner.")
 endif ()
@@ -269,7 +278,6 @@ add_executable(mineGenesis src/tools/mineGenesis.cpp ${TEST_METHODS_SRCS})
 target_link_libraries(mineGenesis epiccore)
 add_dependencies(mineGenesis epiccore)
 
-# coverage
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)
     target_compile_options(epictest PUBLIC --coverage)

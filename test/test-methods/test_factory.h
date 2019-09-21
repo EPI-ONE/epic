@@ -122,8 +122,17 @@ private:
 
 class CPUMiner : public Miner {
 public:
-    using Miner::Miner;
-    void Solve(Block&) override;
+    explicit CPUMiner(size_t nThreads);
+    bool Solve(Block&) override;
+    bool Start() override;
+    bool Stop() override;
+
+private:
+    ThreadPool solverPool_;
+
+    std::atomic<uint32_t> final_nonce;
+    std::atomic<uint64_t> final_time;
+    std::atomic<bool> found_sols;
 };
 
 #endif // EPIC_TEST_FACTORY_H

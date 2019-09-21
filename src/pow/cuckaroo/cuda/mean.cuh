@@ -66,8 +66,9 @@ struct GEdgeTrimmer {
     siphash_keys sipkeys, *dipkeys;
     std::atomic_bool abort;
     bool initsuccess = false;
+    int cycle_len;
 
-    GEdgeTrimmer(const trimparams _tp);
+    GEdgeTrimmer(const trimparams _tp, int cyclelen);
     ~GEdgeTrimmer();
     uint64_t globalbytes() const;
     uint32_t trim();
@@ -79,8 +80,9 @@ struct SolverCtx {
     graph<word_t> cg;
     uint2* soledges;
     std::vector<uint32_t> sols; // concatenation of all proof's indices
+    int cycle_len;
 
-    SolverCtx(const trimparams&);
+    SolverCtx(const trimparams&, int cycleLen);
 
     ~SolverCtx() {
         delete[] edges;

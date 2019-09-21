@@ -112,7 +112,7 @@ VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool fin
 VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
     Block b = CreateBlock(0, 0, false);
     b.SetTime(timeToset);
-    CPUMiner m{};
+    CPUMiner m{1};
     do {
         b.SetNonce(b.GetNonce() + 1);
         m.Solve(b);
@@ -236,7 +236,7 @@ std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(con
     return CreateRawChain(std::make_shared<Vertex>(startMs), height, tx);
 }
 
-void CPUMiner::Solve(Block& b) {
+bool CPUMiner::Solve(Block& b) {
     arith_uint256 target = b.GetTargetAsInteger();
     size_t nthreads      = solverPool_.GetThreadSize();
 
@@ -288,4 +288,29 @@ void CPUMiner::Solve(Block& b) {
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
+    return true;
+}
+
+CPUMiner::CPUMiner(size_t nThreads) : Miner() {
+    solverPool_.SetThreadSize(nThreads);
+}
+
+bool CPUMiner::Start() {
+    bool flag = false;
+    if (enabled_.compare_exchange_strong(flag, true)) {
+        solverPool_.Start();
+        spdlog::info("Miner started.");
+        return true;
+    }
+
+    return false;
+}
+
+bool CPUMiner::Stop() {
+    if (Miner::Stop()) {
+        solverPool_.Stop();
+        return true;
+    }
+
+    return false;
 }

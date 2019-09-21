@@ -97,4 +97,6 @@ protected:
 const Params& GetParams();
 void SelectParams(ParamsType type, bool withGenesis = true);
 
+#define CYCLELEN GetParams().cycleLen
+
 #endif // EPIC_PARAMS_H

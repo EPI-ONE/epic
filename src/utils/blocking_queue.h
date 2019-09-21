@@ -89,6 +89,11 @@ public:
         full_.notify_all();
     }
 
+    T& Front() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        return queue_.front();
+    }
+
 private:
     mutable std::mutex mtx_;
     std::condition_variable full_;

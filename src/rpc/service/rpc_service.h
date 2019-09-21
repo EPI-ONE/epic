@@ -2,12 +2,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef EPIC_RPC_HEADER_H
-#define EPIC_RPC_HEADER_H
+#ifndef EPIC_RPC_SERVICE_H
+#define EPIC_RPC_SERVICE_H
 
 #include <grpc++/grpc++.h>
 #include <rpc.grpc.pb.h>
 #include <rpc.pb.h>
+#include <rpc/proto-gen/rpc.grpc.pb.h>
 
 using rpc::BasicBlockExplorerRPC;
 using rpc::GetBlockRequest;
@@ -46,4 +47,9 @@ using rpc::StopMinerResponse;
 using rpc::StopRequest;
 using rpc::StopResponse;
 
-#endif // EPIC_RPC_HEADER_H
+using rpc::RemoteSolver;
+using rpc::POWTask;
+using rpc::POWResult;
+using rpc::StopTaskRequest;
+using rpc::StopTaskResponse;
+#endif //EPIC_RPC_SERVICE_H
