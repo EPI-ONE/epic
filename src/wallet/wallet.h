@@ -123,7 +123,7 @@ private:
     std::thread scheduleTask_;
 
     mutable std::shared_mutex lock_;
-    std::atomic<bool> enableRedem_ = true;
+    std::atomic_bool enableRedem_ = true;
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
     CKeyID lastRedemAddress_;
 

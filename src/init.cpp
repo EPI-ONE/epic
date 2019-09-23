@@ -17,8 +17,8 @@
 #include <csignal>
 #include <spawn.h>
 
-Block GENESIS;
-Vertex GENESIS_VERTEX;
+std::shared_ptr<const Block> GENESIS;
+std::shared_ptr<Vertex> GENESIS_VERTEX;
 std::unique_ptr<Config> CONFIG;
 std::unique_ptr<PeerManager> PEERMAN;
 std::unique_ptr<BlockStore> STORE;
@@ -132,9 +132,9 @@ int Init(int argc, char* argv[]) {
 
     STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
-    if (!STORE->DBExists(GENESIS.GetHash())) {
+    if (!STORE->DBExists(GENESIS->GetHash())) {
         // put genesis block into cat
-        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
     }
 

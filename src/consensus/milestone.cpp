@@ -132,8 +132,9 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         }
     }
 
-    spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.", oldMsDiff, GetMsDifficulty(),
-                 oldBlkDiff, GetBlockDifficulty());
+    spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.\n"
+                 "   Stats: timespan = {}, nBlkCounter_ = {}, nTxnsCounter_ = {}",
+                 oldMsDiff, GetMsDifficulty(), oldBlkDiff, GetBlockDifficulty(), timespan, nBlkCounter_, nTxnsCounter_);
 
     lastUpdateTime = blockUpdateTime;
     nTxnsCounter_  = 0;

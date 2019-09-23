@@ -21,7 +21,7 @@ using TestChain    = std::vector<LevelSetVtxs>;
 
 class NumberGenerator {
 public:
-    NumberGenerator() : generator(GENESIS.GetTime()), distribution(0, UINT_LEAST32_MAX) {}
+    NumberGenerator() : generator(GENESIS->GetTime()), distribution(0, UINT_LEAST32_MAX) {}
     NumberGenerator(uint32_t seed, uint32_t rangeStart, uint32_t rangeEnd)
         : generator(seed), distribution(rangeStart, rangeEnd) {}
 
@@ -36,7 +36,7 @@ private:
 
 class TimeGenerator {
 public:
-    TimeGenerator() : simulatedTime(GENESIS.GetTime()), distribution(1, 10) {}
+    TimeGenerator() : simulatedTime(GENESIS->GetTime()), distribution(1, 10) {}
     TimeGenerator(uint32_t timeStart, uint32_t rangeStart, uint32_t rangeEnd, uint32_t seed)
         : simulatedTime(timeStart), generator(seed), distribution(rangeStart, rangeEnd) {}
 

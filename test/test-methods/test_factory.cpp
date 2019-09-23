@@ -66,7 +66,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
 
 Block TestFactory::CreateBlock(int numTxInput, int numTxOutput, bool finalize, int maxTxns) {
     Block b = Block(GetParams().version, CreateRandomHash(), CreateRandomHash(), CreateRandomHash(), uint256(),
-                    timeGenerator.NextTime(), GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0);
+                    timeGenerator.NextTime(), GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0);
 
     if (numTxInput && numTxOutput) {
         for (int i = 0; i < maxTxns; ++i) {
@@ -115,7 +115,7 @@ VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
     do {
         b.SetNonce(b.GetNonce() + 1);
         b.Solve();
-    } while (UintToArith256(b.GetHash()) > GENESIS_VERTEX.snapshot->milestoneTarget);
+    } while (UintToArith256(b.GetHash()) > GENESIS_VERTEX->snapshot->milestoneTarget);
 
     return std::make_shared<Vertex>(std::move(b));
 }
@@ -146,7 +146,7 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
         b.SetMilestoneHash(lastMs->cblock->GetHash());
         b.SetPrevHash(prevBlock->cblock->GetHash());
         if (testChain.size() == 1) {
-            b.SetTipHash(GENESIS.GetHash());
+            b.SetTipHash(GENESIS->GetHash());
         } else {
             b.SetTipHash(testChain[GetRand() % (testChain.size() - 1)][0]->cblock->GetHash());
         }
@@ -154,7 +154,7 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
         b.SetDifficultyTarget(lastMs->snapshot->blockTarget.GetCompact());
 
         // Special transaction on the first registration block
-        if (b.GetPrevHash() == GENESIS.GetHash()) {
+        if (b.GetPrevHash() == GENESIS->GetHash()) {
             Transaction tx = Transaction{CreateKeyPair().second.GetID()};
             b.AddTransaction(tx);
         } else if (tx) {

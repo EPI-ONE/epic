@@ -30,7 +30,7 @@ public:
 
 
 TEST_F(TestConsensus, SyntaxChecking) {
-    Block b = GENESIS;
+    Block b = *GENESIS;
     EXPECT_TRUE(b.Verify());
 
     // Bad difficulty target
@@ -82,11 +82,11 @@ TEST_F(TestConsensus, MerkleRoot) {
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
-    TimeGenerator timeGenerator{GENESIS.GetTime(), 25, 400, fac.GetRand()};
+    TimeGenerator timeGenerator{GENESIS->GetTime(), 25, 400, fac.GetRand()};
 
     constexpr size_t HEIGHT = 100;
     std::array<std::shared_ptr<Milestone>, HEIGHT> arrayMs;
-    arrayMs[0] = GENESIS_VERTEX.snapshot;
+    arrayMs[0] = GENESIS_VERTEX->snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {

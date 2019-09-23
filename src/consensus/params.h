@@ -30,6 +30,8 @@ static const std::string ParamsTypeStr[] = {
 
 class Params {
 public:
+    virtual ~Params() {}
+
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
         SECRET_KEY,
@@ -63,32 +65,33 @@ public:
     size_t blockCapacity;
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
-    const Block& GetGenesis() const;
-    const Vertex& GetGenesisVertex() const;
+    std::shared_ptr<Vertex> CreateGenesis() const;
 
 protected:
     Params() = default;
 
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
+    std::string genesisHexStr;
 
-    std::unique_ptr<Block> genesis_;
-    std::shared_ptr<Vertex> genesisVertex_;
-    void CreateGenesis(const std::string& genesisHexStr);
+    virtual void SetGenesisParams(const std::shared_ptr<Vertex>&) const {}
 };
 
 class MainNetParams : public Params {
 public:
-    MainNetParams(bool withGenesis = true);
+    MainNetParams();
 };
 
 class TestNetParams : public Params {
 public:
-    TestNetParams(bool withGenesis = true);
+    TestNetParams();
 };
 
 class UnitTestParams : public Params {
 public:
-    UnitTestParams(bool withGenesis = true);
+    UnitTestParams();
+
+protected:
+    void SetGenesisParams(const std::shared_ptr<Vertex>&) const override;
 };
 
 // instance of the parameters for usage throughout the project

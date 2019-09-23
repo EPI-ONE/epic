@@ -195,6 +195,7 @@ public:
         READWRITE(header_);
 
         if (ser_action.ForRead()) {
+            InitProofSize(CYCLELEN);
             for (auto& i : proof_) {
                 ::Deserialize(s, i);
             }
@@ -244,6 +245,6 @@ public:
 };
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;
-extern Block GENESIS;
+extern ConstBlockPtr GENESIS;
 
 #endif // EPIC_BLOCK_H

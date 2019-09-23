@@ -210,7 +210,7 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
     # nvcc flags
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math;-g)
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_35,code=sm_35) # default
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_52,code=sm_52) # maxwell
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_60,code=sm_60) # pascal

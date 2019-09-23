@@ -70,8 +70,8 @@ public:
 TEST_F(TestChainVerification, chain_with_genesis) {
     ASSERT_EQ(DAG->GetMilestoneHead()->height, 0);
     ASSERT_EQ(DAG->GetMilestoneHead()->snapshot->GetLevelSet().size(), 1);
-    ASSERT_EQ(*DAG->GetMilestoneHead()->snapshot->GetLevelSet()[0].lock()->cblock, GENESIS);
-    ASSERT_EQ(*DAG->GetBestChain().GetVertex(GENESIS.GetHash()), GENESIS_VERTEX);
+    ASSERT_EQ(*DAG->GetMilestoneHead()->snapshot->GetLevelSet()[0].lock()->cblock, *GENESIS);
+    ASSERT_EQ(*DAG->GetBestChain().GetVertex(GENESIS->GetHash()), *GENESIS_VERTEX);
 }
 
 TEST_F(TestChainVerification, UTXO) {
@@ -120,7 +120,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     }
 
     // construct first registration
-    const auto& ghash = GENESIS.GetHash();
+    const auto& ghash = GENESIS->GetHash();
     Block b1{1, ghash, ghash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
     b1.Solve();
@@ -132,7 +132,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     c.AddPendingBlock(std::make_shared<const Block>(std::move(b1)));
     auto prevHash    = b1hash;
     auto prevRedHash = b1hash;
-    auto prevMs      = GENESIS_VERTEX.snapshot;
+    auto prevMs      = GENESIS_VERTEX->snapshot;
     for (size_t i = 0; i < HEIGHT; i++) {
         Block blk{1, ghash, prevHash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
         if (isRedemption[i]) {
@@ -222,7 +222,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     key.Sign(hashMsg, sig);
 
     // construct transaction output to add into the ledger
-    const auto& ghash = GENESIS.GetHash();
+    const auto& ghash = GENESIS->GetHash();
     auto encodedAddr  = EncodeAddress(addr);
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
@@ -230,7 +230,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     uint32_t t = time(nullptr);
     Block b1{
-        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0};
+        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0};
     Transaction tx1{};
     tx1.AddOutput(std::move(output));
     tx1.FinalizeHash();
@@ -249,7 +249,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     // construct an empty block
     Block b2{
-        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_VERTEX.snapshot->blockTarget.GetCompact(), 0};
+        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0};
     b2.Solve();
     Vertex vtx2{std::move(b2)};
     vtx2.minerChainHeight = 2;
@@ -268,7 +268,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
              ghash,
              uint256(),
              t + 1,
-             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
              0};
     b3.AddTransaction(tx);
     b3.Solve();
@@ -290,7 +290,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
 TEST_F(TestChainVerification, ChainForking) {
     // construct the main chain and fork
-    ConcurrentQueue<MilestonePtr> dqcs{{GetParams().GetGenesisVertex().snapshot}};
+    ConcurrentQueue<MilestonePtr> dqcs{{GENESIS_VERTEX->snapshot}};
     std::vector<VertexPtr> vtcs{};
     ConstBlockPtr forkblk;
     MilestonePtr split;
@@ -316,7 +316,7 @@ TEST_F(TestChainVerification, ChainForking) {
 
 TEST_F(TestChainVerification, CheckPartition) {
     Chain c{};
-    auto ghash = GENESIS.GetHash();
+    auto ghash = GENESIS->GetHash();
 
     // Invalid registration block containing more than one txns
     Block reg_inv{GetParams().version,
@@ -325,13 +325,13 @@ TEST_F(TestChainVerification, CheckPartition) {
                   ghash,
                   uint256(),
                   fac.NextTime(),
-                  GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
+                  GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
                   0};
     reg_inv.AddTransaction(Transaction(CKeyID()));
     reg_inv.AddTransaction(fac.CreateTx(1, 1));
     Vertex reg_inv_vtx{reg_inv};
     reg_inv_vtx.minerChainHeight = 1;
-    EXPECT_FALSE(IsValidDistance(&c, reg_inv_vtx, GENESIS_VERTEX.snapshot->hashRate));
+    EXPECT_FALSE(IsValidDistance(&c, reg_inv_vtx, GENESIS_VERTEX->snapshot->hashRate));
 
     // Valid registration block
     Block reg{GetParams().version,
@@ -340,13 +340,13 @@ TEST_F(TestChainVerification, CheckPartition) {
               ghash,
               uint256(),
               fac.NextTime(),
-              GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
+              GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
               0};
     reg.AddTransaction(Transaction(CKeyID()));
     Vertex reg_vtx{reg};
     reg_vtx.minerChainHeight = 1;
     AddToHistory(&c, std::make_shared<Vertex>(reg_vtx));
-    EXPECT_TRUE(IsValidDistance(&c, reg_vtx, GENESIS_VERTEX.snapshot->hashRate));
+    EXPECT_TRUE(IsValidDistance(&c, reg_vtx, GENESIS_VERTEX->snapshot->hashRate));
 
     // Malicious blocks
     // Block with transaction but minerChainHeight not reached sortitionThreshold
@@ -356,13 +356,13 @@ TEST_F(TestChainVerification, CheckPartition) {
              ghash,
              uint256(),
              fac.NextTime(),
-             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
              0};
     b1.AddTransaction(fac.CreateTx(1, 1));
     Vertex vtx1{b1};
     vtx1.minerChainHeight = 2;
     AddToHistory(&c, std::make_shared<Vertex>(vtx1));
-    EXPECT_FALSE(IsValidDistance(&c, vtx1, GENESIS_VERTEX.snapshot->hashRate));
+    EXPECT_FALSE(IsValidDistance(&c, vtx1, GENESIS_VERTEX->snapshot->hashRate));
 
     // Block with invalid distance
     Block b2{GetParams().version,
@@ -371,7 +371,7 @@ TEST_F(TestChainVerification, CheckPartition) {
              ghash,
              uint256(),
              fac.NextTime(),
-             GENESIS_VERTEX.snapshot->blockTarget.GetCompact(),
+             GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
              0};
     Transaction tx1 = fac.CreateTx(1, 1);
     b2.AddTransaction(tx1);

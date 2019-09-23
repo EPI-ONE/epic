@@ -40,7 +40,7 @@ public:
         DAG   = std::make_unique<DAGManager>();
 
         // Initialize DB with genesis
-        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
 
         if (enable_miner) {
@@ -55,7 +55,11 @@ public:
         }
     }
 
-    static void TearDownDAG(std::string dirPath) {
+    static void TearDownDAG(const std::string& dirPath) {
+        if (STORE)
+            STORE->Stop();
+        if (DAG)
+            DAG->Stop();
         STORE.reset();
         DAG.reset();
         MEMPOOL.reset();

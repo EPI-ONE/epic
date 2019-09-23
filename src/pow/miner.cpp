@@ -155,7 +155,7 @@ void Miner::Run() {
             do {
                 distanceCal.Add(cursor, false);
                 cursor = STORE->FindBlock(cursor->GetPrevHash());
-            } while (*selfChainHead != GENESIS && !distanceCal.Full());
+            } while (*selfChainHead != *GENESIS && !distanceCal.Full());
         }
     }
 
@@ -185,7 +185,7 @@ void Miner::Run() {
                     }
                 }
                 spdlog::info("Got the first registration. Start mining.");
-                prevHash = GENESIS.GetHash();
+                prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
                 prevHash = selfChainHead->GetHash();
@@ -260,5 +260,5 @@ uint256 Miner::SelectTip() {
         }
     }
 
-    return GENESIS.GetHash();
+    return GENESIS->GetHash();
 }

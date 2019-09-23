@@ -428,7 +428,9 @@ void BlockStore::Stop() {
     obcThread_.Abort();
     obcThread_.Stop();
     interrupt = true;
-    scheduler_.join();
+    if (scheduler_.joinable()) {
+        scheduler_.join();
+    }
     spdlog::info("Store stopped.");
 }
 

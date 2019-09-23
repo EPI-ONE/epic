@@ -218,11 +218,7 @@ __global__ void SeedB(const uint2* __restrict__ source,
             int newCount = localIdx % FLUSHB;
             int nflush   = localIdx - newCount;
             uint32_t grp = row * NX + col;
-#ifdef SYNCBUG
-            if (grp == 0x2d6)
-                printf("group %x size %d lid %d nflush %d\n", group, bucketEdges, lid, nflush);
-#endif
-            int cnt = min((int) atomicAdd(dstIdx + grp, nflush), (int) (maxOut - nflush));
+            int cnt      = min((int) atomicAdd(dstIdx + grp, nflush), (int) (maxOut - nflush));
             for (int i = 0; i < nflush; i += TMPPERLL4)
                 destination[((uint64_t) grp * maxOut + cnt + i) / TMPPERLL4] = *(ulonglong4*) (&tmp[col][i]);
             for (int t = 0; t < newCount; t++) {
@@ -236,10 +232,6 @@ __global__ void SeedB(const uint2* __restrict__ source,
     for (int col = lid; col < NX; col += dim) {
         int localIdx = min(FLUSHB2, counters[col]);
         uint32_t grp = row * NX + col;
-#ifdef SYNCBUG
-        if (group == 0x2f2 && grp == 0x2d6)
-            printf("group %x size %d lid %d localIdx %d\n", group, bucketEdges, lid, localIdx);
-#endif
         for (int j = localIdx; j % TMPPERLL4; j++)
             tmp[col][j] = zero;
         for (int i = 0; i < localIdx; i += TMPPERLL4) {

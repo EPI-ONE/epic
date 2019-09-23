@@ -88,7 +88,6 @@ public:
     }
 
     void cycles_with_link(uint32_t len, word_t u, word_t dest) {
-        // printf("cycles_with_link(%d, %x, %x)\n", len, u, dest);
         if (visited.test(u))
             return;
         if (u == dest) {

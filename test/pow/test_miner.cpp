@@ -98,7 +98,7 @@ TEST_F(TestMiner, Restart) {
 
     ASSERT_NE(*cursor, *selfChainHead);
 
-    while (*cursor != GENESIS && *cursor != *selfChainHead) {
+    while (*cursor != *GENESIS && *cursor != *selfChainHead) {
         cursor = STORE->FindBlock(cursor->GetPrevHash());
     }
 

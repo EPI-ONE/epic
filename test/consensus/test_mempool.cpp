@@ -97,7 +97,7 @@ TEST_F(TestMemPool, ExtractTransactions) {
 TEST_F(TestMemPool, receive_and_release) {
     // prepare dag
     EpicTestEnvironment::SetUpDAG(dir);
-    const auto& ghash      = GENESIS.GetHash();
+    const auto& ghash      = GENESIS->GetHash();
     auto [privkey, pubkey] = fac.CreateKeyPair();
     auto [hashMsg, sig]    = fac.CreateSig(privkey);
     auto [hashMsg2, sig2]  = fac.CreateSig(privkey);
@@ -109,7 +109,7 @@ TEST_F(TestMemPool, receive_and_release) {
     Block b1      = blkTemplate;
     b1.AddTransaction(firstReg);
     b1.Solve();
-    while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX.snapshot->milestoneTarget) {
+    while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX->snapshot->milestoneTarget) {
         b1.SetNonce(b1.GetNonce() + 1);
         b1.Solve();
     }

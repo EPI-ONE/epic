@@ -211,7 +211,7 @@ bool Block::Verify() const {
 
     // check the conditions of the first registration block
     spdlog::trace("Block::Verify first reg {}", hash_.to_substr());
-    if (header_.prevBlockHash == GENESIS.GetHash()) {
+    if (header_.prevBlockHash == GENESIS->GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
             spdlog::info("Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
@@ -402,7 +402,7 @@ bool Block::IsRegistration() const {
 }
 
 bool Block::IsFirstRegistration() const {
-    return HasTransaction() ? transactions_[0]->IsFirstRegistration() && header_.prevBlockHash == GENESIS.GetHash() :
+    return HasTransaction() ? transactions_[0]->IsFirstRegistration() && header_.prevBlockHash == GENESIS->GetHash() :
                               false;
 }
 
