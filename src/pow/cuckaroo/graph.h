@@ -94,7 +94,7 @@ public:
             spdlog::trace("  {}-cycle found", len);
             if (len == CYCLELEN && nsols < maxSols) {
                 qsort(sols[nsols++], CYCLELEN, sizeof(word_t), nonce_cmp);
-                memcpy(sols[nsols], sols[nsols - 1], sizeof(sols[0]));
+                memcpy(sols[nsols], sols[nsols - 1], sizeof(word_t) * CYCLELEN);
             }
             return;
         }
