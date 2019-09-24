@@ -6,12 +6,16 @@
 #define EPIC_MINER_H
 
 #include "block_store.h"
+#include "circular_queue.h"
 #include "key.h"
 #include "mempool.h"
 #include "peer_manager.h"
 #include "trimmer.h"
 
 #include <atomic>
+
+template <typename>
+class CircularQueue;
 
 class Miner {
 public:
@@ -29,11 +33,12 @@ public:
     }
 
     ConstBlockPtr GetSelfChainHead() const {
-        return selfChainHead;
+        return selfChainHead_;
     }
 
 protected:
-    std::atomic<bool> enabled_ = false;
+    std::atomic_bool enabled_ = false;
+    std::atomic_bool abort_   = false;
 
     ThreadPool solverPool_;
     std::atomic<uint32_t> final_nonce;
@@ -42,11 +47,14 @@ protected:
 
 private:
     std::thread runner_;
+    std::thread inspector_;
 
-    SolverParams solverParams;
+    SolverParams solverParams_;
 
-    ConstBlockPtr selfChainHead = nullptr;
-    Cumulator distanceCal;
+    ConstBlockPtr selfChainHead_ = nullptr;
+    VertexPtr chainHead_         = nullptr;
+    Cumulator distanceCal_;
+    CircularQueue<uint256> selfChainHeads_;
 
     uint256 SelectTip();
 };

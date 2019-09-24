@@ -104,5 +104,7 @@ TEST_F(TestMiner, Restart) {
 
     ASSERT_EQ(*cursor, *selfChainHead);
 
+    selfChainHead = m.GetSelfChainHead();
+
     TearDownEnv();
 }

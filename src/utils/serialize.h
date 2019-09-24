@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <ios>
 #include <limits>
 #include <map>
@@ -631,7 +632,7 @@ void Deserialize(Stream& is, std::set<K, Pred, A>& m);
 template <typename Stream, typename T>
 void Serialize(Stream& os, const std::shared_ptr<const T>& p);
 template <typename Stream, typename T>
-void Deserialize(Stream& os, std::shared_ptr<const T>& p);
+void Deserialize(Stream& is, std::shared_ptr<const T>& p);
 
 /**
  * unique_ptr
@@ -639,7 +640,15 @@ void Deserialize(Stream& os, std::shared_ptr<const T>& p);
 template <typename Stream, typename T>
 void Serialize(Stream& os, const std::unique_ptr<const T>& p);
 template <typename Stream, typename T>
-void Deserialize(Stream& os, std::unique_ptr<const T>& p);
+void Deserialize(Stream& is, std::unique_ptr<const T>& p);
+
+/**
+ * deque
+ */
+template <typename Stream, typename T, typename A>
+void Serialize(Stream& os, const std::deque<T, A>& p);
+template <typename Stream, typename T, typename A>
+void Deserialize(Stream& is, std::deque<T, A>& p);
 
 /**
  * If none of the specialized versions above matched, default to calling member
@@ -815,6 +824,27 @@ void Serialize(Stream& os, const std::shared_ptr<const T>& p) {
 template <typename Stream, typename T>
 void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
     p = std::make_shared<const T>(is);
+}
+
+/**
+ * deque
+ */
+template <typename Stream, typename T, typename A>
+void Serialize(Stream& os, const std::deque<T, A>& q) {
+    WriteCompactSize(os, q.size());
+    for (const auto& e : q) {
+        Serialize(os, e);
+    }
+}
+
+template <typename Stream, typename T, typename A>
+void Deserialize(Stream& is, std::deque<T, A>& q) {
+    auto s = ReadCompactSize(is);
+    for (size_t i = 0; i < s; ++i) {
+        T e;
+        Deserialize(is, e);
+        q.emplace_back(std::move(e));
+    }
 }
 
 /**

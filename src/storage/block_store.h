@@ -5,6 +5,7 @@
 #ifndef EPIC_STORAGE_H
 #define EPIC_STORAGE_H
 
+#include "circular_queue.h"
 #include "dag_manager.h"
 #include "db.h"
 #include "obc.h"
@@ -40,8 +41,8 @@ public:
     bool SaveHeadHeight(uint64_t height) const;
     uint256 GetBestChainWork() const;
     bool SaveBestChainWork(const uint256&) const;
-    uint256 GetMinerChainHead() const;
-    bool SaveMinerChainHead(const uint256&) const;
+    CircularQueue<uint256> GetMinerChainHeads() const;
+    bool SaveMinerChainHeads(const CircularQueue<uint256>&) const;
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;

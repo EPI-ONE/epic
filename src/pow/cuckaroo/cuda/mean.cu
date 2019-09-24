@@ -382,7 +382,7 @@ trimparams::trimparams() {
 }
 
 GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
-    : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t)), indexesE(new uint32_t*[1 + NB]) {
+    : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t))/*, indexesE(new uint32_t*[1 + NB])*/ {
     checkCudaErrors_V(cudaMalloc((void**) &dt, sizeof(GEdgeTrimmer)));
     checkCudaErrors_V(cudaMalloc((void**) &uvnodes, CYCLELEN * 2 * sizeof(uint32_t)));
     checkCudaErrors_V(cudaMalloc((void**) &dipkeys, sizeof(siphash_keys)));
@@ -411,11 +411,11 @@ GEdgeTrimmer::~GEdgeTrimmer() {
     for (int i = 0; i < 1 + NB; i++) {
         checkCudaErrors_V(cudaFree(indexesE[i]));
     }
+    /*delete[] indexesE;*/
     checkCudaErrors_V(cudaFree(dipkeys));
     checkCudaErrors_V(cudaFree(uvnodes));
     checkCudaErrors_V(cudaFree(dt));
     cudaDeviceReset();
-    delete[] indexesE;
 }
 
 uint32_t GEdgeTrimmer::trim() {

@@ -144,6 +144,12 @@ int Init(int argc, char* argv[]) {
     }
 
     /*
+     * Initialize ECC
+     */
+    ECC_Start();
+    handle = ECCVerifyHandle();
+
+    /*
      * Load wallet
      */
     WALLET = std::make_shared<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
@@ -158,15 +164,9 @@ int Init(int argc, char* argv[]) {
     PEERMAN = std::make_unique<PeerManager>();
 
     /*
-     * Initialize ECC
-     */
-    ECC_Start();
-    handle = ECCVerifyHandle();
-
-    /*
      * Initialize miner
      */
-    MINER = std::make_unique<Miner>();
+    MINER = std::make_unique<Miner>(4);
 
     /*
      * Create rpc instance
@@ -353,7 +353,7 @@ void InitLogger() {
         UseFileLogger(CONFIG->GetLoggerPath(), CONFIG->GetLoggerFilename());
     }
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e][%t][%l] %v");
-    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::trace);
     spdlog::flush_on(spdlog::level::debug);
 }
 

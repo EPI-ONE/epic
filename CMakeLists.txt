@@ -11,10 +11,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g ")
-option(ADDRESS_DETECT  "sanitizer flag" ON)
+option(ADDRESS_DETECT "sanitizer flag" ON)
 if (ADDRESS-DETECT)
     STRING(APPEND CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -fno-omit-frame-pointer")
-endif()
+endif ()
 set(CMAKE_CXX_FLAGS "-pthread -march=native $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -179,8 +179,8 @@ aux_source_directory(${TEST_METHODS_DIR} TEST_METHODS_SRCS)
 aux_source_directory(test/wallet TEST_WALLET_SRCS)
 
 include_directories(test
-    ${TEST_METHODS_DIR}
-    )
+        ${TEST_METHODS_DIR}
+        )
 
 set(TEST_CODE
         ${TEST_RPC_SRCS}
@@ -210,7 +210,7 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
     # nvcc flags
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math;-g)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_35,code=sm_35) # default
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_52,code=sm_52) # maxwell
     list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_60,code=sm_60) # pascal
@@ -222,17 +222,17 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     cuda_add_library(epiccuda STATIC ${sources} ${headers})
     set_target_properties(epiccuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
     target_link_libraries(epiccore epiccuda)
-else()
+else ()
     message(STATUS "CUDA disabled. Using CPU miner.")
-endif()
+endif ()
 
 # daemon and cli executables
 add_executable(epic ${SRC_MAIN})
 add_executable(epic-cli ${SRC_CLIENT_MAIN}
-    ${RPC_DIR}/rpc_client.cpp
-    ${PROTO_SRCS}
-    ${GRPC_SRCS}
-    )
+        ${RPC_DIR}/rpc_client.cpp
+        ${PROTO_SRCS}
+        ${GRPC_SRCS}
+        )
 target_link_libraries(epic-cli protobuf::libprotobuf)
 target_link_libraries(epic-cli gRPC::grpc++_reflection)
 target_link_libraries(epic epiccore)
@@ -247,7 +247,7 @@ target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
 target_link_libraries(epiccore ${Secp256k1_LIBRARY})
 if (GMP_FOUND)
     target_link_libraries(epiccore ${GMP_LIBRARY})
-endif()
+endif ()
 target_link_libraries(epiccore protobuf::libprotobuf)
 target_link_libraries(epiccore gRPC::grpc++_reflection)
 
@@ -275,7 +275,7 @@ if (UNITTEST_COVERAGE)
     target_compile_options(epiccore PUBLIC --coverage)
     target_link_options(epictest PUBLIC --coverage)
     target_link_options(epiccore PUBLIC --coverage)
-endif()
+endif ()
 
 # add test
 enable_testing()

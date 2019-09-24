@@ -389,7 +389,7 @@ CKeyID Wallet::GetLastRedemAddress() const {
 
 void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
-    Wallet::lastRedemAddress_ = lastRedemAddress;
+    lastRedemAddress_ = lastRedemAddress;
 }
 
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {

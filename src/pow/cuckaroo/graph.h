@@ -42,8 +42,8 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits);
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
-        sols      = new word_t*[maxSols];
-        for (int i = 0; i < maxSols; ++i) {
+        sols      = new word_t*[maxSols + 1];
+        for (int i = 0; i < maxSols + 1; ++i) {
             sols[i] = new word_t[CYCLELEN];
         }
         visited.clear();
@@ -55,7 +55,7 @@ public:
             delete[] links;
         }
 
-        for (int i = 0; i < maxSols; ++i) {
+        for (int i = 0; i < maxSols + 1; ++i) {
             delete[] sols[i];
         }
         delete[] sols;

@@ -259,7 +259,7 @@ void CPUMiner::Solve(Block& b) {
                     SetTimestamp(blkStream, timestamp);
                 }
 
-                if (found_sols.load()) {
+                if (found_sols.load() || abort_.load()) {
                     return;
                 }
 
@@ -277,7 +277,7 @@ void CPUMiner::Solve(Block& b) {
     }
 
     // Block the main thread until a nonce is solved
-    while (!found_sols.load() && enabled_.load()) {
+    while (!found_sols.load() && enabled_.load() && !abort_.load()) {
         std::this_thread::yield();
     }
 

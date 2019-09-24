@@ -4,14 +4,16 @@
 
 #include "miner.h"
 
-Miner::Miner() : Miner(4) {}
+const size_t headsCacheLimit = 20;
 
-Miner::Miner(size_t nThreads) {
+Miner::Miner() : Miner(1) {}
+
+Miner::Miner(size_t nThreads) : selfChainHeads_(headsCacheLimit) {
     if (CYCLELEN) {
 #ifndef __CUDA_ENABLED__
         spdlog::info("No CUDA support.");
 #else
-        FillDefaultGPUParams(solverParams);
+        FillDefaultGPUParams(solverParams_);
         int nGPUDevices{};
         gpuAssert(cudaGetDeviceCount(&nGPUDevices), (char*) __FILE__, __LINE__);
         spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
@@ -43,6 +45,9 @@ bool Miner::Stop() {
         if (runner_.joinable()) {
             runner_.join();
         }
+        if (inspector_.joinable()) {
+            inspector_.join();
+        }
         spdlog::info("Miner stopped.");
         return true;
     }
@@ -65,11 +70,11 @@ void Miner::Solve(Block& b) {
 
     for (size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
-            auto _params   = solverParams;
-            _params.device = i;
+            auto params    = solverParams_;
+            params.device  = i;
             SolverCtx* ctx = nullptr;
             while (!found_sols.load() && !ctx) {
-                ctx = CreateSolverCtx(_params);
+                ctx = CreateSolverCtx(params);
             }
             ctx_q[i] = ctx;
 
@@ -88,7 +93,8 @@ void Miner::Solve(Block& b) {
 
                 ctx->SetHeader(blkStream.data(), blkStream.size());
 
-                if (found_sols.load()) {
+                if (found_sols.load() || abort_.load()) {
+                    delete ctx;
                     return;
                 }
 
@@ -104,6 +110,7 @@ void Miner::Solve(Block& b) {
                             spdlog::trace("Found solution: thread {}, nonce {}, time {}, cycle hash {}", i, nonce,
                                           timestamp, cyclehash.to_substr());
                         }
+                        delete ctx;
                         break;
                     }
                 }
@@ -111,7 +118,7 @@ void Miner::Solve(Block& b) {
         });
     }
 
-    while (!found_sols.load() && enabled_.load()) {
+    while (!found_sols.load() && enabled_.load() && !abort_.load()) {
         usleep(500000);
     }
 
@@ -129,12 +136,6 @@ void Miner::Solve(Block& b) {
     b.SetTime(final_time.load());
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
-
-    for (auto& ctx : ctx_q) {
-        if (ctx) {
-            DestroySolverCtx(ctx);
-        }
-    }
 #endif
 }
 
@@ -144,20 +145,37 @@ void Miner::Run() {
 #endif
     if (Start()) {
         // Restore miner chain head
-        auto headHash = STORE->GetMinerChainHead();
-        if (!headHash.IsNull()) {
-            selfChainHead = STORE->FindBlock(headHash);
+        selfChainHeads_ = STORE->GetMinerChainHeads();
+        selfChainHeads_.set_limit(headsCacheLimit);
+        while (!selfChainHeads_.empty() && !(selfChainHead_ = STORE->FindBlock(selfChainHeads_.front()))) {
+            selfChainHeads_.pop();
         }
 
-        // Restore distanceCal
-        if (selfChainHead && distanceCal.Empty()) {
-            auto cursor = selfChainHead;
+        // Restore distanceCal_
+        if (selfChainHead_ && distanceCal_.Empty()) {
+            auto cursor = selfChainHead_;
             do {
-                distanceCal.Add(cursor, false);
+                distanceCal_.Add(cursor, false);
                 cursor = STORE->FindBlock(cursor->GetPrevHash());
-            } while (*selfChainHead != *GENESIS && !distanceCal.Full());
+            } while (*selfChainHead_ != *GENESIS && !distanceCal_.Full());
         }
     }
+
+    chainHead_ = DAG->GetMilestoneHead();
+
+    inspector_ = std::thread([&]() {
+        while (enabled_.load()) {
+            if (!abort_ && *DAG->GetMilestoneHead()->cblock != *std::atomic_load(&chainHead_)->cblock) {
+                abort_ = true;
+                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
+                spdlog::debug("Milestone chain head changed {} => {}. Abort the current task.",
+                              chainHead_->cblock->GetHash().to_substr(),
+                              DAG->GetMilestoneHead()->cblock->GetHash().to_substr());
+            } else {
+                usleep(10000);
+            }
+        }
+    });
 
     runner_ = std::thread([&]() {
         uint256 prevHash;
@@ -165,20 +183,13 @@ void Miner::Run() {
         uint32_t ms_cnt  = 0;
 
         while (enabled_.load()) {
+            abort_ = false;
             Block b(GetParams().version);
-            auto head = DAG->GetMilestoneHead();
 
-            if (!head) {
-                spdlog::error("Cannot get milestone head. Did you init with new DB (with flag \"-N\")?");
-                enabled_ = false;
-                spdlog::info("Miner stopped.");
-                return;
-            }
-
-            if (!selfChainHead) {
+            if (!selfChainHead_) {
                 auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
                 if (!firstRegTx) {
-                    spdlog::warn("Can't get the first registration tx, keep waiting...");
+                    spdlog::warn("Paused. Waiting for the first registration.");
                     while (!firstRegTx) {
                         std::this_thread::yield();
                         firstRegTx = MEMPOOL->GetRedemptionTx(true);
@@ -188,35 +199,52 @@ void Miner::Run() {
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
-                prevHash = selfChainHead->GetHash();
-                if (distanceCal.Full()) {
+                prevHash = selfChainHead_->GetHash();
+                if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
-                        spdlog::debug("Hashing power percentage {}", distanceCal.Sum().GetDouble() /
-                                                                         (distanceCal.TimeSpan() + 1) /
-                                                                         (head->snapshot->hashRate + 1));
+                        spdlog::debug("Hashing power percentage {}",
+                                      distanceCal_.Sum().GetDouble() / (distanceCal_.TimeSpan() + 1) /
+                                          (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
                     }
 
                     auto tx = MEMPOOL->GetRedemptionTx(false);
-                    if (tx) {
+                    if (tx && !tx->IsFirstRegistration()) {
                         b.AddTransaction(std::move(tx));
                     }
 
-                    auto allowed = CalculateAllowedDist(distanceCal, head->snapshot->hashRate);
+                    auto allowed =
+                        CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
                 }
             }
 
-            b.SetMilestoneHash(head->cblock->GetHash());
+            b.SetMilestoneHash(std::atomic_load(&chainHead_)->cblock->GetHash());
             b.SetPrevHash(prevHash);
             b.SetTipHash(SelectTip());
-            b.SetDifficultyTarget(head->snapshot->blockTarget.GetCompact());
+            b.SetDifficultyTarget(std::atomic_load(&chainHead_)->snapshot->blockTarget.GetCompact());
 
             Solve(b);
 
+            // To prevent continuing with a block having a false nonce,
+            // which may happen when Solve is aborted by calling
+            // Miner::Stop or when abort_ = true
             if (!enabled_.load()) {
-                // To prevent continuing with a block having a false nonce,
-                // which may happen when Solve is aborted by calling Miner::Stop
                 return;
+            }
+            if (abort_.load()) {
+                if (b.HasTransaction()) {
+                    size_t startIndex = 0;
+                    auto tx0          = std::move(b.GetTransactions()[0]);
+                    if (tx0->IsRegistration()) {
+                        MEMPOOL->PushRedemptionTx(std::move(tx0));
+                        startIndex = 1;
+                    }
+                    auto txns = b.GetTransactions();
+                    for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {
+                        MEMPOOL->Insert(std::move(txns[i]));
+                    }
+                }
+                continue;
             }
 
             assert(b.CheckPOW());
@@ -226,18 +254,21 @@ void Miner::Run() {
             if (PEERMAN) {
                 PEERMAN->RelayBlock(bPtr, nullptr);
             }
-            distanceCal.Add(bPtr, true);
-            selfChainHead = bPtr;
+            distanceCal_.Add(bPtr, true);
+            selfChainHead_ = bPtr;
+            selfChainHeads_.push(bPtr->GetHash());
             DAG->AddNewBlock(bPtr, nullptr);
-            STORE->SaveMinerChainHead(bPtr->GetHash());
+            STORE->SaveMinerChainHeads(selfChainHeads_);
 
-            if (CheckMsPOW(bPtr, head->snapshot)) {
+            if (CheckMsPOW(bPtr, std::atomic_load(&chainHead_)->snapshot)) {
                 spdlog::debug("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
                 ms_cnt++;
                 // Block the thread until the verification is done
-                while (*DAG->GetMilestoneHead()->cblock == *head->cblock) {
+                while (*DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {
                     std::this_thread::yield();
                 }
+
+                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
             }
             counter++;
         }

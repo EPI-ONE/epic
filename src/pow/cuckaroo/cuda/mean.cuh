@@ -46,6 +46,11 @@ struct trimparams {
     trimparams();
 };
 
+// Number of Parts of BufferB, all but one of which will overlap BufferA
+#ifndef NB
+#define NB 2
+#endif
+
 // maintains set of trimmable edges
 struct GEdgeTrimmer {
     trimparams tp;
@@ -55,16 +60,16 @@ struct GEdgeTrimmer {
     uint8_t* bufferA;
     uint8_t* bufferB;
     uint8_t* bufferAB;
-    uint32_t** indexesE;
+    uint32_t* indexesE[1 + NB];
     uint32_t nedges;
     uint32_t* uvnodes;
     siphash_keys sipkeys, *dipkeys;
-    std::atomic<bool> abort;
+    std::atomic_bool abort;
     bool initsuccess = false;
 
     GEdgeTrimmer(const trimparams _tp);
-    uint64_t globalbytes() const;
     ~GEdgeTrimmer();
+    uint64_t globalbytes() const;
     uint32_t trim();
 };
 

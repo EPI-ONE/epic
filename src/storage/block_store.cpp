@@ -276,12 +276,12 @@ bool BlockStore::SaveBestChainWork(const uint256& chainwork) const {
     return dbStore_.WriteInfo("chainwork", chainwork);
 }
 
-uint256 BlockStore::GetMinerChainHead() const {
-    return dbStore_.GetInfo<uint256>("minerHead");
+CircularQueue<uint256> BlockStore::GetMinerChainHeads() const {
+    return dbStore_.GetInfo<CircularQueue<uint256>>("minerHeads");
 }
 
-bool BlockStore::SaveMinerChainHead(const uint256& h) const {
-    return dbStore_.WriteInfo("minerHead", h);
+bool BlockStore::SaveMinerChainHeads(const CircularQueue<uint256>& q) const {
+    return dbStore_.WriteInfo("minerHeads", q);
 }
 
 bool BlockStore::ExistsUTXO(const uint256& key) const {

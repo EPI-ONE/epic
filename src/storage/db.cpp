@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "db.h"
+#include "circular_queue.h"
 
 using std::optional;
 using std::pair;
@@ -254,6 +255,7 @@ template bool DBStore::WriteInfo(const std::string&, const uint256&) const;
 template bool DBStore::WriteInfo(const std::string&, const uint64_t&) const;
 template bool DBStore::WriteInfo(const std::string&, const uint32_t&) const;
 template bool DBStore::WriteInfo(const std::string&, const uint16_t&) const;
+template bool DBStore::WriteInfo(const std::string&, const CircularQueue<uint256>&) const;
 
 template <typename V>
 V DBStore::GetInfo(const std::string& k) const {
@@ -273,6 +275,7 @@ template uint256 DBStore::GetInfo(const std::string&) const;
 template uint64_t DBStore::GetInfo(const std::string&) const;
 template uint32_t DBStore::GetInfo(const std::string&) const;
 template uint16_t DBStore::GetInfo(const std::string&) const;
+template CircularQueue<uint256> DBStore::GetInfo(const std::string&) const;
 
 uint256 DBStore::GetMsHashAt(const uint64_t& height) const {
     MAKE_KEY_SLICE(height);

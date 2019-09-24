@@ -24,7 +24,7 @@ static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 // transaction sortition: coefficient for computing allowed distance
 static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
-static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
+static constexpr size_t SORTITION_THRESHOLD = 1000;
 // coefficient of taking additional reward for milestone
 static constexpr uint32_t REWARD_COEFFICIENT = 50;
 static constexpr size_t CACHE_STATES         = 100;
@@ -107,7 +107,7 @@ TestNetParams::TestNetParams() {
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 4;
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
-    sortitionThreshold   = SORTITION_THRESHOLD;
+    sortitionThreshold   = 100;
     cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
