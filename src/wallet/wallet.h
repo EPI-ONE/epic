@@ -141,7 +141,7 @@ private:
     void SetLastRedemAddress(const CKeyID& lastRedemAddress);
 
     std::atomic_bool cryptedFlag_ = false;
-    KeyingMaterial master_;
+    SecureByte master_;
     uint256 chaincode_;
     MasterInfo masterInfo_;
     Crypter crypter_;

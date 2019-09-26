@@ -29,13 +29,8 @@ public:
         memset(data, 0, sizeof(data));
     }
 
-    explicit base_blob(const char* vch);
     explicit base_blob(const std::vector<unsigned char>& vch);
-    template <typename T>
-    base_blob(const T pbegin, const T pend) {
-        assert(size_t(pend - pbegin) == sizeof(data));
-        memcpy(data, &pbegin[0], sizeof(data));
-    }
+    base_blob(unsigned char* vch, size_t length);
 
     // Defined to be used with std::atomic
     // note that move operations are still copying

@@ -33,10 +33,12 @@ TEST_F(TestWalletEncryption, mnemonics_and_crypter) {
     mne.PrintToFile(CONFIG->GetWalletPath());
 
     auto strs = mne.GetMnemonics();
-    Mnemonics dupmne{strs};
+    Mnemonics dupmne;
+    ASSERT_TRUE(dupmne.Load(strs));
 
     strs.back() = "wrongword";
-    Mnemonics wrongmne{strs};
+    Mnemonics wrongmne;
+    ASSERT_FALSE(wrongmne.Load(strs));
 
     auto [masterMaterial, num] = mne.GetMasterKeyAndSeed();
     CKey master{};
@@ -46,7 +48,7 @@ TEST_F(TestWalletEncryption, mnemonics_and_crypter) {
 
 
     //Crypter crypter{master.GetPrivKey()};
-    KeyingMaterial masterdata{master.begin(), master.end()};
+    SecureByte masterdata{master.begin(), master.end()};
     Crypter crypter{masterdata};
     ASSERT_FALSE(crypter.IsReady());
     SecureString keydata{"random frog"};

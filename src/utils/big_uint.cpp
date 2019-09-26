@@ -8,15 +8,15 @@
 #include "utilstrencodings.h"
 
 template <unsigned int BITS>
-base_blob<BITS>::base_blob(const char* vch) {
-    assert(std::strlen(vch) == sizeof(data));
-    memcpy(data, vch, sizeof(data));
-}
-
-template <unsigned int BITS>
 base_blob<BITS>::base_blob(const std::vector<unsigned char>& vch) {
     assert(vch.size() == sizeof(data));
     memcpy(data, vch.data(), sizeof(data));
+}
+
+template <unsigned int BITS>
+base_blob<BITS>::base_blob(unsigned char* vch, size_t len) {
+    assert(len == sizeof(data));
+    memcpy(data, vch, sizeof(data));
 }
 
 template <unsigned int BITS>
@@ -65,7 +65,6 @@ std::string std::to_string(const base_blob<BITS>& uint) {
 
 // Explicit instantiations for base_blob<160>
 template base_blob<160>::base_blob(const std::vector<unsigned char>&);
-template base_blob<160>::base_blob(const char*);
 template std::string base_blob<160>::GetHex() const;
 template std::string std::to_string(const base_blob<160>& uint);
 template void base_blob<160>::SetHex(const char*);
@@ -73,7 +72,7 @@ template void base_blob<160>::SetHex(const std::string&);
 
 // Explicit instantiations for base_blob<256>
 template base_blob<256>::base_blob(const std::vector<unsigned char>&);
-template base_blob<256>::base_blob(const char*);
+template base_blob<256>::base_blob(unsigned char*, size_t);
 template std::string base_blob<256>::GetHex() const;
 template std::string std::to_string(const base_blob<256>& uint);
 template void base_blob<256>::SetHex(const char*);

@@ -33,7 +33,7 @@ bool Crypter::SetKeyFromPassphrase(const SecureString& strKeyData,
     return true;
 }
 
-bool Crypter::SetKey(const KeyingMaterial& chNewKey, const std::vector<unsigned char>& chNewIV) {
+bool Crypter::SetKey(const SecureByte& chNewKey, const std::vector<unsigned char>& chNewIV) {
     if (chNewKey.size() != WALLET_CRYPTO_KEY_SIZE || chNewIV.size() != WALLET_CRYPTO_IV_SIZE)
         return false;
 
@@ -92,7 +92,7 @@ bool Crypter::EncryptKey(const CPubKey& pubkey, const CKey& key, std::vector<uns
     // max cryptedPriv len for a n bytes of plaintext is
     // n + AES_BLOCKSIZE bytes
     cryptedPriv.resize(key.size() + AES_BLOCKSIZE);
-    KeyingMaterial secret{key.begin(), key.end()};
+    SecureByte secret{key.begin(), key.end()};
     std::vector<unsigned char> chIV(WALLET_CRYPTO_IV_SIZE);
     auto pubkeyHash = pubkey.GetHash();
     memcpy(chIV.data(), &pubkeyHash, WALLET_CRYPTO_IV_SIZE);
@@ -114,7 +114,7 @@ bool Crypter::DecryptKey(const CPubKey& pubkey, const std::vector<unsigned char>
 
     // plaintext(secret) will always be equal to or lesser than length of ciphertext
     int nLen = cryptedPriv.size();
-    KeyingMaterial secret;
+    SecureByte secret;
     secret.resize(nLen);
 
     std::vector<unsigned char> chIV(WALLET_CRYPTO_IV_SIZE);

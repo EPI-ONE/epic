@@ -32,8 +32,9 @@ private:
 class Mnemonics {
 public:
     Mnemonics() : entropy_(16) {}
-    explicit Mnemonics(std::array<std::string, 12> mnemonics);
+
     bool Generate();
+    bool Load(std::array<std::string, 12> mnemonics);
     std::array<std::string, 12> GetMnemonics();
     void PrintToFile(std::string pathstr);
     std::pair<SecureByte, uint256> GetMasterKeyAndSeed();

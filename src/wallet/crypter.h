@@ -52,18 +52,17 @@ public:
     }
 };
 
-using KeyingMaterial = SecureByte;
 
 /** Encryption/decryption context with key information */
 class Crypter {
 private:
     SecureByte passphraseKey_;
     SecureByte passphraseIV_;
-    KeyingMaterial master_;
+    SecureByte master_;
     bool fKeySet_;
     bool fMaster_;
 
-    bool SetKey(const KeyingMaterial& chNewKey, const std::vector<unsigned char>& chNewIV);
+    bool SetKey(const SecureByte& chNewKey, const std::vector<unsigned char>& chNewIV);
 
 public:
     bool SetKeyFromPassphrase(const SecureString& strKeyData,
@@ -74,7 +73,7 @@ public:
     bool EncryptKey(const CPubKey& pubkey, const CKey& key, std::vector<unsigned char>& cryptedPriv) const;
     bool DecryptKey(const CPubKey& pubkey, const std::vector<unsigned char>& cryptedPriv, CKey& key) const;
 
-    bool SetMaster(const KeyingMaterial& master) {
+    bool SetMaster(const SecureByte& master) {
         if (master.size() != 32) {
             return false;
         }
@@ -99,7 +98,7 @@ public:
         master_.resize(WALLET_CRYPTO_KEY_SIZE);
     }
 
-    explicit Crypter(const KeyingMaterial& masterKey) : master_(masterKey), fKeySet_(false), fMaster_(true) {
+    explicit Crypter(const SecureByte& masterKey) : master_(masterKey), fKeySet_(false), fMaster_(true) {
         passphraseKey_.resize(WALLET_CRYPTO_KEY_SIZE);
         passphraseIV_.resize(WALLET_CRYPTO_IV_SIZE);
         master_.resize(WALLET_CRYPTO_KEY_SIZE);

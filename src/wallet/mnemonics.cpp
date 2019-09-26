@@ -9,7 +9,7 @@
 #include "hash.h"
 #include "key.h"
 #include "random.h"
-#include "spdlog.h"
+#include "spdlog/spdlog.h"
 #include "utilstrencodings.h"
 #include "wordlist.h"
 
@@ -49,19 +49,21 @@ std::optional<std::string> WordReader::GetWord(uint32_t index) {
     return {};
 }
 
-Mnemonics::Mnemonics(std::array<std::string, 12> mnemonics) : entropy_(16, 0) {
+bool Mnemonics::Load(std::array<std::string, 12> mnemonics) {
     WordReader reader{};
     for (size_t i = 0; i < mnemonics.size(); i++) {
         if (auto word = reader.GetIndex(mnemonics[i])) {
             words_[i] = *word;
         } else {
-            spdlog::error("Word {} is not in word list", mnemonics[i]);
-            return;
+            spdlog::info("Word {} is not in word list", mnemonics[i]);
+            return false;
         }
     }
     if (!WordsToBits()) {
-        spdlog::error("Entropy does not match its check sum");
+        spdlog::info("Entropy does not match its check sum");
+        return false;
     }
+    return true;
 }
 
 bool Mnemonics::Generate() {
@@ -85,7 +87,6 @@ std::array<std::string, 12> Mnemonics::GetMnemonics() {
     return result;
 }
 
-
 void Mnemonics::PrintToFile(std::string pathstr) {
     auto mne = GetMnemonics();
     std::ofstream writer{pathstr + "mnemonics.txt", std::ios::out | std::ios::trunc};
@@ -102,8 +103,8 @@ void Mnemonics::BitsToWords() {
     SecureString binaryStr;
     binaryStr.reserve(LENGTH * WORD_SIZE);
 
-    char singleByte[9];
-    memset(singleByte, 0, 9 * sizeof(char));
+    char singleByte[8];
+    memset(singleByte, 0, sizeof(singleByte));
 
     // convert each byte to binary in binary str
     for (auto& byte : entropy_) {
@@ -113,7 +114,7 @@ void Mnemonics::BitsToWords() {
 
     sprintf(singleByte, BYTE_TO_BINARY_PATTERN, BYTE_TO_BINARY(*checksum.begin()));
     binaryStr.append(singleByte, 4);
-    memset(singleByte, 0, 9 * sizeof(char));
+    memset(singleByte, 0, sizeof(singleByte));
 
     for (size_t i = 0; i < LENGTH; i++) {
         SecureString wordBinary{binaryStr, i * WORD_SIZE, WORD_SIZE};
@@ -154,7 +155,6 @@ bool Mnemonics::WordsToBits() {
     return (origin == exam);
 }
 
-
 std::pair<SecureByte, uint256> Mnemonics::GetMasterKeyAndSeed() {
     SecureByte out;
     out.resize(64);
@@ -167,6 +167,6 @@ std::pair<SecureByte, uint256> Mnemonics::GetMasterKeyAndSeed() {
     memcpy(out1.data(), out.data(), out1.size());
     memcpy(out2.data(), out.data() + 32, out2.size());
 
-    uint256 chaincode{out2.begin(), out2.end()};
+    uint256 chaincode{out2.data(), out2.size()};
     return {out1, chaincode};
 }
