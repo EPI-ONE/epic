@@ -157,7 +157,7 @@ void Miner::Run() {
             do {
                 distanceCal_.Add(cursor, false);
                 cursor = STORE->FindBlock(cursor->GetPrevHash());
-            } while (*selfChainHead_ != *GENESIS && !distanceCal_.Full());
+            } while (*cursor != *GENESIS && !distanceCal_.Full());
         }
     }
 
@@ -165,12 +165,14 @@ void Miner::Run() {
 
     inspector_ = std::thread([&]() {
         while (enabled_.load()) {
-            if (!abort_ && *DAG->GetMilestoneHead()->cblock != *std::atomic_load(&chainHead_)->cblock) {
+            auto headInDAG = DAG->GetMilestoneHead()->cblock;
+            if (!abort_ && headInDAG->source == Block::NETWORK &&
+                *headInDAG != *std::atomic_load(&chainHead_)->cblock) {
                 abort_ = true;
-                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
                 spdlog::debug("Milestone chain head changed {} => {}. Abort the current task.",
                               chainHead_->cblock->GetHash().to_substr(),
                               DAG->GetMilestoneHead()->cblock->GetHash().to_substr());
+                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
             } else {
                 usleep(10000);
             }
@@ -204,7 +206,7 @@ void Miner::Run() {
                     if (counter % 10 == 0) {
                         spdlog::debug("Hashing power percentage {}",
                                       distanceCal_.Sum().GetDouble() / (distanceCal_.TimeSpan() + 1) /
-                                          (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
+                                          (double) (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
                     }
 
                     auto tx = MEMPOOL->GetRedemptionTx(false);
