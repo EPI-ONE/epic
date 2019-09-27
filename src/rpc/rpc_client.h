@@ -38,6 +38,9 @@ public:
 
     option_string GenerateNewKey();
 
+    option_string SetPassphrase(const std::string& passphrase);
+    option_string ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
+    option_string Login(const std::string& passphrase);
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;

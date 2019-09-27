@@ -5,12 +5,12 @@
 #ifndef EPIC_INIT_H
 #define EPIC_INIT_H
 
-#include "config.h"
 #include "cpptoml.h"
 #include "cxxopts.h"
-#include "file_utils.h"
-#include "spdlog/sinks/basic_file_sink.h"
-#include "storage.h"
+
+#include <atomic>
+
+class ECCVerifyHandle;
 
 extern std::atomic_bool b_shutdown;
 extern ECCVerifyHandle handle;

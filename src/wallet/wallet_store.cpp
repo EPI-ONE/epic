@@ -25,7 +25,7 @@ const std::array<std::string, 3> utxoStr{kUnspentTXO, kPendingTXO, kSpentTXO};
 
 static const std::vector<std::string> COLUMN_NAMES = {
     kKeyBook, // (key) address
-              // (value) encoded private key
+              // (value) {AES256CBC-encrypted private key (32B) + public key (65B)}
               // update on each changes
 
     kTx, // (key) transaction hash
@@ -74,10 +74,10 @@ ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() {
     return result;
 }
 
-bool WalletStore::StoreKeys(const CKeyID& addr, const CKey& privkey) {
+bool WalletStore::StoreKeys(const CKeyID& addr, const CiphertextKey& encrypted, const CPubKey& pubkey) {
     VStream key, value;
     key << EncodeAddress(addr);
-    value << EncodeSecret(privkey);
+    value << encrypted << pubkey;
 
     return put(db_, handleMap_.at(kKeyBook), key, value);
 }
@@ -88,19 +88,18 @@ bool WalletStore::IsExistKey(const CKeyID& addr) {
     return !DBWrapper::Get(kKeyBook, Slice{key.data(), key.size()}).empty();
 }
 
-std::optional<CKey> WalletStore::GetKey(const CKeyID& addr) {
-    CKey privkey;
+std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKeyID& addr) {
     VStream key;
     key << addr;
     PinnableSlice valueSlice;
     if (db_->Get(ReadOptions(), handleMap_.at(kKeyBook), Slice{key.data(), key.size()}, &valueSlice).ok()) {
         try {
-            std::string encodedkey;
             VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-            value >> encodedkey;
-            if (auto oKey = DecodeSecret(encodedkey)) {
-                privkey = *oKey;
-                return privkey;
+            CiphertextKey privkey;
+            CPubKey pubkey;
+            value >> privkey >> pubkey;
+            if (pubkey.IsFullyValid()) { // TODO: consider that do we need this check?
+                return std::tuple{privkey, pubkey};
             }
         } catch (const std::exception& e) {
             std::cout << "err key\n";
@@ -110,25 +109,23 @@ std::optional<CKey> WalletStore::GetKey(const CKeyID& addr) {
     return {};
 }
 
-ConcurrentHashMap<CKeyID, CKey> WalletStore::GetAllKey() {
+ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> WalletStore::GetAllKey() {
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kKeyBook));
-    ConcurrentHashMap<CKeyID, CKey> result;
+    ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> result;
+    CKeyID addr;
+    CiphertextKey privkey;
+    CPubKey pubkey;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
-        CKeyID addr;
-        CKey privkey;
         try {
             VStream key{iter->key().data(), iter->key().data() + iter->key().size()};
             VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
-            std::string keystr, valuestr;
+            std::string keystr;
             key >> keystr;
-            value >> valuestr;
+            value >> privkey >> pubkey;
             if (auto oAddr = DecodeAddress(keystr)) {
                 addr = *oAddr;
+                result.emplace(addr, std::forward_as_tuple(privkey, pubkey));
             }
-            if (auto okey = DecodeSecret(valuestr)) {
-                privkey = *okey;
-            }
-            result.emplace(addr, privkey);
         } catch (std::exception& e) {
             std::cout << "err all key\n";
         }
@@ -205,16 +202,19 @@ ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> Wal
     return GetAllUTXO(SPENT);
 }
 
+// get encoded pubkeys
 int WalletStore::KeysToFile(std::string filePath) {
     // get all data
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kKeyBook));
     std::vector<std::string> keyList;
+    std::vector<unsigned char> ciphertext;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         try {
             VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
             std::string valuestr;
-            value >> valuestr;
+            value >> ciphertext >> valuestr;
             keyList.emplace_back(valuestr);
+            ciphertext.clear();
         } catch (std::exception& e) {
             std::cout << "err file\n";
         }

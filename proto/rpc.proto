@@ -92,8 +92,11 @@ service CommanderRPC {
     rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
     rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
     rpc GenerateNewKey(GenerateNewKeyRequest) returns (GenerateNewKeyResponse);
-    rpc GetBalance(GetBalanceRequest) returns(GetBalanceResponse);
-    rpc CreateTx(CreateTxRequest) returns(CreateTxResponse);
+    rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+    rpc CreateTx(CreateTxRequest) returns (CreateTxResponse);
+    rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
+    rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
 }
 
 message StopRequest {}
@@ -130,9 +133,7 @@ message CreateRandomTxResponse{
 message GenerateNewKeyRequest{}
 
 message GenerateNewKeyResponse{
-    string privateKey = 1;
-    string pubKey = 2;
-    string address = 3;
+    string address = 1;
 }
 
 message GetBalanceRequest{}
@@ -142,10 +143,35 @@ message GetBalanceResponse{
 }
 
 message CreateTxRequest{
-    uint64 fee =1;
-    repeated Output outputs=2;
+    uint64 fee = 1;
+    repeated Output outputs = 2;
 }
 
 message CreateTxResponse{
     string txInfo = 1;
+}
+
+message SetPassphraseRequest {
+    string passphrase = 1;
+}
+
+message SetPassphraseResponse {
+    string responseInfo = 1;
+}
+
+message ChangePassphraseRequest {
+    string oldPassphrase = 1;
+    string newPassphrase = 2;
+}
+
+message ChangePassphraseResponse {
+    string responseInfo = 1;
+}
+
+message LoginRequest {
+    string passphrase = 1;
+}
+
+message LoginResponse {
+    string responseInfo = 1;
 }

@@ -4,11 +4,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "key.h"
+
 #include "base58.h"
 #include "big_uint.h"
 #include "cleanse.h"
 #include "common.h"
 #include "hash.h"
+#include "random.h"
 
 #include <climits>
 #include <cmath>
@@ -165,18 +167,7 @@ bool CKey::Check(const unsigned char* vch) {
 
 // TODO: make it very strong
 void GetRandBytes(CPrivKey& buf) {
-    unsigned long long x;
-    uint_fast8_t j;
-
-    for (std::size_t i = 0; i < buf.size(); i++) {
-        j = i & 0x7;
-        if (j == 0) {
-            while (!_rdrand64_step(&x))
-                ;
-        }
-
-        buf[i] = ((unsigned char*) &x)[j];
-    }
+    GetOpenSSLRand(buf.data(), buf.size());
 }
 
 void CKey::MakeNewKey(bool fCompressedIn) {

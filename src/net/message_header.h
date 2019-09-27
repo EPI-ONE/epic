@@ -29,7 +29,7 @@ inline uint32_t GetMagicNumber() {
     return 0x44535A5A;
 }
 
-inline bool VerifyChecksum(message_header_t& header) {
+inline bool VerifyChecksum(const message_header_t& header) {
     return header.checksum == header.magic + header.type + header.length;
 }
 

@@ -6,13 +6,16 @@
 #define EPIC_WALLET_H
 
 #include "concurrent_container.h"
+#include "crypter.h"
 #include "key.h"
+#include "mnemonics.h"
 #include "scheduler.h"
 #include "tasm.h"
 #include "threadpool.h"
 #include "vertex.h"
 #include "wallet_store.h"
 
+#include <array>
 #include <atomic>
 #include <utility>
 
@@ -47,9 +50,9 @@ public:
 
     CKeyID GetRandomAddress();
 
-    void ImportKey(CKey& key, CPubKey& pubKey);
+    void ImportKey(const CKey& key, const CPubKey& pubKey);
 
-    CKey CreateNewKey(bool compressed);
+    CKeyID CreateNewKey(bool compressed);
     ConstTxPtr CreateFirstRegistration(const CKeyID&);
     ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
     ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
@@ -81,11 +84,23 @@ public:
         return pendingTx;
     }
 
+    bool IsCrypted();
+    bool SetPassphrase(const SecureString& phrase);
+    bool ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase);
+    bool CheckPassphrase(const SecureString& phrase);
+    void RPCLogin() {
+        rpcLoggedin_ = true;
+    }
+    bool IsLoggedIn() {
+        return rpcLoggedin_;
+    }
+    bool GenerateMaster();
+
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingRedemption;
-    ConcurrentHashMap<CKeyID, std::pair<CKey, CPubKey>> keyBook;
+    ConcurrentHashMap<CKeyID, std::pair<CiphertextKey, CPubKey>> keyBook;
 
     ThreadPool threadPool_;
 
@@ -115,15 +130,23 @@ private:
 
     TxInput CreateSignedVin(const CKeyID&, TxOutPoint, const std::string&);
 
-    void SendingStorageTask(uint32_t);
+    void SendPeriodicTasks(uint32_t, uint32_t);
 
     bool CanRedeem();
 
     std::pair<uint256, Coin> GetMinerInfo() const;
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
 
-    const CKeyID GetLastRedemAddress() const;
+    CKeyID GetLastRedemAddress() const;
     void SetLastRedemAddress(const CKeyID& lastRedemAddress);
+
+    std::atomic_bool cryptedFlag_ = false;
+    SecureByte master_;
+    uint256 chaincode_;
+    MasterInfo masterInfo_;
+    Crypter crypter_;
+    
+    std::atomic_bool rpcLoggedin_ = false;
 };
 
 extern std::shared_ptr<Wallet> WALLET;

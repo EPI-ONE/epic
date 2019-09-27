@@ -30,6 +30,7 @@ public:
     }
 
     explicit base_blob(const std::vector<unsigned char>& vch);
+    base_blob(unsigned char* vch, size_t length);
 
     // Defined to be used with std::atomic
     // note that move operations are still copying

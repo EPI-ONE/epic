@@ -211,5 +211,51 @@ RPCClient::option_string RPCClient::GenerateNewKey() {
         return {};
     }
 
-    return "Ckey = " + response.privatekey() + '\n' + "Address = " + response.address() + '\n';
+    return "Address = " + response.address() + '\n';
+}
+
+RPCClient::option_string RPCClient::SetPassphrase(const std::string& passphrase) {
+    SetPassphraseRequest request;
+    SetPassphraseResponse response;
+    grpc::ClientContext context;
+
+    request.set_passphrase(passphrase);
+    auto status = commander_stub_->SetPassphrase(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+
+    return response.responseinfo(); 
+}
+
+RPCClient::option_string RPCClient::ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase) {
+    ChangePassphraseRequest request;
+    ChangePassphraseResponse response;
+    grpc::ClientContext context;
+
+    request.set_oldpassphrase(oldPassphrase);
+    request.set_newpassphrase(newPassphrase);
+    auto status = commander_stub_->ChangePassphrase(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+
+    return response.responseinfo();
+}
+
+RPCClient::option_string RPCClient::Login(const std::string& passphrase) {
+    LoginRequest request;
+    LoginResponse response;
+    grpc::ClientContext context;
+
+    request.set_passphrase(passphrase);
+   auto status = commander_stub_->Login(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+
+    return response.responseinfo();
 }

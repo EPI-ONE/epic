@@ -5,14 +5,9 @@
 #ifndef EPIC_RPC_SERVER_H
 #define EPIC_RPC_SERVER_H
 
-#include "block.h"
-#include "init.h"
-#include "miner.h"
 #include "net_address.h"
 #include "rpc_header.h"
 #include "rpc_tools.h"
-#include "spdlog.h"
-#include "wallet.h"
 
 #include <thread>
 
@@ -66,6 +61,18 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     grpc::Status GetBalance(grpc::ServerContext* context,
                             const GetBalanceRequest* request,
                             GetBalanceResponse* reply) override;
+
+    grpc::Status SetPassphrase(grpc::ServerContext* context,
+                            const SetPassphraseRequest* request,
+                            SetPassphraseResponse* reply) override;
+
+    grpc::Status ChangePassphrase(grpc::ServerContext* context,
+                            const ChangePassphraseRequest* request,
+                            ChangePassphraseResponse* reply) override;
+
+    grpc::Status Login(grpc::ServerContext* context,
+                            const LoginRequest* request,
+                            LoginResponse* reply) override;
 };
 
 class RPCServer {
