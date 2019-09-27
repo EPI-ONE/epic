@@ -42,6 +42,14 @@ public:
         return root_;
     }
 
+    const std::string& GetLoggerLevel() const {
+        return loggerLevel_;
+    }
+
+    void SetLoggerLevel(const std::string& level) {
+        loggerLevel_ = level;
+    }
+
     bool IsUseFileLogger() const {
         return useFileLogger_;
     }
@@ -179,6 +187,7 @@ public:
         std::stringstream ss;
         ss << std::endl << "current config: " << std::endl;
         ss << "config file path = " << GetConfigFilePath() << std::endl;
+        ss << "logger level = " << loggerLevel_ << std::endl;
         ss << "use logger file = " << useFileLogger_ << std::endl;
         ss << "logger file path = " << GetLoggerPath() << loggerFilename_ << std::endl;
         ss << "saved address path = " << GetAddressPath() << addressFilename_ << std::endl;
@@ -230,6 +239,7 @@ private:
     std::string root_ = "data/";
 
     // logger
+    std::string loggerLevel_    = "info";
     bool useFileLogger_         = false;
     std::string loggerPath_     = "logs/";
     std::string loggerFilename_ = "Debug.log";

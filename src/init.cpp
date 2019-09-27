@@ -245,6 +245,8 @@ void LoadConfigFile() {
     // logger
     auto log_config = configContent->get_table("logs");
     if (log_config) {
+        auto log_level = log_config->get_as<std::string>("level").value_or("info");
+        CONFIG->SetLoggerLevel(log_level);
         auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
         CONFIG->SetUseFileLogger(use_file_logger);
         if (use_file_logger) {
@@ -353,8 +355,8 @@ void InitLogger() {
         UseFileLogger(CONFIG->GetLoggerPath(), CONFIG->GetLoggerFilename());
     }
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e][%t][%l] %v");
-    spdlog::set_level(spdlog::level::trace);
-    spdlog::flush_on(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::from_str(CONFIG->GetLoggerLevel()));
+    spdlog::flush_on(spdlog::level::from_str(CONFIG->GetLoggerLevel()));
 }
 
 void UseFileLogger(const std::string& path, const std::string& filename) {

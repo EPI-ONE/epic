@@ -257,8 +257,6 @@ void Block::AddTransactions(std::vector<ConstTxPtr>&& txns) {
     }
     transactions_.insert(transactions_.end(), std::make_move_iterator(txns.begin()),
                          std::make_move_iterator(txns.end()));
-    SetMerkle();
-    CalculateOptimalEncodingSize();
 }
 
 bool Block::HasTransaction() const {

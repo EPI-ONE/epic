@@ -4,6 +4,7 @@ title = "EPIC Default Config"
 root = "data/"
 
 [logs]
+level = "info"
 use_file_logger = true
 path = "logs/"
 filename = "Debug.log"

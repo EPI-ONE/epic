@@ -15,7 +15,6 @@ int main(int argc, char** argv) {
 
     if (Start()) {
         // TODO: start some applications, such as miner, visualization...
-        spdlog::set_level(spdlog::level::level_enum::debug);
         WaitShutdown();
     } else {
         std::cout << "Failed to start epic" << std::endl;

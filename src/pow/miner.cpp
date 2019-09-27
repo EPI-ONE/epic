@@ -170,8 +170,8 @@ void Miner::Run() {
                 *headInDAG != *std::atomic_load(&chainHead_)->cblock) {
                 abort_ = true;
                 spdlog::debug("Milestone chain head changed {} => {}. Abort the current task.",
-                              chainHead_->cblock->GetHash().to_substr(),
-                              DAG->GetMilestoneHead()->cblock->GetHash().to_substr());
+                              std::atomic_load(&chainHead_)->cblock->GetHash().to_substr(),
+                              headInDAG->GetHash().to_substr());
                 std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
             } else {
                 usleep(10000);
@@ -200,13 +200,14 @@ void Miner::Run() {
                 spdlog::info("Got the first registration. Start mining.");
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
+                b.SetMerkle();
             } else {
                 prevHash = selfChainHead_->GetHash();
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
-                        spdlog::debug("Hashing power percentage {}",
-                                      distanceCal_.Sum().GetDouble() / (distanceCal_.TimeSpan() + 1) /
-                                          (double) (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
+                        spdlog::info("Hashing power percentage {}",
+                                     distanceCal_.Sum().GetDouble() / (distanceCal_.TimeSpan() + 1) /
+                                         (double) (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
                     }
 
                     auto tx = MEMPOOL->GetRedemptionTx(false);
@@ -217,6 +218,7 @@ void Miner::Run() {
                     auto allowed =
                         CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
+                    b.SetMerkle();
                 }
             }
 
@@ -235,13 +237,12 @@ void Miner::Run() {
             }
             if (abort_.load()) {
                 if (b.HasTransaction()) {
+                    auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
-                    auto tx0          = std::move(b.GetTransactions()[0]);
-                    if (tx0->IsRegistration()) {
-                        MEMPOOL->PushRedemptionTx(std::move(tx0));
+                    if (txns[0]->IsRegistration()) {
+                        MEMPOOL->PushRedemptionTx(std::move(txns[0]));
                         startIndex = 1;
                     }
-                    auto txns = b.GetTransactions();
                     for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {
                         MEMPOOL->Insert(std::move(txns[i]));
                     }
@@ -263,7 +264,7 @@ void Miner::Run() {
             STORE->SaveMinerChainHeads(selfChainHeads_);
 
             if (CheckMsPOW(bPtr, std::atomic_load(&chainHead_)->snapshot)) {
-                spdlog::debug("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
+                spdlog::info("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
                 ms_cnt++;
                 // Block the thread until the verification is done
                 while (*DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {

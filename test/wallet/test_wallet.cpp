@@ -164,7 +164,6 @@ TEST_F(TestWallet, test_wallet_store) {
 }
 
 TEST_F(TestWallet, workflow) {
-    SetLogLevel(SPDLOG_LEVEL_DEBUG);
     EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");

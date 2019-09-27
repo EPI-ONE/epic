@@ -81,6 +81,7 @@ TEST_F(TestConsensus, MerkleRoot) {
     auto txns = block1.GetTransactions();
     txns[0].swap(txns[5]);
     block2.AddTransactions(std::move(txns));
+    block2.SetMerkle();
 
     EXPECT_NE(block1.GetTransactions(), block2.GetTransactions());
 
