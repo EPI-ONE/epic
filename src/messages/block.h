@@ -26,49 +26,49 @@ namespace std {
 string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validity = {});
 } // namespace std
 
+class BlockHeader {
+public:
+    uint16_t version = 0;
+    uint256 milestoneBlockHash{};
+    uint256 prevBlockHash{};
+    uint256 tipBlockHash{};
+    uint256 merkleRoot{};
+    uint32_t timestamp  = 0;
+    uint32_t diffTarget = 0;
+    uint32_t nonce      = 0;
+
+    BlockHeader() = default;
+    BlockHeader(uint16_t version_,
+                uint256 milestoneBlockHash_,
+                uint256 prevBlockHash_,
+                uint256 tipBlockHash_,
+                uint256 merkle_,
+                uint32_t time_,
+                uint32_t diffTarget_,
+                uint32_t nonce_);
+
+    explicit BlockHeader(const Block& b);
+    explicit BlockHeader(VStream&);
+
+    void SetNull();
+
+    ADD_SERIALIZE_METHODS template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(version);
+        READWRITE(milestoneBlockHash);
+        READWRITE(prevBlockHash);
+        READWRITE(tipBlockHash);
+        READWRITE(merkleRoot);
+        READWRITE(timestamp);
+        READWRITE(diffTarget);
+        READWRITE(nonce);
+    }
+
+    std::string to_string() const;
+};
+
 class Block : public NetMessage {
 public:
-    struct Header {
-        uint16_t version = 0;
-        uint256 milestoneBlockHash{};
-        uint256 prevBlockHash{};
-        uint256 tipBlockHash{};
-        uint256 merkleRoot{};
-        uint32_t timestamp  = 0;
-        uint32_t diffTarget = 0;
-        uint32_t nonce      = 0;
-
-        Header() = default;
-
-        Header(uint16_t version_,
-               uint256 milestoneBlockHash_,
-               uint256 prevBlockHash_,
-               uint256 tipBlockHash_,
-               uint256 merkle_,
-               uint32_t time_,
-               uint32_t diffTarget_,
-               uint32_t nonce_);
-
-        explicit Header(const Block& b);
-        explicit Header(VStream&);
-
-        void SetNull();
-
-        ADD_SERIALIZE_METHODS template <typename Stream, typename Operation>
-        inline void SerializationOp(Stream& s, Operation ser_action) {
-            READWRITE(version);
-            READWRITE(milestoneBlockHash);
-            READWRITE(prevBlockHash);
-            READWRITE(tipBlockHash);
-            READWRITE(merkleRoot);
-            READWRITE(timestamp);
-            READWRITE(diffTarget);
-            READWRITE(nonce);
-        }
-
-        std::string to_string() const;
-    };
-
     Block();
     Block(const Block&);
     Block(Block&&) noexcept;
@@ -96,7 +96,7 @@ public:
     bool IsNull() const;
     void UnCache();
 
-    Header GetHeader() const;
+    BlockHeader GetHeader() const;
     uint16_t GetVersion() const;
     uint256 GetMilestoneHash() const;
     uint256 GetPrevHash() const;
@@ -224,7 +224,7 @@ protected:
     uint256 hash_;
 
 private:
-    Header header_;
+    BlockHeader header_;
     std::vector<word_t> proof_;
     std::vector<ConstTxPtr> transactions_;
 

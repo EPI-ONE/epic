@@ -8,27 +8,28 @@
 
 #include <unordered_set>
 
-Block::Header::Header(uint16_t version_,
-                      uint256 milestoneBlockHash_,
-                      uint256 prevBlockHash_,
-                      uint256 tipBlockHash_,
-                      uint256 merkle_,
-                      uint32_t time_,
-                      uint32_t diffTarget_,
-                      uint32_t nonce_)
+BlockHeader::BlockHeader(uint16_t version_,
+                         uint256 milestoneBlockHash_,
+                         uint256 prevBlockHash_,
+                         uint256 tipBlockHash_,
+                         uint256 merkle_,
+                         uint32_t time_,
+                         uint32_t diffTarget_,
+                         uint32_t nonce_)
     : version(version_), milestoneBlockHash(milestoneBlockHash_), prevBlockHash(prevBlockHash_),
       tipBlockHash(tipBlockHash_), merkleRoot(merkle_), timestamp(time_), diffTarget(diffTarget_), nonce(nonce_) {}
 
-Block::Header::Header(const Block& b)
-    : version(b.header_.version), milestoneBlockHash(b.header_.milestoneBlockHash),
-      prevBlockHash(b.header_.prevBlockHash), tipBlockHash(b.header_.tipBlockHash), merkleRoot(b.header_.merkleRoot),
-      timestamp(b.header_.timestamp), diffTarget(b.header_.diffTarget), nonce(b.header_.nonce) {}
+BlockHeader::BlockHeader(const Block& b)
+    : version(b.GetHeader().version), milestoneBlockHash(b.GetHeader().milestoneBlockHash),
+      prevBlockHash(b.GetHeader().prevBlockHash), tipBlockHash(b.GetHeader().tipBlockHash),
+      merkleRoot(b.GetHeader().merkleRoot), timestamp(b.GetHeader().timestamp), diffTarget(b.GetHeader().diffTarget),
+      nonce(b.GetHeader().nonce) {}
 
-Block::Header::Header(VStream& payload) {
+BlockHeader::BlockHeader(VStream& payload) {
     payload >> *this;
 }
 
-void Block::Header::SetNull() {
+void BlockHeader::SetNull() {
     milestoneBlockHash.SetNull();
     prevBlockHash.SetNull();
     tipBlockHash.SetNull();
@@ -39,7 +40,7 @@ void Block::Header::SetNull() {
     nonce      = 0;
 }
 
-std::string Block::Header::to_string() const {
+std::string BlockHeader::to_string() const {
     std::string s;
     s += strprintf("      version: %s \n", version);
     s += strprintf("      milestone block: %s \n", std::to_string(milestoneBlockHash));
@@ -93,7 +94,7 @@ bool Block::IsNull() const {
     return header_.timestamp == 0;
 }
 
-Block::Header Block::GetHeader() const {
+BlockHeader Block::GetHeader() const {
     return header_;
 }
 
