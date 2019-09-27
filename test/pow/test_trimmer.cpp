@@ -18,6 +18,7 @@ public:
     }
     void TearDown() override {
         ResetLogLevel();
+        SelectParams(ParamsType::UNITTEST);
     }
 };
 

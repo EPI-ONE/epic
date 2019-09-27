@@ -107,7 +107,7 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
 
     static Coin rewards = GetParams().reward * RedemptionInterval;
     if (enableRedem_.load() && CanRedeem(rewards)) {
-        CreateRedemption(CreateNewKey(true).GetPubKey().GetID());
+        CreateRedemption(CreateNewKey(true));
     }
 }
 
@@ -338,7 +338,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             if (stopFlag_) {
                 return;
             }
-            auto addr = CreateNewKey(true).GetPubKey().GetID();
+            auto addr = CreateNewKey(true);
             if (!hasSentFirstRegistration_) {
                 auto reg = CreateFirstRegistration(addr);
                 spdlog::info("[Wallet] Created first registration {}, index = {}", std::to_string(reg->GetHash()), i);
