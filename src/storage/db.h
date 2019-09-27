@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef EPIC_ROCKSDB_H
-#define EPIC_ROCKSDB_H
+#ifndef EPIC_DB_H
+#define EPIC_DB_H
 
 #include "file_utils.h"
 #include "rocksdb.h"
@@ -83,4 +83,4 @@ private:
     bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;
 };
 
-#endif // EPIC_ROCKSDB_H
+#endif // EPIC_DB_H
