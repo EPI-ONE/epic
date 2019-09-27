@@ -148,7 +148,7 @@ void Miner::Run() {
         selfChainHeads_ = STORE->GetMinerChainHeads();
         selfChainHeads_.set_limit(headsCacheLimit);
         while (!selfChainHeads_.empty() && !(selfChainHead_ = STORE->FindBlock(selfChainHeads_.front()))) {
-            selfChainHeads_.pop();
+            selfChainHeads_.pop_front();
         }
 
         // Restore distanceCal_

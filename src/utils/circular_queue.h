@@ -17,22 +17,22 @@ public:
     CircularQueue() : base(), cap(UINT64_MAX) {}
     explicit CircularQueue(size_t s) : base(), cap(s) {}
 
+    void pop() {
+        base::pop_back();
+    }
+
     void push(const T& value) {
         if (base::size() == cap) {
-            base::pop_back();
+            pop();
         }
         base::push_front(value);
     }
 
     void push(T&& value) {
         if (base::size() == cap) {
-            base::pop_back();
+            pop();
         }
         base::push_front(value);
-    }
-
-    void pop() {
-        base::pop_back();
     }
 
     void set_limit(size_t s) {
