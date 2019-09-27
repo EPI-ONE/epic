@@ -112,9 +112,10 @@ VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool fin
 VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
     Block b = CreateBlock(0, 0, false);
     b.SetTime(timeToset);
+    CPUMiner m{};
     do {
         b.SetNonce(b.GetNonce() + 1);
-        b.Solve();
+        m.Solve(b);
     } while (UintToArith256(b.GetHash()) > GENESIS_VERTEX->snapshot->milestoneTarget);
 
     return std::make_shared<Vertex>(std::move(b));
@@ -247,7 +248,7 @@ void CPUMiner::Solve(Block& b) {
     for (std::size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
             auto blkStream     = vs;
-            uint32_t nonce     = i - nthreads;
+            uint32_t nonce     = b.GetNonce() + i - nthreads;
             uint32_t timestamp = final_time.load();
 
             while (enabled_.load()) {

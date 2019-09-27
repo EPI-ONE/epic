@@ -54,6 +54,7 @@ int main(int argc, char* argv[]) {
     genesisBlock.SetNonce(0);
     genesisBlock.InitProofSize(CYCLELEN);
     genesisBlock.AddTransaction(tx);
+    genesisBlock.SetMerkle();
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 

@@ -12,6 +12,7 @@ class TestMemPool : public testing::Test {
 public:
     std::vector<ConstTxPtr> transactions;
     TestFactory fac;
+    CPUMiner m{};
     const std::string dir = "test_mempool/";
 
     void SetUp() {
@@ -108,10 +109,12 @@ TEST_F(TestMemPool, receive_and_release) {
     auto firstReg = std::make_shared<const Transaction>(addr);
     Block b1      = blkTemplate;
     b1.AddTransaction(firstReg);
-    b1.Solve();
+    b1.SetMerkle();
+    b1.CalculateOptimalEncodingSize();
+    m.Solve(b1);
     while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX->snapshot->milestoneTarget) {
         b1.SetNonce(b1.GetNonce() + 1);
-        b1.Solve();
+        m.Solve(b1);
     }
     const auto& b1hash = b1.GetHash();
 
@@ -136,10 +139,11 @@ TEST_F(TestMemPool, receive_and_release) {
     b2.SetPrevHash(chain.back().back()->cblock->GetHash());
     b2.SetTime(chain.back().back()->cblock->GetTime() + 10);
     b2.AddTransaction(redemption);
-    b2.Solve();
+    b2.SetMerkle();
+    m.Solve(b2);
     while (UintToArith256(b2.GetHash()) > DAG->GetBestChain().GetChainHead()->milestoneTarget) {
         b2.SetNonce(b2.GetNonce() + 1);
-        b2.Solve();
+        m.Solve(b2);
     }
     auto b2hash = b2.GetHash();
 

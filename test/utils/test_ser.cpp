@@ -164,6 +164,7 @@ TEST_F(TestSer, SerializeEqDeserializeBlock) {
     tx.AddOutput(TxOutput(100, Listing(randomBytes)));
     tx.FinalizeHash();
     block.AddTransaction(tx);
+    block.SetMerkle();
     block.FinalizeHash();
 
     VStream sinput;
@@ -216,6 +217,7 @@ TEST_F(TestSer, SerializeEqDeserializeVertex) {
     tx.AddOutput(TxOutput(100, randomBytes));
     tx.FinalizeHash();
     blk.AddTransaction(tx);
+    blk.SetMerkle();
     blk.FinalizeHash();
 
     // Construct Vertex

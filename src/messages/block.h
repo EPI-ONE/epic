@@ -178,12 +178,6 @@ public:
     bool CheckPOW() const;
 
     /*
-     * A simple solver for nonce that makes the blocks hash lower than the
-     * difficulty target. For test purposes only.
-     */
-    void Solve();
-
-    /*
      * Sets parents for elements contained in the block all at once
      */
     void SetParents();

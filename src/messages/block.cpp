@@ -235,8 +235,6 @@ void Block::AddTransaction(const Transaction& tx) {
     auto tx_ptr = std::make_shared<Transaction>(tx);
     tx_ptr->SetParent(this);
     transactions_.emplace_back(std::move(tx_ptr));
-    SetMerkle();
-    CalculateOptimalEncodingSize();
 }
 
 void Block::AddTransaction(ConstTxPtr tx) {
@@ -248,8 +246,6 @@ void Block::AddTransaction(ConstTxPtr tx) {
     UnCache();
     tx->SetParent(this);
     transactions_.emplace_back(std::move(tx));
-    SetMerkle();
-    CalculateOptimalEncodingSize();
 }
 
 void Block::AddTransactions(std::vector<ConstTxPtr>&& txns) {
@@ -454,19 +450,6 @@ bool Block::CheckPOW() const {
     }
 
     return true;
-}
-
-void Block::Solve() {
-    arith_uint256 target = GetTargetAsInteger();
-
-    CalculateHash();
-    while (UintToArith256(hash_) > target) {
-        if (header_.nonce == UINT_LEAST32_MAX) {
-            header_.timestamp = time(nullptr);
-        }
-        header_.nonce++;
-        CalculateHash();
-    }
 }
 
 void Block::SetParents() {

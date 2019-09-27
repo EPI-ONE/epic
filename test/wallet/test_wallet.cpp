@@ -43,6 +43,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
         Block block;
         block.AddTransaction(tx);
+        block.SetMerkle();
         block.CalculateHash();
         block.SetParents();
 
@@ -80,6 +81,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
         Block new_block;
         new_block.AddTransaction(std::move(new_tx));
+        new_block.SetMerkle();
         new_block.CalculateHash();
         new_block.SetParents();
         auto outpoint = new_block.GetTransactions()[0]->GetInputs()[0].outpoint;

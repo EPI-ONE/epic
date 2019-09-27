@@ -12,7 +12,8 @@
 
 class TestChainVerification : public testing::Test {
 public:
-    TestFactory fac          = EpicTestEnvironment::GetFactory();
+    TestFactory fac = EpicTestEnvironment::GetFactory();
+    CPUMiner m{};
     const std::string prefix = "test_validation/";
 
     void SetUp() override {
@@ -123,7 +124,9 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     const auto& ghash = GENESIS->GetHash();
     Block b1{1, ghash, ghash, ghash, uint256(), fac.NextTime(), GetParams().maxTarget.GetCompact(), 0};
     b1.AddTransaction(Transaction{addr});
-    b1.Solve();
+    b1.SetMerkle();
+    b1.CalculateOptimalEncodingSize();
+    m.Solve(b1);
     ASSERT_TRUE(b1.IsFirstRegistration());
     const auto b1hash = b1.GetHash();
 
@@ -142,13 +145,15 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             ASSERT_TRUE(redeem.IsRegistration());
             redeem.FinalizeHash();
             blk.AddTransaction(redeem);
+            blk.SetMerkle();
         }
 
-        blk.Solve();
+        blk.CalculateOptimalEncodingSize();
+        m.Solve(blk);
         if (isMilestone[i]) {
             if (UintToArith256(blk.GetHash()) > prevMs->milestoneTarget) {
                 blk.SetNonce(blk.GetNonce() + 1);
-                blk.Solve();
+                m.Solve(blk);
             }
         }
         hashes[i] = blk.GetHash();
@@ -235,7 +240,9 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     tx1.AddOutput(std::move(output));
     tx1.FinalizeHash();
     b1.AddTransaction(tx1);
-    b1.Solve();
+    b1.SetMerkle();
+    b1.CalculateOptimalEncodingSize();
+    m.Solve(b1);
     ASSERT_NE(b1.GetChainWork(), 0);
     auto vtx1              = std::make_shared<Vertex>(std::move(b1));
     vtx1->minerChainHeight = 1;
@@ -250,7 +257,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     // construct an empty block
     Block b2{
         GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0};
-    b2.Solve();
+    m.Solve(b2);
     Vertex vtx2{std::move(b2)};
     vtx2.minerChainHeight = 2;
     const auto& b2hash    = vtx2.cblock->GetHash();
@@ -271,7 +278,9 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
              GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
              0};
     b3.AddTransaction(tx);
-    b3.Solve();
+    b3.SetMerkle();
+    b3.CalculateOptimalEncodingSize();
+    m.Solve(b3);
     Vertex vtx3{std::move(b3)};
     vtx3.minerChainHeight = 3;
 
@@ -302,7 +311,7 @@ TEST_F(TestChainVerification, ChainForking) {
             auto blk = fac.CreateBlock();
             split    = dqcs.back();
             blk.SetMilestoneHash(split->GetMilestoneHash());
-            blk.Solve();
+            m.Solve(blk);
             forkblk = std::make_shared<const Block>(blk);
         }
     }
@@ -329,6 +338,8 @@ TEST_F(TestChainVerification, CheckPartition) {
                   0};
     reg_inv.AddTransaction(Transaction(CKeyID()));
     reg_inv.AddTransaction(fac.CreateTx(1, 1));
+    reg_inv.SetMerkle();
+    reg_inv.CalculateOptimalEncodingSize();
     Vertex reg_inv_vtx{reg_inv};
     reg_inv_vtx.minerChainHeight = 1;
     EXPECT_FALSE(IsValidDistance(&c, reg_inv_vtx, GENESIS_VERTEX->snapshot->hashRate));
@@ -343,6 +354,8 @@ TEST_F(TestChainVerification, CheckPartition) {
               GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
               0};
     reg.AddTransaction(Transaction(CKeyID()));
+    reg.SetMerkle();
+    reg.CalculateOptimalEncodingSize();
     Vertex reg_vtx{reg};
     reg_vtx.minerChainHeight = 1;
     AddToHistory(&c, std::make_shared<Vertex>(reg_vtx));
@@ -359,6 +372,8 @@ TEST_F(TestChainVerification, CheckPartition) {
              GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
              0};
     b1.AddTransaction(fac.CreateTx(1, 1));
+    b1.SetMerkle();
+    b1.CalculateOptimalEncodingSize();
     Vertex vtx1{b1};
     vtx1.minerChainHeight = 2;
     AddToHistory(&c, std::make_shared<Vertex>(vtx1));
@@ -375,6 +390,8 @@ TEST_F(TestChainVerification, CheckPartition) {
              0};
     Transaction tx1 = fac.CreateTx(1, 1);
     b2.AddTransaction(tx1);
+    b2.SetMerkle();
+    b2.CalculateOptimalEncodingSize();
     Vertex vtx2{b2};
     vtx2.minerChainHeight = 3;
     EXPECT_FALSE(IsValidDistance(&c, vtx2, 1000000000));

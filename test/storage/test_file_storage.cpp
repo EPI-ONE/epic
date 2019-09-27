@@ -12,7 +12,8 @@
 
 class TestFileStorage : public testing::Test {
 public:
-    TestFactory fac    = EpicTestEnvironment::GetFactory();
+    TestFactory fac = EpicTestEnvironment::GetFactory();
+    CPUMiner m{};
     std::string prefix = "test_file_store/";
 
     void SetUp() override {
@@ -27,7 +28,7 @@ public:
 TEST_F(TestFileStorage, basic_read_write) {
     // data preparation
     auto blk = fac.CreateBlock();
-    blk.Solve();
+    m.Solve(blk);
     Vertex vtx{blk};
     uint32_t blksize = blk.GetOptimalEncodingSize(), vtxsize = vtx.GetOptimalStorageSize();
     FilePos fpos{0, 0, 0};

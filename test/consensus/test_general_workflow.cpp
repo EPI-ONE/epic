@@ -17,6 +17,7 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
+    CPUMiner m{};
     const std::string prefix = "test_consensus/";
 
     void SetUp() override {
@@ -45,7 +46,9 @@ TEST_F(TestConsensus, SyntaxChecking) {
     tx.FinalizeHash();
     block1.AddTransaction(tx);
     block1.AddTransaction(tx);
-    block1.Solve();
+    block1.SetMerkle();
+    block1.CalculateOptimalEncodingSize();
+    m.Solve(block1);
     EXPECT_FALSE(block1.Verify());
 
     // Duplicated txns
@@ -53,9 +56,12 @@ TEST_F(TestConsensus, SyntaxChecking) {
     for (int i = 0; i < 5; ++i) {
         block2.AddTransaction(fac.CreateTx(2, 3));
     }
-
     block2.AddTransaction(*block2.GetTransactions()[2]);
-    block2.Solve();
+
+    block2.SetMerkle();
+    block2.CalculateOptimalEncodingSize();
+
+    m.Solve(block2);
     EXPECT_FALSE(block2.Verify());
 }
 
@@ -68,7 +74,9 @@ TEST_F(TestConsensus, MerkleRoot) {
     for (int i = 0; i < 10; ++i) {
         block1.AddTransaction(fac.CreateTx(2, 3));
     }
-    block1.Solve();
+    block1.SetMerkle();
+    block1.CalculateOptimalEncodingSize();
+    m.Solve(block1);
 
     auto txns = block1.GetTransactions();
     txns[0].swap(txns[5]);
@@ -76,7 +84,7 @@ TEST_F(TestConsensus, MerkleRoot) {
 
     EXPECT_NE(block1.GetTransactions(), block2.GetTransactions());
 
-    block2.Solve();
+    m.Solve(block2);
 
     EXPECT_NE(block1, block2);
 }

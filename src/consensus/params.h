@@ -56,8 +56,7 @@ public:
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
 
-// proof-of-work parameters
-#define EDGEBITS 29
+    // proof-of-work parameter
     int cycleLen;
 
     size_t cacheStatesSize;
