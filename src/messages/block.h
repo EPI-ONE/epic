@@ -5,6 +5,7 @@
 #ifndef EPIC_BLOCK_H
 #define EPIC_BLOCK_H
 
+#include "cuckaroo.h"
 #include "net_message.h"
 #include "spdlog.h"
 #include "transaction.h"
@@ -14,14 +15,57 @@
 
 // maximum allowed block size in optimal encoding format
 static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
-// exact number of size of a block without counting transaction
-static constexpr std::size_t HEADER_SIZE = 110;
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
+// exact number of size of a block without counting transaction
+static constexpr uint32_t HEADER_SIZE = 142;
+// size of the cuckaroo proof in bytes
+#define PROOFSIZE (GetParams().cycleLen * sizeof(word_t))
 
 namespace std {
 string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validity = {});
 } // namespace std
+
+class BlockHeader {
+public:
+    uint16_t version = 0;
+    uint256 milestoneBlockHash{};
+    uint256 prevBlockHash{};
+    uint256 tipBlockHash{};
+    uint256 merkleRoot{};
+    uint32_t timestamp  = 0;
+    uint32_t diffTarget = 0;
+    uint32_t nonce      = 0;
+
+    BlockHeader() = default;
+    BlockHeader(uint16_t version_,
+                uint256 milestoneBlockHash_,
+                uint256 prevBlockHash_,
+                uint256 tipBlockHash_,
+                uint256 merkle_,
+                uint32_t time_,
+                uint32_t diffTarget_,
+                uint32_t nonce_);
+
+    explicit BlockHeader(const Block& b);
+    explicit BlockHeader(VStream&);
+
+    void SetNull();
+
+    ADD_SERIALIZE_METHODS template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(version);
+        READWRITE(milestoneBlockHash);
+        READWRITE(prevBlockHash);
+        READWRITE(tipBlockHash);
+        READWRITE(merkleRoot);
+        READWRITE(timestamp);
+        READWRITE(diffTarget);
+        READWRITE(nonce);
+    }
+
+    std::string to_string() const;
+};
 
 class Block : public NetMessage {
 public:
@@ -38,9 +82,11 @@ public:
           uint256 merkle,
           uint32_t time,
           uint32_t difficultyTarget,
-          uint32_t nonce)
-        : NetMessage(BLOCK), version_(version), milestoneBlockHash_(milestoneHash), prevBlockHash_(prevBlockHash),
-          tipBlockHash_(tipBlockHash), merkleRoot_(merkle), time_(time), diffTarget_(difficultyTarget), nonce_(nonce) {
+          uint32_t nonce,
+          std::vector<word_t> proof = std::vector<word_t>(CYCLELEN))
+        : NetMessage(BLOCK),
+          header_(version, milestoneHash, prevBlockHash, tipBlockHash, merkle, time, difficultyTarget, nonce),
+          proof_(std::move(proof)) {
         CalculateOptimalEncodingSize();
     }
 
@@ -50,6 +96,7 @@ public:
     bool IsNull() const;
     void UnCache();
 
+    BlockHeader GetHeader() const;
     uint16_t GetVersion() const;
     uint256 GetMilestoneHash() const;
     uint256 GetPrevHash() const;
@@ -58,13 +105,17 @@ public:
     uint32_t GetDifficultyTarget() const;
     uint32_t GetTime() const;
     uint32_t GetNonce() const;
+    const std::vector<uint32_t>& GetProof() const;
 
     void SetMilestoneHash(const uint256&);
     void SetPrevHash(const uint256&);
     void SetTipHash(const uint256&);
+    void SetMerkle(const uint256& h = uint256());
     void SetDifficultyTarget(uint32_t target);
     void SetTime(uint32_t);
     void SetNonce(uint32_t);
+    void SetProof(std::vector<word_t>&&);
+    void InitProofSize(size_t);
 
     void AddTransaction(const Transaction&);
     void AddTransaction(ConstTxPtr);
@@ -78,6 +129,7 @@ public:
     uint256 ComputeMerkleRoot(bool* mutated = nullptr) const;
 
     const uint256& GetHash() const;
+    const uint256& GetProofHash() const;
     void CalculateHash();
     void FinalizeHash();
 
@@ -126,12 +178,6 @@ public:
     bool CheckPOW() const;
 
     /*
-     * A simple solver for nonce that makes the blocks hash lower than the
-     * difficulty target. For test purposes only.
-     */
-    void Solve();
-
-    /*
      * Sets parents for elements contained in the block all at once
      */
     void SetParents();
@@ -140,14 +186,21 @@ public:
     ADD_NET_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(version_);
-        READWRITE(milestoneBlockHash_);
-        READWRITE(prevBlockHash_);
-        READWRITE(tipBlockHash_);
-        READWRITE(time_);
-        READWRITE(diffTarget_);
-        READWRITE(nonce_);
+        READWRITE(header_);
+
+        if (ser_action.ForRead()) {
+            InitProofSize(CYCLELEN);
+            for (auto& i : proof_) {
+                ::Deserialize(s, i);
+            }
+        } else {
+            for (auto& i : proof_) {
+                ::Serialize(s, i);
+            }
+        }
+
         READWRITE(transactions_);
+
         if (ser_action.ForRead()) {
             SetParents();
             FinalizeHash();
@@ -167,31 +220,25 @@ public:
         return !(*this == another);
     }
 
-    friend std::string std::to_string(const Block& b, bool showtx, std::vector<uint8_t> validity);
-
 protected:
     uint256 hash_;
 
 private:
-    uint16_t version_;
-    uint256 milestoneBlockHash_;
-    uint256 prevBlockHash_;
-    uint256 tipBlockHash_;
-    uint256 merkleRoot_;
-    uint32_t time_;
-    uint32_t diffTarget_;
-    uint32_t nonce_;
+    BlockHeader header_;
+    std::vector<word_t> proof_;
     std::vector<ConstTxPtr> transactions_;
 
+    uint256 proofHash_;
     size_t optimalEncodingSize_ = 0;
-    bool mutated                = false;
 
 public:
     enum Source : uint8_t { UNKNOWN = 0, NETWORK = 1, MINER = 2 };
     Source source = UNKNOWN;
+
+    friend std::string std::to_string(const Block& b, bool showtx, std::vector<uint8_t> validity);
 };
 
 typedef std::shared_ptr<const Block> ConstBlockPtr;
-extern Block GENESIS;
+extern ConstBlockPtr GENESIS;
 
 #endif // EPIC_BLOCK_H

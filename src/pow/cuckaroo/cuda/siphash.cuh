@@ -1,5 +1,9 @@
 #pragma once
 
+#include "cuckaroo.h"
+#include "siphash.h"
+
+#include <cstdint>
 #include <cuda_runtime.h>
 
 #if (__CUDA_ARCH__ >= 320) // make rotate-left use funnel shifter, 3% speed gain

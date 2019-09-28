@@ -4,6 +4,19 @@
 
 #include "mean.cuh"
 
+int gpuAssert(cudaError_t code, char* file, int line, bool abort) {
+    int device_id;
+    cudaGetDevice(&device_id);
+    if (code != cudaSuccess) {
+        cudaDeviceReset();
+        if (abort) {
+            spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+            exit(code);
+        }
+    }
+    return code;
+}
+
 #ifndef MAXSOLS
 #define MAXSOLS 4
 #endif
@@ -54,7 +67,7 @@ const uint32_t EDGES_B = NZ * NEPS_B / NEPS;
 const uint32_t ROW_EDGES_A = EDGES_A * NY;
 const uint32_t ROW_EDGES_B = EDGES_B * NY;
 
-__constant__ uint2 recoveredges[PROOFSIZE];
+__constant__ uint2 recoveredges[MAXCYCLELEN];
 __constant__ uint2 e0 = {0, 0};
 
 __device__ uint64_t dipblock(const siphash_keys& keys, const word_t edge, uint64_t* buf) {
@@ -205,11 +218,7 @@ __global__ void SeedB(const uint2* __restrict__ source,
             int newCount = localIdx % FLUSHB;
             int nflush   = localIdx - newCount;
             uint32_t grp = row * NX + col;
-#ifdef SYNCBUG
-            if (grp == 0x2d6)
-                printf("group %x size %d lid %d nflush %d\n", group, bucketEdges, lid, nflush);
-#endif
-            int cnt = min((int) atomicAdd(dstIdx + grp, nflush), (int) (maxOut - nflush));
+            int cnt      = min((int) atomicAdd(dstIdx + grp, nflush), (int) (maxOut - nflush));
             for (int i = 0; i < nflush; i += TMPPERLL4)
                 destination[((uint64_t) grp * maxOut + cnt + i) / TMPPERLL4] = *(ulonglong4*) (&tmp[col][i]);
             for (int t = 0; t < newCount; t++) {
@@ -223,10 +232,6 @@ __global__ void SeedB(const uint2* __restrict__ source,
     for (int col = lid; col < NX; col += dim) {
         int localIdx = min(FLUSHB2, counters[col]);
         uint32_t grp = row * NX + col;
-#ifdef SYNCBUG
-        if (group == 0x2f2 && grp == 0x2d6)
-            printf("group %x size %d lid %d localIdx %d\n", group, bucketEdges, lid, localIdx);
-#endif
         for (int j = localIdx; j % TMPPERLL4; j++)
             tmp[col][j] = zero;
         for (int i = 0; i < localIdx; i += TMPPERLL4) {
@@ -328,16 +333,17 @@ __global__ void Tail(const uint2* source, uint2* destination, const uint32_t* sr
         destination[destIdx + lid] = source[group * maxIn + lid];
 }
 
-__global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* indexes) {
+__global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* indexes, int proofsize) {
     const int gid      = blockDim.x * blockIdx.x + threadIdx.x;
     const int lid      = threadIdx.x;
     const int nthreads = blockDim.x * gridDim.x;
     const int loops    = NEDGES / nthreads;
-    __shared__ uint32_t nonces[PROOFSIZE];
+    __shared__ uint32_t nonces[MAXCYCLELEN];
     uint64_t buf[EDGE_BLOCK_SIZE];
 
-    if (lid < PROOFSIZE)
+    if (lid < proofsize) {
         nonces[lid] = 0;
+    }
     __syncthreads();
     for (int blk = 0; blk < loops; blk += EDGE_BLOCK_SIZE) {
         uint32_t nonce0     = gid * loops + blk;
@@ -346,7 +352,7 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
             uint64_t edge = buf[i] ^ last;
             uint32_t u    = edge & EDGEMASK;
             uint32_t v    = (edge >> 32) & EDGEMASK;
-            for (int p = 0; p < PROOFSIZE; p++) { // YO
+            for (int p = 0; p < proofsize; p++) { // YO
                 if (recoveredges[p].x == u && recoveredges[p].y == v) {
                     nonces[p] = nonce0 + i;
                 }
@@ -354,9 +360,10 @@ __global__ void Recovery(const siphash_keys& sipkeys, ulonglong4* buffer, int* i
         }
     }
     __syncthreads();
-    if (lid < PROOFSIZE) {
-        if (nonces[lid] > 0)
+    if (lid < proofsize) {
+        if (nonces[lid] > 0) {
             indexes[lid] = nonces[lid];
+        }
     }
 }
 
@@ -375,9 +382,9 @@ trimparams::trimparams() {
 }
 
 GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
-    : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t)), indexesE(new uint32_t*[1 + NB]) {
+    : tp(_tp), indexesSize(NX * NY * sizeof(uint32_t))/*, indexesE(new uint32_t*[1 + NB])*/ {
     checkCudaErrors_V(cudaMalloc((void**) &dt, sizeof(GEdgeTrimmer)));
-    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, PROOFSIZE * 2 * sizeof(uint32_t)));
+    checkCudaErrors_V(cudaMalloc((void**) &uvnodes, CYCLELEN * 2 * sizeof(uint32_t)));
     checkCudaErrors_V(cudaMalloc((void**) &dipkeys, sizeof(siphash_keys)));
     for (int i = 0; i < 1 + NB; i++) {
         checkCudaErrors_V(cudaMalloc((void**) &indexesE[i], indexesSize));
@@ -395,7 +402,7 @@ GEdgeTrimmer::GEdgeTrimmer(const trimparams _tp)
 }
 
 uint64_t GEdgeTrimmer::globalbytes() const {
-    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + PROOFSIZE * 2 * sizeof(uint32_t) +
+    return (sizeA + sizeB / NB) + (1 + NB) * indexesSize + sizeof(siphash_keys) + CYCLELEN * 2 * sizeof(uint32_t) +
            sizeof(GEdgeTrimmer);
 }
 
@@ -404,11 +411,11 @@ GEdgeTrimmer::~GEdgeTrimmer() {
     for (int i = 0; i < 1 + NB; i++) {
         checkCudaErrors_V(cudaFree(indexesE[i]));
     }
+    /*delete[] indexesE;*/
     checkCudaErrors_V(cudaFree(dipkeys));
     checkCudaErrors_V(cudaFree(uvnodes));
     checkCudaErrors_V(cudaFree(dt));
     cudaDeviceReset();
-    delete[] indexesE;
 }
 
 uint32_t GEdgeTrimmer::trim() {
@@ -429,7 +436,7 @@ uint32_t GEdgeTrimmer::trim() {
     cudaEventRecord(stop, NULL);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&durationA, start, stop);
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
     cudaEventRecord(start, NULL);
@@ -441,7 +448,7 @@ uint32_t GEdgeTrimmer::trim() {
     for (uint32_t i = 0; i < NA; i++) {
         SeedB<EDGES_A><<<tp.genB.blocks / NA, tp.genB.tpb>>>(
             (uint2*) (bufferAB + i * qA), (ulonglong4*) (bufferA + i * qA), indexesE[1] + i * qE, indexesE[0] + i * qE);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }
@@ -453,7 +460,7 @@ uint32_t GEdgeTrimmer::trim() {
     checkCudaErrors(cudaEventDestroy(start));
     checkCudaErrors(cudaEventDestroy(stop));
     spdlog::trace("Seeding completed in {} + {} ms", durationA, durationB);
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -467,7 +474,7 @@ uint32_t GEdgeTrimmer::trim() {
         Round<1, EDGES_A, EDGES_B / NB>
             <<<tp.trim.blocks / NB, tp.trim.tpb>>>(0, (uint2*) (bufferA + i * qA), (uint2*) (bufferB + i * qB),
                                                    indexesE[0] + i * qE, indexesE[1 + i]); // to .632
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }
@@ -477,7 +484,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<NB, EDGES_B / NB, EDGES_B / 2><<<tp.trim.blocks, tp.trim.tpb>>>(1, (const uint2*) bufferB, (uint2*) bufferA,
                                                                           indexesE[1],
                                                                           indexesE[0]); // to .296
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -486,7 +493,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<1, EDGES_B / 2, EDGES_A / 4><<<tp.trim.blocks, tp.trim.tpb>>>(2, (const uint2*) bufferA, (uint2*) bufferB,
                                                                         indexesE[0],
                                                                         indexesE[1]); // to .176
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -495,7 +502,7 @@ uint32_t GEdgeTrimmer::trim() {
     Round<1, EDGES_A / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(3, (const uint2*) bufferB, (uint2*) bufferA,
                                                                         indexesE[1],
                                                                         indexesE[0]); // to .117
-    if (abort) {
+    if (abort.load()) {
         return false;
     }
 
@@ -505,13 +512,13 @@ uint32_t GEdgeTrimmer::trim() {
         cudaMemset(indexesE[1], 0, indexesSize);
         Round<1, EDGES_B / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(round, (const uint2*) bufferA,
                                                                             (uint2*) bufferB, indexesE[0], indexesE[1]);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
         cudaMemset(indexesE[0], 0, indexesSize);
         Round<1, EDGES_B / 4, EDGES_B / 4><<<tp.trim.blocks, tp.trim.tpb>>>(round + 1, (const uint2*) bufferB,
                                                                             (uint2*) bufferA, indexesE[1], indexesE[0]);
-        if (abort) {
+        if (abort.load()) {
             return false;
         }
     }
@@ -526,32 +533,36 @@ uint32_t GEdgeTrimmer::trim() {
     return nedges;
 }
 
-GSolverCtx::GSolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
-    edges = new uint2[MAXEDGES];
+SolverCtx::SolverCtx(const trimparams& tp) : trimmer(tp), cg(MAXEDGES, MAXEDGES, MAXSOLS, IDXSHIFT) {
+    edges    = new uint2[MAXEDGES];
+    soledges = new uint2[CYCLELEN];
 }
 
-int GSolverCtx::findcycles(uint2* edges, uint32_t nedges) {
+int SolverCtx::findcycles(uint2* edges, uint32_t nedges) {
     cg.reset();
-    for (uint32_t i = 0; i < nedges; i++)
+    for (uint32_t i = 0; i < nedges; i++) {
         cg.add_compress_edge(edges[i].x, edges[i].y);
+    }
+
     for (uint32_t s = 0; s < cg.nsols; s++) {
-        for (uint32_t j = 0; j < PROOFSIZE; j++) {
+        for (uint32_t j = 0; j < CYCLELEN; j++) {
             soledges[j] = edges[cg.sols[s][j]];
         }
-        sols.resize(sols.size() + PROOFSIZE);
-        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(soledges));
+        sols.resize(sols.size() + CYCLELEN);
+        cudaMemcpyToSymbol(recoveredges, soledges, sizeof(uint2) * CYCLELEN);
         cudaMemset(trimmer.indexesE[1], 0, trimmer.indexesSize);
         Recovery<<<trimmer.tp.recover.blocks, trimmer.tp.recover.tpb>>>(*trimmer.dipkeys, (ulonglong4*) trimmer.bufferA,
-                                                                        (int*) trimmer.indexesE[1]);
-        cudaMemcpy(&sols[sols.size() - PROOFSIZE], trimmer.indexesE[1], PROOFSIZE * sizeof(uint32_t),
+                                                                        (int*) trimmer.indexesE[1], CYCLELEN);
+        cudaMemcpy(&sols[sols.size() - CYCLELEN], trimmer.indexesE[1], CYCLELEN * sizeof(uint32_t),
                    cudaMemcpyDeviceToHost);
         checkCudaErrors(cudaDeviceSynchronize());
-        qsort(&sols[sols.size() - PROOFSIZE], PROOFSIZE, sizeof(uint32_t), cg.nonce_cmp);
+        qsort(&sols[sols.size() - CYCLELEN], CYCLELEN, sizeof(uint32_t), cg.nonce_cmp);
     }
+
     return 0;
 }
 
-int GSolverCtx::solve() {
+int SolverCtx::solve() {
     trimmer.abort   = false;
     uint32_t nedges = trimmer.trim();
     if (!nedges)
@@ -563,36 +574,36 @@ int GSolverCtx::solve() {
     cudaMemcpy(edges, trimmer.bufferB, sizeof(uint2[nedges]), cudaMemcpyDeviceToHost);
     findcycles(edges, nedges);
     spdlog::trace("findcycles edges {}", nedges);
-    return sols.size() / PROOFSIZE;
+    return sols.size() / CYCLELEN;
 }
 
-void FillDefaultGPUParams(SolverParams* params) {
+void FillDefaultGPUParams(SolverParams& params) {
     trimparams tp;
-    params->device        = 0;
-    params->ntrims        = tp.ntrims;
-    params->genablocks    = min(tp.genA.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.genA.tpb);
-    params->genatpb       = tp.genA.tpb;
-    params->genbtpb       = tp.genB.tpb;
-    params->trimtpb       = tp.trim.tpb;
-    params->tailtpb       = tp.tail.tpb;
-    params->recoverblocks = min(tp.recover.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.recover.tpb);
-    params->recovertpb    = tp.recover.tpb;
-    params->cpuload       = false;
+    params.device        = 0;
+    params.ntrims        = tp.ntrims;
+    params.genablocks    = min(tp.genA.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.genA.tpb);
+    params.genatpb       = tp.genA.tpb;
+    params.genbtpb       = tp.genB.tpb;
+    params.trimtpb       = tp.trim.tpb;
+    params.tailtpb       = tp.tail.tpb;
+    params.recoverblocks = min(tp.recover.blocks, NEDGES / EDGE_BLOCK_SIZE / tp.recover.tpb);
+    params.recovertpb    = tp.recover.tpb;
+    params.cpuload       = false;
 }
 
-std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params) {
+SolverCtx* CreateSolverCtx(SolverParams& params) {
     trimparams tp;
-    tp.ntrims         = params->ntrims;
-    tp.genA.blocks    = params->genablocks;
-    tp.genA.tpb       = params->genatpb;
-    tp.genB.tpb       = params->genbtpb;
-    tp.trim.tpb       = params->trimtpb;
-    tp.tail.tpb       = params->tailtpb;
-    tp.recover.blocks = params->recoverblocks;
-    tp.recover.tpb    = params->recovertpb;
+    tp.ntrims         = params.ntrims;
+    tp.genA.blocks    = params.genablocks;
+    tp.genA.tpb       = params.genatpb;
+    tp.genB.tpb       = params.genbtpb;
+    tp.trim.tpb       = params.trimtpb;
+    tp.tail.tpb       = params.tailtpb;
+    tp.recover.blocks = params.recoverblocks;
+    tp.recover.tpb    = params.recovertpb;
 
     cudaDeviceProp prop;
-    checkCudaErrors_N(cudaGetDeviceProperties(&prop, params->device));
+    checkCudaErrors_N(cudaGetDeviceProperties(&prop, params.device));
 
     assert(tp.genA.tpb <= prop.maxThreadsPerBlock);
     assert(tp.genB.tpb <= prop.maxThreadsPerBlock);
@@ -606,10 +617,10 @@ std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params) {
     assert(tp.genA.tpb / NX <= FLUSHA);                                     // check ROWS_LIMIT_LOSSES
     assert(tp.genB.tpb / NX <= FLUSHB);                                     // check COLS_LIMIT_LOSSES
 
-    checkCudaErrors_N(cudaSetDevice(params->device));
-    if (!params->cpuload) {
+    checkCudaErrors_N(cudaSetDevice(params.device));
+    if (!params.cpuload) {
         checkCudaErrors_N(cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync));
     }
 
-    return std::make_unique<GSolverCtx>(tp);
+    return new SolverCtx(tp);
 }

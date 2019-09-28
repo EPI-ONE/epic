@@ -5,20 +5,8 @@
 #ifndef EPIC_CONNECTION_MANAGER_H
 #define EPIC_CONNECTION_MANAGER_H
 
-#include "blocking_queue.h"
 #include "connection.h"
-#include "net_message.h"
 #include "threadpool.h"
-
-#include <atomic>
-#include <cstdint>
-#include <event2/buffer.h>
-#include <event2/bufferevent.h>
-#include <event2/event.h>
-#include <event2/listener.h>
-#include <functional>
-#include <string>
-#include <thread>
 
 typedef std::pair<shared_connection_t, unique_message_t> connection_message_t;
 typedef std::function<void(shared_connection_t&)> connection_callback_t;

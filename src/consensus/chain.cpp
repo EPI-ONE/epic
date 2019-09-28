@@ -3,9 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
+#include "block_store.h"
 #include "functors.h"
 #include "mempool.h"
-#include "storage.h"
 #include "tasm.h"
 
 template <typename K, typename V>
@@ -197,8 +197,7 @@ void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
     Cumulator& cum   = nodeHandler.mapped();
 
     // Allowed distance
-    auto allowed = (cum.Sum() / (cum.TimeSpan() + 1)) / GetParams().sortitionCoefficient *
-                   (GetParams().maxTarget / (ms_hashrate + 1));
+    auto allowed = CalculateAllowedDist(cum, ms_hashrate);
 
     // Distances of the transaction hashes and previous block hash
     const auto& txns = b.cblock->GetTransactions();
@@ -223,7 +222,8 @@ void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
 }
 
 VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
-    spdlog::debug("Verifying milestone block {} on height {}", pblock->GetHash().to_substr(), GetChainHead()->height);
+    spdlog::debug("Verifying milestone block {} at height {}", pblock->GetHash().to_substr(),
+                  GetChainHead()->height + 1);
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
@@ -380,7 +380,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     }
 
     if (!VerifyInOut(vin, prevReg->cblock->GetTransactions().at(0)->GetOutputs()[0].listingContent)) {
-        spdlog::info("Singature failed! [{}]", hashstr);
+        spdlog::info("Signature failed! [{}]", hashstr);
         return {};
     }
 
@@ -437,7 +437,7 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
     auto itprevOut = prevOutListing.cbegin();
     for (const auto& input : tx.GetInputs()) {
         if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Singature failed in tx {}! [{}]", std::to_string(tx.GetHash()), std::to_string(blkHash));
+            spdlog::info("Signature failed in tx {}! [{}]", std::to_string(tx.GetHash()), std::to_string(blkHash));
             return false;
         }
         itprevOut++;

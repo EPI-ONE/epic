@@ -15,7 +15,7 @@ TEST_F(TestInit, test_init_dag) {
     file::SetDataDirPrefix(dir);
     STORE                             = std::make_unique<BlockStore>(dir);
     DAG                               = std::make_unique<DAGManager>();
-    std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+    std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
     STORE->StoreLevelSet(genesisLvs);
 
     // validate blocks and flush to DB

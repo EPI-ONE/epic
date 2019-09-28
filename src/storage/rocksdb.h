@@ -5,82 +5,31 @@
 #ifndef EPIC_ROCKSDB_H
 #define EPIC_ROCKSDB_H
 
-#include "db_wrapper.h"
-#include "file_utils.h"
-#include "vertex.h"
+#include <rocksdb/db.h>
+#include <rocksdb/options.h>
+#include <rocksdb/slice.h>
 
-#include <string>
-#include <vector>
-
-class RocksDBStore : public DBWrapper {
+class RocksDB {
 public:
-    explicit RocksDBStore(std::string dbPath);
+    RocksDB()               = delete;
+    RocksDB(const RocksDB&) = delete;
 
-    bool Exists(const uint256&) const;
-    size_t GetHeight(const uint256&) const;
-    bool IsMilestone(const uint256&) const;
+    virtual ~RocksDB();
 
-    /**
-     * Gets the milesonte file posisionts at height
-     * Returns {ms hash, blk FilePos, vtx FilePos}
-     */
-    std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint64_t& height) const;
-    std::optional<FilePos> GetMsBlockPos(const uint64_t& height) const;
+protected:
+    std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
+    rocksdb::DB* db_;
+    std::string dbpath_;
 
-    /**
-     * Gets the milesonte file posisionts at height of blk
-     * Returns {blk FilePos, vtx FilePos}
-     */
-    std::optional<std::pair<FilePos, FilePos>> GetMsPos(const uint256& blk) const;
+    explicit RocksDB(std::string dbPath, std::vector<std::string> columnNames);
 
-    /**
-     * Gets the file posisionts of the hash.
-     * Returns {blk FilePos, vtx FilePos}
-     */
-    std::optional<std::pair<FilePos, FilePos>> GetVertexPos(const uint256&) const;
+    void InitHandleMap(std::vector<rocksdb::ColumnFamilyHandle*> handles, std::vector<std::string> columnNames);
 
-    /**
-     * Writes the file offsets of the milestone hash
-     * key = ms height, value = {ms hash, ms blk FilePos, ms vtx FilePos}
-     */
-    bool WriteMsPos(const uint64_t&, const uint256&, const FilePos&, const FilePos&) const;
+    std::string Get(const std::string& column, const rocksdb::Slice& key) const;
+    std::string Get(const std::string& column, const std::string& key) const;
+    bool Delete(const std::string& column, std::string&& key) const;
 
-    /**
-     * Writes the file offsets of the hash with
-     * key = hash, value = {height, blk offset, vtx offset}
-     */
-    bool WriteVtxPos(const uint256&, const uint64_t&, const uint32_t&, const uint32_t&) const;
-    bool WriteVtxPoses(const std::vector<uint256>&,
-                       const std::vector<uint64_t>&,
-                       const std::vector<uint32_t>&,
-                       const std::vector<uint32_t>&) const;
-
-    bool DeleteVtxPos(const uint256&) const;
-    bool DeleteMsPos(const uint256&) const;
-
-    bool ExistsUTXO(const uint256&) const;
-    std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
-    bool WriteUTXO(const uint256&, const UTXOPtr&) const;
-    bool RemoveUTXO(const uint256&) const;
-
-    uint256 GetLastReg(const uint256&) const;
-    bool UpdateReg(const RegChange&) const;
-    bool RollBackReg(const RegChange&) const;
-
-    template <typename V>
-    bool WriteInfo(const std::string& key, const V& value) const;
-    template <typename V>
-    V GetInfo(const std::string&) const;
-
-private:
-    uint256 GetMsHashAt(const uint64_t& height) const;
-    std::optional<std::tuple<uint64_t, uint32_t, uint32_t>> GetVertexOffsets(const uint256&) const;
-
-    bool WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
-    bool DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>&) const;
-
-    template <typename K, typename H, typename P1, typename P2>
-    bool WritePosImpl(const std::string& column, const K&, const H&, const P1&, const P2&) const;
+    void PrintColumns() const;
 };
 
 #endif // EPIC_ROCKSDB_H

@@ -43,7 +43,7 @@ inline bool put(DB* db, ColumnFamilyHandle* handle, const VStream& key, const VS
     return db->Put(WriteOptions(), handle, Slice{key.data(), key.size()}, Slice{value.data(), value.size()}).ok();
 }
 
-WalletStore::WalletStore(std::string dbPath) : DBWrapper(std::move(dbPath), COLUMN_NAMES) {}
+WalletStore::WalletStore(std::string dbPath) : RocksDB(std::move(dbPath), COLUMN_NAMES) {}
 
 bool WalletStore::StoreTx(const Transaction& tx) {
     VStream key{tx.GetHash()};
@@ -85,7 +85,7 @@ bool WalletStore::StoreKeys(const CKeyID& addr, const CiphertextKey& encrypted, 
 bool WalletStore::IsExistKey(const CKeyID& addr) {
     VStream key;
     key << EncodeAddress(addr);
-    return !DBWrapper::Get(kKeyBook, Slice{key.data(), key.size()}).empty();
+    return !RocksDB::Get(kKeyBook, Slice{key.data(), key.size()}).empty();
 }
 
 std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKeyID& addr) {

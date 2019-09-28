@@ -9,7 +9,6 @@
 
 #include <atomic>
 #include <event2/bufferevent.h>
-#include <string>
 
 class ConnectionManager;
 class Connection;

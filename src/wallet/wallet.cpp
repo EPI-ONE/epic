@@ -24,11 +24,13 @@ void Wallet::Start() {
 }
 
 void Wallet::Stop() {
+    spdlog::info("Stopping wallet...");
     stopFlag_ = true;
     if (scheduleTask_.joinable()) {
         scheduleTask_.join();
     }
     threadPool_.Stop();
+    spdlog::info("Wallet stopped.");
 }
 
 void Wallet::Load() {
@@ -102,6 +104,11 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
             ProcessSTXO(stxo);
         }
     });
+
+    static Coin rewards = GetParams().reward * RedemptionInterval;
+    if (enableRedem_.load() && CanRedeem(rewards)) {
+        CreateRedemption(CreateNewKey(true));
+    }
 }
 
 void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
@@ -215,6 +222,13 @@ ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& next
     return redemPtr;
 }
 
+void Wallet::CreateRedemption(const CKeyID& key) {
+    auto redem = CreateRedemption(GetLastRedemAddress(), key, "lalala");
+    MEMPOOL->PushRedemptionTx(redem);
+    spdlog::info("[Wallet] Created redemption of reward {} coins: {}", redem->GetOutputs()[0].value.GetValue(),
+                 std::to_string(redem->GetHash()));
+}
+
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     auto reg                  = std::make_shared<const Transaction>(address);
     hasSentFirstRegistration_ = true;
@@ -227,7 +241,7 @@ ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs,
                                      [](Coin prev, auto pair) { return prev + pair.first; });
     totalCost      = totalCost + (fee < MIN_FEE ? MIN_FEE : fee);
     if (totalCost > totalBalance_) {
-        spdlog::warn("[Wallet] too much money that we can't afford");
+        spdlog::warn("[Wallet] too much money that we can't afford. Current balance = {}", totalBalance_);
         return nullptr;
     }
 
@@ -290,7 +304,7 @@ void Wallet::SpendUTXO(const UTXOKey& utxoKey) {
 
 CKeyID Wallet::GetRandomAddress() {
     if (keyBook.empty()) {
-        CreateNewKey(false);
+        CreateNewKey(true);
     }
     return keyBook.begin()->first;
 }
@@ -314,8 +328,8 @@ Coin Wallet::GetCurrentMinerReward() const {
     return GetMinerInfo().second;
 }
 
-bool Wallet::CanRedeem() {
-    return GetMinerInfo().second > 0 && pendingRedemption.empty();
+bool Wallet::CanRedeem(Coin coins) {
+    return GetMinerInfo().second >= coins && pendingRedemption.empty();
 }
 
 void Wallet::CreateRandomTx(size_t sizeTx) {
@@ -333,10 +347,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             }
             if (GetBalance() <= MIN_FEE) {
                 if (CanRedeem()) {
-                    auto redem = CreateRedemption(GetLastRedemAddress(), addr, "lalala");
-                    spdlog::info("[Wallet] Created redemption {}, index = {}", std::to_string(redem->GetHash()), i);
-                    pendingRedemption.insert({redem->GetHash(), redem});
-                    MEMPOOL->PushRedemptionTx(redem);
+                    CreateRedemption(addr);
                     continue;
                 } else {
                     while (GetBalance() <= MIN_FEE && !CanRedeem()) {
@@ -378,7 +389,7 @@ CKeyID Wallet::GetLastRedemAddress() const {
 
 void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
-    Wallet::lastRedemAddress_ = lastRedemAddress;
+    lastRedemAddress_ = lastRedemAddress;
 }
 
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
@@ -466,7 +477,7 @@ bool Wallet::GenerateMaster() {
         return false;
     }
     // TODO: add mnemonics printing
-    //mne.PrintToFile(CONFIG->GetWalletPath());
+    // mne.PrintToFile(CONFIG->GetWalletPath());
     std::tie(master_, chaincode_) = mne.GetMasterKeyAndSeed();
     crypter_.SetMaster(master_);
     return true;

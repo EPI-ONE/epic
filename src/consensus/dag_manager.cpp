@@ -3,22 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "dag_manager.h"
+#include "block_store.h"
 #include "peer_manager.h"
-#include "storage.h"
-#include "wallet.h"
 
 DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
     milestoneChains.push(std::make_unique<Chain>());
-    globalStates_.emplace(GENESIS.GetHash(), std::make_shared<Vertex>(GENESIS_VERTEX));
+    globalStates_.emplace(GENESIS->GetHash(), GENESIS_VERTEX);
 
     // Start threadpools
     verifyThread_.Start();
     syncPool_.Start();
     storagePool_.Start();
-}
-
-DAGManager::~DAGManager() {
-    Stop();
 }
 
 bool DAGManager::Init() {
@@ -58,8 +53,8 @@ void DAGManager::CallbackRequestInv(std::unique_ptr<Inv> inv, PeerPtr peer) {
             auto pending_request = std::make_unique<GetData>(task->type);
             pending_request->AddPendingSetNonce(task->nonce);
             peer->SendMessage(std::move(pending_request));
-        } else if (result.size() == 1 && result.at(0) == GENESIS.GetHash()) {
-            if (peer->GetLastGetInvEnd() == GENESIS.GetHash()) {
+        } else if (result.size() == 1 && result.at(0) == GENESIS->GetHash()) {
+            if (peer->GetLastGetInvEnd() == GENESIS->GetHash()) {
                 spdlog::info("peer {} response fork to genesis hash request", peer->address.ToString());
                 peer->Disconnect();
                 return;
@@ -104,7 +99,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
 
         if (hashes.empty()) {
             // Cannot locate the peer's position. Send a genesis hash.
-            hashes.push_back(GENESIS.GetHash());
+            hashes.push_back(GENESIS->GetHash());
         } else {
             uint256 lih = peer->GetLastSentInvHash();
             uint256 lbh = peer->GetLastSentBundleHash();
@@ -214,7 +209,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(VertexPtr cursor, siz
         assert(cursor);
         assert(cursor->isMilestone);
         result.push_back(cursor->cblock->GetHash());
-        if (cursor->cblock->GetHash() == GENESIS.GetHash()) {
+        if (cursor->cblock->GetHash() == GENESIS->GetHash()) {
             break;
         }
         cursor = GetState(cursor->cblock->GetMilestoneHash());
@@ -264,7 +259,7 @@ void DAGManager::EnableOBC() {
 //
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
-        if (*blk == GENESIS) {
+        if (*blk == *GENESIS) {
             return;
         }
 
@@ -355,7 +350,7 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) 
         return true;
     }
 
-    if (blk->GetMilestoneHash() == GENESIS.GetHash()) {
+    if (blk->GetMilestoneHash() == GENESIS->GetHash()) {
         return true;
     }
 
@@ -522,10 +517,12 @@ Chain& DAGManager::GetBestChain() const {
 }
 
 void DAGManager::Stop() {
+    spdlog::info("Stopping DAG...");
     Wait();
     syncPool_.Stop();
     verifyThread_.Stop();
     storagePool_.Stop();
+    spdlog::info("DAG stopped.");
 }
 
 void DAGManager::Wait() {
@@ -635,7 +632,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
-    return !(UintToArith256(b->GetHash()) > m->milestoneTarget);
+    return !(UintToArith256(b->GetProofHash()) > m->milestoneTarget);
 }
 
 VertexPtr DAGManager::GetMilestoneHead() const {
@@ -658,11 +655,7 @@ bool DAGManager::IsMainChainMS(const uint256& blkHash) const {
 }
 
 VertexPtr DAGManager::GetMainChainVertex(const uint256& blkHash) const {
-    auto vtx = GetBestChain().GetVertex(blkHash);
-    if (!vtx) {
-        vtx = STORE->GetVertex(blkHash);
-    }
-    return vtx;
+    return GetBestChain().GetVertex(blkHash);
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {

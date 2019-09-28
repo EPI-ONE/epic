@@ -4,6 +4,7 @@ title = "EPIC Default Config"
 root = "data/"
 
 [logs]
+level = "info"
 use_file_logger = true
 path = "logs/"
 filename = "Debug.log"
@@ -16,7 +17,7 @@ interval = 900
 [network]
 ip = "0.0.0.0"
 port = 7878
-type = "Unittest"
+type = "Testnet"
 
 [[dns_seeds]]
 hostname = "pascal.ieda.ust.hk"

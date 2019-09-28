@@ -4,10 +4,8 @@
 
 #include "net_message.h"
 #include "address_message.h"
-#include "block.h"
 #include "ping.h"
 #include "pong.h"
-#include "spdlog.h"
 #include "sync_messages.h"
 #include "version_message.h"
 

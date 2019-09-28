@@ -8,8 +8,6 @@
 #include <cstdlib>
 #include <new>
 
-typedef word_t proof[PROOFSIZE];
-
 // cuck(ar)oo graph with given limit on number of edges (and on single partition nodes)
 template <typename word_t>
 class graph {
@@ -32,21 +30,8 @@ public:
     compressor<word_t>* compressv = nullptr;
     bitmap<uint32_t> visited;
     uint32_t maxSols;
-    proof* sols = nullptr;
+    word_t** sols = nullptr;
     uint32_t nsols;
-
-    graph(){};
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols) : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new word_t[2 * maxNodes]; // index into links array
-        links     = new link[2 * maxEdges];
-        compressu = compressv = 0;
-        sharedmem             = false;
-        sols                  = new proof[maxSols + 1]; // extra one for current path
-        visited.clear();
-    }
 
     graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits) : visited(2 * maxnodes) {
         maxEdges  = maxedges;
@@ -57,33 +42,10 @@ public:
         compressu = new compressor<word_t>(EDGEBITS, compressbits);
         compressv = new compressor<word_t>(EDGEBITS, compressbits);
         sharedmem = false;
-        sols      = new proof[maxSols];
-        visited.clear();
-    }
-
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, char* bytes) : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new (bytes) word_t[2 * maxNodes]; // index into links array
-        links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
-        compressu = compressv = 0;
-        sharedmem             = true;
-        sols                  = new proof[maxSols];
-        visited.clear();
-    }
-
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits, char* bytes)
-        : visited(2 * maxnodes) {
-        maxEdges  = maxedges;
-        maxNodes  = maxnodes;
-        maxSols   = maxsols;
-        adjlist   = new (bytes) word_t[2 * maxNodes]; // index into links array
-        links     = new (bytes += sizeof(word_t[2 * maxNodes])) link[2 * maxEdges];
-        compressu = new compressor<word_t>(EDGEBITS, compressbits, bytes += sizeof(link[2 * maxEdges]));
-        compressv = new compressor<word_t>(EDGEBITS, compressbits, bytes + compressu->bytes());
-        sharedmem = true;
-        sols      = new proof[maxSols];
+        sols      = new word_t*[maxSols + 1];
+        for (int i = 0; i < maxSols + 1; ++i) {
+            sols[i] = new word_t[CYCLELEN];
+        }
         visited.clear();
     }
 
@@ -92,7 +54,12 @@ public:
             delete[] adjlist;
             delete[] links;
         }
+
+        for (int i = 0; i < maxSols + 1; ++i) {
+            delete[] sols[i];
+        }
         delete[] sols;
+
         delete compressu;
         delete compressv;
     }
@@ -121,18 +88,17 @@ public:
     }
 
     void cycles_with_link(uint32_t len, word_t u, word_t dest) {
-        // printf("cycles_with_link(%d, %x, %x)\n", len, u, dest);
         if (visited.test(u))
             return;
         if (u == dest) {
             spdlog::trace("  {}-cycle found", len);
-            if (len == PROOFSIZE && nsols < maxSols) {
-                qsort(sols[nsols++], PROOFSIZE, sizeof(word_t), nonce_cmp);
-                memcpy(sols[nsols], sols[nsols - 1], sizeof(sols[0]));
+            if (len == CYCLELEN && nsols < maxSols) {
+                qsort(sols[nsols++], CYCLELEN, sizeof(word_t), nonce_cmp);
+                memcpy(sols[nsols], sols[nsols - 1], sizeof(word_t) * CYCLELEN);
             }
             return;
         }
-        if (len == PROOFSIZE)
+        if (len == CYCLELEN)
             return;
         word_t au1 = adjlist[u];
         if (au1 != NIL) {

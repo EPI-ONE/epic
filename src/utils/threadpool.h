@@ -7,12 +7,8 @@
 
 #include "blocking_queue.h"
 
-#include <atomic>
 #include <exception>
 #include <future>
-#include <memory>
-#include <thread>
-#include <vector>
 
 class CallableWrapper {
 public:

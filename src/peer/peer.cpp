@@ -3,9 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "peer.h"
+#include "block_store.h"
 #include "mempool.h"
 #include "peer_manager.h"
-#include "storage.h"
 
 Peer::Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager)
     : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(time(nullptr)),

@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "storage.h"
+#include "block_store.h"
 
 BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
     currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
@@ -20,13 +20,6 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
         });
     });
     scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));
-}
-
-BlockStore::~BlockStore() {
-    obcThread_.Abort();
-    obcThread_.Stop();
-    interrupt = true;
-    scheduler_.join();
 }
 
 void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
@@ -67,8 +60,8 @@ const OrphanBlocksContainer& BlockStore::GetOBC() const {
 }
 
 ConstBlockPtr BlockStore::GetBlockCache(const uint256& blkHash) const {
-    auto cache_iter = blockCache_.find(blkHash);
-    if (cache_iter != blockCache_.end()) {
+    auto cache_iter = blockPool_.find(blkHash);
+    if (cache_iter != blockPool_.end()) {
         return cache_iter->second;
     }
 
@@ -283,12 +276,12 @@ bool BlockStore::SaveBestChainWork(const uint256& chainwork) const {
     return dbStore_.WriteInfo("chainwork", chainwork);
 }
 
-uint256 BlockStore::GetMinerChainHead() const {
-    return dbStore_.GetInfo<uint256>("minerHead");
+CircularQueue<uint256> BlockStore::GetMinerChainHeads() const {
+    return dbStore_.GetInfo<CircularQueue<uint256>>("minerHeads");
 }
 
-bool BlockStore::SaveMinerChainHead(const uint256& h) const {
-    return dbStore_.WriteInfo("minerHead", h);
+bool BlockStore::SaveMinerChainHeads(const CircularQueue<uint256>& q) const {
+    return dbStore_.WriteInfo("minerHeads", q);
 }
 
 bool BlockStore::ExistsUTXO(const uint256& key) const {
@@ -387,7 +380,7 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexPtr>& lvs) {
 }
 
 void BlockStore::UnCache(const uint256& blkHash) {
-    blockCache_.erase(blkHash);
+    blockPool_.erase(blkHash);
 }
 
 bool BlockStore::DBExists(const uint256& blkHash) const {
@@ -395,7 +388,7 @@ bool BlockStore::DBExists(const uint256& blkHash) const {
 }
 
 bool BlockStore::DAGExists(const uint256& blkHash) const {
-    return blockCache_.contains(blkHash) || DBExists(blkHash);
+    return blockPool_.contains(blkHash) || DBExists(blkHash);
 }
 
 bool BlockStore::Exists(const uint256& blkHash) const {
@@ -420,7 +413,7 @@ bool BlockStore::AnyLinkIsOrphan(const ConstBlockPtr& blk) const {
 }
 
 void BlockStore::Cache(const ConstBlockPtr& blk) {
-    blockCache_.emplace(blk->GetHash(), blk);
+    blockPool_.emplace(blk->GetHash(), blk);
 }
 
 void BlockStore::Wait() {
@@ -430,8 +423,15 @@ void BlockStore::Wait() {
 }
 
 void BlockStore::Stop() {
+    spdlog::info("Stopping store...");
     Wait();
+    obcThread_.Abort();
     obcThread_.Stop();
+    interrupt = true;
+    if (scheduler_.joinable()) {
+        scheduler_.join();
+    }
+    spdlog::info("Store stopped.");
 }
 
 void BlockStore::SetFileCapacities(uint32_t fileCapacity, uint16_t epochCapacity) {

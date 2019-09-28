@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "peer_manager.h"
-#include "storage.h"
 #include "test_env.h"
 #include "vertex.h"
 
@@ -102,7 +102,7 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     // check GetInv message
     ASSERT_EQ(getInv->locator.size(), 1);
-    ASSERT_EQ(getInv->locator[0], GENESIS_VERTEX.cblock->GetHash());
+    ASSERT_EQ(getInv->locator[0], GENESIS->GetHash());
 
     auto getInv_Cmp = std::unique_ptr<GetInv>(dynamic_cast<GetInv*>(message.second.release()));
 

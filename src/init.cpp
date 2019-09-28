@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
+#include "block_store.h"
 #include "config.h"
 #include "dag_manager.h"
 #include "file_utils.h"
@@ -11,14 +12,13 @@
 #include "peer_manager.h"
 #include "rpc_server.h"
 #include "spdlog/sinks/basic_file_sink.h"
-#include "storage.h"
 #include "wallet.h"
 
 #include <csignal>
 #include <spawn.h>
 
-Block GENESIS;
-Vertex GENESIS_VERTEX;
+std::shared_ptr<const Block> GENESIS;
+std::shared_ptr<Vertex> GENESIS_VERTEX;
 std::unique_ptr<Config> CONFIG;
 std::unique_ptr<PeerManager> PEERMAN;
 std::unique_ptr<BlockStore> STORE;
@@ -132,9 +132,9 @@ int Init(int argc, char* argv[]) {
 
     STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
-    if (!STORE->DBExists(GENESIS.GetHash())) {
+    if (!STORE->DBExists(GENESIS->GetHash())) {
         // put genesis block into cat
-        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
     }
 
@@ -142,6 +142,12 @@ int Init(int argc, char* argv[]) {
     if (!DAG->Init()) {
         return DAG_INIT_FAILURE;
     }
+
+    /*
+     * Initialize ECC
+     */
+    ECC_Start();
+    handle = ECCVerifyHandle();
 
     /*
      * Load wallet
@@ -158,15 +164,9 @@ int Init(int argc, char* argv[]) {
     PEERMAN = std::make_unique<PeerManager>();
 
     /*
-     * Initialize ECC
-     */
-    ECC_Start();
-    handle = ECCVerifyHandle();
-
-    /*
      * Initialize miner
      */
-    MINER = std::make_unique<Miner>();
+    MINER = std::make_unique<Miner>(4);
 
     /*
      * Create rpc instance
@@ -245,6 +245,8 @@ void LoadConfigFile() {
     // logger
     auto log_config = configContent->get_table("logs");
     if (log_config) {
+        auto log_level = log_config->get_as<std::string>("level").value_or("info");
+        CONFIG->SetLoggerLevel(log_level);
         auto use_file_logger = log_config->get_as<bool>("use_file_logger").value_or(false);
         CONFIG->SetUseFileLogger(use_file_logger);
         if (use_file_logger) {
@@ -353,8 +355,8 @@ void InitLogger() {
         UseFileLogger(CONFIG->GetLoggerPath(), CONFIG->GetLoggerFilename());
     }
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e][%t][%l] %v");
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::flush_on(spdlog::level::debug);
+    spdlog::set_level(spdlog::level::from_str(CONFIG->GetLoggerLevel()));
+    spdlog::flush_on(spdlog::level::from_str(CONFIG->GetLoggerLevel()));
 }
 
 void UseFileLogger(const std::string& path, const std::string& filename) {
@@ -398,19 +400,19 @@ bool Start() {
 }
 
 void ShutDown() {
-    spdlog::info("shutdown start");
+    spdlog::info("Starting to shutdown...");
 
     if (!(CONFIG->GetDisableRPC())) {
         RPC->Shutdown();
     }
 
+    if (MINER) {
+        MINER->Stop();
+    }
     PEERMAN->Stop();
     WALLET->Stop();
     DAG->Stop();
     STORE->Stop();
-    if (MINER->IsRunning()) {
-        MINER->Stop();
-    }
 
     STORE.reset();
     DAG.reset();
@@ -421,7 +423,7 @@ void ShutDown() {
     ECC_Stop();
     handle.~ECCVerifyHandle();
 
-    spdlog::info("shutdown finish");
+    spdlog::info("Shutdown successful.");
     spdlog::shutdown();
 }
 

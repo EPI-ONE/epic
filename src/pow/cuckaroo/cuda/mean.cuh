@@ -9,38 +9,26 @@
 #include "siphash.cuh"
 #include "spdlog.h"
 
-extern inline int gpuAssert(cudaError_t code, char* file, int line, bool abort = true) {
-    int device_id;
-    cudaGetDevice(&device_id);
-    if (code != cudaSuccess) {
-        spdlog::error("Device {} GPUassert({}): {} {} {}", device_id, code, cudaGetErrorString(code), file, line);
+int gpuAssert(cudaError_t code, char* file, int line, bool abort = true);
 
-        cudaDeviceReset();
-        if (abort)
-            exit(code);
-    }
-    return code;
-}
-
-#define checkCudaErrors(ans)                                       \
-    ({                                                             \
-        int retval = gpuAssert((ans), (char*) __FILE__, __LINE__); \
-        if (retval != cudaSuccess)                                 \
-            return retval;                                         \
+#define checkCudaErrors(ans)                                            \
+    ({                                                                  \
+        int retval = gpuAssert(ans, (char*) __FILE__, __LINE__, false); \
+        if (retval != cudaSuccess)                                      \
+            return retval;                                              \
     })
 
-#define checkCudaErrors_N(ans)                                           \
-    ({                                                                   \
-        if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return NULL;                                                 \
+#define checkCudaErrors_N(ans)                                                \
+    ({                                                                        \
+        if (gpuAssert(ans, (char*) __FILE__, __LINE__, false) != cudaSuccess) \
+            return nullptr;                                                   \
     })
 
-#define checkCudaErrors_V(ans)                                           \
-    ({                                                                   \
-        if (gpuAssert((ans), (char*) __FILE__, __LINE__) != cudaSuccess) \
-            return;                                                      \
+#define checkCudaErrors_V(ans)                                                \
+    ({                                                                        \
+        if (gpuAssert(ans, (char*) __FILE__, __LINE__, false) != cudaSuccess) \
+            return;                                                           \
     })
-
 
 struct blockstpb {
     uint16_t blocks;
@@ -58,7 +46,10 @@ struct trimparams {
     trimparams();
 };
 
-typedef uint32_t proof[PROOFSIZE];
+// Number of Parts of BufferB, all but one of which will overlap BufferA
+#ifndef NB
+#define NB 2
+#endif
 
 // maintains set of trimmable edges
 struct GEdgeTrimmer {
@@ -69,34 +60,35 @@ struct GEdgeTrimmer {
     uint8_t* bufferA;
     uint8_t* bufferB;
     uint8_t* bufferAB;
-    uint32_t** indexesE;
+    uint32_t* indexesE[1 + NB];
     uint32_t nedges;
     uint32_t* uvnodes;
     siphash_keys sipkeys, *dipkeys;
-    bool abort;
+    std::atomic_bool abort;
     bool initsuccess = false;
 
     GEdgeTrimmer(const trimparams _tp);
-    uint64_t globalbytes() const;
     ~GEdgeTrimmer();
+    uint64_t globalbytes() const;
     uint32_t trim();
 };
 
-struct GSolverCtx {
+struct SolverCtx {
     GEdgeTrimmer trimmer;
     uint2* edges;
     graph<word_t> cg;
-    uint2 soledges[PROOFSIZE];
+    uint2* soledges;
     std::vector<uint32_t> sols; // concatenation of all proof's indices
 
-    GSolverCtx(const trimparams&);
+    SolverCtx(const trimparams&);
 
-    ~GSolverCtx() {
+    ~SolverCtx() {
         delete[] edges;
+        delete[] soledges;
     }
 
-    void setheader(char* header, uint32_t len) {
-        ::setheader(header, len, &trimmer.sipkeys);
+    void SetHeader(char* header, uint32_t len) {
+        ::SetHeader(header, len, &trimmer.sipkeys);
         sols.clear();
     }
 
@@ -106,6 +98,3 @@ struct GSolverCtx {
         trimmer.abort = true;
     }
 };
-
-extern void FillDefaultGPUParams(SolverParams* params);
-extern std::unique_ptr<GSolverCtx> CreateGSolverCtx(SolverParams* params);

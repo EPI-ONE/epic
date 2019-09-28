@@ -17,14 +17,20 @@ class Block;
 class Vertex;
 
 enum ParamsType : uint8_t {
-    MAINNET = 1,
+    MAINNET = 0,
     TESTNET,
     UNITTEST,
 };
 
+static const std::string ParamsTypeStr[] = {
+    "MAINNET",
+    "TESTNET",
+    "UNITTEST",
+};
+
 class Params {
 public:
-    static inline const std::string INITIAL_MS_TARGET = "346dc5d63886594af4f0d844d013a92a305532617c1bda5119ce075f6fd21";
+    virtual ~Params() {}
 
     enum KeyPrefixType : uint8_t {
         PUBKEY_ADDRESS = 0,
@@ -50,25 +56,23 @@ public:
     arith_uint256 sortitionCoefficient;
     size_t sortitionThreshold;
 
-    uint64_t initialDifficulty;
-    arith_uint256 initialMsTarget;
+    // proof-of-work parameter
+    int cycleLen;
 
     size_t cacheStatesSize;
 
     size_t blockCapacity;
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
-    const Block& GetGenesis() const;
-    const Vertex& GetGenesisVertex() const;
+    std::shared_ptr<Vertex> CreateGenesis() const;
 
 protected:
     Params() = default;
 
     std::array<unsigned char, MAX_KEY_PREFIX_TYPES> keyPrefixes;
+    std::string genesisHexStr;
 
-    std::unique_ptr<Block> genesis_;
-    std::shared_ptr<Vertex> genesisVertex_;
-    void CreateGenesis(const std::string& genesisHexStr);
+    virtual void SetGenesisParams(const std::shared_ptr<Vertex>&) const {}
 };
 
 class MainNetParams : public Params {
@@ -84,10 +88,13 @@ public:
 class UnitTestParams : public Params {
 public:
     UnitTestParams();
+
+protected:
+    void SetGenesisParams(const std::shared_ptr<Vertex>&) const override;
 };
 
 // instance of the parameters for usage throughout the project
 const Params& GetParams();
-void SelectParams(ParamsType type);
+void SelectParams(ParamsType type, bool withGenesis = true);
 
 #endif // EPIC_PARAMS_H

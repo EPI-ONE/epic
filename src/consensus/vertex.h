@@ -121,6 +121,6 @@ namespace std {
 string to_string(const Vertex& vtx, bool showtx = false);
 } // namespace std
 
-extern Vertex GENESIS_VERTEX;
+extern std::shared_ptr<Vertex> GENESIS_VERTEX;
 
 #endif // EPIC_VERTEX_H

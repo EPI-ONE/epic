@@ -239,5 +239,5 @@ arith_uint256 UintToArith256(const uint256& a) {
 }
 
 bool PartitionCmp(const arith_uint256& a, const arith_uint256& b) {
-    return (a << 32) < b;
+    return a < b;
 }

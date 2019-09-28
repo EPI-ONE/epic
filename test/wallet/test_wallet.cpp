@@ -32,6 +32,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
         Wallet wallet{dir, 1};
         wallet.GenerateMaster();
         wallet.SetPassphrase("");
+        wallet.DisableRedemptions();
         wallet.Start();
         wallet.CreateNewKey(false);
         MEMPOOL   = std::make_unique<MemPool>();
@@ -42,6 +43,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
         Block block;
         block.AddTransaction(tx);
+        block.SetMerkle();
         block.CalculateHash();
         block.SetParents();
 
@@ -79,6 +81,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
         Block new_block;
         new_block.AddTransaction(std::move(new_tx));
+        new_block.SetMerkle();
         new_block.CalculateHash();
         new_block.SetParents();
         auto outpoint = new_block.GetTransactions()[0]->GetInputs()[0].outpoint;
@@ -166,46 +169,42 @@ TEST_F(TestWallet, workflow) {
     WALLET->SetPassphrase("");
     WALLET->Start();
 
-    WALLET->CreateNewKey(false);
-    auto old          = WALLET->GetRandomAddress();
-    auto registration = WALLET->CreateFirstRegistration(old);
+    WALLET->CreateNewKey(true);
+    auto registration = WALLET->CreateFirstRegistration(WALLET->GetRandomAddress());
     ASSERT_TRUE(registration);
 
     MEMPOOL->PushRedemptionTx(registration);
 
-    MINER->Start();
     MINER->Run();
 
-    while (WALLET->GetCurrentMinerReward() < 200) {
+    while (WALLET->GetBalance() < 30) {
         std::this_thread::yield();
     }
-    auto redemption = WALLET->CreateRedemption(old, old, "dssss");
-    MEMPOOL->PushRedemptionTx(redemption);
-
-    while (WALLET->GetBalance() < 200) {
-        std::this_thread::yield();
-    }
+    WALLET->DisableRedemptions();
+    MINER->Stop();
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 1);
 
-    auto tx = WALLET->CreateTx({{10, CKeyID()}});
+    auto tx = WALLET->CreateTx({{WALLET->GetBalance() - MIN_FEE, WALLET->GetRandomAddress()}});
     ASSERT_EQ(WALLET->GetBalance().GetValue(), 0);
     ASSERT_TRUE(WALLET->SendTxToMemPool(tx));
     ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
     ASSERT_EQ(WALLET->GetPending().size(), 1);
+    ASSERT_TRUE(WALLET->GetUnspent().empty());
 
-    // receive the change of last transaction
+    MINER->Run();
 
-    while (WALLET->GetSpent().empty()) {
+    // Wait until receive the change of the last transaction
+    while (!MEMPOOL->Empty() || WALLET->GetUnspent().empty()) {
         usleep(50000);
     }
+    MINER->Stop();
 
     EXPECT_EQ(WALLET->GetUnspent().size(), 1);
     EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
     EXPECT_EQ(WALLET->GetPending().size(), 0);
     EXPECT_EQ(WALLET->GetSpent().size(), 1);
 
-    MINER->Stop();
     WALLET->Stop();
     DAG->Stop();
     STORE->Stop();
@@ -219,6 +218,7 @@ TEST_F(TestWallet, normal_workflow) {
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
+    WALLET->DisableRedemptions();
 
     MINER->Start();
     MINER->Run();

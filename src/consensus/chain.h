@@ -8,6 +8,7 @@
 #include "concurrent_container.h"
 #include "vertex.h"
 
+#include <algorithm>
 #include <deque>
 #include <optional>
 #include <vector>
@@ -191,5 +192,10 @@ private:
 };
 
 typedef std::unique_ptr<Chain> ChainPtr;
+
+inline arith_uint256 CalculateAllowedDist(const Cumulator& cum, const arith_uint256& msHashRate) {
+    return std::max((arith_uint256)(cum.Sum() / (cum.TimeSpan() + 1)), arith_uint256(1)) /
+           GetParams().sortitionCoefficient * (GetParams().maxTarget / (msHashRate + 1));
+}
 
 #endif // EPIC_CHAIN_H

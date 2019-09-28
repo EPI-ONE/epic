@@ -45,12 +45,12 @@ std::string TestRPCServer::adr = "";
 TEST_F(TestRPCServer, GetBlock) {
     RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
 
-    auto req_hash = std::to_string(GENESIS_VERTEX.cblock->GetHash());
+    auto req_hash = std::to_string(GENESIS->GetHash());
     auto res      = client.GetBlock(req_hash);
     ASSERT_TRUE(res.has_value());
 
     auto blk = ToBlock(*res);
-    ASSERT_EQ(blk, GENESIS);
+    ASSERT_EQ(blk, *GENESIS);
 
     auto res_fake = client.GetBlock(std::to_string(double0hash));
     ASSERT_TRUE(res_fake.has_value());
@@ -65,7 +65,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     std::vector<VertexPtr> lvs;
     lvs.reserve(size);
     auto ms = fac.CreateVertexPtr(1, 1, true);
-    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, ms);
+    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, ms);
     ms->isMilestone      = true;
     ms->snapshot->height = 1;
     ms->height           = 1;
@@ -123,7 +123,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     std::vector<VertexPtr> mss;
     std::vector<VertexPtr> mss_to_check;
     auto first_ms = fac.CreateVertexPtr(1, 1, true);
-    fac.CreateMilestonePtr(GENESIS_VERTEX.snapshot, first_ms);
+    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, first_ms);
     first_ms->isMilestone      = true;
     first_ms->snapshot->height = 1;
     first_ms->height           = 1;

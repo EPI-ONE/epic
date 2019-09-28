@@ -10,11 +10,11 @@
 
 #include <cstdint>
 #include <cstring>
+#include <deque>
 #include <ios>
 #include <limits>
 #include <map>
 #include <memory>
-#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -632,7 +632,7 @@ void Deserialize(Stream& is, std::set<K, Pred, A>& m);
 template <typename Stream, typename T>
 void Serialize(Stream& os, const std::shared_ptr<const T>& p);
 template <typename Stream, typename T>
-void Deserialize(Stream& os, std::shared_ptr<const T>& p);
+void Deserialize(Stream& is, std::shared_ptr<const T>& p);
 
 /**
  * unique_ptr
@@ -640,15 +640,15 @@ void Deserialize(Stream& os, std::shared_ptr<const T>& p);
 template <typename Stream, typename T>
 void Serialize(Stream& os, const std::unique_ptr<const T>& p);
 template <typename Stream, typename T>
-void Deserialize(Stream& os, std::unique_ptr<const T>& p);
+void Deserialize(Stream& is, std::unique_ptr<const T>& p);
 
 /**
- * optional
+ * deque
  */
-template <typename Stream, typename T>
-void Serialize(Stream& os, const std::optional<const T>& p);
-template <typename Stream, typename T>
-void Deserialize(Stream& os, std::optional<const T>& p);
+template <typename Stream, typename T, typename A>
+void Serialize(Stream& os, const std::deque<T, A>& p);
+template <typename Stream, typename T, typename A>
+void Deserialize(Stream& is, std::deque<T, A>& p);
 
 /**
  * If none of the specialized versions above matched, default to calling member
@@ -663,6 +663,8 @@ template <typename Stream, typename T>
 inline void Deserialize(Stream& is, T&& a) {
     a.Deserialize(is);
 }
+
+//////////////////////////// Implementation ///////////////////////////////////
 
 /**
  * string
@@ -825,28 +827,23 @@ void Deserialize(Stream& is, std::shared_ptr<const T>& p) {
 }
 
 /**
- * optional
+ * deque
  */
-template <typename Stream, typename T>
-void Serialize(Stream& os, const std::optional<T>& p) {
-    if (p.has_value()) {
-        Serialize(os, true);
-        Serialize(os, *p);
-    } else {
-        Serialize(os, false);
+template <typename Stream, typename T, typename A>
+void Serialize(Stream& os, const std::deque<T, A>& q) {
+    WriteCompactSize(os, q.size());
+    for (const auto& e : q) {
+        Serialize(os, e);
     }
 }
 
-template <typename Stream, typename T>
-void Deserialize(Stream& is, std::optional<T>& p) {
-    bool flag;
-    Deserialize(is, flag);
-    if (flag) {
-        T t;
-        Deserialize(is, t);
-        p = std::forward<T>(t);
-    } else {
-        p.reset();
+template <typename Stream, typename T, typename A>
+void Deserialize(Stream& is, std::deque<T, A>& q) {
+    auto s = ReadCompactSize(is);
+    for (size_t i = 0; i < s; ++i) {
+        T e;
+        Deserialize(is, e);
+        q.emplace_back(std::move(e));
     }
 }
 

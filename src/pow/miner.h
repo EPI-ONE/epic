@@ -5,47 +5,27 @@
 #ifndef EPIC_MINER_H
 #define EPIC_MINER_H
 
+#include "block_store.h"
+#include "circular_queue.h"
 #include "key.h"
 #include "mempool.h"
 #include "peer_manager.h"
-#include "storage.h"
 #include "trimmer.h"
 
 #include <atomic>
 
+template <typename>
+class CircularQueue;
+
 class Miner {
 public:
-    Miner() : solverPool_(1) {}
-    explicit Miner(size_t nThreads, size_t nSipThreads = 0) {
-#ifndef __CUDA_ENABLED__
-        if ((nSipThreads & (nSipThreads - 1)) != 0) { // make sure it's power of 2
-            // Round it to the largest power of 2 less than nSipThreads
-            uint32_t n = 1 << (sizeof(uint32_t) * 8 - 1);
-            while ((nSipThreads & n) == 0 && n != 0) {
-                n >>= 1;
-            }
-            nSipThreads = n;
-        }
-
-        params.nthreads = nSipThreads;
-        params.ntrims   = EDGEBITS >= 30 ? 96 : 68;
-        spdlog::info("Miner using CPU. {} threads in solver pool.", nThreads);
-#else
-        FillDefaultGPUParams(&params);
-        int nGPUDevices{};
-        checkCudaErrors_V(cudaGetDeviceCount(&nGPUDevices));
-        spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
-
-        nThreads = std::min(nThreads, (size_t) nGPUDevices);
-#endif
-
-        solverPool_.SetThreadSize(nThreads);
-    }
+    Miner();
+    Miner(size_t nThreads);
+    virtual ~Miner() {}
 
     bool Start();
     bool Stop();
-    void Solve(Block&);
-    void SolveCuckaroo(Block&);
+    virtual void Solve(Block&);
     void Run();
 
     bool IsRunning() {
@@ -53,24 +33,40 @@ public:
     }
 
     ConstBlockPtr GetSelfChainHead() const {
-        return selfChainHead;
+        return selfChainHead_;
     }
+
+protected:
+    std::atomic_bool enabled_ = false;
+    std::atomic_bool abort_   = false;
+
+    ThreadPool solverPool_;
+    std::atomic<uint32_t> final_nonce;
+    std::atomic<uint64_t> final_time;
+    std::atomic<bool> found_sols;
 
 private:
     std::thread runner_;
-    ThreadPool solverPool_;
-    std::atomic<bool> enabled_ = false;
+    std::thread inspector_;
 
-    std::atomic<uint32_t> final_nonce;
-    std::atomic<uint64_t> final_time;
+    SolverParams solverParams_;
 
-    ConstBlockPtr selfChainHead = nullptr;
-    Cumulator distanceCal;
-
-    SolverParams params;
+    ConstBlockPtr selfChainHead_ = nullptr;
+    VertexPtr chainHead_         = nullptr;
+    Cumulator distanceCal_;
+    CircularQueue<uint256> selfChainHeads_;
 
     uint256 SelectTip();
 };
 
 extern std::unique_ptr<Miner> MINER;
+
+inline void SetNonce(VStream& vs, uint32_t nonce) {
+    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
+}
+
+inline void SetTimestamp(VStream& vs, uint32_t t) {
+    memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
+}
+
 #endif // EPIC_MINER_H

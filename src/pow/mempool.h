@@ -38,7 +38,7 @@ public:
     bool Contains(const ConstTxPtr&) const;
     bool Erase(const ConstTxPtr&);
     void Erase(const std::vector<ConstTxPtr>&);
-    bool IsEmpty() const;
+    bool Empty() const;
 
     /**
      * processes transactions received from other nodes(memory pool)

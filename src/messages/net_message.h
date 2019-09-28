@@ -7,8 +7,6 @@
 
 #include "stream.h"
 
-#include <event2/util.h>
-
 #define ADD_NET_SERIALIZE_METHODS             \
     virtual void NetSerialize(VStream& s) {   \
         Serialize(s);                         \

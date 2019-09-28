@@ -14,73 +14,13 @@ public:
 
     void SetUp() override {
         SetLogLevel(SPDLOG_LEVEL_TRACE);
+        SelectParams(ParamsType::TESTNET);
     }
     void TearDown() override {
         ResetLogLevel();
+        SelectParams(ParamsType::UNITTEST);
     }
 };
-
-TEST_F(TestTrimmer, CPU) {
-    // Create solver context
-    SolverParams params;
-    params.nthreads = 16; // should be powers of 2
-    params.ntrims   = EDGEBITS >= 30 ? 96 : 68;
-
-    auto ctx = CreateCSolverCtx(&params);
-
-    VStream header(GENESIS);
-
-    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges", PROOFSIZE, EDGEBITS,
-                 header.str().c_str(), nonce);
-
-    uint64_t sbytes = ctx->sharedbytes();
-    uint32_t tbytes = ctx->threadbytes();
-    int sunit, tunit;
-    for (sunit = 0; sbytes >= 10240; sbytes >>= 10, sunit++)
-        ;
-    for (tunit = 0; tbytes >= 10240; tbytes >>= 10, tunit++)
-        ;
-    spdlog::info("Using {}{}B bucket memory at {},", sbytes, " KMGT"[sunit], (uint64_t) ctx -> trimmer.buckets);
-    spdlog::info("{}x{}{}B thread memory at {},", params.nthreads, tbytes, " KMGT"[tunit],
-                 (uint64_t) ctx -> trimmer.tbuckets);
-    spdlog::info("{}-way siphash, and {} buckets.", NSIPHASH, NX);
-
-    // Generate graph and start trimming
-    uint64_t time0, time1;
-    uint32_t timems;
-
-    time0 = timestamp();
-
-    ctx->setheader(header);
-    spdlog::trace("nonce {} k0 k1 k2 k3 {:X} {:X} {:X} {:X}", nonce, ctx->trimmer.sip_keys.k0, ctx->trimmer.sip_keys.k1,
-                  ctx->trimmer.sip_keys.k2, ctx->trimmer.sip_keys.k3);
-    uint32_t nsols = ctx->solve();
-
-    time1  = timestamp();
-    timems = (time1 - time0) / 1000000;
-    spdlog::trace("Time: {} ms\n", timems);
-
-    // Verify trim result
-    for (unsigned s = 0; s < nsols; s++) {
-        spdlog::trace("Solution");
-        word_t* prf = &ctx->sols[s * PROOFSIZE];
-        for (uint32_t i = 0; i < PROOFSIZE; i++)
-            spdlog::trace(" {}", (uintmax_t) prf[i]);
-        spdlog::trace("\n");
-        int pow_rc = verify(prf, ctx->trimmer.sip_keys);
-        if (pow_rc == POW_OK) {
-            spdlog::trace("Verified with cyclehash ");
-            auto cyclehash = HashBLAKE2<256>(prf, sizeof(proof));
-            spdlog::trace("cycle hash {}", std::to_string(cyclehash));
-        } else {
-            spdlog::trace("FAILED due to {}", errstr[pow_rc]);
-            ASSERT_TRUE(false);
-        }
-    }
-    spdlog::trace("{} total solutions", nsols);
-
-    DestroySolverCtx(ctx);
-}
 
 #ifdef __CUDA_ENABLED__
 #undef checkCudaErrors
@@ -91,13 +31,20 @@ TEST_F(TestTrimmer, CPU) {
             exit(ans);                                \
     })
 
+uint64_t timestamp() {
+    using namespace std::chrono;
+    high_resolution_clock::time_point now = high_resolution_clock::now();
+    auto dn                               = now.time_since_epoch();
+    return dn.count();
+}
+
 TEST_F(TestTrimmer, GPU) {
     trimparams tp;
     VStream header(GENESIS);
 
     // Check GPU status and create solver context
     SolverParams params;
-    FillDefaultGPUParams(&params);
+    FillDefaultGPUParams(params);
 
     spdlog::info("SolverParams: cuckaroo{} -d {} -h \"\" -m {} -n {} -U {} -u "
                  "{} -v {} -w {} -y {} -Z {} -z {}",
@@ -119,11 +66,10 @@ TEST_F(TestTrimmer, GPU) {
     spdlog::info("{} with {}{}B @ {} bits x {}MHz", prop.name, (uint32_t) dbytes, " KMGT"[dunit], prop.memoryBusWidth,
                  prop.memoryClockRate / 1000);
 
-    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {}*{} buckets, {} trims, and {} "
-                 "thread blocks.",
-                 PROOFSIZE, EDGEBITS, header.str().c_str(), nonce, NX, NY, params.ntrims, NX);
+    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.", CYCLELEN,
+                 EDGEBITS, header.str().c_str(), nonce, params.ntrims);
 
-    auto ctx = CreateGSolverCtx(&params);
+    auto* ctx = CreateSolverCtx(params);
 
     uint64_t bytes = ctx->trimmer.globalbytes();
     int unit;
@@ -142,7 +88,7 @@ TEST_F(TestTrimmer, GPU) {
     // Generate graph and start trimming
     time0 = timestamp();
 
-    ctx->setheader(header.data(), header.size());
+    ctx->SetHeader(header.data(), header.size());
     spdlog::trace("nonce {} k0 k1 k2 k3 {:X} {:X} {:X} {:X}", nonce, ctx->trimmer.sipkeys.k0, ctx->trimmer.sipkeys.k1,
                   ctx->trimmer.sipkeys.k2, ctx->trimmer.sipkeys.k3);
     uint32_t nsols = ctx->solve();
@@ -154,18 +100,16 @@ TEST_F(TestTrimmer, GPU) {
     // Verify trim result
     for (unsigned s = 0; s < nsols; s++) {
         spdlog::trace("Solution");
-        uint32_t* prf = &ctx->sols[s * PROOFSIZE];
-        for (uint32_t i = 0; i < PROOFSIZE; i++)
+        uint32_t* prf = &ctx->sols[s * CYCLELEN];
+        for (uint32_t i = 0; i < CYCLELEN; i++)
             spdlog::trace(" {}", (uintmax_t) prf[i]);
-        int pow_rc = verify(prf, ctx->trimmer.sipkeys);
+        int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys);
         if (pow_rc == POW_OK) {
             spdlog::trace("Verified with cyclehash ");
-            unsigned char cyclehash[32];
-            HashBLAKE2((char*) prf, sizeof(proof), cyclehash, sizeof(cyclehash));
-            for (int i = 0; i < 32; i++)
-                spdlog::trace("{}", cyclehash[i]);
+            auto cyclehash = HashBLAKE2<256>((char*) prf, PROOFSIZE);
+            spdlog::trace("{}", std::to_string(cyclehash));
         } else {
-            spdlog::trace("FAILED due to {}", errstr[pow_rc]);
+            spdlog::trace("FAILED due to {}", ErrStr[pow_rc]);
             ASSERT_TRUE(false);
         }
     }

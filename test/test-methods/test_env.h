@@ -7,9 +7,9 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "miner.h"
 #include "params.h"
-#include "storage.h"
 #include "test_factory.h"
 #include "wallet.h"
 
@@ -40,12 +40,12 @@ public:
         DAG   = std::make_unique<DAGManager>();
 
         // Initialize DB with genesis
-        std::vector<VertexPtr> genesisLvs = {std::make_shared<Vertex>(GENESIS_VERTEX)};
+        std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
 
         if (enable_miner) {
             MEMPOOL = std::make_unique<MemPool>();
-            MINER   = std::make_unique<Miner>();
+            MINER   = std::make_unique<CPUMiner>(4);
         }
 
         if (enable_wallet) {
@@ -55,7 +55,11 @@ public:
         }
     }
 
-    static void TearDownDAG(std::string dirPath) {
+    static void TearDownDAG(const std::string& dirPath) {
+        if (STORE)
+            STORE->Stop();
+        if (DAG)
+            DAG->Stop();
         STORE.reset();
         DAG.reset();
         MEMPOOL.reset();

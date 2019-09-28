@@ -12,6 +12,7 @@ class TestMemPool : public testing::Test {
 public:
     std::vector<ConstTxPtr> transactions;
     TestFactory fac;
+    CPUMiner m{};
     const std::string dir = "test_mempool/";
 
     void SetUp() {
@@ -36,7 +37,7 @@ TEST_F(TestMemPool, simple_get_and_set) {
     EXPECT_EQ(pool.Size(), 3);
 
     /* check if IsEmpty returns the right value */
-    EXPECT_FALSE(pool.IsEmpty());
+    EXPECT_FALSE(pool.Empty());
 
     /* check if all elements are found
      * when passing the ptr */
@@ -77,10 +78,10 @@ TEST_F(TestMemPool, ExtractTransactions) {
     pool.Insert(transactions[0]);
     pool.Insert(transactions[1]);
 
-    static auto cmpt = [&](uint256 n) -> arith_uint256 { return (UintToArith256(n) ^ UintToArith256(blkHash)) << 32; };
+    static auto cmpt = [&](uint256 n) -> arith_uint256 { return UintToArith256(n) ^ UintToArith256(blkHash); };
 
     // case 1
-    arith_uint256 threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
+    auto threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
     ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
     // case 2
@@ -91,13 +92,13 @@ TEST_F(TestMemPool, ExtractTransactions) {
     // case 3
     threshold++;
     ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 2);
-    ASSERT_TRUE(pool.IsEmpty());
+    ASSERT_TRUE(pool.Empty());
 }
 
 TEST_F(TestMemPool, receive_and_release) {
     // prepare dag
     EpicTestEnvironment::SetUpDAG(dir);
-    const auto& ghash      = GENESIS.GetHash();
+    const auto& ghash      = GENESIS->GetHash();
     auto [privkey, pubkey] = fac.CreateKeyPair();
     auto [hashMsg, sig]    = fac.CreateSig(privkey);
     auto [hashMsg2, sig2]  = fac.CreateSig(privkey);
@@ -108,10 +109,12 @@ TEST_F(TestMemPool, receive_and_release) {
     auto firstReg = std::make_shared<const Transaction>(addr);
     Block b1      = blkTemplate;
     b1.AddTransaction(firstReg);
-    b1.Solve();
-    while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX.snapshot->milestoneTarget) {
+    b1.SetMerkle();
+    b1.CalculateOptimalEncodingSize();
+    m.Solve(b1);
+    while (UintToArith256(b1.GetHash()) > GENESIS_VERTEX->snapshot->milestoneTarget) {
         b1.SetNonce(b1.GetNonce() + 1);
-        b1.Solve();
+        m.Solve(b1);
     }
     const auto& b1hash = b1.GetHash();
 
@@ -136,10 +139,11 @@ TEST_F(TestMemPool, receive_and_release) {
     b2.SetPrevHash(chain.back().back()->cblock->GetHash());
     b2.SetTime(chain.back().back()->cblock->GetTime() + 10);
     b2.AddTransaction(redemption);
-    b2.Solve();
+    b2.SetMerkle();
+    m.Solve(b2);
     while (UintToArith256(b2.GetHash()) > DAG->GetBestChain().GetChainHead()->milestoneTarget) {
         b2.SetNonce(b2.GetNonce() + 1);
-        b2.Solve();
+        m.Solve(b2);
     }
     auto b2hash = b2.GetHash();
 
@@ -189,7 +193,7 @@ TEST_F(TestMemPool, receive_and_release) {
     ASSERT_EQ(pool.Size(), 2);
 
     pool.ReleaseTxFromConfirmed(ptx_normal_1, true);
-    ASSERT_TRUE(pool.IsEmpty());
+    ASSERT_TRUE(pool.Empty());
 
     EpicTestEnvironment::TearDownDAG(dir);
 }

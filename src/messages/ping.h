@@ -6,7 +6,6 @@
 #define EPIC_PING_H
 
 #include "net_message.h"
-#include "serialize.h"
 
 class Ping : public NetMessage {
 public:

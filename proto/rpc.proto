@@ -35,7 +35,8 @@ message Block {
   uint32 diffTarget = 5;
   uint32 nonce = 6;
   uint64 time = 7;
-  repeated Transaction transactions = 8;
+  repeated uint32 proof = 8;
+  repeated Transaction transactions = 9;
 }
 
 service BasicBlockExplorerRPC {

@@ -24,41 +24,35 @@ static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 // transaction sortition: coefficient for computing allowed distance
 static constexpr size_t SORTITION_COEFFICIENT = 100;
 // transaction sortition: number of block to go back
-static constexpr size_t SORTITION_THRESHOLD = 10 * 1000;
+static constexpr size_t SORTITION_THRESHOLD = 1000;
 // coefficient of taking additional reward for milestone
 static constexpr uint32_t REWARD_COEFFICIENT = 50;
 static constexpr size_t CACHE_STATES         = 100;
 // capacity of transactions in a block
 static constexpr size_t BLK_CAPACITY = 128;
 
-const Block& Params::GetGenesis() const {
-    return *genesis_;
-}
-
-const Vertex& Params::GetGenesisVertex() const {
-    return *genesisVertex_;
-}
-
-void Params::CreateGenesis(const std::string& genesisHexStr) {
+std::shared_ptr<Vertex> Params::CreateGenesis() const {
     const std::vector<unsigned char> parsed = ParseHex(genesisHexStr);
     VStream vs(parsed);
-    Block genesisBlock{vs};
+    Block genesisBlock;
+    vs >> genesisBlock;
     genesisBlock.FinalizeHash();
     genesisBlock.CalculateOptimalEncodingSize();
 
-    genesis_                    = std::make_unique<Block>(genesisBlock);
-    genesisVertex_              = std::make_shared<Vertex>(genesisBlock);
-    genesisVertex_->validity[0] = Vertex::VALID;
+    auto genesisVertex         = std::make_shared<Vertex>(genesisBlock);
+    genesisVertex->validity[0] = Vertex::VALID;
 
-    arith_uint256 msTarget    = initialMsTarget * 2 / arith_uint256{targetTimespan};
-    arith_uint256 blockTarget = msTarget * arith_uint256{targetTPS} * arith_uint256{timeInterval};
+    arith_uint256 msTarget    = maxTarget;
+    arith_uint256 blockTarget = maxTarget;
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
     auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
 
     static auto genesisState = std::make_shared<Milestone>(
-        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex_});
+        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex});
 
-    genesisVertex_->LinkMilestone(genesisState);
+    genesisVertex->LinkMilestone(genesisState);
+    SetGenesisParams(genesisVertex);
+    return genesisVertex;
 }
 
 unsigned char Params::GetKeyPrefix(KeyPrefixType type) const {
@@ -76,7 +70,7 @@ MainNetParams::MainNetParams() {
     maxMoney             = MAX_MONEY;
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
-    initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
+    cycleLen             = 42;
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
@@ -88,14 +82,16 @@ MainNetParams::MainNetParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
+    genesisHexStr =
         "0100e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8553e7b565dffff001d1ad3a83a"
-        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
-        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
-        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
-
-    CreateGenesis(genesisHexStr);
+        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
+        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff00211800000027635f00c6d49a0091a1ca007a69d500ec1246014feac3"
+        "02c244b30398815f04ac8ae204dcc73f05231fca0704788f085f42a30847ba3f09a47c4d09ba957609cb5f9209cdaec10ae3a1ac0dcf39"
+        "290f8460d60f5ae76910fdd42e115a4cc0112d1384124fe98e139b08b014a7f7b714cbe5d814b8c61216e07e6716ec3f7418417d8c18c2"
+        "d5c218ca7956196736bb1b11a11b1c300b9f1ca171a41c94b1c81c3b3a811da693351f0101e3b0c44298fc1c149afbf4c8996fb92427ae"
+        "41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f772074656e20706173742074656e"
+        "20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e6721014200142ac277ce311a053c91e4"
+        "7fd2c4759b263e1b31b4";
 }
 
 TestNetParams::TestNetParams() {
@@ -109,9 +105,9 @@ TestNetParams::TestNetParams() {
     maxMoney             = MAX_MONEY;
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
-    initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
+    cycleLen             = 4;
     sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
-    sortitionThreshold   = SORTITION_THRESHOLD;
+    sortitionThreshold   = 100;
     cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
@@ -121,14 +117,13 @@ TestNetParams::TestNetParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
-        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001e0f253f02"
-        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
-        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
-        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
-
-    CreateGenesis(genesisHexStr);
+    genesisHexStr =
+        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
+        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
+        "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021030000003c8dcb0244c0c70c51e6ae0e4b592f0f01"
+        "01e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
+        "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c"
+        "20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4";
 }
 
 UnitTestParams::UnitTestParams() {
@@ -142,10 +137,10 @@ UnitTestParams::UnitTestParams() {
     maxMoney             = MAX_MONEY;
     reward               = 10;
     msRewardCoefficient  = 1;
-    initialMsTarget      = arith_uint256(INITIAL_MS_TARGET);
+    cycleLen             = 0;
     sortitionCoefficient = arith_uint256(1);
     sortitionThreshold   = 2;
-    cacheStatesSize      = 25;
+    cacheStatesSize      = 20;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
 
@@ -154,18 +149,19 @@ UnitTestParams::UnitTestParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    const std::string genesisHexStr{
-        "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
-        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855388ff95cffff001f213d0000"
-        "0101e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974"
-        "206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f"
-        "726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4"};
+    genesisHexStr =
+        "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
+        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
+        "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021000000000101e3b0c44298fc1c149afbf4c8996fb9"
+        "2427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f772074656e20706173"
+        "742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e6721014200142ac277"
+        "ce311a053c91e47fd2c4759b263e1b31b4";
+}
 
-    CreateGenesis(genesisHexStr);
-
-    genesisVertex_->snapshot->hashRate    = 1;
-    genesisVertex_->snapshot->blockTarget = maxTarget;
-    genesisVertex_->snapshot->milestoneTarget.SetCompact(0x20c0ffffL);
+void UnitTestParams::SetGenesisParams(const std::shared_ptr<Vertex>& genesisVertex) const {
+    genesisVertex->snapshot->hashRate        = 0;
+    genesisVertex->snapshot->blockTarget     = maxTarget;
+    genesisVertex->snapshot->milestoneTarget = maxTarget;
 }
 
 static std::unique_ptr<const Params> pparams;
@@ -175,7 +171,7 @@ const Params& GetParams() {
     return *pparams;
 }
 
-void SelectParams(ParamsType type) {
+void SelectParams(ParamsType type, bool withGenesis) {
     if (type == ParamsType::MAINNET) {
         pparams = std::make_unique<MainNetParams>();
     } else if (type == ParamsType::TESTNET) {
@@ -183,9 +179,11 @@ void SelectParams(ParamsType type) {
     } else if (type == ParamsType::UNITTEST) {
         pparams = std::make_unique<UnitTestParams>();
     } else {
-        throw std::invalid_argument("Invalid Param Type!");
+        throw std::invalid_argument("Invalid param type!");
     }
 
-    GENESIS        = pparams->GetGenesis();
-    GENESIS_VERTEX = pparams->GetGenesisVertex();
+    if (withGenesis) {
+        GENESIS_VERTEX = pparams->CreateGenesis();
+        GENESIS        = GENESIS_VERTEX->cblock;
+    }
 }

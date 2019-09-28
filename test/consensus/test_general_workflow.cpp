@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "key.h"
-#include "storage.h"
 #include "test_env.h"
 #include "vertex.h"
 
@@ -17,6 +17,7 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
+    CPUMiner m{};
     const std::string prefix = "test_consensus/";
 
     void SetUp() override {
@@ -30,7 +31,7 @@ public:
 
 
 TEST_F(TestConsensus, SyntaxChecking) {
-    Block b = GENESIS;
+    Block b = *GENESIS;
     EXPECT_TRUE(b.Verify());
 
     // Bad difficulty target
@@ -45,7 +46,9 @@ TEST_F(TestConsensus, SyntaxChecking) {
     tx.FinalizeHash();
     block1.AddTransaction(tx);
     block1.AddTransaction(tx);
-    block1.Solve();
+    block1.SetMerkle();
+    block1.CalculateOptimalEncodingSize();
+    m.Solve(block1);
     EXPECT_FALSE(block1.Verify());
 
     // Duplicated txns
@@ -53,9 +56,12 @@ TEST_F(TestConsensus, SyntaxChecking) {
     for (int i = 0; i < 5; ++i) {
         block2.AddTransaction(fac.CreateTx(2, 3));
     }
-
     block2.AddTransaction(*block2.GetTransactions()[2]);
-    block2.Solve();
+
+    block2.SetMerkle();
+    block2.CalculateOptimalEncodingSize();
+
+    m.Solve(block2);
     EXPECT_FALSE(block2.Verify());
 }
 
@@ -68,25 +74,28 @@ TEST_F(TestConsensus, MerkleRoot) {
     for (int i = 0; i < 10; ++i) {
         block1.AddTransaction(fac.CreateTx(2, 3));
     }
-    block1.Solve();
+    block1.SetMerkle();
+    block1.CalculateOptimalEncodingSize();
+    m.Solve(block1);
 
     auto txns = block1.GetTransactions();
     txns[0].swap(txns[5]);
     block2.AddTransactions(std::move(txns));
+    block2.SetMerkle();
 
     EXPECT_NE(block1.GetTransactions(), block2.GetTransactions());
 
-    block2.Solve();
+    m.Solve(block2);
 
     EXPECT_NE(block1, block2);
 }
 
 TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
-    TimeGenerator timeGenerator{GENESIS.GetTime(), 25, 400, fac.GetRand()};
+    TimeGenerator timeGenerator{GENESIS->GetTime(), 25, 400, fac.GetRand()};
 
     constexpr size_t HEIGHT = 100;
     std::array<std::shared_ptr<Milestone>, HEIGHT> arrayMs;
-    arrayMs[0] = GENESIS_VERTEX.snapshot;
+    arrayMs[0] = GENESIS_VERTEX->snapshot;
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {

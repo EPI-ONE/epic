@@ -4,15 +4,16 @@
 
 #include <gtest/gtest.h>
 
+#include "block_store.h"
 #include "file_utils.h"
-#include "storage.h"
 #include "test_env.h"
 
 #include <string>
 
 class TestFileStorage : public testing::Test {
 public:
-    TestFactory fac    = EpicTestEnvironment::GetFactory();
+    TestFactory fac = EpicTestEnvironment::GetFactory();
+    CPUMiner m{};
     std::string prefix = "test_file_store/";
 
     void SetUp() override {
@@ -27,7 +28,7 @@ public:
 TEST_F(TestFileStorage, basic_read_write) {
     // data preparation
     auto blk = fac.CreateBlock();
-    blk.Solve();
+    m.Solve(blk);
     Vertex vtx{blk};
     uint32_t blksize = blk.GetOptimalEncodingSize(), vtxsize = vtx.GetOptimalStorageSize();
     FilePos fpos{0, 0, 0};
@@ -89,7 +90,7 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
 
         // Construct milestone
         auto ms      = fac.CreateVertexPtr(1, 1, true);
-        auto prev_ms = levelsets.empty() ? GENESIS_VERTEX : *levelsets.back()[0];
+        auto prev_ms = levelsets.empty() ? *GENESIS_VERTEX : *levelsets.back()[0];
         fac.CreateMilestonePtr(prev_ms.snapshot, ms);
         ms->isMilestone = true;
         ms->height      = i;

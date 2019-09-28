@@ -5,7 +5,7 @@
 #ifndef EPIC_PONG_H
 #define EPIC_PONG_H
 
-#include "serialize.h"
+#include "net_message.h"
 
 class Pong : public NetMessage {
 public:

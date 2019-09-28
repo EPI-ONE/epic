@@ -19,7 +19,8 @@
 #include <atomic>
 #include <utility>
 
-constexpr uint64_t MIN_FEE = 1;
+constexpr uint64_t MIN_FEE            = 1;
+constexpr uint64_t RedemptionInterval = 6;
 
 std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content);
 
@@ -36,6 +37,7 @@ public:
     Wallet(std::string walletPath, uint32_t period)
         : threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
         Load();
+        EnableRedemptions();
     }
 
     virtual ~Wallet() = default;
@@ -55,6 +57,7 @@ public:
     CKeyID CreateNewKey(bool compressed);
     ConstTxPtr CreateFirstRegistration(const CKeyID&);
     ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
+    void CreateRedemption(const CKeyID&);
     ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
     ConstTxPtr CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
 
@@ -96,6 +99,14 @@ public:
     }
     bool GenerateMaster();
 
+    void EnableRedemptions() {
+        enableRedem_ = true;
+    }
+
+    void DisableRedemptions() {
+        enableRedem_ = false;
+    }
+
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
@@ -112,6 +123,7 @@ private:
     std::thread scheduleTask_;
 
     mutable std::shared_mutex lock_;
+    std::atomic_bool enableRedem_ = true;
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
     CKeyID lastRedemAddress_;
 
@@ -132,7 +144,7 @@ private:
 
     void SendPeriodicTasks(uint32_t, uint32_t);
 
-    bool CanRedeem();
+    bool CanRedeem(Coin coins = 1);
 
     std::pair<uint256, Coin> GetMinerInfo() const;
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
@@ -145,7 +157,7 @@ private:
     uint256 chaincode_;
     MasterInfo masterInfo_;
     Crypter crypter_;
-    
+
     std::atomic_bool rpcLoggedin_ = false;
 };
 

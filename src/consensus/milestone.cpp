@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "block_store.h"
 #include "dag_manager.h"
-#include "storage.h"
 #include "vertex.h"
 
 #include <algorithm>
@@ -85,6 +85,9 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         return;
     }
 
+    uint64_t oldMsDiff  = GetMsDifficulty();
+    uint64_t oldBlkDiff = GetBlockDifficulty();
+
     milestoneTarget = milestoneTarget / targetTimespan * timespan;
     milestoneTarget.Round(sizeof(uint32_t));
 
@@ -128,6 +131,10 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
             blockTarget = GetParams().maxTarget;
         }
     }
+
+    spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.\n"
+                 "   Stats: timespan = {}, nBlkCounter_ = {}, nTxnsCounter_ = {}",
+                 oldMsDiff, GetMsDifficulty(), oldBlkDiff, GetBlockDifficulty(), timespan, nBlkCounter_, nTxnsCounter_);
 
     lastUpdateTime = blockUpdateTime;
     nTxnsCounter_  = 0;
