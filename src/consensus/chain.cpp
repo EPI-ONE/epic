@@ -55,10 +55,10 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
             ledger_.Rollback((*it)->GetTXOC());
 
             // Rollback prevRedempHashMap_
-            for (const auto& h : (*it)->regChange.GetCreated()) {
+            for (const auto& h : (*it)->GetRegChange().GetCreated()) {
                 prevRedempHashMap_.erase(h.first);
             }
-            for (const auto& h : (*it)->regChange.GetRemoved()) {
+            for (const auto& h : (*it)->GetRegChange().GetRemoved()) {
                 prevRedempHashMap_.insert(h);
             }
         }
@@ -222,14 +222,17 @@ void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
 }
 
 VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
-    spdlog::debug("Verifying milestone block {} at height {}", pblock->GetHash().to_substr(),
-                  GetChainHead()->height + 1);
+    auto height = GetChainHead()->height + 1;
+
+    spdlog::debug("Verifying milestone block {} at height {}", pblock->GetHash().to_substr(), height);
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
 
     std::vector<VertexPtr> vtcs;
     std::vector<VertexWPtr> wvtcs;
+    RegChange regChange;
+    TXOC txoc;
     vtcs.reserve(blocksToValidate.size());
     wvtcs.reserve(blocksToValidate.size());
     verifying_.clear();
@@ -238,7 +241,6 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
         vtcs.emplace_back(std::make_shared<Vertex>(b));
         wvtcs.emplace_back(vtcs.back());
     }
-    auto state = CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs));
 
     // validate each block in order
     for (auto& vtx : vtcs) {
@@ -246,26 +248,24 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
             const auto& blkHash = vtx->cblock->GetHash();
             prevRedempHashMap_.insert_or_assign(blkHash, blkHash);
             vtx->isRedeemed = Vertex::NOT_YET_REDEEMED;
-            state->regChange.Create(blkHash, blkHash);
+            regChange.Create(blkHash, blkHash);
             vtx->minerChainHeight = 1;
             vtx->validity[0]      = Vertex::Validity::VALID;
             // Invalidate any txns other than the first registration in this block
             memset(&vtx->validity[1], Vertex::Validity::INVALID, vtx->validity.size() - 1);
         } else {
-            auto [validTXOC, invalidTXOC] = Validate(*vtx, state->regChange);
+            auto [validTXOC, invalidTXOC] = Validate(*vtx, regChange);
 
             // update ledger in chain for future reference
             if (!validTXOC.Empty()) {
                 ledger_.Update(validTXOC);
-                // take notes in chain state; will be used when flushing this state from memory to STORE
-                state->UpdateTXOC(std::move(validTXOC));
+                txoc.Merge(std::move(validTXOC));
             }
 
             if (!invalidTXOC.Empty()) {
                 // remove utxo of the block from pending to removed
                 ledger_.Invalidate(invalidTXOC);
-                // still take notes in chain state
-                state->UpdateTXOC(std::move(invalidTXOC));
+                txoc.Merge(std::move(invalidTXOC));
             }
 
             for (const auto& v : vtx->validity) {
@@ -274,9 +274,12 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
             vtx->UpdateReward(GetPrevReward(*vtx));
         }
-        vtx->height = state->height;
+        vtx->height = height;
         verifying_.insert({vtx->cblock->GetHash(), vtx});
     }
+
+    CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
+    vtcs.back()->UpdateMilestoneReward();
 
     recentHistory_.merge(std::move(verifying_));
     return vtcs.back();
@@ -380,7 +383,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     }
 
     if (!VerifyInOut(vin, prevReg->cblock->GetTransactions().at(0)->GetOutputs()[0].listingContent)) {
-        spdlog::info("Signature failed! [{}]", hashstr);
+        spdlog::info("Signature failed in redemption {} [{}]", vin.GetParentTx()->GetHash().to_substr(), hashstr);
         return {};
     }
 
@@ -437,7 +440,7 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
     auto itprevOut = prevOutListing.cbegin();
     for (const auto& input : tx.GetInputs()) {
         if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Signature failed in tx {}! [{}]", std::to_string(tx.GetHash()), std::to_string(blkHash));
+            spdlog::info("Signature failed in tx {}! [{}]", tx.GetHash().to_substr(), std::to_string(blkHash));
             return false;
         }
         itprevOut++;

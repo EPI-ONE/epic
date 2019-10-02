@@ -139,7 +139,6 @@ int main(int argc, char** argv) {
         auto client = CreateClient("0.0.0.0", rpc_port);
 
         switch (commandMap.at(command)) {
-
             case STATUS: {
                 auto r = client.Status();
                 if (r.has_value()) {

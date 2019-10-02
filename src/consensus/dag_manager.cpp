@@ -586,7 +586,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         const auto& ms = *vtxToStore.front().lock();
 
         STORE->StoreLevelSet(vtxToStore);
-        STORE->UpdatePrevRedemHashes(ms.snapshot->regChange);
+        STORE->UpdatePrevRedemHashes(ms.snapshot->GetRegChange());
 
         std::swap(vtxToStore.front(), vtxToStore.back());
         for (auto& vtx : vtxToStore) {

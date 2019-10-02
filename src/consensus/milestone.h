@@ -19,15 +19,14 @@ public:
     uint32_t lastUpdateTime = 0;
     bool stored             = false;
 
-    // Incremental change of the last registration block on each peer chain,
-    // whose elements are pairs consisting of:
-    //   <peer chain head, hash of the last registration block on this peer chain>
-    RegChange regChange;
-
     // constructor of a chain state of genesis.
     Milestone() = default;
     // constructor of a chain state with all data fields
-    Milestone(const std::shared_ptr<Milestone>&, const ConstBlockPtr&, std::vector<std::weak_ptr<Vertex>>&&);
+    Milestone(const std::shared_ptr<Milestone>&,
+              const ConstBlockPtr&,
+              std::vector<std::weak_ptr<Vertex>>&&,
+              RegChange&&,
+              TXOC&&);
     // constructor of a chain state by vstream
     Milestone(VStream&);
     // copy constructor
@@ -85,7 +84,9 @@ public:
         return txoc_;
     }
 
-    void UpdateTXOC(TXOC&&);
+    const RegChange& GetRegChange() const {
+        return regChange_;
+    }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -128,12 +129,21 @@ private:
     // TXOC: changes on transaction outputs from previous chain state
     TXOC txoc_;
 
+    // Incremental change of the last registration block on each peer chain,
+    // whose elements are pairs consisting of:
+    //   <peer chain head, hash of the last registration block on this peer chain>
+    RegChange regChange_;
+
     void UpdateDifficulty(uint32_t blockUpdateTime);
 };
 
 typedef std::shared_ptr<Milestone> MilestonePtr;
 
-MilestonePtr CreateNextMilestone(MilestonePtr previous, Vertex& vertex, std::vector<std::weak_ptr<Vertex>>&& lvs);
+MilestonePtr CreateNextMilestone(MilestonePtr previous,
+                                 Vertex& vertex,
+                                 std::vector<std::weak_ptr<Vertex>>&& lvs,
+                                 RegChange&& = RegChange{},
+                                 TXOC&&      = TXOC{});
 
 namespace std {
 string to_string(const Milestone&);

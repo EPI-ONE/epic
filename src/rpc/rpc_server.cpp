@@ -148,7 +148,7 @@ grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
         }
         auto tx = WALLET->CreateTxAndSend(outputs, request->fee());
         if (!tx) {
-            reply->set_txinfo("failed to create tx, please check if you have enough balance");
+            reply->set_txinfo("Failed to create tx. Please check if you have enough balance.");
         } else {
             reply->set_txinfo(std::to_string(*tx));
         }

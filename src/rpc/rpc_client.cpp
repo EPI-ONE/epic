@@ -226,10 +226,11 @@ RPCClient::option_string RPCClient::SetPassphrase(const std::string& passphrase)
         return {};
     }
 
-    return response.responseinfo(); 
+    return response.responseinfo();
 }
 
-RPCClient::option_string RPCClient::ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase) {
+RPCClient::option_string RPCClient::ChangePassphrase(const std::string& oldPassphrase,
+                                                     const std::string& newPassphrase) {
     ChangePassphraseRequest request;
     ChangePassphraseResponse response;
     grpc::ClientContext context;
@@ -251,7 +252,7 @@ RPCClient::option_string RPCClient::Login(const std::string& passphrase) {
     grpc::ClientContext context;
 
     request.set_passphrase(passphrase);
-   auto status = commander_stub_->Login(&context, request, &response);
+    auto status = commander_stub_->Login(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};

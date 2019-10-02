@@ -103,7 +103,7 @@ void Mnemonics::BitsToWords() {
     SecureString binaryStr;
     binaryStr.reserve(LENGTH * WORD_SIZE);
 
-    char singleByte[8];
+    char singleByte[9];
     memset(singleByte, 0, sizeof(singleByte));
 
     // convert each byte to binary in binary str

@@ -55,12 +55,14 @@ void Vertex::UpdateReward(const Coin& prevReward) {
 
         cumulativeReward += fee;
     }
+}
 
-    // update reward of miletone
-    if (isMilestone) {
-        cumulativeReward +=
-            GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
+void Vertex::UpdateMilestoneReward() {
+    if (!isMilestone) {
+        return;
     }
+
+    cumulativeReward += GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
 }
 
 size_t Vertex::GetOptimalStorageSize() {

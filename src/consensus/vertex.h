@@ -58,6 +58,7 @@ public:
     void LinkMilestone(const std::shared_ptr<Milestone>&);
     size_t GetOptimalStorageSize();
     void UpdateReward(const Coin&);
+    void UpdateMilestoneReward();
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
