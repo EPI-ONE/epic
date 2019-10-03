@@ -268,6 +268,10 @@ add_executable(mineGenesis src/tools/mineGenesis.cpp ${TEST_METHODS_SRCS})
 target_link_libraries(mineGenesis epiccore)
 add_dependencies(mineGenesis epiccore)
 
+add_executable(updateDiff src/tools/updateDiff.cpp)
+target_link_libraries(updateDiff epiccore)
+add_dependencies(updateDiff epiccore)
+
 # coverage
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)

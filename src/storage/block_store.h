@@ -108,6 +108,10 @@ public:
     void Wait();
     void Stop();
 
+    std::string GetDBPath() {
+        return dbStore_.GetDBPath();
+    }
+
 private:
     ThreadPool obcThread_;
     std::atomic<bool> obcEnabled_;

@@ -181,7 +181,6 @@ private:
     void FlushToSTORE(MilestonePtr); // flush the oldest chain states
 
     void EnableOBC();
-
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);

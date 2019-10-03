@@ -187,3 +187,7 @@ void SelectParams(ParamsType type, bool withGenesis) {
         GENESIS        = GENESIS_VERTEX->cblock;
     }
 }
+
+void SetParams(const Params& p) {
+    pparams = std::make_unique<Params>(p);
+}

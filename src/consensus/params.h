@@ -96,5 +96,6 @@ protected:
 // instance of the parameters for usage throughout the project
 const Params& GetParams();
 void SelectParams(ParamsType type, bool withGenesis = true);
+void SetParams(const Params&);
 
 #endif // EPIC_PARAMS_H

@@ -120,7 +120,7 @@ int Init(int argc, char* argv[]) {
     file::SetDataDirPrefix(CONFIG->GetRoot());
 
     /*
-     * Load caterpillar, dag and memory pool
+     * Load block store, dag and memory pool
      */
     if (CONFIG->IsStartWithNewDB()) {
         // delete old block data
@@ -133,7 +133,7 @@ int Init(int argc, char* argv[]) {
     STORE = std::make_unique<BlockStore>(CONFIG->GetDBPath());
 
     if (!STORE->DBExists(GENESIS->GetHash())) {
-        // put genesis block into cat
+        // put genesis block into storage
         std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
     }

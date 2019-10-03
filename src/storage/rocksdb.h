@@ -16,6 +16,10 @@ public:
 
     virtual ~RocksDB();
 
+    std::string GetDBPath() const {
+        return db_->GetName();
+    }
+
 protected:
     std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> handleMap_;
     rocksdb::DB* db_;
