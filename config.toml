@@ -5,7 +5,7 @@ root = "data/"
 
 [logs]
 level = "info"
-use_file_logger = true
+use_file_logger = false
 path = "logs/"
 filename = "Debug.log"
 
