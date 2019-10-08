@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "cxxopts.h"
 #include "mempool.h"
 #include "miner.h"
 #include "params.h"
@@ -9,19 +10,52 @@
 
 #include <cstdlib>
 
+int ParseArg(int argc, char** argv, int& nPeriods, int& startLen, int& endLen) {
+    cxxopts::Options options("updateDiff", "epic tools");
+    options.positional_help("nPeriods startLen endLen").show_positional_help();
+
+    // clang-format off
+    options.add_options("Arguments")
+        ("nPeriods", "number of level sets to generate for each cycle length",
+                                     cxxopts::value<int>(nPeriods)->default_value("10"))
+        ("startLen", "the start of cycle length range", cxxopts::value<int>(startLen)->default_value("4"))
+        ("endLen", "the end of cycle length range", cxxopts::value<int>(endLen)->default_value("42"));
+    // clang-format on
+
+    options.add_options()("h,help", "print this message", cxxopts::value<bool>());
+
+    options.parse_positional({"nPeriods", "startLen", "endLen"});
+    try {
+        auto parsed_options = options.parse(argc, argv);
+        if (parsed_options["help"].as<bool>()) {
+            std::cout << options.help({"", "Arguments"}) << std::endl;
+            return -1;
+        }
+    } catch (const cxxopts::OptionException& e) {
+        std::cerr << "error parsing options: " << e.what() << std::endl;
+        std::cout << options.help() << std::endl;
+        return -1;
+    }
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
-    int nPeriods = 10;
-    int startLen = 4;
-    int endLen   = 42;
+    int nPeriods;
+    int startLen;
+    int endLen;
+    auto status = ParseArg(argc, argv, nPeriods, startLen, endLen);
 
-    if (argc > 1) {
-        nPeriods = std::max(atoi(argv[1]), 2);
+    if (status) {
+        return -1;
     }
 
-    if (argc == 4) {
-        startLen = std::max(atoi(argv[2]), 4);
-        endLen   = std::max(atoi(argv[3]), 5);
-    }
+    nPeriods = std::max(nPeriods, 2);
+    startLen = std::max(startLen, 4);
+    endLen   = std::max(endLen, 5);
+
+    std::cout << "Using the arguments: nPeriods=" + std::to_string(nPeriods) + " startLen=" + std::to_string(startLen) +
+                     " endLen=" + std::to_string(endLen) + "\n"
+              << std::endl;
 
     std::string dataRoot = "diffStats/";
     std::string statsDir = dataRoot + "stats/";
