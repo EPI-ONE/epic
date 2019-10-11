@@ -73,4 +73,6 @@ int main(int argc, char** argv) {
 
         STORE.reset();
     }
+
+    return 0;
 }

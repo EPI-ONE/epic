@@ -4,7 +4,6 @@
 
 #include "block.h"
 #include "merkle.h"
-#include "trimmer.h"
 
 #include <unordered_set>
 
@@ -69,11 +68,7 @@ Block::Block(const Block& b)
 
 Block::Block(Block&& b) noexcept
     : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(std::move(b.proof_)),
-      optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
-    for (auto& ptx : b.transactions_) {
-        transactions_.emplace_back(std::make_shared<Transaction>(std::move(*ptx)));
-    }
-
+      transactions_(std::move(b.transactions_)), optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     b.SetNull();
     SetParents();
 }
