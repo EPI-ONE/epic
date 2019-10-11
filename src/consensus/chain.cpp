@@ -79,12 +79,12 @@ void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), std::move(pblock));
 }
 
-void Chain::AddPendingUTXOs(const std::vector<UTXOPtr>& utxos) {
+void Chain::AddPendingUTXOs(std::vector<UTXOPtr>&& utxos) {
     if (utxos.empty()) {
         return;
     }
-    for (const auto& u : utxos) {
-        ledger_.AddToPending(u);
+    for (auto& u : utxos) {
+        ledger_.AddToPending(std::move(u));
     }
 }
 
@@ -373,7 +373,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
 
     const auto& redem = vertex.cblock->GetTransactions().at(0);
     const auto& vin   = redem->GetInputs().at(0);
-    const auto& vout  = redem->GetOutputs().at(0); // only first tx output will be regarded as valid
+    const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
     auto prevBlock = GetVertex(vertex.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter

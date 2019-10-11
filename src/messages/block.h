@@ -180,7 +180,7 @@ public:
     /*
      * Sets parents for elements contained in the block all at once
      */
-    void SetParents();
+    void SetParents() const;
 
     ADD_SERIALIZE_METHODS
     ADD_NET_SERIALIZE_METHODS

@@ -99,7 +99,7 @@ public:
     }
 
 private:
-    mutable const Transaction* parentTx_;
+    mutable const Transaction* parentTx_ = nullptr;
 };
 
 class TxOutput {
@@ -129,7 +129,7 @@ public:
     }
 
 private:
-    mutable const Transaction* parentTx_{nullptr};
+    mutable const Transaction* parentTx_ = nullptr;
 };
 
 class Transaction : public NetMessage {
@@ -213,7 +213,7 @@ private:
     std::vector<TxOutput> outputs_;
 
     uint256 hash_;
-    mutable const Block* parentBlock_;
+    mutable const Block* parentBlock_ = nullptr;
 };
 
 typedef std::shared_ptr<const Transaction> ConstTxPtr;

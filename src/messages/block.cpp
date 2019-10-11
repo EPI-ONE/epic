@@ -58,14 +58,22 @@ Block::Block() : NetMessage(BLOCK) {
 }
 
 Block::Block(const Block& b)
-    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(b.proof_), transactions_(b.transactions_),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(b.proof_),
       optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
+    for (const auto& ptx : b.transactions_) {
+        transactions_.emplace_back(std::make_shared<Transaction>(*ptx));
+    }
+
     SetParents();
 };
 
 Block::Block(Block&& b) noexcept
     : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(std::move(b.proof_)),
-      transactions_(std::move(b.transactions_)), optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
+      optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
+    for (auto& ptx : b.transactions_) {
+        transactions_.emplace_back(std::make_shared<Transaction>(std::move(*ptx)));
+    }
+
     b.SetNull();
     SetParents();
 }
@@ -451,7 +459,7 @@ bool Block::CheckPOW() const {
     return true;
 }
 
-void Block::SetParents() {
+void Block::SetParents() const {
     for (const auto& tx : transactions_) {
         tx->SetParent(this);
         tx->SetParents();

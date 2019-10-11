@@ -203,7 +203,8 @@ void Miner::Run() {
                 b.SetMerkle();
             } else {
                 prevHash = selfChainHead_->GetHash();
-                auto tx  = MEMPOOL->GetRedemptionTx(false);
+
+                auto tx = MEMPOOL->GetRedemptionTx(false);
                 if (tx && !tx->IsFirstRegistration()) {
                     b.AddTransaction(std::move(tx));
                 }
@@ -255,9 +256,11 @@ void Miner::Run() {
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);
+
             if (PEERMAN) {
                 PEERMAN->RelayBlock(bPtr, nullptr);
             }
+
             distanceCal_.Add(bPtr, true);
             selfChainHead_ = bPtr;
             selfChainHeads_.push(bPtr->GetHash());
@@ -274,6 +277,7 @@ void Miner::Run() {
 
                 std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
             }
+
             counter++;
         }
     });

@@ -66,11 +66,9 @@ const Transaction* TxOutput::GetParentTx() const {
  * transaction class START
  */
 
-Transaction::Transaction(const Transaction& tx) {
+Transaction::Transaction(const Transaction& tx)
+    : inputs_(tx.inputs_), outputs_(tx.outputs_), parentBlock_(tx.parentBlock_) {
     hash_.SetNull();
-    inputs_      = tx.inputs_;
-    outputs_     = tx.outputs_;
-    parentBlock_ = tx.parentBlock_;
     FinalizeHash();
     SetParents();
 }

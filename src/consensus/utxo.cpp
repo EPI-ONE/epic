@@ -59,7 +59,7 @@ TXOC CreateTXOCFromInvalid(const Transaction& invalid, uint32_t txIndex) {
 // ChainLedger
 //
 void ChainLedger::AddToPending(UTXOPtr putxo) {
-    pending_.insert({putxo->GetKey(), putxo});
+    pending_.insert({putxo->GetKey(), std::move(putxo)});
 }
 
 UTXOPtr ChainLedger::GetFromPending(const uint256& xorkey) {
