@@ -179,11 +179,30 @@ std::unique_ptr<UTXO> DBStore::GetUTXO(const uint256& key) const {
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
         valueSlice.Reset();
-
         return std::make_unique<UTXO>(value);
     } catch (const std::exception&) {
         return nullptr;
     }
+}
+
+std::unordered_map<uint256, std::unique_ptr<UTXO>> DBStore::GetAllUTXO() const {
+    std::unordered_map<uint256, std::unique_ptr<UTXO>> results;
+
+    Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at("utxo"));
+    uint256 utxo_key;
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+        try {
+            VStream key{iter->key().data(), iter->key().data() + iter->key().size()};
+            key >> utxo_key;
+            VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
+            results.insert_or_assign(utxo_key, std::make_unique<UTXO>(value));
+        } catch (std::exception& e) {
+            spdlog::error("Exception happened when getting all utxo, {}", e.what());
+            break;
+        }
+    }
+    assert(iter->status().ok());
+    return results;
 }
 
 bool DBStore::WriteUTXO(const uint256& key, const UTXOPtr& utxo) const {
@@ -206,11 +225,41 @@ bool DBStore::DeleteVtxPos(const uint256& h) const {
     return db_->Delete(WriteOptions(), db_->DefaultColumnFamily(), VStream(h).str()).ok();
 }
 
+bool DBStore::DeleteBatchVtxPos(uint64_t heightThreshold) {
+    std::vector<uint256> delBlocks;
+    Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at("default"));
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+        uint64_t height = 0;
+        try {
+            VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
+            value >> VARINT(height);
+            if (height >= heightThreshold) {
+                if (!db_->Delete(WriteOptions(), db_->DefaultColumnFamily(), iter->key()).ok()) {
+                    spdlog::error("Failed to delete block, DB is not consistent");
+                    return false;
+                }
+            }
+        } catch (std::exception& e) {
+            spdlog::error("Exception happened when deleting batch blocks, {}", e.what());
+            return false;
+        }
+    }
+    assert(iter->status().ok());
+    delete iter;
+    return true;
+}
+
 bool DBStore::DeleteMsPos(const uint256& h) const {
-    bool status = db_->Delete(WriteOptions(), handleMap_.at("ms"), std::to_string(GetHeight(h))).ok();
+    bool status = DeleteMsPos(GetHeight(h));
     if (status && IsMilestone(h)) {
         return DeleteVtxPos(h);
     }
+    return status;
+}
+
+bool DBStore::DeleteMsPos(const uint64_t height) const {
+    MAKE_KEY_SLICE(height);
+    bool status = db_->Delete(WriteOptions(), handleMap_.at("ms"), keySlice).ok();
     return status;
 }
 
@@ -311,6 +360,27 @@ optional<tuple<uint64_t, uint32_t, uint32_t>> DBStore::GetVertexOffsets(const ui
     }
 }
 
+std::unordered_map<uint256, uint256> DBStore::GetAllReg() const {
+    std::unordered_map<uint256, uint256> results;
+
+    Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at("reg"));
+    uint256 reg_key, reg_value;
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+        try {
+            VStream key{iter->key().data(), iter->key().data() + iter->key().size()};
+            key >> reg_key;
+            VStream value{iter->value().data(), iter->value().data() + iter->value().size()};
+            value >> reg_value;
+            results.insert_or_assign(reg_key, reg_value);
+        } catch (std::exception& e) {
+            spdlog::error("Exception happened when getting all utxo, {}", e.what());
+            break;
+        }
+    }
+    assert(iter->status().ok());
+    return results;
+}
+
 bool DBStore::WriteRegSet(const std::unordered_set<std::pair<uint256, uint256>>& s) const {
     class WriteBatch wb;
     for (const auto& e : s) {
@@ -348,3 +418,7 @@ template bool DBStore::WritePosImpl(
 
 template bool DBStore::WritePosImpl(
     const string& column, const uint64_t&, const uint256&, const FilePos&, const FilePos&) const;
+
+bool DBStore::ClearColumn(std::string columnName) {
+    return DeleteColumn(columnName) && CreateColumn(columnName);
+}

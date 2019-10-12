@@ -42,7 +42,6 @@ RocksDB::RocksDB(std::string dbPath, std::vector<std::string> columnNames) {
     if (!DB::Open(dbOptions, dbpath_, descriptors, &handles, &db_).ok()) {
         throw std::string("DB initialization failed");
     }
-
     // Store handles into a map
     InitHandleMap(handles, columnNames);
     spdlog::trace("Rocksdb is successfully initialized");
@@ -89,6 +88,42 @@ std::string RocksDB::Get(const std::string& column, const std::string& key) cons
 
 bool RocksDB::Delete(const std::string& column, std::string&& key) const {
     return db_->Delete(WriteOptions(), handleMap_.at(column), key).ok();
+}
+
+bool RocksDB::DeleteColumn(const std::string& column) {
+    auto it = handleMap_.find(column);
+    if (it == handleMap_.end()) {
+        spdlog::error("Invalid column name {}", column);
+        return false;
+    }
+    db_->DropColumnFamily(it->second);
+    auto status = db_->DestroyColumnFamilyHandle(it->second);
+    handleMap_.erase(it);
+    if (status.ok()) {
+        spdlog::info("Deleted the column {} from DB", column);
+        return true;
+    } else {
+        spdlog::error("Failed to delete the column {}", column);
+        return false;
+    }
+}
+
+bool RocksDB::CreateColumn(const std::string& column) {
+    if (handleMap_.find(column) != handleMap_.end()) {
+        spdlog::error("Column {} exists in the DB now", column);
+        return false;
+    }
+    ColumnFamilyHandle* handle;
+    ColumnFamilyOptions options;
+    auto status = db_->CreateColumnFamily(options, column, &handle);
+    if (status.ok()) {
+        spdlog::info("Created column {}", column);
+        handleMap_.insert_or_assign(column, handle);
+        return true;
+    } else {
+        spdlog::error("Failed to create column {}", column);
+        return false;
+    }
 }
 
 void RocksDB::PrintColumns() const {

@@ -193,6 +193,7 @@ if (GMP_FOUND)
 endif ()
 if (NOT CMAKE_HOST_APPLE)
     target_link_libraries(epiccore atomic)
+    target_link_libraries(epiccore stdc++fs)
 endif ()
 
 

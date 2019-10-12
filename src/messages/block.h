@@ -212,7 +212,6 @@ public:
         if (GetHash().IsNull() || another.GetHash().IsNull()) {
             return false;
         }
-
         return hash_ == another.hash_;
     }
 

@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include "block_store.h"
+#include "crc32.h"
 #include "file_utils.h"
 #include "test_env.h"
-
 #include <string>
 
 class TestFileStorage : public testing::Test {
@@ -38,24 +38,24 @@ TEST_F(TestFileStorage, basic_read_write) {
 
     // writing
     FileWriter writer{file::FileType::BLK, fpos};
-    ASSERT_EQ(writer.GetOffset(), 0);
+    ASSERT_EQ(writer.GetOffsetP(), 0);
     writer << blk;
-    ASSERT_EQ(writer.GetOffset(), blksize);
+    ASSERT_EQ(writer.GetOffsetP(), blksize);
     writer << vtx;
-    ASSERT_EQ(writer.GetOffset(), blksize + vtxsize);
+    ASSERT_EQ(writer.GetOffsetP(), blksize + vtxsize);
     writer.Close();
 
     // reading
     FileReader reader{file::FileType::BLK, fpos};
     Block blk1{};
-    ASSERT_EQ(reader.GetOffset(), 0);
+    ASSERT_EQ(reader.GetOffsetG(), 0);
     reader >> blk1;
-    ASSERT_EQ(reader.GetOffset(), blksize);
+    ASSERT_EQ(reader.GetOffsetG(), blksize);
     ASSERT_EQ(blk, blk1);
 
     Vertex vtx1{};
     reader >> vtx1;
-    ASSERT_EQ(reader.GetOffset(), blksize + vtxsize);
+    ASSERT_EQ(reader.GetOffsetG(), blksize + vtxsize);
     ASSERT_EQ(vtx, vtx1);
     reader.Close();
 
@@ -69,7 +69,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     Vertex vtx2{};
     FileReader reader2{file::FileType::BLK, fpos1};
     reader2 >> vtx2;
-    ASSERT_EQ(reader2.GetOffset(), blksize + vtxsize);
+    ASSERT_EQ(reader2.GetOffsetG(), blksize + vtxsize);
     ASSERT_EQ(vtx, vtx2);
     reader2.Close();
 }
@@ -173,6 +173,70 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
         ASSERT_EQ(*lvs[i], *recovered_vtcs_blks[i]);
         ASSERT_EQ(*lvs[i], *recovered_vtcs[i]);
     }
+}
+
+TEST_F(TestFileStorage, test_checksum) {
+    EpicTestEnvironment::SetUpDAG(prefix);
+
+    file::FileType type = file::BLK;
+    FilePos pos(100, 100, 0);
+
+    FileWriter writer(type, pos);
+    uint32_t init_checksum = 0;
+    std::string content    = "test_content";
+    writer << init_checksum;
+    writer << content;
+    writer.Flush();
+    writer.Close();
+
+    file::UpdateChecksum(type, pos);
+    EXPECT_TRUE(file::ValidateChecksum(type, pos));
+
+    pos.nOffset = 6;
+    FileModifier modifier(type, pos);
+    modifier << "error msg";
+    modifier.Flush();
+    modifier.Close();
+
+    pos.nOffset = 0;
+    EXPECT_FALSE(file::ValidateChecksum(type, pos));
+}
+
+TEST_F(TestFileStorage, test_rebuild_consensus) {
+    EpicTestEnvironment::SetUpDAG(prefix, true, true);
+    WALLET->GenerateMaster();
+    WALLET->SetPassphrase("");
+    WALLET->Start();
+    WALLET->CreateRandomTx(10);
+    MINER->Run();
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    WALLET->Stop();
+    MINER->Stop();
+    spdlog::info(DAG->GetBestChain().GetChainHead()->height);
+    auto origin_chainwork = STORE->GetBestChainWork();
+    ASSERT_TRUE(STORE->CheckFileSanity(false));
+
+    auto originUTXOs   = STORE->GetAllUTXO();
+    auto originRegs    = STORE->GetAllReg();
+    auto currentHeight = STORE->GetHeadHeight();
+    STORE->RebuildConsensus(currentHeight + 1);
+    auto rebuildUTXOs = STORE->GetAllUTXO();
+    auto rebuildRegs  = STORE->GetAllReg();
+
+    ASSERT_EQ(originUTXOs.size(), rebuildUTXOs.size());
+    for (auto& utxo : originUTXOs) {
+        auto it = rebuildUTXOs.find(utxo.first);
+        ASSERT_TRUE(it != rebuildUTXOs.end());
+        EXPECT_EQ(*(utxo.second), *(it->second));
+    }
+
+    ASSERT_EQ(originRegs.size(), rebuildRegs.size());
+    for (auto& reg : originRegs) {
+        auto it = rebuildRegs.find(reg.first);
+        ASSERT_TRUE(it != rebuildRegs.end());
+        EXPECT_EQ(reg.second, it->second);
+    }
+    ASSERT_EQ(origin_chainwork, STORE->GetBestChainWork());
 }
 
 TEST_F(TestFileStorage, test_modifier) {
