@@ -18,7 +18,11 @@
 #include <vector>
 
 typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
-
+struct FileCheckInfo {
+    bool valid;
+    uint32_t epoch;
+    uint32_t name;
+};
 class BlockStore {
 public:
     BlockStore() = delete;
@@ -45,9 +49,11 @@ public:
     bool SaveMinerChainHeads(const CircularQueue<uint256>&) const;
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
+    std::unordered_map<uint256, std::unique_ptr<UTXO>> GetAllUTXO() const;
     bool AddUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;
 
+    std::unordered_map<uint256, uint256> GetAllReg() const;
     uint256 GetPrevRedemHash(const uint256&) const;
     bool UpdatePrevRedemHashes(const RegChange&) const;
     bool RollBackPrevRedemHashes(const RegChange&) const;
@@ -108,6 +114,11 @@ public:
     void Wait();
     void Stop();
 
+    bool CheckFileSanity(bool prune);
+
+
+    bool RebuildConsensus(uint64_t height);
+
 private:
     ThreadPool obcThread_;
     std::atomic<bool> obcEnabled_;
@@ -139,12 +150,31 @@ private:
     uint16_t loadCurrentVtxName();
     uint32_t loadCurrentBlkSize();
     uint32_t loadCurrentVtxSize();
+    void SetCurrentFilePos(file::FileType type, FilePos pos);
 
     void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
     StoredVertex ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
     FilePos& NextFile(FilePos&) const;
+
+    FileCheckInfo CheckOneType(file::FileType type);
+
+    bool CheckOneFile(file::FileType type, uint32_t epoch, uint32_t name);
+
+    size_t GetHeightFromInvalidFile(FilePos pos, file::FileType type);
+
+    size_t GetlatestHeightFromFile(FilePos search_pos, file::FileType type);
+
+    bool FixDBRecords(uint64_t height);
+
+    bool DeleteDBBlks(uint64_t height);
+
+    bool DeleteDBMs(uint64_t height);
+
+    bool ConstructUTXOAndRegFromLvs(std::vector<VertexPtr>& levelset);
+
+    bool ConstructUTXOAndRegFromVtx(const VertexPtr& vtx);
 };
 
 extern std::unique_ptr<BlockStore> STORE;

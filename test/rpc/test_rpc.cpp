@@ -146,6 +146,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
         mss.clear();
         prev = ms->snapshot;
     }
+    STORE->SaveHeadHeight(size - 1);
 
     usleep(50000);
     DAG->Stop();

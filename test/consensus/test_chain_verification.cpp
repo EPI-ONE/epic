@@ -189,6 +189,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 
             auto lvs = ms->snapshot->GetLevelSet();
             STORE->StoreLevelSet(lvs);
+            STORE->SaveHeadHeight(ms->height);
             std::vector<uint256> lvs_hashes;
             std::transform(lvs.begin(), lvs.end(), std::back_inserter(lvs_hashes),
                            [](const VertexWPtr& v) -> uint256 { return v.lock()->cblock->GetHash(); });

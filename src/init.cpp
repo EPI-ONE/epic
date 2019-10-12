@@ -148,7 +148,10 @@ int Init(int argc, char* argv[]) {
         std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
     }
-
+    if (!STORE->CheckFileSanity(CONFIG->IsPrune())) {
+        spdlog::error("Failed to pass the file sanity check, quit");
+        return STORAGE_INIT_FAILURE;
+    }
     DAG = std::make_unique<DAGManager>();
     if (!DAG->Init()) {
         return DAG_INIT_FAILURE;
@@ -198,6 +201,7 @@ void SetupCommandline(cxxopts::Options& options) {
     ("D,daemon", "make the program running in a daemon process", cxxopts::value<bool>())
     ("N,newdb", "start with the new db", cxxopts::value<bool>())
     ("S,seed", "start as a seed",cxxopts::value<bool>())
+    ("P,prune","delete invalid files",cxxopts::value<bool>())
     ("version", "version information", cxxopts::value<bool>())
     ;
     // clang-format on
@@ -221,7 +225,6 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     if (result.count("bindip") > 0) {
         CONFIG->SetBindAddress(result["bindip"].as<std::string>());
     }
-
     if (result.count("bindport") > 0) {
         CONFIG->SetBindPort(result["bindport"].as<uint16_t>());
     }
@@ -236,6 +239,9 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     }
     if (result.count("seed") > 0) {
         CONFIG->SetAmISeed(true);
+    }
+    if (result.count("prune") > 0) {
+        CONFIG->SetPrune(true);
     }
     CONFIG->SetDisableRPC(result["disable-rpc"].as<bool>());
 }

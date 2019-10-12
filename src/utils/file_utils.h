@@ -7,10 +7,12 @@
 
 #include "stream.h"
 
+#include <unordered_set>
 #include <array>
 #include <cerrno>
 #include <climits>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -37,12 +39,24 @@ std::string to_string(FileModifier&);
 
 namespace file {
 enum FileType : uint8_t { BLK = 0, VTX = 1 };
-static std::string prefix = "data/";
+const uint32_t checksum_size     = sizeof(uint32_t);
+static std::string prefix        = "data/";
+const std::string epoch_regex    = "^E\\d{6}$";
+const std::string blk_name_regex = "^BLK\\d{6}.dat$";
+const std::string vtx_name_regex = "^VTX\\d{6}.dat$";
 void SetDataDirPrefix(std::string strprefix);
 static const std::array<std::string, 2> typestr{"BLK", "VTX"};
+
 std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
-std::string GetFilePath(FileType type, const FilePos&);
+std::string GetFilePath(FileType type, const FilePos pos);
+void UpdateChecksum(file::FileType type, FilePos& pos);
+bool ValidateChecksum(file::FileType type, FilePos pos);
+bool DeleteInvalidFiles(FilePos& pos, file::FileType type);
+
+uint64_t GetFileSize(file::FileType type, FilePos pos);
+std::unordered_set<uint32_t> GetAllEpoch(FileType type);
+std::unordered_set<uint32_t> GetAllName(uint32_t epoch, FileType type);
 } // namespace file
 
 struct FilePos {
@@ -90,7 +104,21 @@ struct FilePos {
 
 class FileBase {
 public:
-    FileBase()                = default;
+    //    FileBase() = default;
+    FileBase(const std::string& dir, const std::string& filename, std::ios_base::openmode mode, bool create) {
+        if (!CheckDirExist(dir)) {
+            if (create) {
+                MkdirRecursive(dir);
+            } else {
+                throw std::ios_base::failure("Can't open file because path \"./" + dir + "\" doesn't exits");
+            }
+        }
+        filename_ = dir + '/' + filename;
+        fbuf_.open(filename_, mode);
+        if (!fbuf_.is_open()) {
+            throw std::ios_base::failure("file can't be opened");
+        }
+    }
     FileBase(const FileBase&) = delete;
     FileBase& operator=(const FileBase&) = delete;
     virtual ~FileBase()                  = default;
@@ -99,9 +127,6 @@ public:
         return filename_;
     }
 
-    virtual uint32_t GetOffset() {
-        return fbuf_.tellp();
-    }
 
     void Close() {
         fbuf_.close();
@@ -110,24 +135,9 @@ public:
 protected:
     std::string filename_;
     std::fstream fbuf_;
-};
-
-class FileReader : public FileBase {
-public:
-    // check if dir and file exist; if not, it can't read
-    FileReader(file::FileType type, const FilePos& pos) {
-        std::string dir = file::GetEpochPath(type, pos.nEpoch);
-        if (!CheckDirExist(dir)) {
-            throw std::ios_base::failure("Can't open file because path \"./" + dir + "\" doesn't exits");
-        }
-        filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        fbuf_.open(filename_, std::ifstream::in | std::ifstream::binary);
-        fbuf_.seekg(pos.nOffset, std::ios::beg);
-    }
-    FileReader() = delete;
 
     template <typename Stream>
-    FileReader& read(size_t size, Stream& s) {
+    FileBase& read(size_t size, Stream& s) {
         size_t nSize = s.size();
         s.resize(nSize + size);
         fbuf_.read(&s[nSize], size);
@@ -135,75 +145,97 @@ public:
     }
 
     template <typename T>
-    FileReader& operator>>(T&& obj) {
+    FileBase& operator>>(T&& obj) {
         ::Deserialize(fbuf_, obj);
         return *this;
     }
 
-    uint32_t GetOffset() override {
+    template <typename T>
+    FileBase& operator<<(const T& obj) {
+        ::Serialize(fbuf_, obj);
+        return *this;
+    }
+    uint32_t GetOffsetP() {
+        return fbuf_.tellp();
+    }
+
+    uint32_t GetOffsetG() {
         return fbuf_.tellg();
     }
 
+    void SetOffsetP(uint32_t offset, std::ios_base::seekdir seekdir) {
+        fbuf_.seekp(offset, seekdir);
+    }
+
     uint32_t Size() {
-        auto currentPos = GetOffset(); // record the current offset
-        fbuf_.seekg(0, std::ios::end); // seek to end of file
-        auto size = fbuf_.tellg();     // record offset as size
-        fbuf_.seekg(currentPos);       // restore offset
+        auto currentPos = GetOffsetG(); // record the current offset
+        fbuf_.seekg(0, std::ios::end);  // seek to end of file
+        auto size = fbuf_.tellg();      // record offset as size
+        fbuf_.seekg(currentPos);        // restore offset
         return size;
     }
+
+    void Flush() {
+        fbuf_.flush();
+    }
+};
+
+class FileReader : public FileBase {
+public:
+    // check if dir and file exist; if not, it can't read
+    FileReader(file::FileType type, const FilePos& pos)
+        : FileBase(file::GetEpochPath(type, pos.nEpoch),
+                   file::GetFileName(type, pos.nName),
+                   std::ifstream::in | std::ifstream::binary,
+                   false) {
+        fbuf_.seekg(pos.nOffset, std::ios::beg);
+    }
+
+
+    using FileBase::read;
+    using FileBase::operator>>;
+    using FileBase::GetOffsetG;
+    using FileBase::SetOffsetP;
+    using FileBase::Size;
 };
 
 class FileWriter : public FileBase {
 public:
     // check if dir exists. If not, create one
-    FileWriter(file::FileType type, const FilePos& pos) {
-        std::string dir = file::GetEpochPath(type, pos.nEpoch);
-        if (!CheckDirExist(dir)) {
-            MkdirRecursive(dir);
-        }
-        std::string filename_ = dir + "/" + file::GetFileName(type, pos.nName);
-        fbuf_.open(filename_, std::ios_base::out | std::ios_base::binary | std::ios_base::app);
-        if (!fbuf_.is_open()) {
-            throw std::string("file writer stream is not opened");
-        }
+    FileWriter(file::FileType type, const FilePos& pos)
+        : FileBase(file::GetEpochPath(type, pos.nEpoch),
+                   file::GetFileName(type, pos.nName),
+                   std::ios_base::out | std::ios_base::binary | std::ios_base::app,
+                   true) {
+        fbuf_.seekp(pos.nOffset, std::ios::beg);
     }
     FileWriter() = delete;
 
-    void Flush() {
-        fbuf_.flush();
-    }
-
-    template <typename T>
-    FileWriter& operator<<(const T& obj) {
-        ::Serialize(fbuf_, obj);
-        return *this;
-    }
+    using FileBase::Flush;
+    using FileBase::operator<<;
+    using FileBase::GetOffsetP;
+    using FileBase::SetOffsetP;
+    using FileBase::Size;
 };
 
 class FileModifier : public FileBase {
 public:
-    FileModifier(file::FileType type, const FilePos& pos) {
-        std::string filename_ = file::GetFilePath(type, pos);
-        if (!CheckFileExist(filename_)) {
-            throw std::string("target file does not exists");
-        }
-        fbuf_.open(filename_, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        if (!fbuf_.is_open()) {
-            throw std::string("file modifier stream is not opened");
-        }
+    FileModifier(file::FileType type, const FilePos& pos)
+        : FileBase(file::GetEpochPath(type, pos.nEpoch),
+                   file::GetFileName(type, pos.nName),
+                   std::ios_base::in | std::ios_base::out | std::ios_base::binary,
+                   false) {
         fbuf_.seekp(pos.nOffset, std::ios_base::beg);
     }
     FileModifier() = delete;
 
-    void Flush() {
-        fbuf_.flush();
-    }
-
-    template <typename T>
-    FileModifier& operator<<(const T& obj) {
-        ::Serialize(fbuf_, obj);
-        return *this;
-    }
+    using FileBase::read;
+    using FileBase::Size;
+    using FileBase::operator<<;
+    using FileBase::Flush;
+    using FileBase::GetOffsetG;
+    using FileBase::GetOffsetP;
+    using FileBase::SetOffsetP;
 };
 
 #endif // EPIC_FILE_UTILS_H

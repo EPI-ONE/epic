@@ -23,14 +23,18 @@ TEST_F(TestChains, BasicFunctions) {
     std::vector<ChainPtr> random_chains;
     for (int i = 0; i < testSize; ++i) {
         auto chain = std::make_unique<Chain>();
-        chain->AddNewState(*GENESIS_VERTEX);
+        VertexPtr randomBlock=fac.CreateVertexPtr(1,1,true,1);
+        fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomBlock);
+        chain->AddNewState(*randomBlock);
         chainworkOf(chain) = rand() % mcw;
         random_chains.push_back(std::move(chain));
     }
 
     // Replace a random element in random_chains with mcw
     auto best_chain = std::make_unique<Chain>();
-    best_chain->AddNewState(*GENESIS_VERTEX);
+    VertexPtr randomBlock=fac.CreateVertexPtr(1,1,true,1);
+    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomBlock);
+    best_chain->AddNewState(*randomBlock);
     chainworkOf(best_chain)          = mcw;
     random_chains[rand() % testSize] = std::unique_ptr<Chain>(std::move(best_chain));
 
@@ -47,7 +51,9 @@ TEST_F(TestChains, BasicFunctions) {
     // Replace the first chain by a better chain
     uint64_t new_mcw = mcw + 1;
     auto new_best    = std::make_unique<Chain>();
-    new_best->AddNewState(*GENESIS_VERTEX);
+    VertexPtr randomnewBlock=fac.CreateVertexPtr(1,1,true,1);
+    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomnewBlock);
+    new_best->AddNewState(*randomnewBlock);
     chainworkOf(new_best) = new_mcw;
     *q.begin()            = std::move(new_best);
     q.update_best(q.begin());

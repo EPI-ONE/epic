@@ -44,7 +44,7 @@ std::shared_ptr<Vertex> Params::CreateGenesis() const {
     arith_uint256 msTarget    = maxTarget;
     arith_uint256 blockTarget = maxTarget;
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
-    auto chainwork            = maxTarget / (arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget()) + 1);
+    auto chainwork            = maxTarget / arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget());
 
     static auto genesisState = std::make_shared<Milestone>(
         0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex});
@@ -72,7 +72,7 @@ MainNetParams::MainNetParams() {
     cycleLen             = 42;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = SORTITION_THRESHOLD;
-    deleteForkThreshold  = 5;
+    deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
@@ -106,7 +106,7 @@ TestNetSpadeParams::TestNetSpadeParams() {
     cycleLen             = 4;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = 100;
-    deleteForkThreshold  = 5;
+    deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {
@@ -137,7 +137,7 @@ TestNetDiamondParams::TestNetDiamondParams() {
     cycleLen             = 0;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = 100;
-    deleteForkThreshold  = 5;
+    deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
 
     keyPrefixes = {

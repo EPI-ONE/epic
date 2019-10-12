@@ -300,29 +300,9 @@ int WalletStore::KeysToFile(std::string filePath) {
 }
 
 void WalletStore::ClearOldData() {
-    auto vecStr  = std::array{kTx, kUnspentTXO, kPendingTXO};
-    auto vecDrop = std::vector{handleMap_.at(kTx), handleMap_.at(kUnspentTXO), handleMap_.at(kPendingTXO)};
-
-    // delete old columns
-    db_->DropColumnFamilies(vecDrop);
-    for (auto& handle : vecDrop) {
-        db_->DestroyColumnFamilyHandle(handle);
-    }
-
-    // Create column families
-    std::vector<ColumnFamilyDescriptor> descriptors;
-    for (const std::string& columnName : vecStr) {
-        ColumnFamilyOptions cOptions;
-        descriptors.emplace_back(ColumnFamilyDescriptor(columnName, cOptions));
-    }
-    std::vector<ColumnFamilyHandle*> vec;
-    db_->CreateColumnFamilies(descriptors, &vec);
-
-    auto name_it   = vecStr.cbegin();
-    auto handle_it = vec.cbegin();
-    while (name_it != vecStr.cend() && handle_it != vec.cend()) {
-        handleMap_.at(*name_it) = *handle_it;
-        name_it++;
-        handle_it++;
+    auto vecStr = std::array{kTx, kUnspentTXO, kPendingTXO};
+    for (auto& key : vecStr) {
+        DeleteColumn(key);
+        CreateColumn(key);
     }
 }

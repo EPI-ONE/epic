@@ -598,6 +598,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         for (const auto& utxoKey : utxoToRemove) {
             STORE->RemoveUTXO(utxoKey);
         }
+        STORE->SaveHeadHeight(ms.height);
 
         // notify the listener
         if (onLvsConfirmedCallback) {

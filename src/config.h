@@ -206,7 +206,8 @@ public:
         ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
         ss << "rpc port = " << rpcPort_ << std::endl;
-        ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << ", login session time " << GetWalletLogin() << std::endl;
+        ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup()
+           << ", login session time " << GetWalletLogin() << std::endl;
         ss << "solver addr = " << GetSolverAddr() << std::endl;
         ss << "number of solver threads = " << GetSolverThreads() << std::endl;
         ss << "seeds = [" << std::endl;
@@ -275,6 +276,14 @@ public:
         return amISeed_;
     }
 
+    void SetPrune(bool prune) {
+        prune_ = prune;
+    }
+
+    bool IsPrune() const {
+        return prune_;
+    }
+
 private:
     // config file
     std::string configFilePath_;
@@ -318,6 +327,9 @@ private:
     // miner
     std::string solver_addr = "";
     int solver_threads      = 1;
+
+    // file sanity
+    bool prune_ = false;
 };
 
 extern std::unique_ptr<Config> CONFIG;

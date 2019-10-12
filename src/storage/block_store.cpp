@@ -3,6 +3,9 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "block_store.h"
+#include "crc32.h"
+
+#include <filesystem>
 
 template <typename P>
 std::vector<std::shared_ptr<P>> DeserializeRawLvs(VStream&& vs) {
@@ -30,13 +33,6 @@ template std::vector<ConstBlockPtr> DeserializeRawLvs(VStream&&);
 template std::vector<VertexPtr> DeserializeRawLvs(VStream&&);
 
 BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
-    currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
-    currentVtxEpoch_ = dbStore_.GetInfo<uint32_t>("vtxE");
-    currentBlkName_  = dbStore_.GetInfo<uint16_t>("blkN");
-    currentVtxName_  = dbStore_.GetInfo<uint16_t>("vtxN");
-    currentBlkSize_  = dbStore_.GetInfo<uint32_t>("blkS");
-    currentVtxSize_  = dbStore_.GetInfo<uint32_t>("vtxS");
-
     obcThread_.Start();
     obcTimeout_.AddPeriodTask(300, [this]() {
         obcThread_.Execute([this]() {
@@ -239,13 +235,17 @@ VStream BlockStore::GetRawLevelSetBetween(size_t height1, size_t height2, file::
         while (file < *rightPos && !file.SameFileAs(*rightPos)) {
             FileReader cursor(fType, file);
             size = cursor.Size();
-            cursor.read(size, result);
+            cursor.read(size - file::checksum_size, result);
+            cursor.Close();
             NextFile(file);
         }
 
         // Read the last file
-        FileReader cursor(fType, file);
-        cursor.read(rightOffset, result);
+        if (file.nOffset > file::checksum_size) {
+            FileReader cursor(fType, file);
+            cursor.read(rightOffset - file::checksum_size, result);
+            cursor.Close();
+        }
         return result;
     }
 
@@ -257,7 +257,7 @@ VStream BlockStore::GetRawLevelSetBetween(size_t height1, size_t height2, file::
     while (CheckFileExist(file::GetFilePath(fType, file)) && nFiles < nFilesMax) {
         FileReader cursor(fType, file);
         size = cursor.Size();
-        cursor.read(size, result);
+        cursor.read(size - file::checksum_size, result);
         NextFile(file);
         nFiles++;
     }
@@ -300,6 +300,10 @@ std::unique_ptr<UTXO> BlockStore::GetUTXO(const uint256& key) const {
     return dbStore_.GetUTXO(key);
 }
 
+std::unordered_map<uint256, std::unique_ptr<UTXO>> BlockStore::GetAllUTXO() const {
+    return dbStore_.GetAllUTXO();
+}
+
 bool BlockStore::AddUTXO(const uint256& key, const UTXOPtr& utxo) const {
     return dbStore_.WriteUTXO(key, utxo);
 }
@@ -317,6 +321,10 @@ bool BlockStore::UpdatePrevRedemHashes(const RegChange& change) const {
 }
 bool BlockStore::RollBackPrevRedemHashes(const RegChange& change) const {
     return dbStore_.RollBackReg(change);
+}
+
+std::unordered_map<uint256, uint256> BlockStore::GetAllReg() const {
+    return dbStore_.GetAllReg();
 }
 
 bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
@@ -339,46 +347,60 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         FileWriter blkFs{file::BLK, msBlkPos};
         FileWriter vtxFs{file::VTX, msVtxPos};
 
+        // reserve space for checksum
+        uint32_t init_checksum = 0;
+        if (blkFs.Size() == 0) {
+            currentBlkSize_.store(file::checksum_size);
+            msBlkPos.nOffset = file::checksum_size;
+            blkFs << init_checksum;
+        }
+        if (vtxFs.Size() == 0) {
+            currentVtxSize_.store(file::checksum_size);
+            msVtxPos.nOffset = file::checksum_size;
+            vtxFs << init_checksum;
+        }
+
         const auto& ms  = (*lvs.back().lock());
         uint64_t height = ms.height;
 
         // Store ms to file
         blkFs << *ms.cblock;
-        blkFs.Flush();
         vtxFs << ms;
-        vtxFs.Flush();
         dbStore_.WriteVtxPos(ms.cblock->GetHash(), height, 0, 0);
 
         uint32_t blkOffset;
         uint32_t vtxOffset;
+
         for (size_t i = 0; i < lvs.size() - 1; ++i) {
-            // Write block to file
+            // Write to file
             const auto& vtx = (*lvs[i].lock());
-            blkOffset       = blkFs.GetOffset() - msBlkPos.nOffset;
-            vtxOffset       = vtxFs.GetOffset() - msVtxPos.nOffset;
+            blkOffset       = blkFs.GetOffsetP() - msBlkPos.nOffset;
+            vtxOffset       = vtxFs.GetOffsetP() - msVtxPos.nOffset;
             blkFs << *(vtx.cblock);
-            blkFs.Flush();
             vtxFs << vtx;
-            vtxFs.Flush();
 
             // Write positions to db
             dbStore_.WriteVtxPos(vtx.cblock->GetHash(), height, blkOffset, vtxOffset);
         }
+        blkFs.Flush();
+        blkFs.Close();
+        vtxFs.Flush();
+        vtxFs.Close();
 
         // Write ms position at last to enable search for all blocks in the lvs
         dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msVtxPos);
+        STORE->SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
+
+        UpdateChecksum(file::BLK, msBlkPos);
+        UpdateChecksum(file::VTX, msVtxPos);
 
         AddCurrentSize(totalSize);
-
-        SaveHeadHeight(height);
-        SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
 
         spdlog::trace("[STORE] Storing LVS with MS hash {} of height {} with current file pos {}", ms.height, height,
                       std::to_string(*dbStore_.GetMsBlockPos(height)));
     } catch (const std::exception&) {
         return false;
     }
-
     return true;
 }
 
@@ -477,36 +499,25 @@ void BlockStore::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentBlkSize() > 0 && loadCurrentBlkSize() + addon.first > fileCapacity_) {
         currentBlkName_.fetch_add(1, std::memory_order_seq_cst);
         currentBlkSize_.store(0, std::memory_order_seq_cst);
-        dbStore_.WriteInfo("blkS", (uint32_t) 0);
         if (loadCurrentBlkName() == epochCapacity_) {
             currentBlkEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentBlkName_.store(0, std::memory_order_seq_cst);
-            dbStore_.WriteInfo("blkE", loadCurrentBlkEpoch());
         }
-
-        dbStore_.WriteInfo("blkN", loadCurrentBlkName());
     }
 
     if (loadCurrentVtxSize() > 0 && loadCurrentVtxSize() + addon.second > fileCapacity_) {
         currentVtxName_.fetch_add(1, std::memory_order_seq_cst);
         currentVtxSize_.store(0, std::memory_order_seq_cst);
-        dbStore_.WriteInfo("vtxS", (uint32_t) 0);
         if (loadCurrentVtxName() == epochCapacity_) {
             currentVtxEpoch_.fetch_add(1, std::memory_order_seq_cst);
             currentVtxName_.store(0, std::memory_order_seq_cst);
-            dbStore_.WriteInfo("vtxE", loadCurrentVtxEpoch());
         }
-
-        dbStore_.WriteInfo("vtxN", loadCurrentVtxName());
     }
 }
 
 void BlockStore::AddCurrentSize(std::pair<uint32_t, uint32_t> size) {
     currentBlkSize_.fetch_add(size.first, std::memory_order_seq_cst);
     currentVtxSize_.fetch_add(size.second, std::memory_order_seq_cst);
-
-    dbStore_.WriteInfo("blkS", loadCurrentBlkSize());
-    dbStore_.WriteInfo("vtxS", loadCurrentVtxSize());
 }
 
 FilePos& BlockStore::NextFile(FilePos& pos) const {
@@ -516,7 +527,7 @@ FilePos& BlockStore::NextFile(FilePos& pos) const {
     } else {
         pos.nName++;
     }
-    pos.nOffset = 0;
+    pos.nOffset = file::checksum_size;
     return pos;
 }
 
@@ -524,5 +535,376 @@ void BlockStore::ScheduleTask() {
     while (!interrupt) {
         obcTimeout_.Loop();
         std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+bool BlockStore::CheckOneFile(file::FileType type, uint32_t epoch, uint32_t name) {
+    auto filename = file::GetEpochPath(type, epoch) + '/' + file::GetFileName(type, name);
+    if (!CheckFileExist(filename)) {
+        spdlog::error("File {} doesn't exit", filename);
+        return false;
+    }
+    if (!ValidateChecksum(type, FilePos{epoch, name, 0})) {
+        spdlog::error("File {} can't pass the validation of checksum", filename);
+        return false;
+    }
+    return true;
+}
+
+FileCheckInfo BlockStore::CheckOneType(file::FileType type) {
+    FileCheckInfo result{false, 0, 0};
+    auto all_epoches = file::GetAllEpoch(type);
+    if (all_epoches.empty()) {
+        spdlog::error("File {} doesn't exit", file::GetFilePath(type, FilePos(0, 0, 0)));
+        return result;
+    }
+    for (size_t epoch = 0; epoch < all_epoches.size(); epoch++) {
+        size_t end   = epochCapacity_;
+        result.epoch = epoch;
+        if (epoch == all_epoches.size() - 1) {
+            auto all_names = file::GetAllName(epoch, type);
+            if (all_names.empty()) {
+                spdlog::error("File {} doesn't exit", file::GetFilePath(type, FilePos(epoch, 0, 0)));
+                result.name = 0;
+                return result;
+            }
+            end = all_names.size();
+        }
+        for (size_t name = 0; name < end; name++) {
+            result.name = name;
+            if (!CheckOneFile(type, epoch, name)) {
+                return result;
+            }
+        }
+    }
+    result.valid = true;
+    return result;
+}
+
+bool BlockStore::CheckFileSanity(bool prune) {
+    auto blk_res              = CheckOneType(file::BLK);
+    auto vtx_res              = CheckOneType(file::VTX);
+    uint64_t minInvalidHeight = UINT64_MAX;
+    auto headHeight           = GetHeadHeight();
+
+    if (blk_res.valid && vtx_res.valid) {
+        auto currentBLKHeight = GetlatestHeightFromFile(FilePos(blk_res.epoch, blk_res.name, 0), file::BLK);
+        auto currentVTXHeight = GetlatestHeightFromFile(FilePos(vtx_res.epoch, vtx_res.name, 0), file::VTX);
+        if (currentBLKHeight == currentVTXHeight && currentBLKHeight == headHeight) {
+            FilePos vvtxPos{vtx_res.epoch, vtx_res.name, 0};
+            FilePos vblkPos{blk_res.epoch, blk_res.name, 0};
+            vvtxPos.nOffset = file::GetFileSize(file::VTX, vvtxPos);
+            vblkPos.nOffset = file::GetFileSize(file::BLK, vblkPos);
+            SetCurrentFilePos(file::VTX, vvtxPos);
+            SetCurrentFilePos(file::BLK, vblkPos);
+            spdlog::info("Pass the file sanity check, current blk epoch = {}, name = {}, offset = {} and current vtx "
+                         "epoch = {}, name = {}, offset = {}",
+                         currentBlkEpoch_, currentBlkName_, currentBlkSize_, currentVtxEpoch_, currentVtxName_,
+                         currentVtxSize_);
+            return true;
+        } else {
+            spdlog::error("current valid blk height is {}, vtx height is {}, head height is {}, which are not same.",
+                          currentBLKHeight, currentVTXHeight, headHeight);
+            minInvalidHeight = std::min(currentBLKHeight, currentVTXHeight) + 1;
+        }
+    } else {
+        if (!blk_res.valid) {
+            uint64_t invalidBlkHeight = GetHeightFromInvalidFile(FilePos{blk_res.epoch, blk_res.name, 0}, file::BLK);
+            if (invalidBlkHeight == UINT64_MAX) {
+                return false;
+            }
+            spdlog::error("BLK files starting from height {} errored", invalidBlkHeight);
+            minInvalidHeight = invalidBlkHeight;
+        }
+        if (!vtx_res.valid) {
+            uint64_t invalidVtxHeight = GetHeightFromInvalidFile(FilePos{vtx_res.epoch, vtx_res.name, 0}, file::VTX);
+            if (invalidVtxHeight == UINT64_MAX) {
+                return false;
+            }
+            spdlog::error("Vtx files starting from height {} errored", invalidVtxHeight);
+            minInvalidHeight = std::min(minInvalidHeight, invalidVtxHeight);
+        }
+    }
+
+    // try to locate the actual position at the min invalid height in DB
+    minInvalidHeight = std::min(minInvalidHeight, headHeight + 1);
+    auto pos_pair    = dbStore_.GetMsPos(minInvalidHeight);
+    while (!pos_pair && minInvalidHeight > 0) {
+        spdlog::debug("Failed to get the ms pos from the invalid height {}", minInvalidHeight);
+        --minInvalidHeight;
+        pos_pair = dbStore_.GetMsPos(minInvalidHeight);
+    }
+    spdlog::debug("The min invalid height is {}", minInvalidHeight);
+
+    if (!prune) {
+        return false;
+    } else {
+        spdlog::info("Start to prune invalid db records");
+        // fix invalid DB records
+        if (!FixDBRecords(minInvalidHeight)) {
+            spdlog::error("Failed to prune invalid DB records");
+            return false;
+        }
+
+        // delete invalid files
+        auto [blkPos, vtxPos] = *pos_pair;
+        if (!DeleteInvalidFiles(blkPos, file::BLK) || !DeleteInvalidFiles(vtxPos, file::VTX)) {
+            spdlog::error("Failed to delete invalid files");
+            return false;
+        }
+
+        // set correct DB records about meta data,reset head height to the safe height
+        auto latestValidHeight = minInvalidHeight == 0 ? 0 : minInvalidHeight - 1;
+        spdlog::debug("Reset current head height from {} to {}", headHeight, latestValidHeight);
+        if (!SaveHeadHeight(latestValidHeight)) {
+            spdlog::error("Failed to update head height");
+            return false;
+        }
+
+        // set correct position info
+        auto latestValidPos = dbStore_.GetMsPos(latestValidHeight);
+        if (latestValidPos) {
+            auto [vblkPos, vvtxPos] = *latestValidPos;
+            vvtxPos.nOffset         = file::GetFileSize(file::VTX, vvtxPos);
+            vblkPos.nOffset         = file::GetFileSize(file::BLK, vblkPos);
+            SetCurrentFilePos(file::VTX, vvtxPos);
+            SetCurrentFilePos(file::BLK, vblkPos);
+        } else if (minInvalidHeight > 0) {
+            // since DB has the record of minInvalidHeight, it should have the record of latestValidHeight unless
+            // minInvalidHeight == 0
+            spdlog::error("DB is not consistent, please delete all data files and restart the program");
+            return false;
+        }
+
+        // deal with genesis case
+        if (minInvalidHeight == 0) {
+            spdlog::info("Restore genesis");
+            FilePos empty_pos{0, 0, 0};
+            SetCurrentFilePos(file::BLK, empty_pos);
+            SetCurrentFilePos(file::VTX, empty_pos);
+            std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
+            StoreLevelSet(genesisLvs);
+        }
+        spdlog::info("Finish the pruning process, current blk epoch = {}, name = {}, offset = {} and current vtx "
+                     "epoch = {}, name = {}, offset = {}",
+                     currentBlkEpoch_, currentBlkName_, currentBlkSize_, currentVtxEpoch_, currentVtxName_,
+                     currentVtxSize_);
+    }
+    return true;
+}
+
+size_t BlockStore::GetlatestHeightFromFile(FilePos search_pos, file::FileType type) {
+    FileReader reader(type, search_pos);
+    reader.SetOffsetP(file::checksum_size, std::ios_base::beg);
+    if (type == file::BLK) {
+        Block block;
+        reader >> block;
+        uint64_t height = GetHeight(block.GetHash()) + 1;
+        if (height == 0) {
+            spdlog::error("Can not find the record of the block {}, DB may be broken", block.GetHash().to_substr());
+            return height;
+        }
+        while (true) {
+            auto msPos = dbStore_.GetMsBlockPos(height);
+            if (!msPos || msPos->nName != search_pos.nName) {
+                return height - 1;
+            }
+            height++;
+        }
+    } else {
+        Vertex vertex;
+        reader >> vertex;
+
+        uint64_t height = vertex.height + 1;
+        while (true) {
+            auto msPos = dbStore_.GetMsPos(height);
+            if (!msPos || msPos->second.nName != search_pos.nName) {
+                return height - 1;
+            }
+            height++;
+        }
+    }
+}
+
+size_t BlockStore::GetHeightFromInvalidFile(FilePos pos, file::FileType type) {
+    if (pos.nEpoch == 0 && pos.nName == 0) {
+        return 0;
+    }
+    FilePos search_pos;
+
+    if (pos.nName == 0) {
+        search_pos.nName  = epochCapacity_ - 1;
+        search_pos.nEpoch = pos.nEpoch - 1;
+    } else {
+        search_pos.nName  = pos.nName - 1;
+        search_pos.nEpoch = pos.nEpoch;
+    }
+    return GetlatestHeightFromFile(search_pos, type) + 1;
+}
+
+bool BlockStore::FixDBRecords(uint64_t height) {
+    spdlog::debug("Start to rebuild UTXOs and Registrations");
+    if (!RebuildConsensus(height)) {
+        spdlog::error("Failed to rebuild consensus records");
+        return false;
+    }
+
+    spdlog::debug("Start to delete invalid milestone records");
+    if (!DeleteDBMs(height)) {
+        spdlog::error("Failed to delete ms pos");
+        return false;
+    }
+
+    spdlog::debug("Start to delete invalid block and vertex records");
+    if (!DeleteDBBlks(height)) {
+        spdlog::error("Failed ot delete all invalid blk/vtx records");
+        return false;
+    }
+
+    return true;
+}
+
+bool BlockStore::DeleteDBMs(uint64_t height) {
+    uint64_t currentHeight = GetHeadHeight();
+    spdlog::info("Start to delete db ms record from {} to {}", height, currentHeight);
+    for (uint64_t h = height; h <= currentHeight; h++) {
+        auto res = dbStore_.DeleteMsPos(h);
+        if (res) {
+            spdlog::debug("Deleted Ms Pos at height {}", h);
+        } else {
+            spdlog::error("Failed to delete Ms Pos at height {}, DB record is not consistent", h);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BlockStore::DeleteDBBlks(uint64_t height) {
+    return dbStore_.DeleteBatchVtxPos(height);
+}
+
+bool BlockStore::RebuildConsensus(uint64_t height) {
+    // delete two columns in db  UTXO, Reg
+    std::string column1 = "utxo";
+    std::string column2 = "reg";
+    auto statusU        = dbStore_.ClearColumn(column1);
+    auto statusR        = dbStore_.ClearColumn(column2);
+    if (!statusU || !statusR) {
+        return false;
+    }
+    if (height <= 1) {
+        return true;
+    }
+    arith_uint256 chainwork       = GENESIS_VERTEX->snapshot->chainwork;
+    arith_uint256 previous_target = GENESIS_VERTEX->snapshot->milestoneTarget;
+    for (uint64_t h = 1; h < height; h++) {
+        auto levelset = GetLevelSetVtcsAt(h, true);
+        if (!ConstructUTXOAndRegFromLvs(levelset)) {
+            return false;
+        }
+        auto ms = levelset.back();
+        chainwork += GetParams().maxTarget / previous_target;
+        previous_target = ms->snapshot->milestoneTarget;
+    }
+
+    // save chainwork
+    SaveBestChainWork(ArithToUint256(chainwork));
+    return true;
+}
+
+bool BlockStore::ConstructUTXOAndRegFromLvs(std::vector<VertexPtr>& levelset) {
+    for (auto& vertex : levelset) {
+        if (!ConstructUTXOAndRegFromVtx(vertex)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BlockStore::ConstructUTXOAndRegFromVtx(const VertexPtr& vtx) {
+    size_t size   = vtx->cblock->GetTransactionSize();
+    auto blkHash  = vtx->cblock->GetHash();
+    auto prevHash = vtx->cblock->GetPrevHash();
+
+    RegChange regChange;
+    TXOC txoc;
+    std::vector<UTXOPtr> newUXTOs;
+    if (vtx->cblock->IsFirstRegistration()) {
+        regChange.Create(blkHash, blkHash);
+    } else {
+        // reg change
+        auto oldRedempHash = STORE->GetPrevRedemHash(prevHash);
+        if (oldRedempHash.IsNull()) {
+            spdlog::error("Can't find redemption hash {}", oldRedempHash.GetHex());
+            return false;
+        }
+        regChange.Remove(prevHash, oldRedempHash);
+        if (size > 0 && vtx->cblock->IsRegistration() && vtx->validity[0] == Vertex::VALID) {
+            regChange.Create(blkHash, blkHash);
+        } else {
+            regChange.Create(blkHash, oldRedempHash);
+        }
+
+        // utxo
+        for (size_t txIndex = 0; txIndex < size; ++txIndex) {
+            if (vtx->validity[txIndex] == Vertex::VALID) {
+                auto tx = vtx->cblock->GetTransactions()[txIndex];
+                // input, find spent utxo and new reg
+                for (auto& input : tx->GetInputs()) {
+                    if (!input.IsRegistration()) {
+                        txoc.AddToSpent(input);
+                    }
+                }
+                // output, find new utxo
+                for (size_t outputIndex = 0; outputIndex < tx->GetOutputs().size(); ++outputIndex) {
+                    auto utxoPtr = std::make_shared<UTXO>(tx->GetOutputs()[outputIndex], txIndex, outputIndex);
+                    newUXTOs.emplace_back(utxoPtr);
+                }
+            }
+        }
+    }
+
+    // delete spent utxo
+    for (auto& utxokey : txoc.GetSpent()) {
+        if (!RemoveUTXO(utxokey)) {
+            spdlog::error("Failed to remove utxo {}", utxokey.GetHex());
+            return false;
+        }
+    }
+
+    // save new utxo
+    for (auto& utxo : newUXTOs) {
+        if (!AddUTXO(utxo->GetKey(), utxo)) {
+            spdlog::error("Failed to add utxo {}", utxo->GetKey().GetHex());
+            return false;
+        }
+    }
+
+    // update reg change
+    if (!UpdatePrevRedemHashes(regChange)) {
+        spdlog::error("Failed to update reg");
+        return false;
+    }
+
+    return true;
+}
+
+void BlockStore::SetCurrentFilePos(file::FileType type, FilePos pos) {
+    switch (type) {
+        case file::BLK: {
+            currentBlkEpoch_ = pos.nEpoch;
+            currentBlkName_  = pos.nName;
+            currentBlkSize_  = pos.nOffset;
+            break;
+        }
+        case file::VTX: {
+            currentVtxEpoch_ = pos.nEpoch;
+            currentVtxName_  = pos.nName;
+            currentVtxSize_  = pos.nOffset;
+            break;
+        }
+        default: {
+            throw "invalid file type " + std::to_string(type);
+        }
     }
 }

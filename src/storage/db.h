@@ -56,14 +56,18 @@ public:
                        const std::vector<uint32_t>&) const;
 
     bool DeleteVtxPos(const uint256&) const;
+    bool DeleteBatchVtxPos(uint64_t heightThreshold);
     bool DeleteMsPos(const uint256&) const;
+    bool DeleteMsPos(uint64_t height) const;
 
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
+    std::unordered_map<uint256, std::unique_ptr<UTXO>> GetAllUTXO() const;
     bool WriteUTXO(const uint256&, const UTXOPtr&) const;
     bool RemoveUTXO(const uint256&) const;
 
     uint256 GetLastReg(const uint256&) const;
+    std::unordered_map<uint256, uint256> GetAllReg() const;
     bool UpdateReg(const RegChange&) const;
     bool RollBackReg(const RegChange&) const;
 
@@ -71,6 +75,8 @@ public:
     bool WriteInfo(const std::string& key, const V& value) const;
     template <typename V>
     V GetInfo(const std::string&) const;
+
+    bool ClearColumn(std::string columnName);
 
 private:
     uint256 GetMsHashAt(const uint64_t& height) const;
