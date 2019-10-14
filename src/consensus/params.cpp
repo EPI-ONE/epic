@@ -27,7 +27,8 @@ static constexpr size_t SORTITION_COEFFICIENT = 100;
 static constexpr size_t SORTITION_THRESHOLD = 1000;
 // coefficient of taking additional reward for milestone
 static constexpr uint32_t REWARD_COEFFICIENT = 50;
-static constexpr size_t CACHE_STATES         = 100;
+// the number of milestones to be cached in each chain
+static constexpr size_t CACHE_STATES = 100;
 // capacity of transactions in a block
 static constexpr size_t BLK_CAPACITY = 128;
 

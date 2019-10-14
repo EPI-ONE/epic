@@ -16,7 +16,9 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
     obcTimeout_.AddPeriodTask(300, [this]() {
         obcThread_.Execute([this]() {
             auto n = obc_.Prune(3600);
-            spdlog::info("Erased {} outdated entries from OBC.", n);
+            if (n) {
+                spdlog::info("Erased {} outdated entries from OBC.", n);
+            }
         });
     });
     scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));

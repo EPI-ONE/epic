@@ -374,8 +374,8 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     std::vector<UTXOPtr> utxos;
     const auto& txns = block->GetTransactions();
     for (size_t i = 0; i < txns.size(); ++i) {
-        auto& outs = txns[i]->GetOutputs();
-        utxos.reserve(outs.size());
+        const auto& outs = txns[i]->GetOutputs();
+        utxos.reserve(utxos.size() + outs.size());
         for (size_t j = 0; j < outs.size(); ++j) {
             utxos.emplace_back(std::make_shared<UTXO>(outs[j], i, j));
         }
@@ -384,7 +384,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     // Add to pending on every chain
     for (const auto& chain : milestoneChains) {
         chain->AddPendingBlock(block);
-        chain->AddPendingUTXOs(utxos);
+        if (!block->IsFirstRegistration()) {
+            chain->AddPendingUTXOs(std::move(utxos));
+        }
     }
 
     // Check if it's a new ms from the main chain
@@ -586,7 +588,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         const auto& ms = *vtxToStore.front().lock();
 
         STORE->StoreLevelSet(vtxToStore);
-        STORE->UpdatePrevRedemHashes(ms.snapshot->regChange);
+        STORE->UpdatePrevRedemHashes(ms.snapshot->GetRegChange());
 
         std::swap(vtxToStore.front(), vtxToStore.back());
         for (auto& vtx : vtxToStore) {

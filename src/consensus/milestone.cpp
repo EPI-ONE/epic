@@ -11,10 +11,13 @@
 
 Milestone::Milestone(const std::shared_ptr<Milestone>& previous,
                      const ConstBlockPtr& msBlock,
-                     std::vector<VertexWPtr>&& lvs)
+                     std::vector<VertexWPtr>&& lvs,
+                     RegChange&& regChange,
+                     TXOC&& txoc)
     : height(previous->height + 1), milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget),
       hashRate(previous->hashRate), lastUpdateTime(previous->lastUpdateTime), nTxnsCounter_(previous->nTxnsCounter_),
-      nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)) {
+      nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)), txoc_(std::move(txoc)),
+      regChange_(std::move(regChange)) {
     if (previous->chainwork == 0) {
         previous->chainwork = UintToArith256(STORE->GetBestChainWork());
     }
@@ -141,16 +144,14 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
     nBlkCounter_   = 0;
 }
 
-void Milestone::UpdateTXOC(TXOC&& txoc) {
-    txoc_.Merge(std::move(txoc));
-}
-
 const uint256& Milestone::GetMilestoneHash() const {
     return (*lvs_.back().lock()).cblock->GetHash();
 }
 
-MilestonePtr CreateNextMilestone(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs) {
-    auto pms = std::make_shared<Milestone>(previous, vertex.cblock, std::move(lvs));
+MilestonePtr CreateNextMilestone(
+    MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs, RegChange&& regChange, TXOC&& txoc) {
+    auto pms =
+        std::make_shared<Milestone>(previous, vertex.cblock, std::move(lvs), std::move(regChange), std::move(txoc));
     vertex.LinkMilestone(pms);
     return pms;
 }

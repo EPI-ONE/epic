@@ -200,9 +200,14 @@ void Miner::Run() {
                 spdlog::info("Got the first registration. Start mining.");
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
-                b.SetMerkle();
             } else {
                 prevHash = selfChainHead_->GetHash();
+
+                auto tx = MEMPOOL->GetRedemptionTx(false);
+                if (tx && !tx->IsFirstRegistration()) {
+                    b.AddTransaction(std::move(tx));
+                }
+
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
                         spdlog::info("Hashing power percentage {}",
@@ -210,18 +215,13 @@ void Miner::Run() {
                                          (double) (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
                     }
 
-                    auto tx = MEMPOOL->GetRedemptionTx(false);
-                    if (tx && !tx->IsFirstRegistration()) {
-                        b.AddTransaction(std::move(tx));
-                    }
-
                     auto allowed =
                         CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
-                    b.SetMerkle();
                 }
             }
 
+            b.SetMerkle();
             b.SetMilestoneHash(std::atomic_load(&chainHead_)->cblock->GetHash());
             b.SetPrevHash(prevHash);
             b.SetTipHash(SelectTip());
@@ -254,9 +254,11 @@ void Miner::Run() {
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);
+
             if (PEERMAN) {
                 PEERMAN->RelayBlock(bPtr, nullptr);
             }
+
             distanceCal_.Add(bPtr, true);
             selfChainHead_ = bPtr;
             selfChainHeads_.push(bPtr->GetHash());
@@ -273,6 +275,7 @@ void Miner::Run() {
 
                 std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
             }
+
             counter++;
         }
     });
