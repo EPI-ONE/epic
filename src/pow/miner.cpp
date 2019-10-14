@@ -200,7 +200,6 @@ void Miner::Run() {
                 spdlog::info("Got the first registration. Start mining.");
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
-                b.SetMerkle();
             } else {
                 prevHash = selfChainHead_->GetHash();
 
@@ -220,10 +219,9 @@ void Miner::Run() {
                         CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
                 }
-
-                b.SetMerkle();
             }
 
+            b.SetMerkle();
             b.SetMilestoneHash(std::atomic_load(&chainHead_)->cblock->GetHash());
             b.SetPrevHash(prevHash);
             b.SetTipHash(SelectTip());
