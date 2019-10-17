@@ -129,7 +129,7 @@ void Transaction::FinalizeHash() {
 
 bool Transaction::Verify() const {
     if (inputs_.empty() || outputs_.empty()) {
-        spdlog::info("Transaction {} contains empty inputs or outputs {}", hash_.to_substr(),
+        spdlog::info("[Syntax] Invalid transaction {} containing empty inputs or outputs {}", hash_.to_substr(),
                      parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
         return false;
     }
@@ -140,7 +140,7 @@ bool Transaction::Verify() const {
     outpoints.reserve(inputs_.size());
     for (const auto& input : inputs_) {
         if (outpoints.count(input.outpoint) > 0) {
-            spdlog::info("Transaction {} contains duplicated outpoints {}", hash_.to_substr(),
+            spdlog::info("[Syntax] Invalid transaction {} containing duplicated outpoints {}", hash_.to_substr(),
                          parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
             return false;
         }

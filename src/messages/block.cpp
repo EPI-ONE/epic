@@ -151,7 +151,7 @@ bool Block::Verify() const {
     // check version
     spdlog::trace("Block::Verify version {}", hash_.to_substr());
     if (header_.version != GetParams().version) {
-        spdlog::info("Block with wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
+        spdlog::info("[Syntax] Wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
                      std::to_string(hash_));
         return false;
     }
@@ -167,11 +167,11 @@ bool Block::Verify() const {
     bool mutated;
     auto root = ComputeMerkleRoot(&mutated);
     if (mutated) {
-        spdlog::info("Block contains duplicated transactions in a merkle tree branch. [{}]", std::to_string(hash_));
+        spdlog::info("[Syntax] Duplicated transactions in a merkle tree branch [{}]", std::to_string(hash_));
         return false;
     }
     if (root != header_.merkleRoot) {
-        spdlog::info("Block contains invalid merkle root. [{}]", std::to_string(hash_));
+        spdlog::info("[Syntax] Invalid merkle root [{}]", std::to_string(hash_));
         return false;
     }
 
@@ -180,21 +180,24 @@ bool Block::Verify() const {
     time_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (header_.timestamp > allowedTime) {
         time_t t = header_.timestamp;
-        spdlog::info("Block too advanced in the future: {} ({}) v.s. allowed {} ({}) [{}]", std::string(ctime(&t)),
-                     header_.timestamp, std::string(ctime(&allowedTime)), allowedTime, std::to_string(hash_));
+        spdlog::info("[Syntax] Too advanced in the future: {} v.s. allowed {} ({} vs. {}) [{}]",
+                     std::string(ctime(&t)).substr(0, 24), std::string(ctime(&allowedTime)).substr(0, 24),
+                     header_.timestamp, allowedTime, std::to_string(hash_));
         return false;
     }
 
     // verify content of the block
     spdlog::trace("Block::Verify number of txns {}", hash_.to_substr());
     if (transactions_.size() > GetParams().blockCapacity) {
-        spdlog::info("Block with {} transactions larger than its capacity ({}]) [{}]", transactions_.size(),
-                     GetParams().blockCapacity, std::to_string(hash_));
+        spdlog::info("[Syntax] The number of transactions ({}) greater than the block capacity ({}) [{}]",
+                     transactions_.size(), GetParams().blockCapacity, std::to_string(hash_));
+        return false;
     }
 
     spdlog::trace("Block::Verify content {}", hash_.to_substr());
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
-        spdlog::info("Block with size {} larger than MAX_BLOCK_SIZE [{}]", optimalEncodingSize_, std::to_string(hash_));
+        spdlog::info("[Syntax] Size {} larger than the maximum allowed size ({} bytes) [{}]", optimalEncodingSize_,
+                     MAX_BLOCK_SIZE, std::to_string(hash_));
         return false;
     }
 
@@ -208,7 +211,7 @@ bool Block::Verify() const {
         }
 
         if (txhashes.size() != transactions_.size()) {
-            spdlog::info("Block contains duplicated transactions. [{}]", std::to_string(hash_));
+            spdlog::info("[Syntax] Duplicated transactions [{}]", std::to_string(hash_));
             return false;
         }
     }
@@ -218,13 +221,13 @@ bool Block::Verify() const {
     if (header_.prevBlockHash == GENESIS->GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
-            spdlog::info("Block is the first registration but does not contain a tx [{}]", std::to_string(hash_));
+            spdlog::info("[Syntax] Empty first registration [{}]", std::to_string(hash_));
             return false;
         }
 
         // ... with input from ZERO hash and index -1 and output value 0
         if (!transactions_[0]->IsFirstRegistration()) {
-            spdlog::info("Block is the first registration but conatains invalid tx [{}]", std::to_string(hash_));
+            spdlog::info("[Syntax] Invalid first registration [{}]", std::to_string(hash_));
             return false;
         }
     }
@@ -296,7 +299,6 @@ uint32_t Block::GetTime() const {
 
 void Block::SetNonce(uint32_t nonce) {
     hash_.SetNull();
-    header_.merkleRoot.SetNull();
     header_.nonce = nonce;
 }
 
@@ -339,6 +341,7 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     if (HasTransaction() && header_.merkleRoot.IsNull()) {
+        std::cout << "header merkle " << std::to_string(header_.merkleRoot) << std::endl;
         header_.merkleRoot = ComputeMerkleRoot();
     }
 
@@ -419,7 +422,7 @@ bool Block::CheckPOW() const {
     assert(!hash_.IsNull());
 
     if (proof_.size() != CYCLELEN) {
-        spdlog::info("Bad proof size: {} [{}]", proof_.size(), std::to_string(hash_));
+        spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), CYCLELEN, std::to_string(hash_));
         return false;
     }
 
@@ -432,22 +435,23 @@ bool Block::CheckPOW() const {
         // Verify cuckaroo pow
         auto status = VerifyProof(proof_.data(), sipkeys);
         if (status != POW_OK) {
-            spdlog::info("Invalid proof of edges: {}", ErrStr[status]);
+            spdlog::info("[Syntax] Invalid proof of edges: {}", ErrStr[status]);
             return false;
         }
     }
 
     // Verify target validity
     arith_uint256 target = GetTargetAsInteger();
-    if (target <= 0 || target > GetParams().maxTarget) {
-        spdlog::info("Bad difficulty target: " + std::to_string(target));
+    if (target == 0 || target > GetParams().maxTarget) {
+        spdlog::info("[Syntax] Bad difficulty target: {}", target.GetDouble());
         return false;
     }
 
     // Verify proof target
-    if (UintToArith256(CYCLELEN ? proofHash_ : (uint256) HashBLAKE2<256>(vs)) > target) {
-        spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash_), std::to_string(target),
-                     std::to_string(hash_));
+    auto hash_to_verify = CYCLELEN ? proofHash_ : (uint256) HashBLAKE2<256>(vs);
+    if (UintToArith256(hash_to_verify) > target) {
+        spdlog::info("[Syntax] Proof hash {} is higher than the target {} [{}]", std::to_string(hash_to_verify),
+                     std::to_string(target), std::to_string(hash_));
         return false;
     }
 
