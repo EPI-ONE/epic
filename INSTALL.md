@@ -74,19 +74,19 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
 
 ### Mac OS X 10.15
 
-0. XCode
+0. XCode11
 
      ```bash
      xcode-select --install
      ```
      Mac provides its own C/C++ compiler and lib via XCode, `Apple clang version 11.0.0 (clang-1100.0.33.8)`
-     >   Note: if you are using MacOS 10.14 Mojave, you need to install llvm by using `brew install llvm` and manually add some required C header files. This step is complicated since MacOS Mojave removed some system headers. You may check whether you already have the required C headers by
+     >   Note: if you use XCode10 (or lower) and on OS X 10.14, you need to install llvm by using `brew install llvm` and manually add some required C header files. This step is complicated since MacOS Mojave removed some system headers. You may check whether you already have the required C headers by
      >
      >   `ls /Library/Developer/CommandLineTools/Packages`
      >
      >   If you have something like `macOS_SDK_headers_for_macOS_10.14.pkg` in this folder, then you can skip the next step. Otherwise, please go to [Apple Developer](https://developer.apple.com/download/more/) and download `Command Line Tools (macOS 10.14) for Xcode 10.2.1.dmg` and install. After this, you will find `/Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg`. After install this package, you will have the required system header files. Now, you can build from source.
      
-1. [Brew](https://brew.sh)
+1. Brew
 
     ```bash
     /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
