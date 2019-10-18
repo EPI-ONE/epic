@@ -125,13 +125,13 @@ Mac:
 
 ```bash
 brew install cmake
-# version 3.15.2 will be installed
+# version 3.15.4 will be installed
 ```
 
 Linux:
 
 ```bash
-git clone -b v3.15.2 --single-branch https://github.com/Kitware/CMake.git
+git clone -b v3.15.4 --single-branch https://github.com/Kitware/CMake.git
 cd CMake
 ./bootstrap && make -j && sudo make install
 ```
@@ -198,7 +198,7 @@ brew install protobuf
 Linux:
 
 ```bash
-git clone -b v3.7.0 --single-branch https://github.com/protocolbuffers/protobuf.git
+git clone -b v3.10.0 --single-branch https://github.com/protocolbuffers/protobuf.git
 cd protobuf
 git submodule update --init --recursive
 ./autogen.sh && ./configure && make -j
@@ -221,7 +221,7 @@ brew install grpc
 Linux:
 
 ```bash
-git clone -b v1.24.2 --single-branch https://github.com/grpc/grpc.git
+git clone -b v1.24.0 --single-branch https://github.com/grpc/grpc.git
 cd grpc
 git submodule update --init
 make -j
@@ -242,7 +242,7 @@ brew install rocksdb
 Linux:
 
 ```bash
-git clone -b v6.2.2 --single-branch https://github.com/facebook/rocksdb.git
+git clone -b v6.3.6 --single-branch https://github.com/facebook/rocksdb.git
 cd rocksdb
 make shared_lib -j
 sudo make install

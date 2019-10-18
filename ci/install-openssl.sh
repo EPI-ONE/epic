@@ -4,7 +4,7 @@ EPIC_OPENSSL_VERSION="1_1_1d"
 EPIC_OPENSSL_DIR=""openssl-"$EPIC_OPENSSL_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    brew install openssl
+    brew install openssl@1.1
     export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
 else
     if [[ ! -d ${EPIC_OPENSSL_DIR} ]];then

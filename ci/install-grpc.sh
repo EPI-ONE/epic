@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ev
-EPIC_GRPC_VERSION="1.23.0"
+EPIC_GRPC_VERSION="1.24.0"
 EPIC_GRPC_DIR=""grpc-"$EPIC_GRPC_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then

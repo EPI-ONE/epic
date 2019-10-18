@@ -15,7 +15,7 @@ The implementation of this peoject is written in C++ 17.
 
 - C/C++ compilier and library
     - `gcc` version 7 or up on Linux
-    - Apple LLVM version 10.0.1 (clang-1001.0.46.4) provided by XCode
+    - Apple LLVM version 11.0.0 (clang-1100.0.33.8) provided by XCode 11
 
 - `cmake` version 3.14 or up
 
@@ -31,13 +31,13 @@ Builds on several esisting projects:
     - [spdlog v1.3.1](https://github.com/gabime/spdlog): header file only. You may customize how to use it by editing the default [config.toml](./config.toml) file.
 ********
 - The following need to be installed on your system:
-    - `openssl` version 1.1.1c
+    - `openssl` version 1.1
     - `libsecp256k1`
     - `libevent` version 2.1.11
-    - `RocksDB` version 6.2.2
-    - `protobuf` version 3.7.1
-    - `gRPC` version 1.20.0
-    - `GoogleTest` version 1.8.1
+    - `RocksDB` version 6.1.2 or up
+    - `protobuf` version 3.10.0 
+    - `gRPC` version 1.23.0 or up
+    - `GoogleTest` version 1.10.0
 
 We test this project on Ubuntu (18.04), CentOS (7.6) and MacOS X (10.14.6). See [INSTALL.md](./INSTALL.md) for detailed installation instructions.
 
