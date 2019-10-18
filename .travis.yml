@@ -100,7 +100,7 @@ script:
   - cmake --version
   - which cmake
   - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
-  - make -j
+  - make -j2
   - ./../bin/epictest --gtest_filter="-TestTrimmer*:TestMiner.SolveCuckaroo*"
 
 notifications:
