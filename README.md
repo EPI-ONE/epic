@@ -29,8 +29,7 @@ Builds on several esisting projects:
     - [cxxopts v2.0.0](https://github.com/jarro2783/cxxopts)
     - [cpptoml v0.1.1](https://github.com/skystrife/cpptoml)
     - [spdlog v1.3.1](https://github.com/gabime/spdlog): header file only. You may customize how to use it by editing the default [config.toml](./config.toml) file.
-********
-- The following need to be installed on your system:
+- The following dependencies need to be installed on your system:
     - `openssl` version 1.1
     - `libsecp256k1`
     - `libevent` version 2.1.11

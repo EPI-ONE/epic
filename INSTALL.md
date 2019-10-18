@@ -83,7 +83,7 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
      >   Note: if you are using MacOS 10.14 Mojave, you need to install llvm by using `brew install llvm` and manually add some required C header files. This step is complicated since MacOS Mojave removed some system headers. You may check whether you already have the required C headers by
      >
      >   `ls /Library/Developer/CommandLineTools/Packages`
->
+     >
      >   If you have something like `macOS_SDK_headers_for_macOS_10.14.pkg` in this folder, then you can skip the next step. Otherwise, please go to [Apple Developer](https://developer.apple.com/download/more/) and download `Command Line Tools (macOS 10.14) for Xcode 10.2.1.dmg` and install. After this, you will find `/Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg`. After install this package, you will have the required system header files. Now, you can build from source.
      
 1. [Brew](https://brew.sh)
