@@ -70,6 +70,7 @@ matrix:
         directories:
          - $BUILD_LIB_MPATH
       before_install:
+        - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
         - export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
         - cd $BUILD_LIB_MPATH
