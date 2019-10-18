@@ -3,11 +3,6 @@ set -ev
 EPIC_LIBEVENT_VERSION="2.1.11"
 EPIC_LIBEVENT_DIR=""libevent-"$EPIC_LIBEVENT_VERSION"
 
-if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-  echo $OPENSSL_ROOT_DIR
-  export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
-fi
-
 if [[ ! -d ${EPIC_LIBEVENT_DIR} ]];then
     sudo rm -rf libevent*
     git clone -b release-${EPIC_LIBEVENT_VERSION}-stable --single-branch https://github.com/libevent/libevent.git ${EPIC_LIBEVENT_DIR}

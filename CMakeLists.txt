@@ -40,6 +40,7 @@ LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 # openssl
 find_package(OpenSSL REQUIRED)
 target_link_libraries(OpenSSL::Crypto)
+include_directories(OPENSSL_INCLUDE_DIR)
 
 # gtest
 find_package(GTest 1.10.0 REQUIRED)
