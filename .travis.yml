@@ -63,9 +63,6 @@ matrix:
             - automake
             - libtool
             - gmp 
-            - c-ares
-            - gflags
-            - gperftools
       cache:
         directories:
          - $BUILD_LIB_MPATH

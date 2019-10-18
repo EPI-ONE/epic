@@ -104,15 +104,6 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
     brew install gmp
     ```
 
-4. `gRPC` requires `c-ares` `grpc` and `perftools`
-
-    ```bash
-    brew install c-ares
-    brew install gflags
-    brew install gperftools
-    brew link gperftools
-    ```
-    It is important that the above link is successful. In fact, it is import for all `brew link` to be successful. 
 
 
 ## Dependencies installation from source
@@ -154,36 +145,6 @@ Linux:
 git clone -b OpenSSL_1_1_1d https://github.com/openssl/openssl.git
 cd openssl
 ./config && make -j && sudo make install
-```
-
-#### Secp256k1
-
-```bash
-git clone https://github.com/bitcoin-core/secp256k1.git
-cd secp256k1
-./autogen.sh && ./configure --enable-module-recovery=yes
-make -j && sudo make install
-```
-
-#### libevent
-
-```bash
-git clone -b release-2.1.11-stable --single-branch https://github.com/libevent/libevent.git
-cd libevent
-mkdir build && cd build
-cmake ..
-make -j && sudo make install
-```
-
->   The brew-installed `libevent` on Mac does not work for now. So please compile as instructed in the above.
-
-#### Google Test
-
-```bash
-git clone -b release-1.10.0 --single-branch https://github.com/google/googletest.git
-cd googletest && mkdir build && cd build
-cmake ..
-make -j && sudo make install
 ```
 
 #### Protocol Buffers
@@ -246,4 +207,34 @@ git clone -b v6.3.6 --single-branch https://github.com/facebook/rocksdb.git
 cd rocksdb
 make shared_lib -j
 sudo make install
+```
+
+#### libevent
+
+```bash
+git clone -b release-2.1.11-stable --single-branch https://github.com/libevent/libevent.git
+cd libevent
+mkdir build && cd build
+cmake ..
+make -j && sudo make install
+```
+
+>   The brew-installed `libevent` (version 2.1.11_1) on Mac does not work smoothly for now. So please compile as instructed in the above.
+
+#### Google Test
+
+```bash
+git clone -b release-1.10.0 --single-branch https://github.com/google/googletest.git
+cd googletest && mkdir build && cd build
+cmake ..
+make -j && sudo make install
+```
+
+#### Secp256k1
+
+```bash
+git clone https://github.com/bitcoin-core/secp256k1.git
+cd secp256k1
+./autogen.sh && ./configure --enable-module-recovery=yes
+make -j && sudo make install
 ```
