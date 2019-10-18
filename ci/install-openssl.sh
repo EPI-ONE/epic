@@ -6,6 +6,8 @@ EPIC_OPENSSL_DIR=""openssl-"$EPIC_OPENSSL_VERSION"
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
     brew install openssl@1.1
     export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+    export OPENSSL_INCLUDE_DIR="/usr/local/opt/openssl@1.1/include"
+    echo $OPENSSL_ROOT_DIR $OPENSSL_INCLUDE_DIR
 else
     if [[ ! -d ${EPIC_OPENSSL_DIR} ]];then
         sudo rm -rf openssl*
