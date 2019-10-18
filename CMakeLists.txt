@@ -42,7 +42,7 @@ find_package(OpenSSL REQUIRED)
 target_link_libraries(OpenSSL::Crypto)
 
 # gtest
-find_package(GTest 1.8.1 EXACT REQUIRED)
+find_package(GTest 1.10.0 REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 #libevent
@@ -50,7 +50,7 @@ find_package(Libevent 2.1.11 EXACT REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIRS})
 
 # rocksdb
-find_package(rocksdb REQUIRED)
+find_package(rocksdb 6.1.2 REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIRS})
 
 # secp256k1
@@ -66,7 +66,7 @@ endif()
 include_directories(${Secp256k1_INCLUDE_DIR})
 
 # Protobuf and gRPC
-find_package(Protobuf REQUIRED)
+find_package(Protobuf 3.10.0 REQUIRED)
 find_package(GRPC REQUIRED)
 set(RPC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/rpc)
 set(PROTOS proto/rpc.proto)
