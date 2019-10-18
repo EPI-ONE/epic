@@ -71,7 +71,6 @@ matrix:
          - $BUILD_LIB_MPATH
       before_install:
         - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
-        - export CXXFLAGS="-I/usr/local/opt/openssl@1.1/include $CXXFLAGS"
         - cd $BUILD_LIB_MPATH
 
 install:
@@ -101,7 +100,7 @@ script:
   - cmake --version
   - which cmake
   - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
-  - make -j2
+  - make -j
   - ./../bin/epictest --gtest_filter="-TestTrimmer*:TestMiner.SolveCuckaroo*"
 
 notifications:
