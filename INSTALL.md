@@ -108,7 +108,7 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
 
 ## Dependencies installation from source
 
-Some depencencies needs to be installed from the source. The following is the detailed instruction, with slight variation depending on Linux (Ubuntu/CentOS) or Mac.
+Some depencencies need to be installed from the source. The following is the detailed instruction, with slight variation depending on Linux (Ubuntu/CentOS) or Mac.
 
 #### CMake
 
@@ -129,8 +129,6 @@ cd CMake
 
 #### OpenSSL
 
-This is required by `libevent` and `secp256k1`. 
-
 Mac:
 
 ```bash
@@ -146,6 +144,8 @@ git clone -b OpenSSL_1_1_1d https://github.com/openssl/openssl.git
 cd openssl
 ./config && make -j && sudo make install
 ```
+
+This is required by `libevent` and `secp256k1`. 
 
 #### Protocol Buffers
 
