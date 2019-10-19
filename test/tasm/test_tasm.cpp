@@ -24,8 +24,7 @@ TEST_F(TestTasm, verify) {
     Tasm t;
     VStream v;
 
-    CKey seckey = CKey();
-    seckey.MakeNewKey(true);
+    CKey seckey         = CKey().MakeNewKey(true);
     CPubKey pubkey      = seckey.GetPubKey();
     std::string randstr = "frog learns chess";
     uint256 msg         = HashSHA2<1>(randstr.data(), randstr.size());
@@ -64,10 +63,8 @@ TEST_F(TestTasm, verify_bad_pubkeyhash) {
     Tasm t;
     VStream v;
 
-    CKey seckey          = CKey();
-    CKey maliciousSeckey = CKey();
-    seckey.MakeNewKey(true);
-    maliciousSeckey.MakeNewKey(true);
+    CKey seckey             = CKey().MakeNewKey(true);
+    CKey maliciousSeckey    = CKey().MakeNewKey(true);
     CPubKey pubkey          = seckey.GetPubKey();
     CPubKey maliciousPubkey = maliciousSeckey.GetPubKey();
     std::string randstr     = "frog learns chess";
@@ -90,13 +87,11 @@ TEST_F(TestTasm, verify_bad_signature) {
     Tasm t;
     VStream v;
 
-    CKey seckey          = CKey();
-    CKey maliciousSeckey = CKey();
-    seckey.MakeNewKey(true);
-    maliciousSeckey.MakeNewKey(true);
-    CPubKey pubkey      = seckey.GetPubKey();
-    std::string randstr = "frog learns chess";
-    uint256 msg         = HashSHA2<1>(randstr.data(), randstr.size());
+    CKey seckey          = CKey().MakeNewKey(true);
+    CKey maliciousSeckey = CKey().MakeNewKey(true);
+    CPubKey pubkey       = seckey.GetPubKey();
+    std::string randstr  = "frog learns chess";
+    uint256 msg          = HashSHA2<1>(randstr.data(), randstr.size());
     std::vector<unsigned char> maliciousSig;
     maliciousSeckey.Sign(msg, maliciousSig);
 
@@ -117,8 +112,7 @@ TEST_F(TestTasm, continuous_verify) {
 
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
     for (int i = 0; i < 3; ++i) {
-        CKey seckey = CKey();
-        seckey.MakeNewKey(true);
+        CKey seckey    = CKey().MakeNewKey(true);
         CPubKey pubkey = seckey.GetPubKey();
         uint256 msg    = HashSHA2<1>(randstr[i].data(), randstr[i].size());
         std::vector<unsigned char> sig;
@@ -142,8 +136,7 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
     for (int i = 0; i < 3; ++i) {
         if (i != 2) {
-            CKey seckey = CKey();
-            seckey.MakeNewKey(true);
+            CKey seckey    = CKey().MakeNewKey(true);
             CPubKey pubkey = seckey.GetPubKey();
             uint256 msg    = HashSHA2<1>(randstr[i].data(), randstr[i].size());
             std::vector<unsigned char> sig;
@@ -154,10 +147,8 @@ TEST_F(TestTasm, continuous_verify_bad_pubkeyhash) {
             msg.Serialize(v);
             v << EncodeAddress(pubkey.GetID());
         } else {
-            CKey seckey          = CKey();
-            CKey maliciousSeckey = CKey();
-            seckey.MakeNewKey(true);
-            maliciousSeckey.MakeNewKey(true);
+            CKey seckey             = CKey().MakeNewKey(true);
+            CKey maliciousSeckey    = CKey().MakeNewKey(true);
             CPubKey pubkey          = seckey.GetPubKey();
             CPubKey maliciousPubkey = maliciousSeckey.GetPubKey();
             uint256 msg             = HashSHA2<1>(randstr[i].data(), randstr[i].size());
@@ -183,8 +174,7 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
     std::string randstr[3] = {"first random string", "second random string", "third random string"};
     for (int i = 0; i < 3; ++i) {
         if (i != 2) {
-            CKey seckey = CKey();
-            seckey.MakeNewKey(true);
+            CKey seckey    = CKey().MakeNewKey(true);
             CPubKey pubkey = seckey.GetPubKey();
             uint256 msg    = HashSHA2<1>(randstr[i].data(), randstr[i].size());
             std::vector<unsigned char> sig;
@@ -195,13 +185,11 @@ TEST_F(TestTasm, continuous_verify_bad_signature) {
             msg.Serialize(v);
             v << EncodeAddress(pubkey.GetID());
         } else {
-            CKey seckey          = CKey();
-            CKey maliciousSeckey = CKey();
-            seckey.MakeNewKey(true);
-            maliciousSeckey.MakeNewKey(true);
-            CPubKey pubkey      = seckey.GetPubKey();
-            std::string randstr = "frog learns chess";
-            uint256 msg         = HashSHA2<1>(randstr.data(), randstr.size());
+            CKey seckey          = CKey().MakeNewKey(true);
+            CKey maliciousSeckey = CKey().MakeNewKey(true);
+            CPubKey pubkey       = seckey.GetPubKey();
+            std::string randstr  = "frog learns chess";
+            uint256 msg          = HashSHA2<1>(randstr.data(), randstr.size());
             std::vector<unsigned char> maliciousSig;
             maliciousSeckey.Sign(msg, maliciousSig);
 

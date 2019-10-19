@@ -170,12 +170,13 @@ void GetRandBytes(CPrivKey& buf) {
     GetOpenSSLRand(buf.data(), buf.size());
 }
 
-void CKey::MakeNewKey(bool fCompressedIn) {
+CKey& CKey::MakeNewKey(bool fCompressedIn) {
     do {
         GetRandBytes(keydata);
     } while (!Check(keydata.data()));
     fValid      = true;
     fCompressed = fCompressedIn;
+    return *this;
 }
 
 CPrivKey CKey::GetPrivKey() const {

@@ -32,6 +32,10 @@ public:
         c->ledger_ = ledger;
     }
 
+    void UpdateLedger(Chain* c, const TXOC& txoc) {
+        c->ledger_.Update(txoc);
+    }
+
     std::unique_ptr<Chain> make_chain(const ConcurrentQueue<MilestonePtr>& states,
                                       const std::vector<VertexPtr>& vtcs,
                                       bool ismain = false) {
@@ -216,6 +220,42 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
 }
 
 TEST_F(TestChainVerification, verify_tx_and_utxo) {
+    /**
+     * Generates consecutive blocks along the prevHash link
+     */
+    auto GenerateVertex = [&](Transaction* tx = nullptr) -> VertexPtr {
+        static int height        = 1;
+        static uint256 prev_hash = GENESIS->GetHash();
+        static uint32_t t        = time(nullptr);
+
+        static const auto& ghash = GENESIS->GetHash();
+        Block b{GetParams().version,
+                ghash,
+                prev_hash,
+                ghash,
+                uint256(),
+                t,
+                GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
+                0};
+
+        if (tx) {
+            b.AddTransaction(*tx);
+        }
+
+        b.SetMerkle();
+        b.CalculateOptimalEncodingSize();
+        m.Solve(b);
+
+        VertexPtr vtx         = std::make_shared<Vertex>(std::move(b));
+        vtx->minerChainHeight = height;
+
+        height++;
+        prev_hash = vtx->cblock->GetHash();
+        t++;
+
+        return vtx;
+    };
+
     Chain c{};
 
     Coin valueIn{4}, valueOut1{2}, valueOut2{1};
@@ -227,26 +267,19 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     key.Sign(hashMsg, sig);
 
     // construct transaction output to add into the ledger
-    const auto& ghash = GENESIS->GetHash();
-    auto encodedAddr  = EncodeAddress(addr);
+    // const auto& ghash = GENESIS->GetHash();
+    auto encodedAddr = EncodeAddress(addr);
     VStream outdata(encodedAddr);
     Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
     TxOutput output{valueIn, outputListing};
 
-    uint32_t t = time(nullptr);
-    Block b1{
-        GetParams().version, ghash, ghash, ghash, uint256(), t, GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0};
+    // uint32_t t = time(nullptr);
     Transaction tx1{};
     tx1.AddOutput(std::move(output));
     tx1.FinalizeHash();
-    b1.AddTransaction(tx1);
-    b1.SetMerkle();
-    b1.CalculateOptimalEncodingSize();
-    m.Solve(b1);
-    ASSERT_NE(b1.GetChainWork(), 0);
-    auto vtx1              = std::make_shared<Vertex>(std::move(b1));
-    vtx1->minerChainHeight = 1;
-    const auto& b1hash     = vtx1->cblock->GetHash();
+    auto vtx1 = GenerateVertex(&tx1);
+    ASSERT_NE(vtx1->cblock->GetChainWork(), 0);
+    const auto& b1hash = vtx1->cblock->GetHash();
 
     auto putxo = std::make_shared<UTXO>(vtx1->cblock->GetTransactions()[0]->GetOutputs()[0], 0, 0);
     ChainLedger ledger{
@@ -255,36 +288,21 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     AddToHistory(&c, vtx1);
 
     // construct an empty block
-    Block b2{
-        GetParams().version, ghash, b1hash, ghash, uint256(), t, GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0};
-    m.Solve(b2);
-    Vertex vtx2{std::move(b2)};
-    vtx2.minerChainHeight = 2;
-    const auto& b2hash    = vtx2.cblock->GetHash();
-    AddToHistory(&c, std::make_shared<Vertex>(vtx2));
+    auto vtx2 = GenerateVertex();
+    AddToHistory(&c, vtx2);
 
-    // construct another block
+    // construct another block with a valid tx
     Transaction tx{};
     tx.AddInput(TxInput(TxOutPoint{b1hash, 0, 0}, key.GetPubKey(), hashMsg, sig))
         .AddOutput(valueOut1, addr)
         .AddOutput(valueOut2, addr)
         .FinalizeHash();
-    Block b3{GetParams().version,
-             ghash,
-             b2hash,
-             ghash,
-             uint256(),
-             t + 1,
-             GENESIS_VERTEX->snapshot->blockTarget.GetCompact(),
-             0};
-    b3.AddTransaction(tx);
-    b3.SetMerkle();
-    b3.CalculateOptimalEncodingSize();
-    m.Solve(b3);
-    Vertex vtx3{std::move(b3)};
-    vtx3.minerChainHeight = 3;
+    auto vtx3 = GenerateVertex(&tx);
 
-    auto txoc{ValidateTx(&c, vtx3)};
+    c.AddPendingUTXOs({std::make_shared<UTXO>(vtx3->cblock->GetTransactions()[0]->GetOutputs()[0], 0, 0),
+                       std::make_shared<UTXO>(vtx3->cblock->GetTransactions()[0]->GetOutputs()[1], 0, 1)});
+
+    auto txoc{ValidateTx(&c, *vtx3)};
     ASSERT_FALSE(txoc.Empty());
 
     auto& spent   = txoc.GetSpent();
@@ -294,7 +312,53 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
     auto& created = txoc.GetCreated();
     ASSERT_EQ(created.size(), 2);
-    ASSERT_EQ(vtx3.fee, valueIn - valueOut1 - valueOut2);
+    ASSERT_EQ(vtx3->fee, valueIn - valueOut1 - valueOut2);
+
+    const auto& b3hash = vtx3->cblock->GetHash();
+    AddToHistory(&c, vtx3);
+    UpdateLedger(&c, txoc);
+
+    // construct a block with a double-spent tx
+    auto vtx4 = GenerateVertex(&tx);
+    auto txoc4{ValidateTx(&c, *vtx4)};
+    ASSERT_TRUE(txoc4.Empty());
+    AddToHistory(&c, vtx4);
+
+    // construct a block with invalid output value
+    Transaction invalid_out{};
+    invalid_out.AddInput(TxInput(TxOutPoint{b3hash, 0, 0}, key.GetPubKey(), hashMsg, sig))
+        .AddOutput(valueOut1 + 1, addr)
+        .FinalizeHash();
+    auto vtx5 = GenerateVertex(&invalid_out);
+
+    auto txoc5{ValidateTx(&c, *vtx5)};
+    ASSERT_TRUE(txoc5.Empty());
+    AddToHistory(&c, vtx5);
+
+    // construct a block with invalid input value
+    Transaction invalid_in{};
+    invalid_in.AddInput(TxInput(TxOutPoint{b3hash, 0, 0}, key.GetPubKey(), hashMsg, sig))
+        .AddInput(TxInput(TxOutPoint{b3hash, 0, 1}, key.GetPubKey(), hashMsg, sig))
+        .AddOutput(valueOut1, addr)
+        .AddOutput(valueOut2, addr)
+        .AddOutput(1, addr)
+        .FinalizeHash();
+    auto vtx6 = GenerateVertex(&invalid_in);
+
+    auto txoc6{ValidateTx(&c, *vtx6)};
+    ASSERT_TRUE(txoc6.Empty());
+    AddToHistory(&c, vtx6);
+
+    // construct a block with invalid signature
+    Transaction invalid_sig{};
+    invalid_sig.AddInput(TxInput(TxOutPoint{b3hash, 0, 0}, CKey().MakeNewKey(true).GetPubKey(), hashMsg, sig))
+        .AddOutput(valueOut1, addr)
+        .FinalizeHash();
+    auto vtx7 = GenerateVertex(&invalid_sig);
+
+    auto txoc7{ValidateTx(&c, *vtx7)};
+    ASSERT_TRUE(txoc7.Empty());
+    AddToHistory(&c, vtx7);
 }
 
 TEST_F(TestChainVerification, ChainForking) {

@@ -116,8 +116,7 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 }
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
-    VStream vstream;
-    vstream << EncodeAddress(addr);
+    VStream vstream{EncodeAddress(addr)};
     return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, std::move(vstream)}});
 }
 
