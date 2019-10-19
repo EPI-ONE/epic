@@ -54,27 +54,20 @@ matrix:
         - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB024.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && ./ci/deploy-build.sh"
         - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB028.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && ./ci/deploy-build.sh"
 
-
     - os: osx
-      osx_image: xcode11
+      osx_image: xcode11.2
       addons:
         homebrew:
           packages:
             - autoconf
             - automake
             - libtool
-            - llvm
+            - gmp 
       cache:
         directories:
          - $BUILD_LIB_MPATH
       before_install:
-        - export PATH="/usr/local/opt/llvm/bin:$PATH"
-        - export LDFLAGS="-L/usr/local/opt/llvm/lib"
-        - export CXXFLAGS="-I/usr/local/opt/llvm/include"
-        - export CC=clang && export CXX=clang++ &&  CXX_FOR_BUILD=clang++ && CC_FOR_BUILD=clang
-        - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
-        - export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
-        - sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+        - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         - cd $BUILD_LIB_MPATH
 
 install:

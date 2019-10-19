@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ev
-EPIC_GTEST_VERSION="1.8.1"
+EPIC_GTEST_VERSION="1.10.0"
 EPIC_GTEST_DIR=""googletest-"$EPIC_GTEST_VERSION"
 
 if [[ ! -d ${EPIC_GTEST_DIR} ]];then
