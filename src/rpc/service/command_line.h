@@ -44,23 +44,11 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             reply->set_result("Miner is not running yet");
         }
         if (!MINER->Stop()) {
-            reply->set_result("Fail to stop miner");
+            reply->set_result("Failed to stop miner");
         }
         reply->set_result("Miner is successfully stopped");
         return grpc::Status::OK;
     }
-
-    /*grpc::Status StopMiner(grpc::ServerContext* context,
-                           const StopMinerRequest* request,
-                           StopMinerResponse* reply) override {
-        if (MINER->IsRunning()) {
-            MINER->Stop();
-            reply->set_success(true);
-        } else {
-            reply->set_success(false);
-        }
-        return grpc::Status::OK;
-    }*/
 
     grpc::Status CreateRandomTx(grpc::ServerContext* context,
                                 const CreateRandomTxRequest* request,
@@ -68,24 +56,13 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (!WALLET) {
             reply->set_result("Wallet has not been started");
         } else if (!WALLET->IsLoggedIn()) {
-            reply->set_result("Please log in wallet or set up a new passphrase");
+            reply->set_result("Please log in or set up a new passphrase");
         } else {
             WALLET->CreateRandomTx(request->size());
             reply->set_result("Now wallet is creating tx");
         }
         return grpc::Status::OK;
     }
-    /*grpc::Status CreateRandomTx(grpc::ServerContext* context,
-                                const CreateRandomTxRequest* request,
-                                CreateRandomTxResponse* reply) override {
-        if (!WALLET) {
-            reply->set_result("Wallet has not been started");
-        } else {
-            WALLET->CreateRandomTx(request->size());
-            reply->set_result("Now wallet is creating tx");
-        }
-        return grpc::Status::OK;
-    }*/
 
     grpc::Status CreateTx(grpc::ServerContext* context,
                           const CreateTxRequest* request,
@@ -94,7 +71,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (!WALLET) {
             reply->set_txinfo("Wallet has not been started");
         } else if (!WALLET->IsLoggedIn()) {
-            reply->set_txinfo("Please log in wallet or set up a new passphrase");
+            reply->set_txinfo("Please log in or set up a new passphrase");
         } else if (request->outputs().empty()) {
             reply->set_txinfo("Please specify at least one output");
         } else {
@@ -124,7 +101,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (!WALLET) {
             reply->set_address("Wallet has not been started");
         } else if (!WALLET->IsLoggedIn()) {
-            reply->set_address("Please log in wallet or set up a new passphrase");
+            reply->set_address("Please log in or set up a new passphrase");
         } else {
             auto key = WALLET->CreateNewKey(true);
             reply->set_address(EncodeAddress(key));
@@ -138,7 +115,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (!WALLET) {
             reply->set_coin("Wallet has not been started");
         } else if (!WALLET->IsLoggedIn()) {
-            reply->set_coin("Please log in wallet or set up a new passphrase");
+            reply->set_coin("Please log in or set up a new passphrase");
         } else {
             auto balance = WALLET->GetBalance();
             reply->set_coin(std::to_string(balance.GetValue()));
@@ -154,11 +131,12 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         } else if (WALLET->IsCrypted()) {
             reply->set_responseinfo("Wallet has already be encrypted with a passphrase");
         } else if (!WALLET->SetPassphrase(SecureString{request->passphrase()})) {
-            reply->set_responseinfo("Fail to set passphrase");
+            reply->set_responseinfo("Failed to set passphrase");
         } else {
             reply->set_responseinfo("Your passphrase has been successfully set!");
             WALLET->RPCLogin();
         }
+        return grpc::Status::OK;
     }
 
     grpc::Status ChangePassphrase(grpc::ServerContext* context,
@@ -170,7 +148,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             reply->set_responseinfo("Wallet has no phrase set. Please set one first");
         } else if (!WALLET->ChangePassphrase(SecureString{request->oldpassphrase()},
                                              SecureString{request->newpassphrase()})) {
-            reply->set_responseinfo("Fail to change passphrase. Please check passphrase");
+            reply->set_responseinfo("Failed to change passphrase. Please check passphrase");
         } else {
             reply->set_responseinfo("Your passphrase is successfully updated!");
             WALLET->RPCLogin();
@@ -184,7 +162,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         } else if (!WALLET->IsCrypted()) {
             reply->set_responseinfo("Wallet has no phrase set. Please set one first");
         } else if (!WALLET->CheckPassphrase(SecureString{request->passphrase()})) {
-            reply->set_responseinfo("Fail to login with the passphrase. Please check passphrase");
+            reply->set_responseinfo("Failed to login with the passphrase. Please check passphrase");
         } else {
             reply->set_responseinfo("You are already logged in");
             WALLET->RPCLogin();

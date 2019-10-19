@@ -256,7 +256,6 @@ TEST_F(TestWallet, normal_workflow) {
 
     ASSERT_EQ(balance, WALLET->GetBalance());
 
-    MINER->Start();
     MINER->Run();
 
     WALLET->CreateRandomTx(1);
@@ -276,7 +275,6 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_TRUE(WALLET->CheckPassphrase(newPhrase));
     WALLET->CreateRandomTx(1);
 
-    MINER->Start();
     MINER->Run();
 
     usleep(500000);

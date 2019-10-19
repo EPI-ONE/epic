@@ -626,7 +626,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 
         TXOC txocToRemove{std::move(utxoCreated), std::move(utxoToRemove)};
 
-        verifyThread_.Execute([=, msHash = std::move(ms.cblock->GetHash()), vtxHashes = std::move(vtxHashes),
+        verifyThread_.Execute([=, msHash = ms.cblock->GetHash(), vtxHashes = std::move(vtxHashes),
                                txocToRemove = std::move(txocToRemove)]() {
             globalStates_.erase(msHash);
             for (auto& chain : milestoneChains) {

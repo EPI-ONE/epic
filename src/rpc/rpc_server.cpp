@@ -6,7 +6,8 @@
 #include "service/basic_block_explorer.h"
 #include "service/command_line.h"
 
-    RPCServer::RPCServer(const NetAddress& address, const std::vector <RPCServiceType>& services) : server(address.ToString()) {
+RPCServer::RPCServer(const NetAddress& address, const std::vector<RPCServiceType>& services)
+    : server(address.ToString()) {
     for (auto& type : services) {
         switch (type) {
             case RPCServiceType::BLOCK_EXPLORER_SERVER: {
