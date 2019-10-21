@@ -159,7 +159,7 @@ private:
     Crypter crypter_;
 
     // check if the old pass phrase matches
-    std::optional<Crypter> CheckPassphraseMatch(const SecureString&);
+    std::optional<Crypter> CheckPassphraseMatch(const SecureString&) const;
     std::atomic_bool rpcLoggedin_ = false;
 };
 

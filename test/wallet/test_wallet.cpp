@@ -2,14 +2,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <chrono>
 #include <gtest/gtest.h>
 
 #include "mempool.h"
 #include "miner.h"
 #include "test_env.h"
 #include "wallet.h"
-
-#include <chrono>
 
 class TestWallet : public testing::Test {
 public:
@@ -27,91 +26,91 @@ public:
 };
 
 TEST_F(TestWallet, basic_workflow_in_wallet) {
-    {
-        Coin init_money{100};
-        Wallet wallet{dir, 1};
-        wallet.GenerateMaster();
-        wallet.SetPassphrase("");
-        wallet.DisableRedemptions();
-        wallet.Start();
-        wallet.CreateNewKey(false);
-        MEMPOOL   = std::make_unique<MemPool>();
-        auto addr = wallet.GetRandomAddress();
-        Transaction tx;
-        tx.AddOutput(init_money, addr);
-        tx.FinalizeHash();
+    Coin init_money{100};
+    auto wallet = new Wallet{dir, 1};
+    wallet->GenerateMaster();
+    wallet->SetPassphrase("");
+    wallet->DisableRedemptions();
+    wallet->Start();
+    wallet->CreateNewKey(false);
+    MEMPOOL   = std::make_unique<MemPool>();
+    auto addr = wallet->GetRandomAddress();
+    Transaction tx;
+    tx.AddOutput(init_money, addr);
+    tx.FinalizeHash();
 
-        Block block;
-        block.AddTransaction(tx);
-        block.SetMerkle();
-        block.CalculateHash();
-        block.SetParents();
+    Block block;
+    block.AddTransaction(tx);
+    block.SetMerkle();
+    block.CalculateHash();
+    block.SetParents();
 
-        auto utxo           = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[0], 0, 0);
-        auto vertex         = std::make_shared<Vertex>(block);
-        vertex->validity[0] = Vertex::VALID;
-        wallet.OnLvsConfirmed({vertex}, {{utxo->GetKey(), utxo}}, {});
+    auto utxo           = std::make_shared<UTXO>(block.GetTransactions()[0]->GetOutputs()[0], 0, 0);
+    auto vertex         = std::make_shared<Vertex>(block);
+    vertex->validity[0] = Vertex::VALID;
+    wallet->OnLvsConfirmed({vertex}, {{utxo->GetKey(), utxo}}, {});
 
-        while (wallet.GetBalance() != init_money) {
-            std::this_thread::yield();
-        }
-        ASSERT_EQ(wallet.GetBalance(), init_money);
-        ASSERT_EQ(wallet.GetUnspent().size(), 1);
-
-        wallet.CreateNewKey(false);
-        Coin spent_money{10};
-        std::vector<std::pair<Coin, CKeyID>> outputs{{spent_money, CKeyID()}};
-        auto new_tx = wallet.CreateTx(outputs);
-
-        ASSERT_EQ(new_tx->GetOutputs().size(), 2);
-        auto totalOutput = new_tx->GetOutputs()[0].value + new_tx->GetOutputs()[1].value;
-        ASSERT_EQ(totalOutput, init_money - MIN_FEE);
-        ASSERT_TRUE(new_tx);
-        ASSERT_EQ(new_tx->GetOutputs().size(), outputs.size() + 1);
-        ASSERT_EQ(wallet.GetBalance(), 0);
-        ASSERT_EQ(wallet.GetUnspent().size(), 0);
-        ASSERT_EQ(wallet.GetPending().size(), 1);
-        ASSERT_EQ(wallet.GetSpent().size(), 0);
-        ASSERT_EQ(wallet.GetPendingTx().size(), 1);
-        ASSERT_TRUE(wallet.GetPendingTx().contains(new_tx->GetHash()));
-
-        MEMPOOL = std::make_unique<MemPool>();
-        ASSERT_TRUE(wallet.SendTxToMemPool(new_tx));
-        ASSERT_EQ(MEMPOOL->Size(), 1);
-
-        Block new_block;
-        new_block.AddTransaction(std::move(new_tx));
-        new_block.SetMerkle();
-        new_block.CalculateHash();
-        new_block.SetParents();
-        auto outpoint = new_block.GetTransactions()[0]->GetInputs()[0].outpoint;
-        auto stxokey  = ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex);
-        ASSERT_EQ(stxokey, utxo->GetKey());
-
-        std::unordered_map<uint256, UTXOPtr> utxos;
-
-        int index = 0;
-        for (auto& output : new_block.GetTransactions()[0]->GetOutputs()) {
-            auto putxo = std::make_shared<UTXO>(output, index, index);
-            utxos.emplace(putxo->GetKey(), putxo);
-            index++;
-        }
-
-        auto new_vertex         = std::make_shared<Vertex>(new_block);
-        new_vertex->validity[0] = Vertex::VALID;
-
-        wallet.OnLvsConfirmed({new_vertex}, std::move(utxos), {stxokey});
-        while (wallet.GetBalance() == init_money - spent_money - MIN_FEE) {
-            std::this_thread::yield();
-        }
-        wallet.Stop();
-        ASSERT_EQ(wallet.GetUnspent().size(), 1);
-        ASSERT_EQ(wallet.GetPending().size(), 0);
-        ASSERT_EQ(wallet.GetSpent().size(), 1);
-        ASSERT_EQ(wallet.GetPendingTx().size(), 0);
-        ASSERT_EQ(wallet.GetBalance(), init_money - spent_money - MIN_FEE);
-        MEMPOOL.reset();
+    while (wallet->GetBalance() != init_money) {
+        std::this_thread::yield();
     }
+    ASSERT_EQ(wallet->GetBalance(), init_money);
+    ASSERT_EQ(wallet->GetUnspent().size(), 1);
+
+    wallet->CreateNewKey(false);
+    Coin spent_money{10};
+    std::vector<std::pair<Coin, CKeyID>> outputs{{spent_money, CKeyID()}};
+    auto new_tx = wallet->CreateTx(outputs);
+
+    ASSERT_EQ(new_tx->GetOutputs().size(), 2);
+    auto totalOutput = new_tx->GetOutputs()[0].value + new_tx->GetOutputs()[1].value;
+    ASSERT_EQ(totalOutput, init_money - MIN_FEE);
+    ASSERT_TRUE(new_tx);
+    ASSERT_EQ(new_tx->GetOutputs().size(), outputs.size() + 1);
+    ASSERT_EQ(wallet->GetBalance(), 0);
+    ASSERT_EQ(wallet->GetUnspent().size(), 0);
+    ASSERT_EQ(wallet->GetPending().size(), 1);
+    ASSERT_EQ(wallet->GetSpent().size(), 0);
+    ASSERT_EQ(wallet->GetPendingTx().size(), 1);
+    ASSERT_TRUE(wallet->GetPendingTx().contains(new_tx->GetHash()));
+
+    MEMPOOL = std::make_unique<MemPool>();
+    ASSERT_TRUE(wallet->SendTxToMemPool(new_tx));
+    ASSERT_EQ(MEMPOOL->Size(), 1);
+
+    Block new_block;
+    new_block.AddTransaction(std::move(new_tx));
+    new_block.SetMerkle();
+    new_block.CalculateHash();
+    new_block.SetParents();
+    auto outpoint = new_block.GetTransactions()[0]->GetInputs()[0].outpoint;
+    auto stxokey  = ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex);
+    ASSERT_EQ(stxokey, utxo->GetKey());
+
+    std::unordered_map<uint256, UTXOPtr> utxos;
+
+    int index = 0;
+    for (auto& output : new_block.GetTransactions()[0]->GetOutputs()) {
+        auto putxo = std::make_shared<UTXO>(output, index, index);
+        utxos.emplace(putxo->GetKey(), putxo);
+        index++;
+    }
+
+    auto new_vertex         = std::make_shared<Vertex>(new_block);
+    new_vertex->validity[0] = Vertex::VALID;
+
+    wallet->OnLvsConfirmed({new_vertex}, std::move(utxos), {stxokey});
+    while (wallet->GetBalance() == init_money - spent_money - MIN_FEE) {
+        std::this_thread::yield();
+    }
+    wallet->Stop();
+    ASSERT_EQ(wallet->GetUnspent().size(), 1);
+    ASSERT_EQ(wallet->GetPending().size(), 0);
+    ASSERT_EQ(wallet->GetSpent().size(), 1);
+    ASSERT_EQ(wallet->GetPendingTx().size(), 0);
+    ASSERT_EQ(wallet->GetBalance(), init_money - spent_money - MIN_FEE);
+    MEMPOOL.reset();
+
+    delete wallet;
 
     Wallet newWallet{dir, period};
     ASSERT_EQ(newWallet.GetUnspent().size(), 1);
@@ -125,40 +124,40 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
 TEST_F(TestWallet, test_wallet_store) {
     CKeyID addr;
-    {
-        WalletStore store{dir};
-        // very simple tx tests
-        auto tx = fac.CreateTx(fac.GetRand() % 10, fac.GetRand() % 10);
-        store.StoreTx(tx);
+    auto store = new WalletStore{dir};
+    // very simple tx tests
+    auto tx = fac.CreateTx(fac.GetRand() % 10, fac.GetRand() % 10);
+    store->StoreTx(tx);
 
-        auto txs = store.GetAllTx();
-        ASSERT_EQ(tx, *(txs.at(tx.GetHash())));
+    auto txs = store->GetAllTx();
+    ASSERT_EQ(tx, *(txs.at(tx.GetHash())));
 
-        // very simple key tests
-        auto [priv, pub] = fac.CreateKeyPair();
-        addr             = pub.GetID();
-        auto testCipher  = ParseHex("f5f7228bfe8d771c7f860338cf6fa2d609aa1fdf8167046cc3f4ebdc3169d6ad");
-        store.StoreKeys(addr, testCipher, pub);
+    // very simple key tests
+    auto [priv, pub] = fac.CreateKeyPair();
+    addr             = pub.GetID();
+    auto testCipher  = ParseHex("f5f7228bfe8d771c7f860338cf6fa2d609aa1fdf8167046cc3f4ebdc3169d6ad");
+    store->StoreKeys(addr, testCipher, pub);
 
-        auto keys = store.GetAllKey();
-        ASSERT_EQ(keys.count(addr), 1);
-        ASSERT_TRUE(store.IsExistKey(addr));
+    auto keys = store->GetAllKey();
+    ASSERT_EQ(keys.count(addr), 1);
+    ASSERT_TRUE(store->IsExistKey(addr));
 
-        uint256 fakeHash = fac.CreateRandomHash();
-        store.StoreUnspent(fakeHash, addr, 0, 0, 5);
-        auto unspent = store.GetAllUnspent();
-        ASSERT_FALSE(unspent.empty());
-        ASSERT_EQ(unspent.size(), 1);
-        ASSERT_EQ(unspent.count(fakeHash), 1);
-        ASSERT_TRUE(std::get<3>(unspent.at(fakeHash)) == 5);
+    uint256 fakeHash = fac.CreateRandomHash();
+    store->StoreUnspent(fakeHash, addr, 0, 0, 5);
+    auto unspent = store->GetAllUnspent();
+    ASSERT_FALSE(unspent.empty());
+    ASSERT_EQ(unspent.size(), 1);
+    ASSERT_EQ(unspent.count(fakeHash), 1);
+    ASSERT_TRUE(std::get<3>(unspent.at(fakeHash)) == 5);
 
-        ASSERT_EQ(store.KeysToFile("keys"), 0);
-        ASSERT_TRUE(store.StoreFirstRegInfo());
-        ASSERT_TRUE(store.GetFirstRegInfo());
+    ASSERT_EQ(store->KeysToFile("keys"), 0);
+    ASSERT_TRUE(store->StoreFirstRegInfo());
+    ASSERT_TRUE(store->GetFirstRegInfo());
 
-        store.ClearOldData();
-        ASSERT_EQ(store.GetAllTx().size(), 0);
-    }
+    store->ClearOldData();
+    ASSERT_EQ(store->GetAllTx().size(), 0);
+
+    delete store;
 
     WalletStore newStore{dir};
     ASSERT_TRUE(newStore.IsExistKey(addr));

@@ -525,7 +525,7 @@ bool Wallet::CheckPassphrase(const SecureString& phrase) {
     }
 }
 
-std::optional<Crypter> Wallet::CheckPassphraseMatch(const SecureString& phrase) {
+std::optional<Crypter> Wallet::CheckPassphraseMatch(const SecureString& phrase) const {
     Crypter tmpcrypter{};
     if (!tmpcrypter.SetKeyFromPassphrase(phrase, masterInfo_.salt, masterInfo_.nDeriveIterations)) {
         return {};

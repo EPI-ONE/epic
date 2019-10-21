@@ -134,7 +134,6 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             reply->set_responseinfo("Failed to set passphrase");
         } else {
             reply->set_responseinfo("Your passphrase has been successfully set!");
-            WALLET->RPCLogin();
         }
         return grpc::Status::OK;
     }
@@ -151,7 +150,6 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             reply->set_responseinfo("Failed to change passphrase. Please check passphrase");
         } else {
             reply->set_responseinfo("Your passphrase is successfully updated!");
-            WALLET->RPCLogin();
         }
         return grpc::Status::OK;
     }
