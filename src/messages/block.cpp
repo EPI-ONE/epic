@@ -341,7 +341,6 @@ void Block::FinalizeHash() {
 
 void Block::CalculateHash() {
     if (HasTransaction() && header_.merkleRoot.IsNull()) {
-        std::cout << "header merkle " << std::to_string(header_.merkleRoot) << std::endl;
         header_.merkleRoot = ComputeMerkleRoot();
     }
 

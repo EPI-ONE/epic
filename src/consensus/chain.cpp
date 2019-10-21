@@ -120,7 +120,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 
     /**
      * reserve memory for efficiency;
-     * please note that n/2 is a not really precise upper bound and can be improved 
+     * please note that n/2 is a not really precise upper bound and can be improved
      */
     stack.reserve(pendingBlocks_.size() / 2);
     result.reserve(pendingBlocks_.size());
@@ -154,7 +154,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 
     result.shrink_to_fit();
     spdlog::debug("{} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
-                 static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
+                  static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
     return result;
 }
 
@@ -305,10 +305,19 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         oldRedempHash = prevRedempHashMap_.find(blkHash)->second;
     } else {
         oldRedempHash = STORE->GetPrevRedemHash(prevHash);
+
+        if (oldRedempHash.IsNull()) {
+            spdlog::warn("Peer chain forks here [{}]", std::to_string(blkHash));
+            auto b = GetVertex(prevHash);
+            while (!b->cblock->IsRegistration() || b->validity[0] != Vertex::VALID) {
+                b = GetVertex(b->cblock->GetPrevHash());
+            }
+            oldRedempHash = b->cblock->GetHash();
+        }
+
         prevRedempHashMap_.emplace(blkHash, oldRedempHash);
     }
 
-    assert(!oldRedempHash.IsNull());
     regChange.Remove(prevHash, oldRedempHash);
     regChange.Create(blkHash, oldRedempHash);
 
@@ -370,20 +379,27 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     auto prevReg           = GetVertex(prevRedempHash);
     assert(prevReg);
 
-    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
-        spdlog::info("[Validation] Double redemption on previous registration block {} [{}]",
-                     std::to_string(prevRedempHash), hashstr);
-        return {};
-    }
-
     const auto& redem = vertex.cblock->GetTransactions().at(0);
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
+    if (vin.outpoint.bHash != prevRedempHash) {
+        spdlog::info("[Validation] Double redemption on previous registration block: outpoint not matching {} [{}]",
+                     prevRedempHash.to_substr(), hashstr);
+        return {};
+    }
+
+    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
+        spdlog::info("[Validation] Double redemption on previous registration block: already redeemed {} [{}]",
+                     prevRedempHash.to_substr(), hashstr);
+        return {};
+    }
+
     auto prevBlock = GetVertex(vertex.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter
     if (!(vout.value <= prevBlock->cumulativeReward)) {
-        spdlog::info("[Validation] Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
+        spdlog::info("[Validation] Wrong redemption value ({}) that exceeds the total cumulative reward ({}) [{}]",
+                     vout.value.GetValue(), prevBlock->cumulativeReward.GetValue(), hashstr);
         return {};
     }
 
