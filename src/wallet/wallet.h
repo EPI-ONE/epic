@@ -131,6 +131,7 @@ private:
     std::atomic_bool enableRedem_ = true;
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
     CKeyID lastRedemAddress_;
+    uint256 lastRedemHash_;
 
     std::atomic<size_t> totalBalance_;
     std::atomic_bool hasSentFirstRegistration_{false};
@@ -156,6 +157,9 @@ private:
 
     CKeyID GetLastRedemAddress() const;
     void SetLastRedemAddress(const CKeyID& lastRedemAddress);
+
+    uint256 GetLastRedemHash() const;
+    void SetLastRedemHash(const uint256&);
 
     std::atomic_bool cryptedFlag_ = false;
     SecureByte master_;

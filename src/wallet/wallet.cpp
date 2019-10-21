@@ -195,6 +195,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
             auto keyId  = ParseAddrFromScript(output.listingContent);
             assert(keyId);
             SetLastRedemAddress(*keyId);
+            SetLastRedemHash(vertex->cblock->GetHash());
             pendingRedemption.erase(it);
         }
     }
@@ -240,7 +241,7 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
 ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& nextAddr, const std::string& msg) {
     Transaction redeem{};
     auto minerInfo = GetMinerInfo();
-    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{minerInfo.first, UNCONNECTED, UNCONNECTED}, msg))
+    redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{GetLastRedemHash(), UNCONNECTED, UNCONNECTED}, msg))
         .AddOutput(minerInfo.second, nextAddr);
     auto redemPtr = std::make_shared<const Transaction>(std::move(redeem));
     pendingRedemption.insert({redemPtr->GetHash(), redemPtr});
@@ -257,7 +258,7 @@ void Wallet::CreateRedemption(const CKeyID& key) {
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     auto reg                  = std::make_shared<const Transaction>(address);
     hasSentFirstRegistration_ = true;
-    SetLastRedemAddress(address);
+    pendingRedemption.insert({reg->GetHash(), reg});
     return reg;
 }
 
@@ -417,6 +418,16 @@ void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     lastRedemAddress_ = lastRedemAddress;
     walletStore_.StoreLastRedemAddr(lastRedemAddress_);
+}
+
+uint256 Wallet::GetLastRedemHash() const {
+    READER_LOCK(lock_);
+    return lastRedemHash_;
+}
+
+void Wallet::SetLastRedemHash(const uint256& h) {
+    WRITER_LOCK(lock_)
+    lastRedemHash_ = h;
 }
 
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
