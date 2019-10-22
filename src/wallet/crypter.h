@@ -50,6 +50,12 @@ public:
         READWRITE(salt);
         READWRITE(nDeriveIterations);
     }
+
+    bool IsNull() const {
+        unsigned char zeros[WALLET_CRYPTO_KEY_SIZE];
+        memset(zeros, 0, WALLET_CRYPTO_KEY_SIZE);
+        return memcmp(cryptedMaster.data(), zeros, WALLET_CRYPTO_KEY_SIZE) == 0;
+    }
 };
 
 

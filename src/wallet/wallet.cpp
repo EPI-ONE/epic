@@ -469,7 +469,7 @@ bool Wallet::SetPassphrase(const SecureString& phrase) {
     walletStore_.StoreMasterInfo(masterInfo_);
     // TODO: set HD wallet
     cryptedFlag_ = true;
-    return true;
+    return crypter_.IsReady();
 }
 
 bool Wallet::ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase) {

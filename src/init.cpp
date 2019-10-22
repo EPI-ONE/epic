@@ -392,13 +392,13 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 bool Start() {
     // start p2p network
     if (!PEERMAN->Init(CONFIG)) {
-        std::cerr << "fail to start peer manager" << std::endl;
+        std::cerr << "Failed to start peer manager" << std::endl;
         return false;
     }
     PEERMAN->Start();
     WALLET->Start();
-    if (!WALLET->GenerateMaster()) {
-        std::cerr << "fail to generate master key for wallet" << std::endl;
+    if (!WALLET->ExistMaster() &&!WALLET->GenerateMaster()) {
+        std::cerr << "Failed to generate master key for wallet" << std::endl;
         return false;
     } // TODO: make it from rpc calls
 
@@ -424,6 +424,7 @@ void ShutDown() {
     DAG->Stop();
     STORE->Stop();
 
+    WALLET.reset();
     STORE.reset();
     DAG.reset();
     MEMPOOL.reset();

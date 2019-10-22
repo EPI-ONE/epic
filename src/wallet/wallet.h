@@ -91,11 +91,16 @@ public:
     bool SetPassphrase(const SecureString& phrase);
     bool ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase);
     bool CheckPassphrase(const SecureString& phrase);
+
     void RPCLogin() {
         rpcLoggedin_ = true;
     }
-    bool IsLoggedIn() {
+    bool IsLoggedIn() const {
         return rpcLoggedin_;
+    }
+
+    bool ExistMaster() const {
+        return !masterInfo_.IsNull();
     }
     bool GenerateMaster();
 
