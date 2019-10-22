@@ -88,6 +88,10 @@ public:
         return true;
     } 
 
+    SecureByte GetMaster() const {
+        return master_;
+    }
+
     void CleanKey() {
         memory_cleanse(passphraseKey_.data(), passphraseKey_.size());
         memory_cleanse(passphraseIV_.data(), passphraseIV_.size());

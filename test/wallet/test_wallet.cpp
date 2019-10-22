@@ -253,6 +253,7 @@ TEST_F(TestWallet, normal_workflow) {
     WALLET->CheckPassphrase("");
     WALLET->Start();
 
+    ASSERT_TRUE(WALLET->ExistMaster());
     ASSERT_EQ(balance, WALLET->GetBalance());
 
     MINER->Run();

@@ -153,6 +153,9 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
     // update miner info
     if (vertex->cblock->source == Block::Source::MINER) {
         UpdateMinerInfo(vertex->cblock->GetHash(), vertex->cumulativeReward);
+        if (vertex->cblock->IsFirstRegistration()) {
+            walletStore_.StoreFirstRegInfo();
+        }
     }
 
     if (!vertex->cblock->HasTransaction()) {
@@ -254,7 +257,6 @@ void Wallet::CreateRedemption(const CKeyID& key) {
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     auto reg                  = std::make_shared<const Transaction>(address);
     hasSentFirstRegistration_ = true;
-    walletStore_.StoreFirstRegInfo();
     SetLastRedemAddress(address);
     return reg;
 }
@@ -518,6 +520,9 @@ bool Wallet::CheckPassphrase(const SecureString& phrase) {
             }
 
             crypter_ = std::move(*oCrypter);
+            const auto& master = crypter_.GetMaster();
+            master_.resize(master.size());
+            memcpy(master_.data(), master.data(), master.size());
             return crypter_.IsReady();
         }
     } else {
