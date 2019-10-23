@@ -187,7 +187,8 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
     }
 
     if (!message->hashes.empty()) {
-        spdlog::debug("Requesting lvs {} to {}", message->hashes.front().to_substr(), message->hashes.back().to_substr());
+        spdlog::debug("Requesting lvs {} to {}", message->hashes.front().to_substr(),
+                      message->hashes.back().to_substr());
         requestFrom->SendMessage(std::move(message));
     }
 }
@@ -493,7 +494,8 @@ void DAGManager::DeleteFork() {
                 }
                 globalStates_.erase((*it)->GetMilestoneHash());
             }
-            spdlog::info("Deleting fork with chain head {}", (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr());
+            spdlog::info("Deleting fork with chain head {}",
+                         (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr());
             chain_it = milestoneChains.erase(chain_it);
         } else {
             chain_it++;

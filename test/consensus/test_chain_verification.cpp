@@ -13,7 +13,7 @@
 class TestChainVerification : public testing::Test {
 public:
     TestFactory fac = EpicTestEnvironment::GetFactory();
-    CPUMiner m{1};
+    Miner m{1};
     const std::string prefix = "test_validation/";
 
     void SetUp() override {

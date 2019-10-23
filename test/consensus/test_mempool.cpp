@@ -12,7 +12,7 @@ class TestMemPool : public testing::Test {
 public:
     std::vector<ConstTxPtr> transactions;
     TestFactory fac;
-    CPUMiner m{1};
+    Miner m{1};
     const std::string dir = "test_mempool/";
 
     void SetUp() {

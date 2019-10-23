@@ -31,8 +31,11 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (MINER->IsRunning()) {
             reply->set_success(false);
         } else {
+            MINER->Stop();
             MINER->Run();
-            reply->set_success(MINER->IsRunning());
+            if (MINER->IsRunning()) {
+                reply->set_success(MINER->IsRunning());
+            }
         }
         return grpc::Status::OK;
     }

@@ -17,7 +17,7 @@
 class TestConsensus : public testing::Test {
 public:
     TestFactory fac;
-    CPUMiner m{1};
+    Miner m{1};
     const std::string prefix = "test_consensus/";
 
     void SetUp() override {

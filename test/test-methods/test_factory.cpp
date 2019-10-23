@@ -111,7 +111,7 @@ VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool fin
 VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
     Block b = CreateBlock(0, 0, false);
     b.SetTime(timeToset);
-    CPUMiner m{1};
+    Miner m{1};
     do {
         b.SetNonce(b.GetNonce() + 1);
         m.Solve(b);
@@ -136,7 +136,7 @@ TestChain TestFactory::CreateChain(const VertexPtr& startMs, size_t height, bool
     TestChain testChain{{}};
 
     SetLogLevel(SPDLOG_LEVEL_OFF);
-    CPUMiner m(1);
+    Miner m(1);
     m.Start();
 
     size_t count = 0;
@@ -233,83 +233,4 @@ std::tuple<TestRawChain, std::vector<VertexPtr>> TestFactory::CreateRawChain(con
                                                                              size_t height,
                                                                              bool tx) {
     return CreateRawChain(std::make_shared<Vertex>(startMs), height, tx);
-}
-
-bool CPUMiner::Solve(Block& b) {
-    arith_uint256 target = b.GetTargetAsInteger();
-    size_t nthreads      = solverPool_.GetThreadSize();
-
-    final_nonce = 0;
-    final_time  = b.GetTime();
-    found_sols  = false;
-    VStream vs(b.GetHeader());
-
-    for (std::size_t i = 0; i < nthreads; ++i) {
-        solverPool_.Execute([&, i]() {
-            auto blkStream     = vs;
-            uint32_t nonce     = b.GetNonce() + i - nthreads;
-            uint32_t timestamp = final_time.load();
-
-            while (enabled_.load()) {
-                nonce += nthreads;
-                SetNonce(blkStream, nonce);
-
-                if (nonce >= i - nthreads) {
-                    timestamp = time(nullptr);
-                    SetTimestamp(blkStream, timestamp);
-                }
-
-                if (found_sols.load() || abort_.load()) {
-                    return;
-                }
-
-                uint256 blkHash = HashBLAKE2<256>(blkStream.data(), blkStream.size());
-                if (UintToArith256(blkHash) <= target) {
-                    bool f = false;
-                    if (found_sols.compare_exchange_strong(f, true)) {
-                        final_nonce = nonce;
-                        final_time  = timestamp;
-                    }
-                    break;
-                }
-            }
-        });
-    }
-
-    // Block the main thread until a nonce is solved
-    while (!found_sols.load() && enabled_.load() && !abort_.load()) {
-        std::this_thread::yield();
-    }
-
-    solverPool_.Abort();
-
-    b.SetNonce(final_nonce.load());
-    b.SetTime(final_time.load());
-    b.CalculateHash();
-    b.CalculateOptimalEncodingSize();
-    return true;
-}
-
-CPUMiner::CPUMiner(size_t nThreads) : Miner() {
-    solverPool_.SetThreadSize(nThreads);
-}
-
-bool CPUMiner::Start() {
-    bool flag = false;
-    if (enabled_.compare_exchange_strong(flag, true)) {
-        solverPool_.Start();
-        spdlog::info("Miner started.");
-        return true;
-    }
-
-    return false;
-}
-
-bool CPUMiner::Stop() {
-    if (Miner::Stop()) {
-        solverPool_.Stop();
-        return true;
-    }
-
-    return false;
 }

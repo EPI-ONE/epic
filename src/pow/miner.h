@@ -10,38 +10,19 @@
 #include "key.h"
 #include "mempool.h"
 #include "peer_manager.h"
-#include "service/rpc_service.h"
-#include "trimmer.h"
-#include <atomic>
-#include <grpcpp/support/status.h>
+#include "solver.h"
 
 template <typename>
 class CircularQueue;
 
-class MinerRPCClient {
-public:
-    explicit MinerRPCClient(const std::string& address)
-        : stub(grpc::CreateChannel(address, grpc::InsecureChannelCredentials())) {}
-    grpc::Status SendTask(grpc::ClientContext* context, POWTask request, POWResult* reply) {
-        return stub.SendPOWTask(context, request, reply);
-    }
-
-    grpc::Status AbortTask(grpc::ClientContext* context, StopTaskRequest request, StopTaskResponse* reply) {
-        return stub.StopTask(context, request, reply);
-    }
-
-private:
-    RemoteSolver::Stub stub;
-};
-
 class Miner {
 public:
-    Miner();
-    virtual ~Miner() {}
+    Miner(size_t nThreads = 1);
+    ~Miner();
 
-    virtual bool Start();
-    virtual bool Stop();
-    virtual bool Solve(Block&);
+    bool Start();
+    bool Stop();
+    bool Solve(Block&);
     void Run();
 
     void AbortTask(uint32_t task_id);
@@ -61,25 +42,15 @@ protected:
     std::thread inspector_;
 
 private:
+    Solver* solver;
     ConstBlockPtr selfChainHead_ = nullptr;
     VertexPtr chainHead_         = nullptr;
     Cumulator distanceCal_;
     CircularQueue<uint256> selfChainHeads_;
-    std::unique_ptr<MinerRPCClient> client;
 
-    std::atomic<uint32_t> current_task_id_;
-    std::atomic_bool sent_task_{false};
     uint256 SelectTip();
 };
 
 extern std::unique_ptr<Miner> MINER;
-
-inline void SetNonce(VStream& vs, uint32_t nonce) {
-    memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
-}
-
-inline void SetTimestamp(VStream& vs, uint32_t t) {
-    memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
-}
 
 #endif // EPIC_MINER_H

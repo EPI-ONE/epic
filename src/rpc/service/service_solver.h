@@ -2,16 +2,16 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef EPIC_SERVICE_SOLVER_H
-#define EPIC_SERVICE_SOLVER_H
+#ifndef EPIC_SOLVER_H
+#define EPIC_SOLVER_H
 
 #include "rpc.grpc.pb.h"
 #include "rpc.pb.h"
 #include "rpc_service.h"
 #include "solver_manager.h"
 
-#include <grpc++/grpc++.h>
 #include <utility>
+#include <grpc++/grpc++.h>
 
 class SolverRPCServiceImpl final : public RemoteSolver::Service {
 public:
@@ -81,4 +81,4 @@ private:
 };
 
 
-#endif // EPIC_SERVICE_SOLVER_H
+#endif // EPIC_SOLVER_H

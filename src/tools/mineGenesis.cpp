@@ -59,15 +59,14 @@ int main(int argc, char* argv[]) {
     genesisBlock.CalculateOptimalEncodingSize();
 
     int numThreads = std::thread::hardware_concurrency() / 10;
-    auto* m        = CYCLELEN ? new Miner() : new CPUMiner(numThreads);
-    m->Start();
-    m->Solve(genesisBlock);
+    auto m         = Miner(numThreads);
+    m.Start();
+    m.Solve(genesisBlock);
     spdlog::info("Mined Genesis\n{}", std::to_string(genesisBlock));
     VStream gvs(genesisBlock);
     spdlog::info("HEX string for version [{}]: \n{}", genesisBlock.GetVersion(), HexStr(gvs.cbegin(), gvs.cend()));
     assert(genesisBlock.Verify());
-    m->Stop();
-    delete m;
+    m.Stop();
 
     return 0;
 

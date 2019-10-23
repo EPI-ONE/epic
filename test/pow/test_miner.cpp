@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include "miner.h"
+#include "solver_manager.h"
 #include "test_env.h"
 #include "utilstrencodings.h"
-#include "solver_manager.h"
 
 class TestMiner : public testing::Test {
     void SetUp() override {}
@@ -33,7 +33,7 @@ public:
 TEST_F(TestMiner, Solve) {
     Block block = fac.CreateBlock(1, 1);
 
-    CPUMiner m(4);
+    Miner m(4);
     m.Start();
     m.Solve(block);
     m.Stop();
@@ -49,15 +49,15 @@ TEST_F(TestMiner, SolveCuckaroo) {
     Block b = fac.CreateBlock(2, 2, false, 5);
     SolverManager solverManager(1);
     solverManager.Start();
-    auto task = std::make_shared<SolverTask>();
-    task->step= 1;
-    task->target = b.GetTargetAsInteger();
+    auto task          = std::make_shared<SolverTask>();
+    task->step         = 1;
+    task->target       = b.GetTargetAsInteger();
     task->cycle_length = GetParams().cycleLen;
-    task->blockHeader = VStream(b.GetHeader());
-    task->init_time = b.GetTime();
-    task->init_nonce = 0;
-    task->id = 0;
-    auto res = solverManager.Solve(task);
+    task->blockHeader  = VStream(b.GetHeader());
+    task->init_time    = b.GetTime();
+    task->init_nonce   = 0;
+    task->id           = 0;
+    auto res           = solverManager.Solve(task);
     ASSERT_TRUE(res.first);
     b.SetProof(std::move(res.first->proof));
     b.SetNonce(res.first->final_nonce);
@@ -74,7 +74,7 @@ TEST_F(TestMiner, SolveCuckaroo) {
 TEST_F(TestMiner, Run) {
     SetUpEnv();
 
-    CPUMiner m(2);
+    Miner m(2);
     m.Run();
     usleep(500000);
     m.Stop();
@@ -91,7 +91,7 @@ TEST_F(TestMiner, Run) {
 TEST_F(TestMiner, Restart) {
     SetUpEnv();
 
-    CPUMiner m(2);
+    Miner m(2);
     m.Run();
     usleep(100000);
     m.Stop();

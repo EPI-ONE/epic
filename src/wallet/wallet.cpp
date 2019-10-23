@@ -306,7 +306,7 @@ std::pair<Coin, std::vector<Wallet::utxo_info>> Wallet::Select(const Coin& amoun
             break;
         }
     }
-    return {totalInput, result};
+    return std::make_pair(totalInput, result);
 }
 
 void Wallet::AddInput(Transaction& tx, const utxo_info& utxo) {
@@ -530,7 +530,7 @@ bool Wallet::CheckPassphrase(const SecureString& phrase) {
                 return false;
             }
 
-            crypter_ = std::move(*oCrypter);
+            crypter_           = std::move(*oCrypter);
             const auto& master = crypter_.GetMaster();
             master_.resize(master.size());
             memcpy(master_.data(), master.data(), master.size());

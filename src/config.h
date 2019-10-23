@@ -202,6 +202,8 @@ public:
         ss << "rpc port = " << rpcPort_ << std::endl;
         ss << "seeds = [" << std::endl;
         ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << std::endl;
+        ss << "solver addr = " << GetSolverAddr() << std::endl;
+        ss << "number of solver threads = " << GetSolverThreads() << std::endl;
 
         for (const NetAddress& addr : seeds_) {
             ss << addr.ToString() << ',' << std::endl;
@@ -235,13 +237,22 @@ public:
         return backupPeriod_;
     }
 
-    void SetSolverAddr(std::string addr){
+    void SetSolverAddr(std::string addr) {
         solver_addr = std::move(addr);
     }
 
-    std::string GetSolverAddr() const{
+    std::string GetSolverAddr() const {
         return solver_addr;
     }
+
+    void SetSolverThreads(int n) {
+        solver_threads = std::max(n, 1);
+    }
+
+    int GetSolverThreads() const {
+        return solver_threads;
+    }
+
 private:
     // config file
     std::string configFilePath_;
@@ -282,6 +293,7 @@ private:
 
     // miner
     std::string solver_addr = "";
+    int solver_threads      = 1;
 };
 
 extern std::unique_ptr<Config> CONFIG;
