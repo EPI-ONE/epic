@@ -25,8 +25,6 @@ public:
     bool Solve(Block&);
     void Run();
 
-    void AbortTask(uint32_t task_id);
-
     bool IsRunning() {
         return enabled_.load();
     }

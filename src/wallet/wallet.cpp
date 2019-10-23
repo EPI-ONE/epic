@@ -293,7 +293,7 @@ ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs,
 }
 
 std::pair<Coin, std::vector<Wallet::utxo_info>> Wallet::Select(const Coin& amount) const {
-    std::vector<utxo_info> utxo_list(unspent.begin(), unspent.end());
+    std::vector<utxo_info> utxo_list = unspent.dump_to_vector();
     std::sort(utxo_list.begin(), utxo_list.end(), [](const utxo_info& lhs, const utxo_info& rhs) {
         return std::get<COIN>(lhs.second) > std::get<COIN>(rhs.second);
     });

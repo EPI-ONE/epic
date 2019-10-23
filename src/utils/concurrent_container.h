@@ -255,6 +255,12 @@ public:
         return it->second;
     }
 
+    std::vector<std::pair<K, V>> dump_to_vector() const {
+        READER_LOCK(base::mutex_)
+        std::vector<std::pair<K, V>> result(base::c.begin(), base::c.end());
+        return result;
+    }
+
 private:
     std::function<key_type(value_type)> key_selector      = [](auto pair) { return pair.first; };
     std::function<mapped_type(value_type)> value_selector = [](auto pair) { return pair.second; };

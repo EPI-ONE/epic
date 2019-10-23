@@ -57,7 +57,7 @@ Block::Block() : NetMessage(BLOCK) {
 }
 
 Block::Block(const Block& b)
-    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(b.proof_),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(b.proof_), proofHash_(b.proofHash_),
       optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     for (const auto& ptx : b.transactions_) {
         transactions_.emplace_back(std::make_shared<Transaction>(*ptx));
@@ -67,7 +67,7 @@ Block::Block(const Block& b)
 };
 
 Block::Block(Block&& b) noexcept
-    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(std::move(b.proof_)),
+    : NetMessage(BLOCK), hash_(b.hash_), header_(b.header_), proof_(std::move(b.proof_)), proofHash_(b.proofHash_),
       transactions_(std::move(b.transactions_)), optimalEncodingSize_(b.optimalEncodingSize_), source(b.source) {
     b.SetNull();
     SetParents();
@@ -144,6 +144,7 @@ void Block::SetMerkle(const uint256& h) {
 void Block::UnCache() {
     optimalEncodingSize_ = 0;
     hash_.SetNull();
+    proofHash_.SetNull();
     header_.merkleRoot.SetNull();
 }
 
@@ -317,6 +318,7 @@ void Block::SetProof(std::vector<word_t>&& p) {
 
 void Block::InitProofSize(size_t s) {
     hash_.SetNull();
+    proofHash_.SetNull();
     proof_.clear();
     proof_.resize(s);
 }
@@ -334,7 +336,7 @@ const uint256& Block::GetProofHash() const {
 }
 
 void Block::FinalizeHash() {
-    if (hash_.IsNull()) {
+    if (hash_.IsNull() || proofHash_.IsNull()) {
         CalculateHash();
     }
 }
@@ -344,11 +346,16 @@ void Block::CalculateHash() {
         header_.merkleRoot = ComputeMerkleRoot();
     }
 
-    VStream s;
-    s << header_ << proof_;
+    VStream s(header_);
 
-    hash_      = HashSHA2<1>(s);
-    proofHash_ = HashBLAKE2<256>(proof_.data(), proof_.size() * sizeof(word_t));
+    if (CYCLELEN) {
+        proofHash_ = HashBLAKE2<256>(proof_.data(), proof_.size() * sizeof(word_t));
+    } else {
+        proofHash_ = (uint256) HashBLAKE2<256>(s);
+    }
+
+    s << proof_;
+    hash_ = HashSHA2<1>(s);
 }
 
 std::vector<uint256> Block::GetTxHashes() const {
@@ -419,6 +426,7 @@ arith_uint256 Block::GetTargetAsInteger() const {
 
 bool Block::CheckPOW() const {
     assert(!hash_.IsNull());
+    assert(!proofHash_.IsNull());
 
     if (proof_.size() != CYCLELEN) {
         spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), CYCLELEN, std::to_string(hash_));
@@ -447,10 +455,9 @@ bool Block::CheckPOW() const {
     }
 
     // Verify proof target
-    auto hash_to_verify = CYCLELEN ? proofHash_ : (uint256) HashBLAKE2<256>(vs);
-    if (UintToArith256(hash_to_verify) > target) {
-        spdlog::info("[Syntax] Proof hash {} is higher than the target {} [{}]", std::to_string(hash_to_verify),
-                     std::to_string(target), std::to_string(hash_));
+    if (UintToArith256(proofHash_) > target) {
+        spdlog::info("Proof hash {} is higher than target {} [{}]", std::to_string(proofHash_), std::to_string(target),
+                     std::to_string(hash_));
         return false;
     }
 

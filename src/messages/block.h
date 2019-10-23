@@ -226,9 +226,10 @@ protected:
 private:
     BlockHeader header_;
     std::vector<word_t> proof_;
+    uint256 proofHash_;
+
     std::vector<ConstTxPtr> transactions_;
 
-    uint256 proofHash_;
     size_t optimalEncodingSize_ = 0;
 
 public:
