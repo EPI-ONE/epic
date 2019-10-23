@@ -388,7 +388,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     for (const auto& chain : milestoneChains) {
         chain->AddPendingBlock(block);
         if (!block->IsFirstRegistration()) {
-            chain->AddPendingUTXOs(std::move(utxos));
+            chain->AddPendingUTXOs(utxos);
         }
     }
 

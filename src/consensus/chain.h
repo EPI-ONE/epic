@@ -66,7 +66,7 @@ public:
 
     /** Adds the block to pending and returns its milestone status */
     void AddPendingBlock(ConstBlockPtr);
-    void AddPendingUTXOs(std::vector<UTXOPtr>&&);
+    void AddPendingUTXOs(std::vector<UTXOPtr>);
 
     bool IsBlockPending(const uint256&) const;
     std::vector<ConstBlockPtr> GetPendingBlocks() const;
