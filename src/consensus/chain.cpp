@@ -79,12 +79,12 @@ void Chain::AddPendingBlock(ConstBlockPtr pblock) {
     pendingBlocks_.insert_or_assign(pblock->GetHash(), std::move(pblock));
 }
 
-void Chain::AddPendingUTXOs(std::vector<UTXOPtr>&& utxos) {
+void Chain::AddPendingUTXOs(std::vector<UTXOPtr> utxos) {
     if (utxos.empty()) {
         return;
     }
     for (auto& u : utxos) {
-        ledger_.AddToPending(std::move(u));
+        ledger_.AddToPending(u);
     }
 }
 
@@ -284,6 +284,9 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     }
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
+    spdlog::debug("New milestone {} has milestone difficulty target as {} (compact form {}), while difficulty is {}",
+                  vtcs.back()->cblock->GetHash().to_substr(), std::to_string(vtcs.back()->snapshot->milestoneTarget),
+                  vtcs.back()->snapshot->milestoneTarget.GetCompact(), vtcs.back()->snapshot->GetMsDifficulty());
     vtcs.back()->UpdateMilestoneReward();
 
     recentHistory_.merge(std::move(verifying_));
