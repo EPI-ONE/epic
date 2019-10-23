@@ -116,8 +116,7 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 }
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
-    VStream vstream;
-    vstream << EncodeAddress(addr);
+    VStream vstream{EncodeAddress(addr)};
     return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, std::move(vstream)}});
 }
 
@@ -129,7 +128,7 @@ void Transaction::FinalizeHash() {
 
 bool Transaction::Verify() const {
     if (inputs_.empty() || outputs_.empty()) {
-        spdlog::info("Transaction {} contains empty inputs or outputs {}", hash_.to_substr(),
+        spdlog::info("[Syntax] Invalid transaction {} containing empty inputs or outputs {}", hash_.to_substr(),
                      parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
         return false;
     }
@@ -140,7 +139,7 @@ bool Transaction::Verify() const {
     outpoints.reserve(inputs_.size());
     for (const auto& input : inputs_) {
         if (outpoints.count(input.outpoint) > 0) {
-            spdlog::info("Transaction {} contains duplicated outpoints {}", hash_.to_substr(),
+            spdlog::info("[Syntax] Invalid transaction {} containing duplicated outpoints {}", hash_.to_substr(),
                          parentBlock_ ? "[" + std::to_string(parentBlock_->GetHash()) + "]" : "");
             return false;
         }

@@ -120,7 +120,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 
     /**
      * reserve memory for efficiency;
-     * please note that n/2 is a not really precise upper bound and can be improved 
+     * please note that n/2 is a not really precise upper bound and can be improved
      */
     stack.reserve(pendingBlocks_.size() / 2);
     result.reserve(pendingBlocks_.size());
@@ -154,7 +154,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
 
     result.shrink_to_fit();
     spdlog::debug("{} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
-                 static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
+                  static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
     return result;
 }
 
@@ -163,14 +163,16 @@ void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
         if (b.cblock->IsRegistration()) {
             if (b.cblock->GetTransactionSize() > 1) {
                 memset(&b.validity[1], Vertex::Validity::INVALID, b.validity.size() - 1);
-                spdlog::info("Does not reach height of partition threshold but contains transactions other than "
-                             "registration [{}]",
-                             std::to_string(b.cblock->GetHash()));
+                spdlog::info(
+                    "[Validation] Does not reach height of partition threshold but contains transactions other than "
+                    "registration [{}]",
+                    std::to_string(b.cblock->GetHash()));
             }
         } else {
             memset(&b.validity[0], Vertex::Validity::INVALID, b.validity.size());
-            spdlog::info("Does not reach height of partition threshold but contains non-reg transactions [{}]",
-                         std::to_string(b.cblock->GetHash()));
+            spdlog::info(
+                "[Validation] Does not reach height of partition threshold but contains non-reg transactions [{}]",
+                std::to_string(b.cblock->GetHash()));
         }
         return;
     }
@@ -213,7 +215,7 @@ void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
 
         if (!PartitionCmp(dist, allowed)) {
             b.validity[i] = Vertex::Validity::INVALID;
-            spdlog::info("Transaction distance exceeds its allowed distance! [{}]",
+            spdlog::info("[Validation] Transaction distance exceeds its allowed distance! [{}]",
                          std::to_string(b.cblock->GetHash()));
         }
     }
@@ -266,7 +268,7 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
             }
 
             if (!invalidTXOC.Empty()) {
-                // remove utxo of the block from pending to removed
+                // move utxos of the block from pending to removed
                 ledger_.Invalidate(invalidTXOC);
                 txoc.Merge(std::move(invalidTXOC));
             }
@@ -303,10 +305,19 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         oldRedempHash = prevRedempHashMap_.find(blkHash)->second;
     } else {
         oldRedempHash = STORE->GetPrevRedemHash(prevHash);
+
+        if (oldRedempHash.IsNull()) {
+            spdlog::warn("Peer chain forks here [{}]", std::to_string(blkHash));
+            auto b = GetVertex(prevHash);
+            while (!b->cblock->IsRegistration() || b->validity[0] != Vertex::VALID) {
+                b = GetVertex(b->cblock->GetPrevHash());
+            }
+            oldRedempHash = b->cblock->GetHash();
+        }
+
         prevRedempHashMap_.emplace(blkHash, oldRedempHash);
     }
 
-    assert(!oldRedempHash.IsNull());
     regChange.Remove(prevHash, oldRedempHash);
     regChange.Create(blkHash, oldRedempHash);
 
@@ -368,25 +379,33 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     auto prevReg           = GetVertex(prevRedempHash);
     assert(prevReg);
 
-    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
-        spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(prevRedempHash),
-                     hashstr);
-        return {};
-    }
-
     const auto& redem = vertex.cblock->GetTransactions().at(0);
     const auto& vin   = redem->GetInputs().at(0);
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
+    if (vin.outpoint.bHash != prevRedempHash) {
+        spdlog::info("[Validation] Double redemption on previous registration block: outpoint not matching {} [{}]",
+                     prevRedempHash.to_substr(), hashstr);
+        return {};
+    }
+
+    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
+        spdlog::info("[Validation] Double redemption on previous registration block: already redeemed {} [{}]",
+                     prevRedempHash.to_substr(), hashstr);
+        return {};
+    }
+
     auto prevBlock = GetVertex(vertex.cblock->GetPrevHash());
     // value of the output should be less or equal to the previous counter
     if (!(vout.value <= prevBlock->cumulativeReward)) {
-        spdlog::info("Wrong redemption value that exceeds total cumulative reward! [{}]", hashstr);
+        spdlog::info("[Validation] Wrong redemption value ({}) that exceeds the total cumulative reward ({}) [{}]",
+                     vout.value.GetValue(), prevBlock->cumulativeReward.GetValue(), hashstr);
         return {};
     }
 
     if (!VerifyInOut(vin, prevReg->cblock->GetTransactions().at(0)->GetOutputs()[0].listingContent)) {
-        spdlog::info("Signature failed in redemption {} [{}]", vin.GetParentTx()->GetHash().to_substr(), hashstr);
+        spdlog::info("[Validation] Signature failed in redemption {} [{}]", vin.GetParentTx()->GetHash().to_substr(),
+                     hashstr);
         return {};
     }
 
@@ -415,8 +434,8 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
         auto prevOut = ledger_.FindSpendable(ComputeUTXOKey(outpoint.bHash, outpoint.txIndex, outpoint.outIndex));
 
         if (!prevOut) {
-            spdlog::info("Attempting to spend a non-existent or spent output {} in tx {} [{}]",
-                         std::to_string(outpoint), std::to_string(tx.GetHash()), std::to_string(blkHash));
+            spdlog::info("[Validation] Attempting to spend a non-existent or spent output {} in tx {} [{}]",
+                         std::to_string(outpoint), tx.GetHash().to_substr(), std::to_string(blkHash));
             return false;
         }
         valueIn += prevOut->GetOutput().value;
@@ -427,14 +446,22 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
 
     // get key of new UTXO and compute total value out
     for (size_t j = 0; j < tx.GetOutputs().size(); ++j) {
-        valueOut += tx.GetOutputs()[j].value;
+        const auto& out = tx.GetOutputs()[j];
+        if (out.value > valueIn) {
+            // To prevent overflow of the outputs' sum
+            spdlog::info("[Validation] Transaction {} has an output whose value ({}) is greater than the sum of all "
+                         "inputs ({}) [{}]",
+                         tx.GetHash().to_substr(), out.value.GetValue(), valueIn.GetValue(), std::to_string(blkHash));
+            return false;
+        }
+        valueOut += out.value;
         txoc.AddToCreated(blkHash, index, j);
     }
 
-    // check total amount of value in and value out and take a note of fee received
+    // check total amount of value in and value out and record the fee received
     fee = valueIn - valueOut;
-    if (!(fee >= 0 && fee <= GetParams().maxMoney)) {
-        spdlog::info("Transaction {} input value goes out of range! [{}]", std::to_string(tx.GetHash()),
+    if (!(valueIn >= valueOut && fee <= GetParams().maxMoney)) {
+        spdlog::info("[Validation] Transaction {} input value goes out of range! [{}]", tx.GetHash().to_substr(),
                      std::to_string(blkHash));
         return false;
     }
@@ -443,7 +470,8 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
     auto itprevOut = prevOutListing.cbegin();
     for (const auto& input : tx.GetInputs()) {
         if (!VerifyInOut(input, *itprevOut)) {
-            spdlog::info("Signature failed in tx {}! [{}]", tx.GetHash().to_substr(), std::to_string(blkHash));
+            spdlog::info("[Validation] Signature failed in tx {}! [{}]", tx.GetHash().to_substr(),
+                         std::to_string(blkHash));
             return false;
         }
         itprevOut++;

@@ -112,6 +112,7 @@ public:
     const std::unordered_set<uint256>& GetSpent() const {
         return increment_.GetRemoved();
     }
+
     const std::unordered_set<uint256>& GetCreated() const {
         return increment_.GetCreated();
     }

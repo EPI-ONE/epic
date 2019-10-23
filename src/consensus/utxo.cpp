@@ -150,7 +150,7 @@ bool ChainLedger::IsSpendable(const uint256& utxokey) const {
 std::string std::to_string(const UTXO& utxo) {
     std::string s;
     s += "UTXO { \n";
-    s += "   " + std::to_string(utxo.output_) + "with index " + std::to_string(utxo.txIndex_) + ", " +
+    s += "   " + std::to_string(utxo.output_) + " with index " + std::to_string(utxo.txIndex_) + ", " +
          std::to_string(utxo.outIndex_);
     s += "   }";
     return s;

@@ -36,8 +36,7 @@ uint256 TestFactory::CreateRandomHash() {
 }
 
 std::pair<CKey, CPubKey> TestFactory::CreateKeyPair(bool compressed) {
-    CKey seckey = CKey();
-    seckey.MakeNewKey(compressed);
+    CKey seckey    = CKey().MakeNewKey(compressed);
     CPubKey pubkey = seckey.GetPubKey();
     return std::make_pair(std::move(seckey), std::move(pubkey));
 }

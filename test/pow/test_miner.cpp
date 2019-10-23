@@ -20,7 +20,7 @@ public:
         EpicTestEnvironment::SetUpDAG("test_miner/", true);
 
         CKey key;
-        key.MakeNewKey(false);
+        key.MakeNewKey(true);
         auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
         MEMPOOL->PushRedemptionTx(tx);
     }

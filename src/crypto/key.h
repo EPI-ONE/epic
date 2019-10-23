@@ -105,7 +105,7 @@ public:
     }
 
     //! Generate a new private key using a cryptographic PRNG.
-    void MakeNewKey(bool fCompressed);
+    CKey& MakeNewKey(bool fCompressed);
 
     /**
      * Convert the private key to a CPrivKey (serialized OpenSSL private key data).

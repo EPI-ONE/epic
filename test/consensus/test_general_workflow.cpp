@@ -27,42 +27,108 @@ public:
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG(prefix);
     }
+
+    bool SealAndCheck(Block& b) {
+        b.SetMerkle();
+        b.CalculateOptimalEncodingSize();
+        m.Solve(b);
+        return b.Verify();
+    }
 };
 
-
 TEST_F(TestConsensus, SyntaxChecking) {
-    Block b = *GENESIS;
+    Block b = fac.CreateBlock(1, 1, true);
     EXPECT_TRUE(b.Verify());
 
+    // Wrong version
+    Block wrong_version =
+        Block(GetParams().version + 1, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
+              uint256(), time(nullptr), GENESIS_VERTEX->snapshot->blockTarget.GetCompact(), 0);
+    wrong_version.FinalizeHash();
+    EXPECT_FALSE(wrong_version.Verify());
+
+    // Bad proof size
+    Block bad_pf_size = fac.CreateBlock();
+    bad_pf_size.SetProof(std::vector<uint32_t>(GetParams().cycleLen + 1));
+    m.Solve(bad_pf_size);
+    EXPECT_FALSE(bad_pf_size.Verify());
+
     // Bad difficulty target
-    Block block = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(), fac.CreateRandomHash(),
-                        uint256(), time(nullptr), 1, 1);
-    block.FinalizeHash();
-    EXPECT_FALSE(block.Verify());
+    Block bad_target = Block(GetParams().version, fac.CreateRandomHash(), fac.CreateRandomHash(),
+                             fac.CreateRandomHash(), uint256(), time(nullptr), 0, 1);
+    bad_target.FinalizeHash();
+    EXPECT_FALSE(bad_target.Verify());
+
+    // Invalid pow
+    Block invalid_pow = fac.CreateBlock();
+    invalid_pow.SetDifficultyTarget(((arith_uint256)(GetParams().maxTarget / 10000000)).GetCompact());
+    invalid_pow.FinalizeHash();
+    EXPECT_FALSE(invalid_pow.Verify());
 
     // Duplicated txns in a merkle tree branch
-    Block block1 = fac.CreateBlock();
-    auto tx      = fac.CreateTx(1, 1);
-    tx.FinalizeHash();
-    block1.AddTransaction(tx);
-    block1.AddTransaction(tx);
-    block1.SetMerkle();
-    block1.CalculateOptimalEncodingSize();
-    m.Solve(block1);
-    EXPECT_FALSE(block1.Verify());
+    Block dup_txns_merkle = fac.CreateBlock();
+    auto dup_tx           = fac.CreateTx(1, 1);
+    dup_tx.FinalizeHash();
+    dup_txns_merkle.AddTransaction(dup_tx);
+    dup_txns_merkle.AddTransaction(dup_tx);
+    EXPECT_FALSE(SealAndCheck(dup_txns_merkle));
+
+    // Bad merkle root
+    Block bad_merkle = fac.CreateBlock(1, 1);
+    bad_merkle.SetMerkle(fac.CreateRandomHash());
+    m.Solve(bad_merkle);
+    EXPECT_FALSE(bad_merkle.Verify());
+
+    // Too advanced in time
+    Block too_advanced = fac.CreateBlock();
+    too_advanced.SetTime(time(nullptr) + ALLOWED_TIME_DRIFT + 1);
+    EXPECT_FALSE(SealAndCheck(too_advanced));
+
+    // Too many txns
+    Block exceeds_cap = fac.CreateBlock(1, 1, false, GetParams().blockCapacity + 1);
+    EXPECT_FALSE(SealAndCheck(exceeds_cap));
+
+    // Too big
+    Block too_big = fac.CreateBlock();
+    Transaction big_tx;
+    big_tx.AddInput(TxInput(fac.CreateRandomHash(), 0, 0, Tasm::Listing(std::vector<unsigned char>(MAX_BLOCK_SIZE))));
+    big_tx.AddOutput(TxOutput(0, Tasm::Listing(std::vector<unsigned char>(1))));
+    big_tx.FinalizeHash();
+    too_big.AddTransaction(std::move(big_tx));
+    EXPECT_FALSE(SealAndCheck(too_big));
+
+    // Empty inputs in txn (empty output is nothing different)
+    Block empty_in = fac.CreateBlock();
+    empty_in.AddTransaction(fac.CreateTx(0, 1));
+    EXPECT_FALSE(SealAndCheck(empty_in));
+
+    // double spending
+    Block double_spent = fac.CreateBlock();
+    Transaction tx1    = fac.CreateTx(1, 1);
+    tx1.AddInput(TxInput(TxOutPoint(tx1.GetInputs()[0].outpoint), Tasm::Listing(std::vector<unsigned char>(1))));
+    tx1.FinalizeHash();
+    double_spent.AddTransaction(tx1);
+    EXPECT_FALSE(SealAndCheck(double_spent));
 
     // Duplicated txns
-    Block block2 = fac.CreateBlock(1, 1);
+    Block dup_txns = fac.CreateBlock(1, 1);
     for (int i = 0; i < 5; ++i) {
-        block2.AddTransaction(fac.CreateTx(2, 3));
+        dup_txns.AddTransaction(fac.CreateTx(2, 3));
     }
-    block2.AddTransaction(*block2.GetTransactions()[2]);
+    dup_txns.AddTransaction(*dup_txns.GetTransactions()[2]);
+    EXPECT_FALSE(SealAndCheck(dup_txns));
 
-    block2.SetMerkle();
-    block2.CalculateOptimalEncodingSize();
+    // Empty first reg
+    Block empty_reg = fac.CreateBlock();
+    empty_reg.SetPrevHash(GENESIS->GetHash());
+    m.Solve(empty_reg);
+    EXPECT_FALSE(empty_reg.Verify());
 
-    m.Solve(block2);
-    EXPECT_FALSE(block2.Verify());
+    // Bad first reg
+    Block bad_reg = fac.CreateBlock(1, 1);
+    bad_reg.SetPrevHash(GENESIS->GetHash());
+    m.Solve(bad_reg);
+    EXPECT_FALSE(bad_reg.Verify());
 }
 
 TEST_F(TestConsensus, MerkleRoot) {
@@ -247,7 +313,7 @@ TEST_F(TestConsensus, flush_single_chain_to_cat) {
     TestRawChain chain;
     std::tie(chain, std::ignore) = fac.CreateRawChain(GENESIS_VERTEX, HEIGHT);
 
-   for (size_t i = 0; i < chain.size(); i++) {
+    for (size_t i = 0; i < chain.size(); i++) {
         if (i > GetParams().cacheStatesSize) {
             usleep(50000);
         }
