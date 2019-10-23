@@ -32,6 +32,8 @@ bool Miner::Start() {
 bool Miner::Stop() {
     spdlog::info("Stopping miner...");
 
+    enabled_ = false;
+
     if (runner_.joinable()) {
         runner_.join();
     }
@@ -96,6 +98,7 @@ void Miner::Run() {
 
         while (enabled_.load()) {
             abort_ = false;
+            solver->Resume();
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
@@ -160,10 +163,6 @@ void Miner::Run() {
                     for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {
                         MEMPOOL->Insert(std::move(txns[i]));
                     }
-                }
-
-                if (!enabled_.load()) {
-                    return;
                 }
 
                 continue;

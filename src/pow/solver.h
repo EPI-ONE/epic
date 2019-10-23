@@ -19,6 +19,9 @@ public:
     virtual bool Start()       = 0;
     virtual bool Stop()        = 0;
     virtual void Abort()       = 0;
+    virtual void Resume(){
+        aborted = false;
+    }
     virtual bool Solve(Block&) = 0;
 
 protected:

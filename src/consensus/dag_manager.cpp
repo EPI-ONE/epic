@@ -516,6 +516,7 @@ VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
 
     // will happen only for finding ms of nonsolid block
     // may return nullptr when rpc is requesting some non-existing states
+    auto ms = GetBestChain().GetVertexCache(msHash);
     spdlog::trace("Milestone with hash {} is not found", msHash.to_substr());
     return nullptr;
 }
@@ -639,6 +640,9 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 }
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
+    if(!(UintToArith256(b->GetProofHash()) > m->milestoneTarget)){
+        spdlog::info("msHash = {}, proof hash = {}, ms target = {}",b->GetHash().to_substr(),b->GetProofHash().to_substr(),m->milestoneTarget.GetCompact());
+    }
     return !(UintToArith256(b->GetProofHash()) > m->milestoneTarget);
 }
 

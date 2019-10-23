@@ -204,7 +204,7 @@ bool RemoteGPUSolver::Solve(Block& b) {
             }
         }
     } else {
-        spdlog::warn("RPC error. Task failed: id = {}, error message = ", request.task_id(), status.error_message());
+        spdlog::warn("RPC error. Task failed: id = {}, error message = {}", request.task_id(), status.error_message());
     }
     return flag;
 }
