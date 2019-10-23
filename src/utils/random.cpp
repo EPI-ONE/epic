@@ -1,6 +1,7 @@
 #include "random.h"
 
 #include <climits>
+#include <immintrin.h>
 #include <openssl/rand.h>
 
 void GetRDRandBytes(unsigned char* buf, size_t size) noexcept {

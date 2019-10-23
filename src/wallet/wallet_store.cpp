@@ -260,13 +260,11 @@ std::optional<CKeyID> WalletStore::GetLastRedemAddr() {
 
 bool WalletStore::StoreFirstRegInfo() {
     VStream key;
-    std::cout << key.str() << std::endl;
     return put(db_, handleMap_.at(kInfo), key, VStream{true});
 }
 
 bool WalletStore::GetFirstRegInfo() {
     VStream key;
-    std::cout << key.str() << std::endl;
     return !RocksDB::Get(kInfo, Slice{key.data(), key.size()}).empty();
 }
 

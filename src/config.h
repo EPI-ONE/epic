@@ -206,7 +206,7 @@ public:
         ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
         ss << "rpc port = " << rpcPort_ << std::endl;
-        ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << std::endl;
+        ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << ", login session time " << GetWalletLogin() << std::endl;
         ss << "solver addr = " << GetSolverAddr() << std::endl;
         ss << "number of solver threads = " << GetSolverThreads() << std::endl;
         ss << "seeds = [" << std::endl;
@@ -241,6 +241,14 @@ public:
 
     uint32_t GetWalletBackup() {
         return backupPeriod_;
+    }
+
+    void SetWalletLogin(uint32_t login) {
+        loginSesseion_ = login;
+    }
+
+    uint32_t GetWalletLogin() {
+        return loginSesseion_;
     }
 
     void SetSolverAddr(std::string addr) {
@@ -302,6 +310,7 @@ private:
     // wallet
     std::string walletPath_ = "wallet/";
     uint32_t backupPeriod_;
+    uint32_t loginSesseion_;
 
     // daemon
     bool daemon_;

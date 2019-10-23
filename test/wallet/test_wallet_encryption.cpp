@@ -1,3 +1,7 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <gtest/gtest.h>
 
 #include "config.h"
@@ -28,7 +32,7 @@ TEST_F(TestWalletEncryption, mnemonics_and_crypter) {
     // create a random mnemonics
     CONFIG = std::make_unique<Config>();
 
-    Mnemonics mne; 
+    Mnemonics mne;
     mne.Generate();
     mne.PrintToFile(CONFIG->GetWalletPath());
 
@@ -46,10 +50,8 @@ TEST_F(TestWalletEncryption, mnemonics_and_crypter) {
     ASSERT_TRUE(master.IsValid());
     ASSERT_TRUE(master.IsCompressed());
 
-
-    //Crypter crypter{master.GetPrivKey()};
     SecureByte masterdata{master.begin(), master.end()};
-    Crypter crypter{masterdata};
+    Crypter crypter{};
     ASSERT_FALSE(crypter.IsReady());
     SecureString keydata{"random frog"};
     std::vector<unsigned char> salt = {14, 24, 242, 1, 192, 78, 45, 145};
@@ -57,27 +59,39 @@ TEST_F(TestWalletEncryption, mnemonics_and_crypter) {
     ASSERT_TRUE(crypter.IsReady());
 
     std::vector<unsigned char> ciphertext;
-    ASSERT_TRUE(crypter.EncryptMaster(ciphertext));
-
-    Crypter newCrypter{};
-    ASSERT_FALSE(newCrypter.IsReady());
-    ASSERT_TRUE(newCrypter.SetKeyFromPassphrase(keydata, salt, 100));
-    ASSERT_FALSE(newCrypter.IsReady());
-    ASSERT_TRUE(newCrypter.DecryptMaster(ciphertext));
-    ASSERT_TRUE(newCrypter.IsReady());
+    ASSERT_TRUE(crypter.EncryptMaster(masterdata, ciphertext));
 
     auto [key, pubkey] = fac.CreateKeyPair();
     std::vector<unsigned char> crypted;
-    ASSERT_TRUE(crypter.EncryptKey(pubkey, key, crypted));
+    ASSERT_TRUE(crypter.EncryptKey(masterdata, pubkey, key, crypted));
 
     CKey newkey{};
-    EXPECT_TRUE(crypter.DecryptKey(pubkey, crypted, newkey));
-    EXPECT_EQ(key, newkey);
+    ASSERT_TRUE(crypter.DecryptKey(masterdata, pubkey, crypted, newkey));
+    ASSERT_EQ(key, newkey);
+
+    // new crypter with correct passphrase to decrypt master
+    Crypter newCrypter{};
+    ASSERT_FALSE(newCrypter.IsReady());
+    ASSERT_TRUE(newCrypter.SetKeyFromPassphrase(keydata, salt, 100));
+    ASSERT_TRUE(newCrypter.IsReady());
+    SecureByte masterDecrypted;
+    ASSERT_TRUE(newCrypter.DecryptMaster(ciphertext, masterDecrypted));
+    ASSERT_EQ(masterdata, masterDecrypted);
+
+    // new crypter with wrong passphrase
+    Crypter newCrypter_1{};
+    SecureString wrongdata{"bad frog"};
+    ASSERT_FALSE(newCrypter_1.IsReady());
+    ASSERT_TRUE(newCrypter_1.SetKeyFromPassphrase(wrongdata, salt, 100));
+    ASSERT_TRUE(newCrypter_1.IsReady());
+    SecureByte wrongMasterDecrypted;
+    ASSERT_FALSE(newCrypter_1.DecryptMaster(ciphertext, wrongMasterDecrypted));
+    ASSERT_NE(masterdata, wrongMasterDecrypted);
 }
 
 TEST_F(TestWalletEncryption, wallet_encryption) {
     const std::string dir = "test_wallet_encryption/";
-    Wallet wallet{dir, 1};
+    Wallet wallet{dir, 0, 0};
     wallet.GenerateMaster();
 
     SecureString passphrase{"godsio"};

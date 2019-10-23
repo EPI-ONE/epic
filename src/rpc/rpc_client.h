@@ -14,30 +14,21 @@ public:
     RPCClient(std::shared_ptr<grpc::Channel> channel);
 
     std::optional<rpc::Block> GetBlock(std::string);
-
     std::optional<std::vector<rpc::Block>> GetLevelSet(std::string);
-
     std::optional<size_t> GetLevelSetSize(std::string);
-
     std::optional<rpc::Block> GetLatestMilestone();
-
     std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(std::string, size_t);
     std::optional<StatusResponse> Status();
 
     bool Stop();
 
     std::optional<bool> StartMiner();
-
     option_string StopMiner();
 
     option_string CreateFirstReg(std::string addr, bool force = false);
-
     option_string CreateRandomTx(size_t size);
-
-    option_string CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outpus, uint64_t fee);
-
+    option_string CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee);
     option_string GetBalance();
-
     option_string GenerateNewKey();
 
     option_string SetPassphrase(const std::string& passphrase);

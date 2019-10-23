@@ -91,3 +91,21 @@ TEST_F(TestAES256, aes256CBC_random_str_enc_dec) {
         ASSERT_NE(hexstr, decResultPP);
     }
 }
+
+TEST_F(TestAES256, aes256CBC_maliciout_test) {
+    std::vector<unsigned char> key1 = ParseHex(keys[0]), key2 = ParseHex(keys[1]);
+    std::vector<unsigned char> iv1 = ParseHex(ivs[0]), iv2 = ParseHex(ivs[1]);
+    std::vector<unsigned char> text   = ParseHex(texts[0]);
+    std::vector<unsigned char> result = ParseHex(results[0]);
+
+    AES256CBCEncrypt encryptor{key1.data(), iv1.data(), true};
+    std::vector<unsigned char> ciphertext(text.size() + AES_BLOCKSIZE);
+    int size = encryptor.Encrypt(text.data(), text.size(), ciphertext.data());
+    ASSERT_GT(size, 0);
+    ciphertext.resize(size);
+
+    std::vector<unsigned char> plaintext(ciphertext.size());
+    AES256CBCDecrypt decryptor{key2.data(), iv2.data(), true};
+    int size_1 = decryptor.Decrypt(ciphertext.data(), ciphertext.size(), plaintext.data());
+    ASSERT_EQ(size_1, 0);
+}

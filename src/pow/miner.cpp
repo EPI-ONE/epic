@@ -82,7 +82,7 @@ void Miner::Run() {
                 *headInDAG != *std::atomic_load(&chainHead_)->cblock) {
                 abort_ = true;
                 solver->Abort();
-                spdlog::debug("Milestone chain head changed {} => {}. Abort the current task.",
+                spdlog::debug("[Miner] Milestone chain head changed {} => {}. Abort the current task.",
                               std::atomic_load(&chainHead_)->cblock->GetHash().to_substr(),
                               headInDAG->GetHash().to_substr());
                 std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
@@ -105,13 +105,13 @@ void Miner::Run() {
             if (!selfChainHead_) {
                 auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
                 if (!firstRegTx) {
-                    spdlog::warn("Paused. Waiting for the first registration.");
-                    while (!firstRegTx) {
+                    spdlog::info("[Miner] Paused. Waiting for the first registration.");
+                    while (enabled_ && !firstRegTx) {
                         std::this_thread::yield();
                         firstRegTx = MEMPOOL->GetRedemptionTx(true);
                     }
                 }
-                spdlog::info("Got the first registration. Start mining.");
+                spdlog::info("[Miner] Got the first registration. Start mining.");
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
@@ -136,7 +136,7 @@ void Miner::Run() {
 
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
-                        spdlog::info("Hashing power percentage {}",
+                        spdlog::info("[Miner] Hashing power percentage {}",
                                      distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
                                          std::atomic_load(&chainHead_)->snapshot->hashRate);
                     }
@@ -154,7 +154,7 @@ void Miner::Run() {
             b.SetDifficultyTarget(std::atomic_load(&chainHead_)->snapshot->blockTarget.GetCompact());
 
             if (!Solve(b)) {
-                spdlog::warn("Failed to solve the block. Stop the miner.");
+                spdlog::warn("[Miner] Failed to solve the block. Stop the miner.");
                 enabled_ = false;
                 solver->Stop();
                 if (inspector_.joinable()) {
@@ -204,7 +204,7 @@ void Miner::Run() {
                 spdlog::info("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
                 ms_cnt++;
                 // Block the thread until the verification is done
-                while (*DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {
+                while (enabled_ && *DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {
                     std::this_thread::yield();
                 }
 

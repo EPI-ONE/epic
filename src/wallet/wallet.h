@@ -34,11 +34,7 @@ private:
     enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
-    Wallet(std::string walletPath, uint32_t period)
-        : threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
-        Load();
-        EnableRedemptions();
-    }
+    Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession);
 
     ~Wallet();
 
@@ -100,7 +96,7 @@ public:
         return rpcLoggedin_;
     }
 
-    bool ExistMaster() const {
+    bool ExistMasterInfo() const {
         return !masterInfo_.IsNull();
     }
     bool GenerateMaster();
@@ -124,8 +120,8 @@ private:
     WalletStore walletStore_;
 
     std::atomic_bool stopFlag_;
-    uint32_t storePeriod_;
     Scheduler scheduler_;
+    std::function<void(void)> scheduleFunc_ = nullptr;
     std::thread scheduleTask_;
 
     mutable std::shared_mutex lock_;
@@ -163,7 +159,7 @@ private:
     void SetLastRedemHash(const uint256&);
 
     std::atomic_bool cryptedFlag_ = false;
-    SecureByte master_;
+    SecureByte master_{};
     uint256 chaincode_;
     MasterInfo masterInfo_;
     Crypter crypter_;
