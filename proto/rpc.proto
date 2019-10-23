@@ -113,7 +113,7 @@ message StartMinerResponse {
 message StopMinerRequest {}
 
 message StopMinerResponse {
-    bool success = 1;
+    string result = 1;
 }
 
 message StatusRequest {}

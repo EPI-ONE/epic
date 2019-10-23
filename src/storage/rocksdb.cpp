@@ -4,14 +4,18 @@
 
 #include "rocksdb.h"
 #include "file_utils.h"
+#include "spdlog/spdlog.h"
 
 using namespace rocksdb;
 
 RocksDB::RocksDB(std::string dbPath, std::vector<std::string> columnNames) {
-    this->dbpath_ = dbPath;
+    dbpath_ = dbPath;
     // Make directory DBPATH if missing
     if (!CheckDirExist(dbpath_)) {
+        spdlog::trace("Creating a new database...");
         MkdirRecursive(dbpath_);
+    } else {
+        spdlog::trace("Loading an old database from {}...", dbpath_);
     }
 
     // Create column families
@@ -41,6 +45,7 @@ RocksDB::RocksDB(std::string dbPath, std::vector<std::string> columnNames) {
 
     // Store handles into a map
     InitHandleMap(handles, columnNames);
+    spdlog::trace("Rocksdb is successfully initialized");
     handles.clear();
     descriptors.clear();
 }
@@ -66,6 +71,7 @@ RocksDB::~RocksDB() {
     handleMap_.clear();
 
     delete db_;
+    spdlog::trace("Destructing rocksdb");
 }
 
 std::string RocksDB::Get(const std::string& column, const Slice& keySlice) const {
@@ -84,7 +90,6 @@ std::string RocksDB::Get(const std::string& column, const std::string& key) cons
 bool RocksDB::Delete(const std::string& column, std::string&& key) const {
     return db_->Delete(WriteOptions(), handleMap_.at(column), key).ok();
 }
-
 
 void RocksDB::PrintColumns() const {
     std::vector<std::string> families{};

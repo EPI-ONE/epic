@@ -19,15 +19,15 @@ std::optional<rpc::Block> RPCClient::GetBlock(std::string block_hash) {
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
 
-    GetBlockResponse reply;
+    GetBlockResponse response;
     grpc::ClientContext context;
-    grpc::Status status = be_stub_->GetBlock(&context, request, &reply);
+    grpc::Status status = be_stub_->GetBlock(&context, request, &response);
 
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return {reply.block()};
+    return {response.block()};
 }
 
 std::optional<std::vector<rpc::Block>> RPCClient::GetLevelSet(std::string block_hash) {
@@ -35,18 +35,18 @@ std::optional<std::vector<rpc::Block>> RPCClient::GetLevelSet(std::string block_
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
 
-    GetLevelSetResponse reply;
+    GetLevelSetResponse response;
     grpc::ClientContext context;
-    grpc::Status status = be_stub_->GetLevelSet(&context, request, &reply);
+    grpc::Status status = be_stub_->GetLevelSet(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    if (auto n = reply.blocks_size()) {
+    if (auto n = response.blocks_size()) {
         std::vector<rpc::Block> r;
         r.resize(n);
         for (size_t i = 0; i < n; ++i) {
-            r[i] = reply.blocks(i);
+            r[i] = response.blocks(i);
         }
         return {r};
     }
@@ -58,26 +58,26 @@ std::optional<size_t> RPCClient::GetLevelSetSize(std::string block_hash) {
     rpc::Hash* h = HashToRPCHash(block_hash);
     request.set_allocated_hash(h);
 
-    GetLevelSetSizeResponse reply;
+    GetLevelSetSizeResponse response;
     grpc::ClientContext context;
-    grpc::Status status = be_stub_->GetLevelSetSize(&context, request, &reply);
+    grpc::Status status = be_stub_->GetLevelSetSize(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return {reply.size()};
+    return {response.size()};
 }
 
 std::optional<rpc::Block> RPCClient::GetLatestMilestone() {
     GetLatestMilestoneRequest request;
-    GetLatestMilestoneResponse reply;
+    GetLatestMilestoneResponse response;
     grpc::ClientContext context;
-    grpc::Status status = be_stub_->GetLatestMilestone(&context, request, &reply);
+    grpc::Status status = be_stub_->GetLatestMilestone(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return {reply.milestone()};
+    return {response.milestone()};
 }
 
 std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::string block_hash,
@@ -87,19 +87,19 @@ std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::stri
     request.set_allocated_hash(h);
     request.set_number(numberOfMilestone);
 
-    GetNewMilestoneSinceResponse reply;
+    GetNewMilestoneSinceResponse response;
     grpc::ClientContext context;
-    grpc::Status status = be_stub_->GetNewMilestoneSince(&context, request, &reply);
+    grpc::Status status = be_stub_->GetNewMilestoneSince(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
 
-    if (auto n = reply.blocks_size()) {
+    if (auto n = response.blocks_size()) {
         std::vector<rpc::Block> blocks;
         blocks.resize(n);
         for (size_t i = 0; i < n; ++i) {
-            blocks[i] = reply.blocks(i);
+            blocks[i] = response.blocks(i);
         }
         return {blocks};
     }
@@ -108,21 +108,21 @@ std::optional<std::vector<rpc::Block>> RPCClient::GetNewMilestoneSince(std::stri
 
 std::optional<StatusResponse> RPCClient::Status() {
     StatusRequest request;
-    StatusResponse reply;
+    StatusResponse response;
     grpc::ClientContext context;
-    grpc::Status status = commander_stub_->Status(&context, request, &reply);
+    grpc::Status status = commander_stub_->Status(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return {reply};
+    return {response};
 }
 
 bool RPCClient::Stop() {
     StopRequest request;
-    StopResponse reply;
+    StopResponse response;
     grpc::ClientContext context;
-    grpc::Status status = commander_stub_->Stop(&context, request, &reply);
+    grpc::Status status = commander_stub_->Stop(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return false;
@@ -132,26 +132,26 @@ bool RPCClient::Stop() {
 
 std::optional<bool> RPCClient::StartMiner() {
     StartMinerRequest request;
-    StartMinerResponse reply;
+    StartMinerResponse response;
     grpc::ClientContext context;
-    grpc::Status status = commander_stub_->StartMiner(&context, request, &reply);
+    grpc::Status status = commander_stub_->StartMiner(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return reply.success();
+    return response.success();
 }
 
-std::optional<bool> RPCClient::StopMiner() {
+RPCClient::option_string RPCClient::StopMiner() {
     StopMinerRequest request;
-    StopMinerResponse reply;
+    StopMinerResponse response;
     grpc::ClientContext context;
-    grpc::Status status = commander_stub_->StopMiner(&context, request, &reply);
+    grpc::Status status = commander_stub_->StopMiner(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-    return reply.success();
+    return response.result();
 }
 
 std::optional<std::string> RPCClient::CreateRandomTx(size_t size) {

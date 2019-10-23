@@ -40,7 +40,7 @@ public:
         EnableRedemptions();
     }
 
-    virtual ~Wallet() = default;
+    ~Wallet();
 
     void Start();
     void Stop();
@@ -91,11 +91,16 @@ public:
     bool SetPassphrase(const SecureString& phrase);
     bool ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase);
     bool CheckPassphrase(const SecureString& phrase);
+
     void RPCLogin() {
         rpcLoggedin_ = true;
     }
-    bool IsLoggedIn() {
+    bool IsLoggedIn() const {
         return rpcLoggedin_;
+    }
+
+    bool ExistMaster() const {
+        return !masterInfo_.IsNull();
     }
     bool GenerateMaster();
 
@@ -158,9 +163,11 @@ private:
     MasterInfo masterInfo_;
     Crypter crypter_;
 
+    // check if the old pass phrase matches
+    std::optional<Crypter> CheckPassphraseMatch(const SecureString&) const;
     std::atomic_bool rpcLoggedin_ = false;
 };
 
-extern std::shared_ptr<Wallet> WALLET;
+extern std::unique_ptr<Wallet> WALLET;
 
 #endif // EPIC_WALLET_H

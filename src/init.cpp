@@ -25,7 +25,7 @@ std::unique_ptr<BlockStore> STORE;
 std::unique_ptr<DAGManager> DAG;
 std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
-std::shared_ptr<Wallet> WALLET;
+std::unique_ptr<Wallet> WALLET;
 std::unique_ptr<MemPool> MEMPOOL;
 
 ECCVerifyHandle handle;
@@ -120,6 +120,12 @@ int Init(int argc, char* argv[]) {
     file::SetDataDirPrefix(CONFIG->GetRoot());
 
     /*
+     * Initialize ECC
+     */
+    ECC_Start();
+    handle = ECCVerifyHandle();
+
+    /*
      * Load caterpillar, dag and memory pool
      */
     if (CONFIG->IsStartWithNewDB()) {
@@ -144,17 +150,11 @@ int Init(int argc, char* argv[]) {
     }
 
     /*
-     * Initialize ECC
-     */
-    ECC_Start();
-    handle = ECCVerifyHandle();
-
-    /*
      * Load wallet
      */
-    WALLET = std::make_shared<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
-    DAG->RegisterOnLvsConfirmedCallback(std::bind(&Wallet::OnLvsConfirmed, WALLET, std::placeholders::_1,
-                                                  std::placeholders::_2, std::placeholders::_3));
+    WALLET = std::make_unique<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
+    DAG->RegisterOnLvsConfirmedCallback(
+        [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
 
     MEMPOOL = std::make_unique<MemPool>();
 
@@ -392,13 +392,13 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
 bool Start() {
     // start p2p network
     if (!PEERMAN->Init(CONFIG)) {
-        std::cerr << "fail to start peer manager" << std::endl;
+        std::cerr << "Failed to start peer manager" << std::endl;
         return false;
     }
     PEERMAN->Start();
     WALLET->Start();
-    if (!WALLET->GenerateMaster()) {
-        std::cerr << "fail to generate master key for wallet" << std::endl;
+    if (!WALLET->ExistMaster() &&!WALLET->GenerateMaster()) {
+        std::cerr << "Failed to generate master key for wallet" << std::endl;
         return false;
     } // TODO: make it from rpc calls
 
@@ -424,6 +424,7 @@ void ShutDown() {
     DAG->Stop();
     STORE->Stop();
 
+    WALLET.reset();
     STORE.reset();
     DAG.reset();
     MEMPOOL.reset();
@@ -433,7 +434,7 @@ void ShutDown() {
     ECC_Stop();
     handle.~ECCVerifyHandle();
 
-    spdlog::info("Shutdown successful.");
+    spdlog::info("Shutdown successfully.");
     spdlog::shutdown();
 }
 

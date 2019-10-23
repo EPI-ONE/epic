@@ -91,7 +91,11 @@ UTXOPtr ChainLedger::FindFromLedger(const uint256& xorkey) {
     if (query != removed_.end()) {
         return query->second;
     }
-    return nullptr; // should not happen
+
+    // should not happen
+    spdlog::warn("UTXO with key {} is not found in ledger; in STORE {}; in pending {}", xorkey.to_substr(),
+                 STORE->ExistsUTXO(xorkey), pending_.find(xorkey) != pending_.end());
+    return nullptr;
 }
 
 void ChainLedger::Invalidate(const TXOC& txoc) {

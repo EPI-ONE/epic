@@ -46,6 +46,7 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     uint256 target = pfork->GetMilestoneHash();
     assert(recentHistory_.find(target) != recentHistory_.end());
 
+    // We don't do any verification here but only data copying and rolling back
     for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
         for (const auto& rwp : (*it)->GetLevelSet()) {
             const auto& rpt = *rwp.lock();
@@ -64,7 +65,6 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
         }
         states_.erase(std::next(it).base());
     }
-    // note that we don't do any verification here
 }
 
 MilestonePtr Chain::GetChainHead() const {
@@ -118,9 +118,10 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     std::vector<ConstBlockPtr> result;
     ConstBlockPtr cursor;
 
-    /* reserve a good chunk of memory for efficiency;
-     * please note that n/2 is a not really precise
-     * upper bound and can be improved */
+    /**
+     * reserve memory for efficiency;
+     * please note that n/2 is a not really precise upper bound and can be improved 
+     */
     stack.reserve(pendingBlocks_.size() / 2);
     result.reserve(pendingBlocks_.size());
 
@@ -152,6 +153,8 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     }
 
     result.shrink_to_fit();
+    spdlog::debug("{} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
+                 static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
     return result;
 }
 
@@ -289,9 +292,12 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
     const auto& pblock   = vertex.cblock;
     const auto& blkHash  = pblock->GetHash();
     const auto& prevHash = pblock->GetPrevHash();
-    spdlog::trace("Validating {}", blkHash.to_substr());
 
-    // first update the key of the prev redemption hashes
+    // update miner chain height
+    vertex.minerChainHeight = GetVertex(prevHash)->minerChainHeight + 1;
+    spdlog::trace("Validating {} at its miner chain {}", blkHash.to_substr(), vertex.minerChainHeight);
+
+    // update the key of the prev redemption hashes
     uint256 oldRedempHash;
     if (UpdateKey(prevRedempHashMap_, prevHash, blkHash)) {
         oldRedempHash = prevRedempHashMap_.find(blkHash)->second;
@@ -304,9 +310,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
     regChange.Remove(prevHash, oldRedempHash);
     regChange.Create(blkHash, oldRedempHash);
 
-    vertex.minerChainHeight = GetVertex(prevHash)->minerChainHeight + 1;
-
-    // then verify its transaction and return the updating UTXO
+    // verify its transaction and return the updating UTXO
     TXOC validTXOC, invalidTXOC;
     if (pblock->HasTransaction()) {
         if (pblock->IsRegistration()) {
@@ -363,7 +367,6 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
     auto prevReg           = GetVertex(prevRedempHash);
     assert(prevReg);
-
 
     if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
         spdlog::info("Double redemption on previous registration block {} [{}]", std::to_string(prevRedempHash),

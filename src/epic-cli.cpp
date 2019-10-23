@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
 
             case STOP: {
                 if (client.Stop()) {
-                    std::cout << "OK";
+                    std::cout << "OK" << std::endl;
                 } else {
                     throw UnconnectedException();
                 }
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
             case STOP_MINER: {
                 auto r = client.StopMiner();
                 if (r.has_value()) {
-                    std::cout << ((*r) ? "OK" : "FAIL: Miner is already stopped") << std::endl;
+                    std::cout << *r << std::endl;
                 } else {
                     throw UnconnectedException();
                 }

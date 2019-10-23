@@ -134,7 +134,7 @@ public:
         : pending_(std::move(pending)), confirmed_(std::move(confirmed)), removed_(std::move(removed)) {}
 
     void AddToPending(UTXOPtr);
-    UTXOPtr FindFromLedger(const uint256&); // might be already spent
+    UTXOPtr FindFromLedger(const uint256&); // for created and spent UTXOs
     UTXOPtr FindSpendable(const uint256&);
     UTXOPtr GetFromPending(const uint256&);
     void Invalidate(const TXOC&);

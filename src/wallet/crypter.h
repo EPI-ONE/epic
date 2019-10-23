@@ -50,6 +50,12 @@ public:
         READWRITE(salt);
         READWRITE(nDeriveIterations);
     }
+
+    bool IsNull() const {
+        unsigned char zeros[WALLET_CRYPTO_KEY_SIZE];
+        memset(zeros, 0, WALLET_CRYPTO_KEY_SIZE);
+        return memcmp(cryptedMaster.data(), zeros, WALLET_CRYPTO_KEY_SIZE) == 0;
+    }
 };
 
 
@@ -82,6 +88,10 @@ public:
         return true;
     } 
 
+    SecureByte GetMaster() const {
+        return master_;
+    }
+
     void CleanKey() {
         memory_cleanse(passphraseKey_.data(), passphraseKey_.size());
         memory_cleanse(passphraseIV_.data(), passphraseIV_.size());
@@ -107,7 +117,6 @@ public:
     ~Crypter() {
         CleanKey();
         memory_cleanse(master_.data(), master_.size());
-        fMaster_ = false;
     }
 };
 

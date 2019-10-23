@@ -38,4 +38,5 @@ void UseFileLogger(const std::string& path, const std::string& filename);
 void InitLogger();
 
 void CreateDaemon();
+
 #endif // EPIC_INIT_H

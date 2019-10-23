@@ -13,6 +13,7 @@ PeerManager::PeerManager() {
 PeerManager::~PeerManager() {
     delete connectionManager_;
     delete addressManager_;
+    spdlog::trace("Destructing Peer Manager");
 }
 
 void PeerManager::Start() {

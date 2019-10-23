@@ -12,6 +12,7 @@
 
 class CKey;
 class CKeyID;
+class MasterInfo;
 class CPubKey;
 class Transaction;
 class uint256;
@@ -27,6 +28,9 @@ public:
     bool StoreUnspent(const uint256&, const CKeyID&, uint32_t, uint32_t, uint64_t);
     bool StorePending(const uint256&, const CKeyID&, uint32_t, uint32_t, uint64_t);
     bool StoreSpent(const uint256&, const CKeyID&, uint32_t, uint32_t, uint64_t);
+    bool StoreMasterInfo(const MasterInfo&);
+    bool StoreFirstRegInfo();
+    bool StoreLastRedemAddr(const CKeyID&);
 
     bool IsExistKey(const CKeyID&);
     std::optional<std::tuple<CiphertextKey, CPubKey>> GetKey(const CKeyID&);
@@ -36,6 +40,10 @@ public:
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> GetAllUnspent();
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> GetAllPending();
     ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> GetAllSpent();
+
+    std::optional<MasterInfo> GetMasterInfo();
+    bool GetFirstRegInfo();
+    std::optional<CKeyID> GetLastRedemAddr();
 
     // returns 0 upon success or non-zero value on error.
     int KeysToFile(std::string filePath);
