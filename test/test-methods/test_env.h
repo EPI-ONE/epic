@@ -45,7 +45,7 @@ public:
 
         if (enable_miner) {
             MEMPOOL = std::make_unique<MemPool>();
-            MINER   = std::make_unique<CPUMiner>(4);
+            MINER   = std::make_unique<Miner>(4);
         }
 
         if (enable_wallet) {

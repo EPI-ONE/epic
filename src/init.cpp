@@ -166,7 +166,7 @@ int Init(int argc, char* argv[]) {
     /*
      * Initialize miner
      */
-    MINER = std::make_unique<Miner>();
+    MINER = std::make_unique<Miner>(CONFIG->GetSolverThreads());
 
     /*
      * Create rpc instance
@@ -353,9 +353,9 @@ void LoadConfigFile() {
     // miner
     auto miner_config = configContent->get_table("miner");
     if (miner_config) {
-        auto solver_path = miner_config->get_as<std::string>("solver_addr");
-        if (solver_path) {
-            CONFIG->SetSolverAddr(*solver_path);
+        auto solver_threads = miner_config->get_as<int>("threads");
+        if (solver_threads) {
+            CONFIG->SetSolverThreads(*solver_threads);
         }
     }
 }
@@ -397,7 +397,7 @@ bool Start() {
     }
     PEERMAN->Start();
     WALLET->Start();
-    if (!WALLET->ExistMaster() &&!WALLET->GenerateMaster()) {
+    if (!WALLET->ExistMaster() && !WALLET->GenerateMaster()) {
         std::cerr << "Failed to generate master key for wallet" << std::endl;
         return false;
     } // TODO: make it from rpc calls

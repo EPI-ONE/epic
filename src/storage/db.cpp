@@ -117,7 +117,7 @@ optional<pair<FilePos, FilePos>> DBStore::GetVertexPos(const uint256& blkHash) c
     blkPos.nOffset += blkOffset;
     vtxPos.nOffset += vtxOffset;
 
-    return {{blkPos, vtxPos}};
+    return {std::make_pair(blkPos, vtxPos)};
 }
 
 

@@ -39,3 +39,4 @@ backup_period = 600
 
 [miner]
 solver_addr = ""
+threads = 1

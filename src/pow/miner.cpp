@@ -3,37 +3,42 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "miner.h"
-#include "solver_protocol.h"
+
 const size_t headsCacheLimit = 20;
 
-Miner::Miner() : selfChainHeads_(headsCacheLimit) {}
+Miner::Miner(size_t nThreads) : selfChainHeads_(headsCacheLimit) {
+    if (CYCLELEN) {
+        solver = new RemoteGPUSolver();
+    } else {
+        solver = new CPUSolver(nThreads);
+    }
+}
+
+Miner::~Miner() {
+    delete solver;
+}
 
 bool Miner::Start() {
-    bool flag = false;
-    if (enabled_.compare_exchange_strong(flag, true)) {
-        auto client_ip = NetAddress::GetByIP(CONFIG->GetSolverAddr());
-        if (client_ip) {
-            client = std::make_unique<MinerRPCClient>(client_ip->ToString());
-        } else {
-            spdlog::info("Invalid solver RPC client ip. Failed to start the miner.");
-            return false;
-        }
+    if (solver->Start()) {
+        enabled_ = true;
         spdlog::info("Miner started.");
         return true;
     }
+
+    enabled_ = false;
     return false;
 }
 
 bool Miner::Stop() {
-    bool flag = true;
-    if (enabled_.compare_exchange_strong(flag, false)) {
-        spdlog::info("Stopping miner...");
-        if (runner_.joinable()) {
-            runner_.join();
-        }
-        if (inspector_.joinable()) {
-            inspector_.join();
-        }
+    spdlog::info("Stopping miner...");
+
+    if (runner_.joinable()) {
+        runner_.join();
+    }
+    if (inspector_.joinable()) {
+        inspector_.join();
+    }
+    if (solver->Stop()) {
         return true;
     }
 
@@ -41,88 +46,28 @@ bool Miner::Stop() {
 }
 
 bool Miner::Solve(Block& b) {
-    arith_uint256 target = b.GetTargetAsInteger();
-    VStream vs(b.GetHeader());
-    grpc::ClientContext context;
-    POWTask request;
-    POWResult reply;
-    request.set_task_id(rand());
-    request.set_init_nonce(0);
-    request.set_init_time(b.GetTime());
-    request.set_step(1);
-    request.set_cycle_length(CYCLELEN);
-    request.set_target(target.GetHex());
-    request.set_header(vs.data(), vs.size());
-
-    current_task_id_ = request.task_id();
-    if (!sent_task_) {
-        sent_task_ = true;
-    }
-    std::cout << "Sending solver task: id = " << request.task_id() << std::endl;
-    auto status = client->SendTask(&context, request, &reply);
-
-    bool flag = false;
-    if (status.ok()) {
-        switch (reply.error_code()) {
-            case SolverResult::ErrorCode ::SUCCESS: {
-                b.SetNonce(reply.nonce());
-                std::vector<uint32_t> proof;
-                for (auto n : reply.proof()) {
-                    proof.emplace_back(n);
-                }
-                b.SetProof(std::move(proof));
-                b.SetTime(reply.time());
-                b.CalculateHash();
-                b.CalculateOptimalEncodingSize();
-                spdlog::info("Solver task succeeded, id = {}", request.task_id());
-                flag = true;
-                break;
-            }
-            case SolverResult::ErrorCode::SERVER_ABORT: {
-                spdlog::warn("Remote solver aborted. Task failed: id = {}", request.task_id());
-                break;
-            }
-            case SolverResult::ErrorCode ::TASK_CANCELED_BY_CLIENT: {
-                spdlog::warn("We canceled this task: id = {}", request.task_id());
-                flag = true;
-                break;
-            }
-            case SolverResult::ErrorCode::INVALID_PARAM: {
-                spdlog::warn("Invalid task parameter. Task failed: id = {}", request.task_id());
-                break;
-            }
-            case SolverResult::ErrorCode::UNKNOWN_ERROR: {
-                spdlog::warn("Unknown error on remote solver. Task failed: id = {}", request.task_id());
-                break;
-            }
-            default: {
-                spdlog::warn("Unknown error code. Task failed: id = {}", request.task_id());
-                break;
-            }
-        }
-    } else {
-        spdlog::warn("RPC error. Task failed: id = {}, error message = ", request.task_id(), status.error_message());
-    }
-    return flag;
+    return solver->Solve(b);
 }
 
 void Miner::Run() {
-    if (Start()) {
-        // Restore miner chain head
-        selfChainHeads_ = STORE->GetMinerChainHeads();
-        selfChainHeads_.set_limit(headsCacheLimit);
-        while (!selfChainHeads_.empty() && !(selfChainHead_ = STORE->FindBlock(selfChainHeads_.front()))) {
-            selfChainHeads_.pop_front();
-        }
+    if (!Start()) {
+        return;
+    }
 
-        // Restore distanceCal_
-        if (selfChainHead_ && distanceCal_.Empty()) {
-            auto cursor = selfChainHead_;
-            do {
-                distanceCal_.Add(cursor, false);
-                cursor = STORE->FindBlock(cursor->GetPrevHash());
-            } while (*cursor != *GENESIS && !distanceCal_.Full());
-        }
+    // Restore miner chain head
+    selfChainHeads_ = STORE->GetMinerChainHeads();
+    selfChainHeads_.set_limit(headsCacheLimit);
+    while (!selfChainHeads_.empty() && !(selfChainHead_ = STORE->FindBlock(selfChainHeads_.front()))) {
+        selfChainHeads_.pop_front();
+    }
+
+    // Restore distanceCal_
+    if (selfChainHead_ && distanceCal_.Empty()) {
+        auto cursor = selfChainHead_;
+        do {
+            distanceCal_.Add(cursor, false);
+            cursor = STORE->FindBlock(cursor->GetPrevHash());
+        } while (*cursor != *GENESIS && !distanceCal_.Full());
     }
 
     chainHead_ = DAG->GetMilestoneHead();
@@ -133,7 +78,7 @@ void Miner::Run() {
             if (!abort_ && headInDAG->source == Block::NETWORK &&
                 *headInDAG != *std::atomic_load(&chainHead_)->cblock) {
                 abort_ = true;
-                AbortTask(current_task_id_);
+                solver->Abort();
                 spdlog::debug("Milestone chain head changed {} => {}. Abort the current task.",
                               std::atomic_load(&chainHead_)->cblock->GetHash().to_substr(),
                               headInDAG->GetHash().to_substr());
@@ -194,16 +139,17 @@ void Miner::Run() {
 
             if (!Solve(b)) {
                 spdlog::warn("Failed to solve the block. Stop the miner.");
-                return;
+                enabled_ = false;
+                solver->Stop();
+                if (inspector_.joinable()) {
+                    inspector_.join();
+                }
             }
 
             // To prevent continuing with a block having a false nonce,
             // which may happen when Solve is aborted by calling
             // Miner::Stop or when abort_ = true
-            if (!enabled_.load()) {
-                return;
-            }
-            if (abort_.load()) {
+            if (abort_.load() || !enabled_.load()) {
                 if (b.HasTransaction()) {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
@@ -215,6 +161,11 @@ void Miner::Run() {
                         MEMPOOL->Insert(std::move(txns[i]));
                     }
                 }
+
+                if (!enabled_.load()) {
+                    return;
+                }
+
                 continue;
             }
 
@@ -266,14 +217,4 @@ uint256 Miner::SelectTip() {
     }
 
     return GENESIS->GetHash();
-}
-void Miner::AbortTask(uint32_t task_id) {
-    if (!sent_task_) {
-        return;
-    }
-    grpc::ClientContext context;
-    StopTaskRequest request;
-    StopTaskResponse response;
-    request.set_task_id(task_id);
-    client->AbortTask(&context, request, &response);
 }
