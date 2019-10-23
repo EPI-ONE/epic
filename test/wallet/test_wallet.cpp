@@ -2,13 +2,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <chrono>
 #include <gtest/gtest.h>
 
 #include "mempool.h"
 #include "miner.h"
 #include "test_env.h"
 #include "wallet.h"
+
+#include <chrono>
 
 class TestWallet : public testing::Test {
 public:
