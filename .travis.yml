@@ -20,8 +20,6 @@ matrix:
       dist: bionic
       addons:
         apt:
-          sources:
-            - llvm-toolchain-bionic-9
           packages:
             - autoconf
             - libtool
@@ -29,7 +27,6 @@ matrix:
             - gcc-8
             - g++-8
             - lcov
-            - clang-9
       cache:
         directories:
           - $BUILD_LIB_LPATH
@@ -39,6 +36,10 @@ matrix:
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
         - gcc -v
         - g++-v
+        - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        - sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+        - sudo apt-get update 
+        - sudo apt-get install clang-9
         - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
         - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         - clang -v
