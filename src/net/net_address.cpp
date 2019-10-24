@@ -291,3 +291,7 @@ bool operator==(const NetAddress& a, const NetAddress& b) {
 bool operator!=(const NetAddress& a, const NetAddress& b) {
     return !(a == b);
 }
+
+size_t NetAddress::HashCode() const {
+    return GetIpInt() * GetPort();
+}

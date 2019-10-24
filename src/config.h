@@ -253,6 +253,14 @@ public:
         return solver_threads;
     }
 
+    void SetAmISeed(bool seed) {
+        amISeed_ = seed;
+    }
+
+    bool AmISeed() const {
+        return amISeed_;
+    }
+
 private:
     // config file
     std::string configFilePath_;
@@ -274,6 +282,7 @@ private:
     uint16_t bindPort_       = defaultPort;
     std::string connect_;
     std::string networkType_ = "Testnet";
+    bool amISeed_            = false;
     std::vector<NetAddress> seeds_;
 
     // db

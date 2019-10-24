@@ -58,14 +58,15 @@ TEST_F(TestNetMsg, AddressMessage) {
 }
 
 TEST_F(TestNetMsg, VersionMessage) {
-    VersionMessage versionMessage(a1, 0);
+    VersionMessage versionMessage(a1,a1, 0, 123);
     std::stringstream os;
     versionMessage.Serialize(os);
 
     VersionMessage versionMessage1;
     versionMessage1.Deserialize(os);
     EXPECT_EQ(versionMessage.current_height, versionMessage1.current_height);
-    EXPECT_EQ(versionMessage.address_you, versionMessage1.address_you);
+    EXPECT_EQ(versionMessage.address_you_, versionMessage1.address_you_);
+    EXPECT_EQ(versionMessage.address_me_, versionMessage1.address_me_);
     EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);
     EXPECT_EQ(versionMessage.local_service, versionMessage1.local_service);
     EXPECT_EQ(versionMessage.client_version, versionMessage1.client_version);

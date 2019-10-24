@@ -192,6 +192,7 @@ void SetupCommandline(cxxopts::Options& options) {
     ("disable-rpc", "disable rpc server", cxxopts::value<bool>())
     ("D,daemon","make the program running in a daemon process", cxxopts::value<bool>())
     ("N,newdb","start with the new db", cxxopts::value<bool>())
+    ("S,seed","start as a seed",cxxopts::value<bool>())
     ;
     // clang-format on
 }
@@ -220,6 +221,9 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     }
     if (result.count("newdb") > 0) {
         CONFIG->SetStartWithNewDB(true);
+    }
+    if (result.count("seed") > 0) {
+        CONFIG->SetAmISeed(true);
     }
     CONFIG->SetDisableRPC(result["disable-rpc"].as<bool>());
 }
@@ -305,15 +309,16 @@ void LoadConfigFile() {
                 CONFIG->AddSeedByDNS(*host, *port);
             }
         }
+    }
 
-        if (CONFIG->GetSeedSize() == 0) {
-            auto ip_seeds = configContent->get_table_array("ip_seeds");
-            for (const auto& seed : *dns_seeds) {
-                auto ip   = seed->get_as<std::string>("ip");
-                auto port = seed->get_as<uint16_t>("port");
-                if (ip && port) {
-                    CONFIG->AddSeedByIP(*ip, *port);
-                }
+    // use ip seeds only when no dns seeds are available
+    if (CONFIG->GetSeedSize() == 0) {
+        auto ip_seeds = configContent->get_table_array("ip_seeds");
+        for (const auto& seed : *ip_seeds) {
+            auto ip   = seed->get_as<std::string>("ip");
+            auto port = seed->get_as<uint16_t>("port");
+            if (ip && port) {
+                CONFIG->AddSeedByIP(*ip, *port);
             }
         }
     }

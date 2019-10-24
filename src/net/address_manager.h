@@ -27,13 +27,10 @@
 
 class NetAddressInfo {
 public:
-    NetAddressInfo(uint16_t port_, uint64_t lastTry_, uint64_t lastSuccess_, uint16_t numAttempts_)
-        : port(port_), lastTry(lastTry_), lastSuccess(lastSuccess_), numAttempts(numAttempts_) {}
+    NetAddressInfo(uint64_t lastTry_, uint64_t lastSuccess_, uint16_t numAttempts_)
+        : lastTry(lastTry_), lastSuccess(lastSuccess_), numAttempts(numAttempts_) {}
 
     NetAddressInfo() = default;
-
-    // port
-    uint16_t port = 0;
 
     // last time that we tried to connect to the address
     uint64_t lastTry = 0;
@@ -59,7 +56,7 @@ public:
      * @param address
      * @return bool
      */
-    bool IsSeedAddress(const IPAddress& address);
+    bool IsSeedAddress(const NetAddress& address);
 
     /*
      * dump all addresses as toml file
@@ -76,14 +73,7 @@ public:
      * @param address
      * @return
      */
-    bool ContainAddress(const IPAddress& address) const;
-
-    /*
-     * add address to new addr map
-     * @param address
-     * @return
-     */
-    void AddNewAddress(const IPAddress& address);
+    bool ContainAddress(const NetAddress& address) const;
 
     /*
      * add address to new addr map
@@ -96,21 +86,21 @@ public:
      * 2. put the address from new map to old map if it is new
      * @param address
      */
-    void MarkOld(const IPAddress& address);
+    void MarkOld(const NetAddress& address);
 
     /*
      * judge if an address is a new address
      * @param address
      * @return
      */
-    bool IsNew(const IPAddress& address) const;
+    bool IsNew(const NetAddress& address) const;
 
     /*
      * judge if an address is an old address
      * @param address
      * @return
      */
-    bool IsOld(const IPAddress& address) const;
+    bool IsOld(const NetAddress& address) const;
 
     /*
      * get an address to connect from all address map
@@ -124,14 +114,14 @@ public:
      * @param address
      * @param time
      */
-    void SetLastTry(const IPAddress& address, uint64_t time);
+    void SetLastTry(const NetAddress& address, uint64_t time);
 
     /*
      * update the time of last success in NetAddressInfo
      * @param address
      * @param time
      */
-    void SetLastSuccess(const IPAddress& address, uint64_t time);
+    void SetLastSuccess(const NetAddress& address, uint64_t time);
 
     /*
      * get addresses of specified size, default 1000
@@ -178,9 +168,9 @@ public:
      * get one seed that hasn't been connected
      * @return
      */
-    std::optional<IPAddress> GetOneSeed();
+    std::optional<NetAddress> GetOneSeed();
 
-    uint64_t GetLastTry(IPAddress& address);
+    uint64_t GetLastTry(NetAddress& address);
 
 private:
     /*
@@ -188,22 +178,22 @@ private:
      * @param address
      * @return
      */
-    NetAddressInfo* GetInfo(const IPAddress& address);
+    NetAddressInfo* GetInfo(const NetAddress& address);
 
     // store all the addresses that we haven't try to connect
-    std::unordered_map<IPAddress, NetAddressInfo> newAddr_;
+    std::unordered_map<NetAddress, NetAddressInfo> newAddr_;
 
     // store all the addresses that we have connected
-    std::unordered_map<IPAddress, NetAddressInfo> oldAddr_;
+    std::unordered_map<NetAddress, NetAddressInfo> oldAddr_;
 
     // recursive lock
     mutable std::recursive_mutex lock_;
 
     // a set to save all seeds
-    std::unordered_set<IPAddress> allSeeds_;
+    std::unordered_set<NetAddress> allSeeds_;
 
     // a queue to store all seeds that we will connect to
-    std::queue<IPAddress> seedQueue_;
+    std::queue<NetAddress> seedQueue_;
 
     // map of local addresses, value is the score of the local address
     std::unordered_map<IPAddress, uint32_t> localAddresses_;

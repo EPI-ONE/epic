@@ -23,7 +23,7 @@ public:
 
     void ServerCallback(shared_connection_t connection) {
         std::optional<NetAddress> address = NetAddress::GetByIP(connection->GetRemote());
-        peer_server                       = std::make_shared<Peer>(*address, connection, false, addressManager);
+        peer_server                       = std::make_shared<Peer>(*address, connection, false, addressManager, 100);
         peer_server->SetWeakPeer(peer_server);
     }
 
@@ -77,7 +77,8 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     ASSERT_TRUE(client.Connect(0x7f000001, 12121));
     usleep(50000);
 
-    client_connection->SendMessage(std::make_unique<VersionMessage>(peer_server->address, testChainHeight, 0, 0));
+    client_connection->SendMessage(
+        std::make_unique<VersionMessage>(peer_server->address, peer_server->address, testChainHeight, 0, 100));
     usleep(50000);
     connection_message_t message;
 

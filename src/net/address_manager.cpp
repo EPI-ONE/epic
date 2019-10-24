@@ -19,24 +19,13 @@ void AddressManager::Init() {
     LoadAddress(CONFIG->GetAddressPath(), CONFIG->GetAddressFilename());
 }
 
-bool AddressManager::IsSeedAddress(const IPAddress& address) {
+bool AddressManager::IsSeedAddress(const NetAddress& address) {
     return allSeeds_.find(address) != allSeeds_.end();
 }
 
-bool AddressManager::ContainAddress(const IPAddress& address) const {
+bool AddressManager::ContainAddress(const NetAddress& address) const {
     std::lock_guard<std::recursive_mutex> lk(lock_);
     return newAddr_.find(address) != newAddr_.end() || oldAddr_.find(address) != oldAddr_.end();
-}
-
-void AddressManager::AddNewAddress(const IPAddress& address) {
-    if (IsSeedAddress(address) || IsLocal(address)) {
-        return;
-    }
-
-    if (ContainAddress(address)) {
-        return;
-    }
-    newAddr_.insert(std::make_pair(address, NetAddressInfo()));
 }
 
 void AddressManager::AddNewAddress(const NetAddress& address) {
@@ -48,11 +37,10 @@ void AddressManager::AddNewAddress(const NetAddress& address) {
         return;
     }
     NetAddressInfo info;
-    info.port = address.GetPort();
     newAddr_.insert(std::make_pair(address, info));
 }
 
-void AddressManager::MarkOld(const IPAddress& address) {
+void AddressManager::MarkOld(const NetAddress& address) {
     if (!ContainAddress(address)) {
         return;
     }
@@ -66,7 +54,7 @@ void AddressManager::MarkOld(const IPAddress& address) {
     }
 }
 
-void AddressManager::SetLastTry(const IPAddress& address, uint64_t time) {
+void AddressManager::SetLastTry(const NetAddress& address, uint64_t time) {
     NetAddressInfo* info = GetInfo(address);
     if (!info) {
         return;
@@ -76,7 +64,7 @@ void AddressManager::SetLastTry(const IPAddress& address, uint64_t time) {
     info->lastTry = time;
 }
 
-void AddressManager::SetLastSuccess(const IPAddress& address, uint64_t time) {
+void AddressManager::SetLastSuccess(const NetAddress& address, uint64_t time) {
     NetAddressInfo* info = GetInfo(address);
     if (!info) {
         return;
@@ -86,7 +74,7 @@ void AddressManager::SetLastSuccess(const IPAddress& address, uint64_t time) {
     info->lastSuccess = time;
 }
 
-NetAddressInfo* AddressManager::GetInfo(const IPAddress& address) {
+NetAddressInfo* AddressManager::GetInfo(const NetAddress& address) {
     std::lock_guard<std::recursive_mutex> lk(lock_);
     auto it = newAddr_.find(address);
     if (it != newAddr_.end()) {
@@ -112,13 +100,13 @@ std::optional<NetAddress> AddressManager::GetOneAddress(bool onlyNew) {
         int index = dis2(gen);
         auto it   = oldAddr_.begin();
         std::advance(it, index);
-        return NetAddress(it->first, it->second.port);
+        return NetAddress(it->first);
     } else if (!newAddr_.empty()) {
         std::uniform_int_distribution<int> dis3(0, newAddr_.size() - 1);
         int index = dis3(gen);
         auto it   = newAddr_.begin();
         std::advance(it, index);
-        return NetAddress(it->first, it->second.port);
+        return NetAddress(it->first);
     }
     return {};
 }
@@ -142,8 +130,8 @@ void AddressManager::SaveAddress(const std::string& path, const std::string& fil
         table->insert("numAttempts", it.second.numAttempts);
         table->insert("lastSuccess", it.second.lastSuccess);
         table->insert("lastTry", it.second.lastTry);
-        table->insert("port", it.second.port);
-        table->insert("ip", it.first.ToString());
+        table->insert("port", it.first.GetPort());
+        table->insert("ip", it.first.ToStringIP());
         new_table->push_back(table);
     }
     root->insert("new", new_table);
@@ -155,8 +143,8 @@ void AddressManager::SaveAddress(const std::string& path, const std::string& fil
         table->insert("lastSuccess", it.second.lastSuccess);
         table->insert("lastTry", it.second.lastTry);
         table->insert("lastTry", it.second.lastTry);
-        table->insert("port", it.second.port);
-        table->insert("ip", it.first.ToString());
+        table->insert("port", it.first.GetPort());
+        table->insert("ip", it.first.ToStringIP());
         old_table->push_back(table);
     }
     root->insert("old", old_table);
@@ -181,8 +169,10 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastTry     = table->get_as<uint64_t>("lastTry");
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
-                newAddr_.insert(std::make_pair(*IPAddress::GetByIP(*ip),
-                                               NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                if (ip && port && lastTry && lastSuccess && numAttempts) {
+                    newAddr_.insert(std::make_pair(*NetAddress::GetByIP(*ip, *port),
+                                                   NetAddressInfo(*lastTry, *lastSuccess, *numAttempts)));
+                }
             }
         }
         auto old_table = all_address->get_table_array("old");
@@ -193,8 +183,10 @@ void AddressManager::LoadAddress(const std::string& path, const std::string& fil
                 auto lastTry     = table->get_as<uint64_t>("lastTry");
                 auto lastSuccess = table->get_as<uint64_t>("lastSuccess");
                 auto numAttempts = table->get_as<uint>("numAttempts");
-                oldAddr_.insert(std::make_pair(*IPAddress::GetByIP(*ip),
-                                               NetAddressInfo(*port, *lastTry, *lastSuccess, *numAttempts)));
+                if (ip && port && lastTry && lastSuccess && numAttempts) {
+                    oldAddr_.insert(std::make_pair(*NetAddress::GetByIP(*ip, *port),
+                                                   NetAddressInfo(*lastTry, *lastSuccess, *numAttempts)));
+                }
             }
         }
     }
@@ -210,13 +202,13 @@ std::vector<NetAddress> AddressManager::GetAddresses(size_t size) {
     }
     list.reserve(actual_size);
     for (auto& it : oldAddr_) {
-        list.emplace_back(it.first, it.second.port);
+        list.emplace_back(it.first);
         if (list.size() == actual_size) {
             return list;
         }
     }
     for (auto& it : newAddr_) {
-        list.emplace_back(it.first, it.second.port);
+        list.emplace_back(it.first);
         if (list.size() == actual_size) {
             return list;
         }
@@ -275,12 +267,12 @@ bool AddressManager::IsLocal(const IPAddress& address) const {
     return localAddresses_.find(address) != localAddresses_.end();
 }
 
-bool AddressManager::IsNew(const IPAddress& address) const {
+bool AddressManager::IsNew(const NetAddress& address) const {
     std::unique_lock<std::recursive_mutex> lk(lock_);
     return newAddr_.find(address) != newAddr_.end();
 }
 
-bool AddressManager::IsOld(const IPAddress& address) const {
+bool AddressManager::IsOld(const NetAddress& address) const {
     std::unique_lock<std::recursive_mutex> lk(lock_);
     return oldAddr_.find(address) != oldAddr_.end();
 }
@@ -296,7 +288,7 @@ size_t AddressManager::SizeOfAllAddr() {
     return newAddr_.size() + oldAddr_.size();
 }
 
-std::optional<IPAddress> AddressManager::GetOneSeed() {
+std::optional<NetAddress> AddressManager::GetOneSeed() {
     if (seedQueue_.empty()) {
         return {};
     } else {
@@ -306,6 +298,6 @@ std::optional<IPAddress> AddressManager::GetOneSeed() {
     }
 }
 
-uint64_t AddressManager::GetLastTry(IPAddress& address) {
+uint64_t AddressManager::GetLastTry(NetAddress& address) {
     return GetInfo(address)->lastTry;
 }

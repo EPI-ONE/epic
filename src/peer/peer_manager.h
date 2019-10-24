@@ -101,7 +101,20 @@ public:
      */
     void RelayTransaction(const ConstTxPtr& tx, const PeerPtr& msg_from);
 
-private:
+    /**
+     * relay message to neighbors
+     * @param message
+     * @param msg_from
+     */
+    void RelayAddressMsg(AddressMessage& message, const PeerPtr& msg_from);
+
+    /**
+     * get my own peer id
+     * @return myID_
+     */
+    uint64_t GetMyPeerID() const;
+
+    private:
     /*
      * create a peer after a new connection is setup
      */
@@ -115,7 +128,7 @@ private:
      * check if we have connected to the ip address
      * @return
      */
-    bool HasConnectedTo(const IPAddress& address);
+    bool HasConnectedTo(const NetAddress &address);
 
     /**
      * add a peer into peer map
@@ -130,6 +143,24 @@ private:
      * a while loop function to receive and process messages
      */
     void HandleMessage();
+
+    /**
+     * process block, add to dag and relay
+     * @param block
+     */
+    void ProcessBlock(const ConstBlockPtr& block, PeerPtr& peer);
+
+    /**
+     * process transaction, add to memory pool and relay
+     * @param transaction
+     */
+    void ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer);
+
+    /**
+     * process address message, check, relay and save addresses
+     * @param addressMessage
+     */
+    void ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr& peer);
 
     /**
      * a while loop function to setup outbound connection
@@ -155,6 +186,9 @@ private:
 
     // possibility of relaying a block to a peer
     constexpr static float kAlpha = 0.5;
+
+    // max size of peers to relay address message
+    const static uint32_t kMaxPeersToRelayAddr = 2;
 
     // max outbound size
     const size_t kMax_outbound = 8;
@@ -183,6 +217,12 @@ private:
     constexpr static uint32_t kSyncTimeThreshold = 60;
 
     constexpr static uint32_t kCheckSyncInterval = 180;
+
+    /**
+     * my own peer id, a random number used to identify peer
+     */
+
+    uint64_t myID_;
 
     /*
      * current local network status
@@ -227,6 +267,9 @@ private:
     PeerPtr initial_sync_peer_ = nullptr;
 
     std::string connect_;
+
+    // random generator
+    std::default_random_engine gen;
 };
 
 extern std::unique_ptr<PeerManager> PEERMAN;
