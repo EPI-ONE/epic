@@ -153,7 +153,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     }
 
     result.shrink_to_fit();
-    spdlog::debug("{} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
+    spdlog::debug("[Validation] {} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
                   static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
     return result;
 }
@@ -229,7 +229,7 @@ void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
 VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     auto height = GetChainHead()->height + 1;
 
-    spdlog::debug("Verifying milestone block {} at height {}", pblock->GetHash().to_substr(), height);
+    spdlog::debug("[Validation] Validating level set of ms {} at height {}", pblock->GetHash().to_substr(), height);
 
     // get a path for validation by the post ordered DFS search
     std::vector<ConstBlockPtr> blocksToValidate = GetSortedSubgraph(pblock);
@@ -284,6 +284,9 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     }
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
+    const auto& ms = vtcs.back()->snapshot;
+    spdlog::debug("[Validate] New milestone {} has milestone difficulty target in compact form {} as difficulty {}",
+                  vtcs.back()->cblock->GetHash().to_substr(), ms->milestoneTarget.GetCompact(), ms->GetMsDifficulty());
     vtcs.back()->UpdateMilestoneReward();
 
     recentHistory_.merge(std::move(verifying_));
@@ -297,7 +300,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
 
     // update miner chain height
     vertex.minerChainHeight = GetVertex(prevHash)->minerChainHeight + 1;
-    spdlog::trace("Validating {} at its miner chain {}", blkHash.to_substr(), vertex.minerChainHeight);
+    spdlog::trace("[Validate] Validating {} at its miner chain {}", blkHash.to_substr(), vertex.minerChainHeight);
 
     // update the key of the prev redemption hashes
     uint256 oldRedempHash;
@@ -307,7 +310,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         oldRedempHash = STORE->GetPrevRedemHash(prevHash);
 
         if (oldRedempHash.IsNull()) {
-            spdlog::warn("Peer chain forks here [{}]", std::to_string(blkHash));
+            spdlog::warn("[Validate] Peer chain forks here [{}]", std::to_string(blkHash));
             auto b = GetVertex(prevHash);
             while (!b->cblock->IsRegistration() || b->validity[0] != Vertex::VALID) {
                 b = GetVertex(b->cblock->GetPrevHash());
@@ -348,7 +351,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         // invalidate transactions that still have validity == UNKNOWN
         const auto& txns = vertex.cblock->GetTransactions();
         for (size_t i = 0; i < txns.size(); ++i) {
-            if (!vertex.validity[i]) { // if UNKNOWN
+            if (vertex.validity[i] == Vertex::Validity::UNKNOWN) {
                 vertex.validity[i] = Vertex::Validity::INVALID;
                 invalidTXOC.Merge(CreateTXOCFromInvalid(*txns[i], i));
             }
@@ -373,7 +376,7 @@ uint256 Chain::GetPrevRedempHash(const uint256& h) const {
 std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChange) {
     const auto& blkHash = vertex.cblock->GetHash();
     const auto hashstr  = std::to_string(blkHash);
-    spdlog::trace("Validating redemption {}", blkHash.to_substr());
+    spdlog::trace("[Validate] Validating redemption in block {}", blkHash.to_substr());
 
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
     auto prevReg           = GetVertex(prevRedempHash);
@@ -422,6 +425,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
 
 bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& fee) {
     const auto& blkHash = tx.GetParentBlock()->GetHash();
+    spdlog::trace("[Validate] Validating Transactions in block {}", blkHash.to_substr());
 
     Coin valueIn{};
     Coin valueOut{};
@@ -483,13 +487,13 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
 
 TXOC Chain::ValidateTxns(Vertex& vertex) {
     const auto& blkHash = vertex.cblock->GetHash();
-    spdlog::trace("Validating transactions in block {}", blkHash.to_substr());
+    spdlog::trace("[Validation] Validating transactions in block {}", blkHash.to_substr());
 
     TXOC validTXOC{};
 
     const auto& txns = vertex.cblock->GetTransactions();
     for (size_t i = 0; i < txns.size(); ++i) {
-        if (vertex.validity[i]) { // if not UNKNWON
+        if (vertex.validity[i] != Vertex::Validity::UNKNOWN) {
             // Skipping, because this txn is either redemption
             // or has been marked invalid by CheckTxPartition
             continue;
