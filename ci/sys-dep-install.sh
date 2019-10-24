@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -v
+# set -ev
 EPIC_SYS_DEP_DIR="sys-dep-install"
 EPIC_SYS_INFO="$(uname -v)"
 
@@ -62,6 +62,3 @@ then
 else
   echo "This script only supports Mac OS X and Ubuntu Linux 18.04"
 fi
-
-
-
