@@ -4,7 +4,7 @@ EPIC_CMAKE_VERSION="3.15.4"
 EPIC_CMAKE_DIR=""cmake-"$EPIC_CMAKE_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    cmake --version
+    brew link cmake
 else
     if [[ ! -d ${EPIC_CMAKE_DIR} ]];then
         sudo rm -rf cmake*

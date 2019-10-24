@@ -4,7 +4,7 @@ EPIC_OPENSSL_VERSION="1_1_1d"
 EPIC_OPENSSL_DIR=""openssl-"$EPIC_OPENSSL_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    brew list openssl@1.1
+    type -a openssl
 else
     if [[ ! -d ${EPIC_OPENSSL_DIR} ]];then
         sudo rm -rf openssl*

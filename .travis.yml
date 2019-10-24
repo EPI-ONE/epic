@@ -21,7 +21,7 @@ matrix:
       addons:
         apt:
           sources:
-            - llvm-toolchain-bionic-9 main
+            - llvm-toolchain-bionic-9
           packages:
             - autoconf
             - libtool
