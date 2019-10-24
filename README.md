@@ -58,7 +58,7 @@ cd ../bin
 # runing the daemon
 ./epic --configpath /path/to/toml
 # send rpc command to daemon
-./epicc [OPTIONS] [COMMAND]
+./epic-cli [OPTIONS] [COMMAND]
 ```
 
 We provide a default [config.toml](./config.toml), where seed address for the testnet is provided. You may customize a number of things, e.g., how to use spdlog, by editing it.
