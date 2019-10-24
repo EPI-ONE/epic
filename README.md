@@ -16,17 +16,17 @@ The design of the consensus mechanism is based on a Structured DAG. Refer to the
 The implementation of this peoject is written in C++ 17.
 
 - C/C++ compilier and library
-    - `gcc` version 7 or up on Linux
-    - Apple LLVM version 11.0.0 (clang-1100.0.33.8) provided by XCode 11
+    - `gcc` version 8 or up on Linux
+    - Apple LLVM version 11.0.0 (clang-1100.0.33.8) provided by XCode 11 on OS X 10.15
 
-- `cmake` version 3.14 or up
+- `cmake` version 3.15 or up
 
-- (Recommended) `clang` version 5 or up as an alternative (or better) compiler.
+- (Recommended) `clang` version 8 or up as an alternative (or better) compiler.
   Note: the llvm `libc++` lacks support of some C++ 17, thus still need the `gcc` (or Mac clang) library.
 
-Builds on several esisting projects:
+Builds on several existing projects:
 
-- Our source code has inculded the code from existing projects:
+- Our source code has included the code from existing projects:
     - several pieces of code in the [bitcoin](https://github.com/bitcoin/bitcoin) project, some of which with our own modification.
     - `cxxopts` [v2.0.0](https://github.com/jarro2783/cxxopts)
     - `cpptoml` [v0.1.1](https://github.com/skystrife/cpptoml)

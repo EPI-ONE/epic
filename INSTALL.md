@@ -2,74 +2,51 @@
 
 ## Basic tools via system installation
 
-We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
+We provide instructions for two operating systems: Ubuntu and MacOS. 
 
 ### Ubuntu 18.04
 
-0. Install some basics including `gcc` version 7.4 and build tools.
+0. Install some basics build tools
 
     ```bash
-    sudo apt-get install build-essential
     sudo apt-get install autoconf libtool pkg-config
     ```
-
-2. `clang` version 8
-
-    Add repository. If you have a different version of Ubuntu other than 18.04, see https://apt.llvm.org for corresponding repos.
+    
+1. Install gcc-8
 
     ```bash
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-    sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main"
-    sudo apt-get update
-    ```
-
-    The following is instructed in https://apt.llvm.org
-
-    ```bash
-    # LLVM
-    sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev llvm-8-doc llvm-8-examples llvm-8-runtime
-    # Clang and co
-    sudo apt-get install clang-8 clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8
+    sudo apt-get install gcc-8 g++-8
     ```
 
     Update alternatives
 
     ```bash
-    sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 100
-    sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-8 100
+    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
+    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
     ```
 
-3. (Optional) for `libsecp256k1`
+0. Install clang-9
+
+   Add repository. If you have a different version of Ubuntu other than 18.04, see https://apt.llvm.org for corresponding repos.
+
+   ```bash
+   wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+   sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+   sudo apt-get update 
+   sudo apt-get install clang-9
+   ```
+
+   Update alternatives
+
+   ```bash
+   sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
+   sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
+   ```
+
+1. (Optional) for `libsecp256k1`
 
     ```bash
     sudo apt-get install libgmp-dev
-    ```
-
-### CentOS 7.6
-
-0. Basic build tools
-
-    ```bash
-    sudo yum install libtool autoconf automake
-    ```
-
-1. `gcc` version 7.4
-    ```bash
-    sudo yum install centos-release-scl
-    sudo yum install devtoolset-7-gcc-c++
-    scl enable devtoolset-7 bash/zsh
-    ```
-
-2. `clang` version 5.0
-
-    ```bash
-    sudo yum install llvm-toolset-7
-    scl enable llvm-toolset-7 bash
-    ```
-
-3. (Optional) for `libsecp256k1`
-    ```bash
-    sudo yum install gmp-devel
     ```
 
 ### Mac OS X 10.15
@@ -79,12 +56,7 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
      ```bash
      xcode-select --install
      ```
-     Mac provides its own C/C++ compiler and lib via XCode, `Apple clang version 11.0.0 (clang-1100.0.33.8)`
-     >   Note: if you use XCode10 (or lower) and on OS X 10.14, you need to install llvm by using `brew install llvm` and manually add some required C header files. This step is complicated since MacOS Mojave removed some system headers. You may check whether you already have the required C headers by
-     >
-     >   `ls /Library/Developer/CommandLineTools/Packages`
-     >
-     >   If you have something like `macOS_SDK_headers_for_macOS_10.14.pkg` in this folder, then you can skip the next step. Otherwise, please go to [Apple Developer](https://developer.apple.com/download/more/) and download `Command Line Tools (macOS 10.14) for Xcode 10.2.1.dmg` and install. After this, you will find `/Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg`. After install this package, you will have the required system header files. Now, you can build from source.
+     Mac provides its own C/C++ compiler and lib via XCode, `Apple clang version 11.0.0 (clang-1100.0.33.8)`. Mac OS X must upgrade to 10.15.
      
 1. Brew
 
@@ -103,8 +75,6 @@ We provide instructions for three operating systems: Ubuntu, CentOS and MacOS.
     ```bash
     brew install gmp
     ```
-
-
 
 ## Dependencies installation from source
 
