@@ -17,7 +17,7 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
         obcThread_.Execute([this]() {
             auto n = obc_.Prune(3600);
             if (n) {
-                spdlog::info("Erased {} outdated entries from OBC.", n);
+                spdlog::info("[OBC] Erased {} outdated entries from OBC.", n);
             }
         });
     });
@@ -26,7 +26,7 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
 
 void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
     obcThread_.Execute([blk = std::move(blk), mask, this]() mutable {
-        spdlog::trace("AddBlockToOBC {}", blk->GetHash().to_substr());
+        spdlog::trace("[OBC] AddBlockToOBC {}", blk->GetHash().to_substr());
         if (!obcEnabled_.load()) {
             return;
         }
@@ -363,7 +363,7 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         SaveHeadHeight(height);
         SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
 
-        spdlog::trace("Storing LVS with MS hash {} of height {} with current file pos {}", ms.height, height,
+        spdlog::trace("[STORE] Storing LVS with MS hash {} of height {} with current file pos {}", ms.height, height,
                       std::to_string(*dbStore_.GetMsBlockPos(height)));
     } catch (const std::exception&) {
         return false;

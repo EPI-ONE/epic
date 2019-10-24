@@ -260,6 +260,7 @@ void DAGManager::EnableOBC() {
 //
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
+        spdlog::trace("[Verify Thread] Adding blocks to pending {}", blk->GetHash().to_substr());
         if (*blk == *GENESIS) {
             spdlog::trace("Adding new block aborted: genesis");
             return;
@@ -343,6 +344,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         AddBlockToPending(blk);
         STORE->ReleaseBlocks(blk->GetHash());
+        spdlog::trace("[Verify Thread] End of adding block to pending {}", blk->GetHash().to_substr());
     });
 }
 
@@ -371,8 +373,6 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) 
 }
 
 void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
-    spdlog::trace("AddBlockToPending {}", block->GetHash().to_substr());
-
     // Extract utxos from outputs and pass their pointers to chains
     std::vector<UTXOPtr> utxos;
     const auto& txns = block->GetTransactions();
@@ -405,7 +405,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
-                spdlog::debug("Updating main chain MS block {} pre MS {}", block->GetHash().to_substr(),
+                spdlog::debug("[Verify Thread] Updating main chain MS block {} pre MS {}", block->GetHash().to_substr(),
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
                 EnableOBC();
@@ -413,7 +413,8 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 FlushTrigger();
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {} pre main chain MS {} total chains {}",
+                spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre main chain MS {} --- "
+                              "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
                               milestoneChains.size());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
@@ -443,17 +444,18 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
                 // new milestone on fork
-                spdlog::debug("A fork grows MS block {} pre MS {}", block->GetHash().to_substr(),
+                spdlog::debug("[Verify Thread] A fork grows MS block {} pre MS {}", block->GetHash().to_substr(),
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
                 if (milestoneChains.update_best(chainIt)) {
-                    spdlog::debug("Switched to the best chain: head = {}",
+                    spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
                                   milestoneChains.best()->GetChainHead()->GetMilestoneHash().to_substr());
                 }
                 return;
             } else {
                 // new fork
-                spdlog::debug("A fork created which points to MS block {} pre forked chain MS {} total chains {}",
+                spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre forked chain MS {} --- "
+                              "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
                               milestoneChains.size());
                 auto new_fork = std::make_unique<Chain>(*chain, block);
@@ -471,7 +473,7 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
     chain->AddNewState(*newMs);
 
     if (EraseDownloading(block->GetHash())) {
-        spdlog::debug("Size of downloading = {}, removed successfully", downloading.size());
+        spdlog::debug("[Verify Thread] Size of downloading = {}, removed successfully", downloading.size());
     }
 }
 
@@ -494,8 +496,8 @@ void DAGManager::DeleteFork() {
                 }
                 globalStates_.erase((*it)->GetMilestoneHash());
             }
-            spdlog::info("Deleting fork with chain head {}",
-                         (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr());
+            spdlog::info("[Verify Thread] Deleting fork with chain head {} --- total chains {}",
+                         (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr(), milestoneChains.size());
             chain_it = milestoneChains.erase(chain_it);
         } else {
             chain_it++;
@@ -582,7 +584,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
     auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
     ms->stored                                   = true;
 
-    spdlog::debug("Flushing at height {}", ms->height);
+    spdlog::debug("[Verify Thread] Flushing {} at height {}", ms->GetMilestoneHash().to_substr(), ms->height);
 
     storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
@@ -631,11 +633,13 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 
         verifyThread_.Execute([=, msHash = ms.cblock->GetHash(), vtxHashes = std::move(vtxHashes),
                                txocToRemove = std::move(txocToRemove)]() {
+            spdlog::trace("[Verify Thread] Removing level set {} cache", msHash.to_substr());
             globalStates_.erase(msHash);
             for (auto& chain : milestoneChains) {
                 chain->PopOldest(vtxHashes, txocToRemove);
             }
         });
+        spdlog::trace("[Storage Pool] End of flushing {}", ms.cblock->GetHash().to_substr());
     });
 }
 

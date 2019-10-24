@@ -149,8 +149,8 @@ void Block::UnCache() {
 }
 
 bool Block::Verify() const {
+    spdlog::trace("[Syntax] Syntactically checking block {}", hash_.to_substr());
     // check version
-    spdlog::trace("Block::Verify version {}", hash_.to_substr());
     if (header_.version != GetParams().version) {
         spdlog::info("[Syntax] Wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
                      std::to_string(hash_));
@@ -158,13 +158,11 @@ bool Block::Verify() const {
     }
 
     // check pow
-    spdlog::trace("Block::Verify pow {}", hash_.to_substr());
     if (!CheckPOW()) {
         return false;
     }
 
     // check merkle
-    spdlog::trace("Block::Verify merkle {}", hash_.to_substr());
     bool mutated;
     auto root = ComputeMerkleRoot(&mutated);
     if (mutated) {
@@ -177,7 +175,6 @@ bool Block::Verify() const {
     }
 
     // check if the timestamp is too far in the future
-    spdlog::trace("Block::Verify allowed time {}", hash_.to_substr());
     time_t allowedTime = std::time(nullptr) + ALLOWED_TIME_DRIFT;
     if (header_.timestamp > allowedTime) {
         time_t t = header_.timestamp;
@@ -188,14 +185,12 @@ bool Block::Verify() const {
     }
 
     // verify content of the block
-    spdlog::trace("Block::Verify number of txns {}", hash_.to_substr());
     if (transactions_.size() > GetParams().blockCapacity) {
         spdlog::info("[Syntax] The number of transactions ({}) greater than the block capacity ({}) [{}]",
                      transactions_.size(), GetParams().blockCapacity, std::to_string(hash_));
         return false;
     }
 
-    spdlog::trace("Block::Verify content {}", hash_.to_substr());
     if (GetOptimalEncodingSize() > MAX_BLOCK_SIZE) {
         spdlog::info("[Syntax] Size {} larger than the maximum allowed size ({} bytes) [{}]", optimalEncodingSize_,
                      MAX_BLOCK_SIZE, std::to_string(hash_));
@@ -218,7 +213,6 @@ bool Block::Verify() const {
     }
 
     // check the conditions of the first registration block
-    spdlog::trace("Block::Verify first reg {}", hash_.to_substr());
     if (header_.prevBlockHash == GENESIS->GetHash()) {
         // Must contain a tx
         if (!HasTransaction()) {
@@ -233,6 +227,7 @@ bool Block::Verify() const {
         }
     }
 
+    spdlog::trace("[Syntax] End of syntactical checking on {}", hash_.to_substr());
     return true;
 }
 
