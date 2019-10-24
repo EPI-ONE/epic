@@ -84,17 +84,17 @@ matrix:
 
 install:
   - clang -v
-  - $EPIC_PATH/ci/install-cmake.sh
+  - if [ ${TRAVIS_OS_NAME} == 'linux' ]; then $EPIC_PATH/ci/install-cmake.sh
   - export PATH="/usr/local/bin:$PATH"
   - cmake --version
   - type -a cmake
-  - $EPIC_PATH/ci/install-openssl.sh
+  - if [ ${TRAVIS_OS_NAME} == 'linux' ]; then $EPIC_PATH/ci/install-openssl.sh
+  - if [ ${TRAVIS_OS_NAME} == 'linux' ]; then $EPIC_PATH/ci/install-protobuf.sh
+  - if [ ${TRAVIS_OS_NAME} == 'linux' ]; then $EPIC_PATH/ci/install-grpc.sh
+  - if [ ${TRAVIS_OS_NAME} == 'linux' ]; then $EPIC_PATH/ci/install-rocksdb.sh
   - $EPIC_PATH/ci/install-secp256k1.sh
   - $EPIC_PATH/ci/install-libevent.sh
   - $EPIC_PATH/ci/install-googletest.sh
-  - $EPIC_PATH/ci/install-protobuf.sh
-  - $EPIC_PATH/ci/install-grpc.sh
-  - $EPIC_PATH/ci/install-rocksdb.sh
   - ls
 
 script:
