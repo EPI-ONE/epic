@@ -88,6 +88,7 @@ install:
   - ls /usr/local/lib
   - ls
   - $EPIC_PATH/ci/install-cmake.sh
+  - export PATH="/usr/local/bin:$PATH"
   - cmake --version
   - type -a cmake
   - $EPIC_PATH/ci/install-openssl.sh
