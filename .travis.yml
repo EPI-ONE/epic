@@ -35,7 +35,7 @@ matrix:
         - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
         - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
         - gcc -v
-        - g++-v
+        - g++ -v
         - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         - sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
         - sudo apt-get update 
