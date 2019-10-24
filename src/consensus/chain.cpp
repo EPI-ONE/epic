@@ -158,7 +158,7 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     return result;
 }
 
-void Chain::CheckTxPartition(Vertex& b, const arith_uint256& ms_hashrate) {
+void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
     if (b.minerChainHeight <= GetParams().sortitionThreshold) {
         if (b.cblock->IsRegistration()) {
             if (b.cblock->GetTransactionSize() > 1) {
@@ -284,9 +284,6 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     }
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
-    spdlog::debug("New milestone {} has milestone difficulty target as {} (compact form {}), while difficulty is {}",
-                  vtcs.back()->cblock->GetHash().to_substr(), std::to_string(vtcs.back()->snapshot->milestoneTarget),
-                  vtcs.back()->snapshot->milestoneTarget.GetCompact(), vtcs.back()->snapshot->GetMsDifficulty());
     vtcs.back()->UpdateMilestoneReward();
 
     recentHistory_.merge(std::move(verifying_));
@@ -387,8 +384,10 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
     if (vin.outpoint.bHash != prevRedempHash) {
-        spdlog::info("[Validation] Double redemption on previous registration block: outpoint not matching {} [{}]",
-                     prevRedempHash.to_substr(), hashstr);
+        spdlog::info(
+            "[Validation] Double redemption on previous registration block: outpoint {} not matching the last valid "
+            "redemption hash {} [{}]",
+            vin.outpoint.bHash.to_substr(), prevRedempHash.to_substr(), hashstr);
         return {};
     }
 

@@ -179,7 +179,7 @@ private:
     std::optional<TXOC> ValidateRedemption(Vertex&, RegChange&);
     bool ValidateTx(const Transaction&, uint32_t index, TXOC&, Coin& fee);
     TXOC ValidateTxns(Vertex&);
-    void CheckTxPartition(Vertex&, const arith_uint256&);
+    void CheckTxPartition(Vertex&, float);
 
     Coin GetPrevReward(const Vertex& vtx) const {
         return GetVertex(vtx.cblock->GetPrevHash())->cumulativeReward;
@@ -193,9 +193,9 @@ private:
 
 typedef std::unique_ptr<Chain> ChainPtr;
 
-inline arith_uint256 CalculateAllowedDist(const Cumulator& cum, const arith_uint256& msHashRate) {
-    return std::max((arith_uint256)(cum.Sum() / (cum.TimeSpan() + 1)), arith_uint256(1)) /
-           GetParams().sortitionCoefficient * (GetParams().maxTarget / (msHashRate + 1));
+inline double CalculateAllowedDist(const Cumulator& cum, float msHashRate) {
+    return cum.Sum().GetDouble() / std::max(cum.TimeSpan(), (uint32_t) 1) / msHashRate *
+           (GetParams().sortitionCoefficient * GetParams().maxTarget.GetDouble());
 }
 
 #endif // EPIC_CHAIN_H

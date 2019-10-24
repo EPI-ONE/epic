@@ -22,7 +22,7 @@ static constexpr uint32_t GENESIS_BLOCK_VERSION = 1;
 // an easy enough difficulty target
 static constexpr uint32_t EASIEST_COMP_DIFF_TARGET = 0x2100ffffL;
 // transaction sortition: coefficient for computing allowed distance
-static constexpr size_t SORTITION_COEFFICIENT = 100;
+static constexpr float SORTITION_COEFFICIENT = 0.01;
 // transaction sortition: number of block to go back
 static constexpr size_t SORTITION_THRESHOLD = 1000;
 // coefficient of taking additional reward for milestone
@@ -72,7 +72,7 @@ MainNetParams::MainNetParams() {
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 42;
-    sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
+    sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = SORTITION_THRESHOLD;
     cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
@@ -107,7 +107,7 @@ TestNetParams::TestNetParams() {
     reward               = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 4;
-    sortitionCoefficient = arith_uint256(SORTITION_COEFFICIENT);
+    sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = 100;
     cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
@@ -139,7 +139,7 @@ UnitTestParams::UnitTestParams() {
     reward               = 10;
     msRewardCoefficient  = 1;
     cycleLen             = 0;
-    sortitionCoefficient = arith_uint256(1);
+    sortitionCoefficient = 1;
     sortitionThreshold   = 2;
     cacheStatesSize      = 20;
     deleteForkThreshold  = 10;
@@ -160,7 +160,7 @@ UnitTestParams::UnitTestParams() {
 }
 
 void UnitTestParams::SetGenesisParams(const std::shared_ptr<Vertex>& genesisVertex) const {
-    genesisVertex->snapshot->hashRate        = 0;
+    genesisVertex->snapshot->hashRate        = 1;
     genesisVertex->snapshot->blockTarget     = maxTarget;
     genesisVertex->snapshot->milestoneTarget = maxTarget;
 }

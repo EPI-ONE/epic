@@ -53,7 +53,7 @@ public:
     Coin reward;
     uint32_t msRewardCoefficient;
 
-    arith_uint256 sortitionCoefficient;
+    float sortitionCoefficient;
     size_t sortitionThreshold;
 
     // proof-of-work parameter

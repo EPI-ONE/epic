@@ -92,9 +92,7 @@ void MemPool::ReleaseTxFromConfirmed(const ConstTxPtr& tx, bool valid) {
     }
 }
 
-std::vector<ConstTxPtr> MemPool::ExtractTransactions(const uint256& blkHash,
-                                                     const arith_uint256& threshold,
-                                                     size_t limit) {
+std::vector<ConstTxPtr> MemPool::ExtractTransactions(const uint256& blkHash, double threshold, size_t limit) {
     arith_uint256 base_hash = UintToArith256(blkHash);
     std::vector<ConstTxPtr> result;
     WRITER_LOCK(mutex_)

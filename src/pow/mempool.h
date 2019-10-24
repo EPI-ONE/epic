@@ -57,7 +57,7 @@ public:
      * retrives the transactions from the pool that has
      * sortition distances less than the given threshold
      */
-    std::vector<ConstTxPtr> ExtractTransactions(const uint256&, const arith_uint256& threshold, size_t limit = -1);
+    std::vector<ConstTxPtr> ExtractTransactions(const uint256&, double threshold, size_t limit = -1);
 
     void PushRedemptionTx(ConstTxPtr redemption);
 

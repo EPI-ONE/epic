@@ -15,7 +15,7 @@ public:
     arith_uint256 chainwork;
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
-    uint64_t hashRate;
+    float hashRate;
     uint32_t lastUpdateTime = 0;
     bool stored             = false;
 
@@ -92,7 +92,7 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(VARINT(height));
-        READWRITE(VARINT(hashRate));
+        READWRITE(hashRate);
         if (ser_action.ForRead()) {
             milestoneTarget.SetCompact(ser_readdata32(s));
             blockTarget.SetCompact(ser_readdata32(s));

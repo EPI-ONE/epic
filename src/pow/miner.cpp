@@ -124,8 +124,8 @@ void Miner::Run() {
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
                         spdlog::info("Hashing power percentage {}",
-                                     distanceCal_.Sum().GetDouble() / (distanceCal_.TimeSpan() + 1) /
-                                         (double) (std::atomic_load(&chainHead_)->snapshot->hashRate + 1));
+                                     distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
+                                         std::atomic_load(&chainHead_)->snapshot->hashRate);
                     }
 
                     auto allowed =
