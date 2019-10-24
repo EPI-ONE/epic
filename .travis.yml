@@ -84,9 +84,6 @@ matrix:
 
 install:
   - clang -v
-  - pwd
-  - ls /usr/local/lib
-  - ls
   - $EPIC_PATH/ci/install-cmake.sh
   - export PATH="/usr/local/bin:$PATH"
   - cmake --version
