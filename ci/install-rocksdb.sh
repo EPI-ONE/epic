@@ -4,7 +4,7 @@ EPIC_ROCKSDB_VERSION="6.3.6"
 EPIC_ROCKSDB_DIR=""rocksdb-"$EPIC_ROCKSDB_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    brew install rocksdb
+    brew list rocksdb
 else
     if [[ ! -d ${EPIC_ROCKSDB_DIR} ]];then
         sudo rm -rf rocksdb*

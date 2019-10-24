@@ -21,22 +21,29 @@ matrix:
       addons:
         apt:
           sources:
-            - ubuntu-tool-chain-r-test
+            - llvm-toolchain-bionic-9 main
           packages:
             - autoconf
             - libtool
             - pkg-config
+            - gcc-8
+            - g++-8
             - lcov
-            - llvm
+            - clang-9
       cache:
         directories:
           - $BUILD_LIB_LPATH
       before_install:
         - ls
+        - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
+        - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
+        - gcc -v
+        - g++-v
+        - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
+        - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         - clang -v
+        - clang++ -v
         - pwd
-        - sudo ln -s /usr/local/clang-7.0.0/bin/clang++ /usr/bin/clang++
-        - sudo ln -s /usr/local/clang-7.0.0/bin/clang /usr/bin/clang
         - echo $BUILD_LIB_LPATH
         - echo $EPIC_PATH
         - cd $BUILD_LIB_LPATH
@@ -55,14 +62,18 @@ matrix:
         - ssh -p99 -oStrictHostKeyChecking=no ieda@IEB028.ieda.ust.hk "rm -rf epic && git clone git@github.com:EPI-ONE/epic.git && cd epic && ./ci/deploy-build.sh"
 
     - os: osx
-      osx_image: xcode11.2
+      osx_image: xcode11.1
       addons:
         homebrew:
           packages:
             - autoconf
             - automake
             - libtool
-            - gmp 
+            - gmp
+            - cmake
+            - openssl@1.1
+            - grpc
+            - rocksdb
       cache:
         directories:
          - $BUILD_LIB_MPATH
@@ -76,9 +87,8 @@ install:
   - ls /usr/local/lib
   - ls
   - $EPIC_PATH/ci/install-cmake.sh
-  - export PATH="/usr/local/bin:$PATH"
   - cmake --version
-  - which cmake
+  - type -a cmake
   - $EPIC_PATH/ci/install-openssl.sh
   - $EPIC_PATH/ci/install-secp256k1.sh
   - $EPIC_PATH/ci/install-libevent.sh

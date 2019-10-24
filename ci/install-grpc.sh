@@ -4,7 +4,7 @@ EPIC_GRPC_VERSION="1.24.0"
 EPIC_GRPC_DIR=""grpc-"$EPIC_GRPC_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    brew install grpc
+    brew list grpc
 else
     if [[ ! -d ${EPIC_GRPC_DIR} ]];then
         sudo rm -rf grpc*

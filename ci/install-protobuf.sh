@@ -4,7 +4,7 @@ EPIC_PROTOBUF_VERSION="3.10.0"
 EPIC_PROTOBUF_DIR=""protobuf-"$EPIC_PROTOBUF_VERSION"
 
 if [ ${TRAVIS_OS_NAME} == 'osx' ]; then
-    brew install protobuf 
+    brew list protobuf 
 else
     if [[ ! -d ${EPIC_PROTOBUF_DIR} ]];then
         sudo rm -rf protobuf*
