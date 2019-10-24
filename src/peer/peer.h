@@ -25,7 +25,11 @@
 
 class Peer {
 public:
-    Peer(NetAddress& netAddress, shared_connection_t connection, bool isSeedPeer, AddressManager* addressManager);
+    Peer(NetAddress& netAddress,
+         shared_connection_t connection,
+         bool isSeedPeer,
+         AddressManager* addressManager,
+         uint64_t myID);
 
     virtual ~Peer();
 
@@ -50,6 +54,8 @@ public:
     void SendVersion(uint64_t height);
 
     void SendLocalAddress();
+
+    void RelayAddrMsg(std::vector<NetAddress>& addresses);
 
     void Disconnect();
 
@@ -134,6 +140,9 @@ public:
     // the time when the connection is setup
     const uint64_t connected_time;
 
+    // the peer id of the seed
+    uint64_t peer_id;
+
     // version message
     VersionMessage* versionMessage = nullptr;
 
@@ -169,28 +178,10 @@ private:
      */
     void ProcessVersionACK();
 
-    /*
-     * process address message, check, relay and save addresses
-     * @param addressMessage
-     */
-    void ProcessAddressMessage(AddressMessage& addressMessage);
-
     /**
      * send addresses to the peer
      */
     void ProcessGetAddrMessage();
-
-    /**
-     * process transaction, add to memory pool and relay
-     * @param transaction
-     */
-    void ProcessTransaction(const ConstTxPtr& tx);
-
-    /**
-     * process block, add to dag and relay
-     * @param block
-     */
-    void ProcessBlock(const ConstBlockPtr& block);
 
     /**
      * process GetInv, respond with an Inv message
@@ -246,9 +237,13 @@ private:
 
     // if we have reply GetAddr to this peer
     bool haveReplyGetAddr;
+    std::unordered_set<uint64_t> sentAddresses;
 
     // the address queue to send
     ConcurrentQueue<NetAddress> addrSendQueue;
+
+    // my own peer id
+    uint64_t myID_;
 
     /*
      * Synchronization information

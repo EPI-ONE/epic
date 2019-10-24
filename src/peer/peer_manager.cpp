@@ -4,8 +4,10 @@
 
 #include "peer_manager.h"
 #include "dag_manager.h"
+#include "mempool.h"
 
 PeerManager::PeerManager() {
+    myID_              = random();
     connectionManager_ = new ConnectionManager();
     addressManager_    = new AddressManager();
 }
@@ -31,7 +33,11 @@ void PeerManager::Start() {
     handleMessageTask_ = std::thread(std::bind(&PeerManager::HandleMessage, this));
     scheduleTask_      = std::thread(std::bind(&PeerManager::ScheduleTask, this));
     if (connect_.empty()) {
-        openConnectionTask_ = std::thread(std::bind(&PeerManager::OpenConnection, this));
+        if (CONFIG->AmISeed()) {
+            spdlog::info("I am a seed, then don't start the openConnection thread");
+        } else {
+            openConnectionTask_ = std::thread(std::bind(&PeerManager::OpenConnection, this));
+        }
     } else {
         ConnectTo(connect_);
     }
@@ -107,7 +113,8 @@ void PeerManager::DisconnectAllPeer() {
 }
 
 PeerPtr PeerManager::CreatePeer(shared_connection_t& connection, NetAddress& address) {
-    auto peer = std::make_shared<Peer>(address, connection, addressManager_->IsSeedAddress(address), addressManager_);
+    auto peer =
+        std::make_shared<Peer>(address, connection, addressManager_->IsSeedAddress(address), addressManager_, myID_);
     peer->SetWeakPeer(peer);
     return peer;
 }
@@ -168,10 +175,72 @@ void PeerManager::HandleMessage() {
                 continue;
             }
             auto msg_from = GetPeer(msg.first);
-            if (msg_from && msg_from->IsVaild()) {
-                msg_from->ProcessMessage(msg.second);
+            if (!msg_from || !msg_from->IsVaild()) {
+                continue;
+            }
+            switch (msg.second->GetType()) {
+                case NetMessage::BLOCK: {
+                    auto* b   = dynamic_cast<Block*>(msg.second.release());
+                    b->source = Block::NETWORK;
+                    ProcessBlock(std::shared_ptr<const Block>(b), msg_from);
+                    break;
+                }
+                case NetMessage::TX: {
+                    ProcessTransaction(std::shared_ptr<Transaction>(dynamic_cast<Transaction*>(msg.second.release())),
+                                       msg_from);
+                    break;
+                }
+                case NetMessage::ADDR: {
+                    ProcessAddressMessage(*dynamic_cast<AddressMessage*>(msg.second.get()), msg_from);
+                    break;
+                }
+                default: {
+                    msg_from->ProcessMessage(msg.second);
+                }
             }
         }
+    }
+}
+
+void PeerManager::ProcessBlock(const ConstBlockPtr& block, PeerPtr& peer) {
+    DAG->AddNewBlock(block, peer);
+}
+
+void PeerManager::ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer) {
+    if (!tx->Verify()) {
+        return;
+    }
+    if (MEMPOOL->ReceiveTx(tx)) {
+        RelayTransaction(tx, peer);
+    }
+}
+
+void PeerManager::ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr& peer) {
+    if (addressMessage.addressList.size() > AddressMessage::kMaxAddressSize) {
+        spdlog::warn("Received too many addresses, abort them");
+    } else {
+        spdlog::info("Received addresses from peer {}, size = {}", peer->address.ToString(),
+                     addressMessage.addressList.size());
+        AddressMessage relayMessage;
+        for (auto& addr : addressMessage.addressList) {
+            // save addresses
+            if (addr.IsRoutable()) {
+                addressManager_->AddNewAddress(addr);
+                relayMessage.AddAddress(addr);
+                spdlog::info("Received address {} , will save and relay it", addr.ToString());
+            } else {
+                spdlog::info("Received address {} which is local or invalid, abort it", addr.ToString());
+            }
+        }
+        if (!relayMessage.addressList.empty()) {
+            RelayAddressMsg(relayMessage, peer);
+        }
+    }
+
+    // disconnect the connection after we get the addresses if the peer is a seed
+    if (peer->isSeed) {
+        spdlog::warn("Disconnect the seed {} after receiving addresses from it", peer->address.ToString());
+        peer->Disconnect();
     }
 }
 
@@ -313,10 +382,10 @@ void PeerManager::AddPeer(shared_connection_t& connection, const std::shared_ptr
     peerMap_.insert(std::make_pair(connection, peer));
 }
 
-bool PeerManager::HasConnectedTo(const IPAddress& address) {
+bool PeerManager::HasConnectedTo(const NetAddress& address) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
     for (auto& peer : peerMap_) {
-        if (0 == std::memcmp(peer.second->address.GetIP(), address.GetIP(), 16)) {
+        if (address == peer.second->address || address == peer.second->versionMessage->address_me_) {
             return true;
         }
     }
@@ -345,6 +414,31 @@ void PeerManager::RelayTransaction(const ConstTxPtr& tx, const PeerPtr& msg_from
     for (auto& it : peerMap_) {
         if (it.second != msg_from) {
             it.second->SendMessage(std::make_unique<Transaction>(*tx));
+        }
+    }
+}
+
+void PeerManager::RelayAddressMsg(AddressMessage& message, const PeerPtr& msg_from) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    if (peerMap_.empty()) {
+        return;
+    }
+
+    auto size = peerMap_.size() - 1;
+    std::unordered_set<uint32_t> selectedOffset;
+    std::uniform_int_distribution<int> dis(0, size);
+
+    for (int i = 0; i < kMaxPeersToRelayAddr; i++) {
+        uint32_t offset = dis(gen);
+        if (selectedOffset.find(offset) == selectedOffset.end()) {
+            selectedOffset.insert(offset);
+        } else {
+            continue;
+        }
+        auto it = peerMap_.begin();
+        std::advance(it, offset);
+        if (it->second != msg_from) {
+            it->second->RelayAddrMsg(message.addressList);
         }
     }
 }
@@ -384,4 +478,8 @@ PeerPtr PeerManager::GetSyncPeer() {
     }
 
     return nullptr;
+}
+
+uint64_t PeerManager::GetMyPeerID() const {
+    return myID_;
 }

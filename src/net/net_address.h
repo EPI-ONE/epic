@@ -127,6 +127,8 @@ public:
 
     uint16_t GetPort() const;
 
+    size_t HashCode() const;
+
     friend bool operator==(const NetAddress& a, const NetAddress& b);
 
     friend bool operator!=(const NetAddress& a, const NetAddress& b);
@@ -146,7 +148,7 @@ namespace std {
 template <>
 struct hash<NetAddress> {
     size_t operator()(const NetAddress& f) const {
-        return f.GetIpInt() * f.GetPort();
+        return f.HashCode();
     }
 };
 } // namespace std

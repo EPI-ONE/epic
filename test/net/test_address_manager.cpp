@@ -11,10 +11,10 @@ public:
     AddressManager addressManager;
     std::string addressFilePath = "test_address.toml";
 
-    IPAddress ip1 = *IPAddress::GetByIP("127.0.0.1");
-    IPAddress ip2 = *IPAddress::GetByIP("192.168.0.1");
-    IPAddress ip3 = *IPAddress::GetByIP("100.0.0.4");
-    IPAddress ip4 = *IPAddress::GetByIP("172.4.2.111");
+    NetAddress ip1 = *NetAddress::GetByIP("127.0.0.1:7877");
+    NetAddress ip2 = *NetAddress::GetByIP("192.168.0.1:7877");
+    NetAddress ip3 = *NetAddress::GetByIP("100.0.0.4:7877");
+    NetAddress ip4 = *NetAddress::GetByIP("172.4.2.111:7877");
 
     void SetUp() {
         addressManager.AddNewAddress(ip1);

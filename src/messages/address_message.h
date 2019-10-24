@@ -31,7 +31,7 @@ public:
     }
 
     void AddAddress(NetAddress&& addr) {
-        addressList.push_back(addr);
+        addressList.emplace_back(addr);
     }
 
     ADD_SERIALIZE_METHODS
