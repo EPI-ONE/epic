@@ -317,7 +317,7 @@ void Peer::StartSync() {
     }
 
     if (getDataTasks.Empty() && InvTaskEmpty()) {
-        spdlog::info("Syncing start");
+        spdlog::info("Syncing start {}", address.ToString());
         DAG->RequestInv(uint256(), 5, weak_peer_.lock());
     }
 }

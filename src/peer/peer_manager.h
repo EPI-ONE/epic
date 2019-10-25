@@ -220,7 +220,7 @@ private:
 
     constexpr static uint32_t kSyncTimeThreshold = 60;
 
-    constexpr static uint32_t kCheckSyncInterval = 180;
+    constexpr static uint32_t kCheckSyncInterval = 10;
 
     /**
      * my own peer id, a random number used to identify peer
