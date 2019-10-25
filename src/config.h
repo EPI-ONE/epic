@@ -85,7 +85,7 @@ public:
     }
 
     const std::string GetAddressFilename() const {
-        return GetRoot() + addressFilename_;
+        return addressFilename_;
     }
 
     void SetAddressFilename(const std::string& addressFilename) {

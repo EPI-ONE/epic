@@ -114,7 +114,7 @@ public:
      */
     uint64_t GetMyPeerID() const;
 
-    private:
+private:
     /*
      * create a peer after a new connection is setup
      */
@@ -128,7 +128,7 @@ public:
      * check if we have connected to the ip address
      * @return
      */
-    bool HasConnectedTo(const NetAddress &address);
+    bool HasConnectedTo(const NetAddress& address);
 
     /**
      * add a peer into peer map
@@ -162,6 +162,8 @@ public:
      */
     void ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr& peer);
 
+    bool CheckPeerID(uint64_t id);
+
     /**
      * a while loop function to setup outbound connection
      */
@@ -179,6 +181,8 @@ public:
     void InitScheduleTask();
 
     PeerPtr GetSyncPeer();
+
+    void PrintConnectedPeers();
 
     /*
      * default network parameter based on the protocol

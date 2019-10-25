@@ -33,7 +33,7 @@ void AddressManager::AddNewAddress(const NetAddress& address) {
         return;
     }
     std::lock_guard<std::recursive_mutex> lk(lock_);
-    if (newAddr_.find(address) != newAddr_.end()) {
+    if (newAddr_.find(address) != newAddr_.end() || oldAddr_.find(address) != oldAddr_.end()) {
         return;
     }
     NetAddressInfo info;

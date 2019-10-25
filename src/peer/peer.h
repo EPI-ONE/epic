@@ -42,6 +42,12 @@ public:
     void SendMessage(unique_message_t&& message);
 
     /**
+     * process version message
+     * @param versionMessage
+     */
+    void ProcessVersionMessage(VersionMessage& version);
+
+    /**
      * regularly send ping to the peer
      */
     void SendPing();
@@ -168,12 +174,6 @@ private:
     void ProcessPong(const Pong& pong);
 
     /*
-     * process version message
-     * @param versionMessage
-     */
-    void ProcessVersionMessage(VersionMessage& version);
-
-    /*
      * process version ack message
      */
     void ProcessVersionACK();
@@ -236,7 +236,7 @@ private:
     size_t nPingFailed;
 
     // if we have reply GetAddr to this peer
-    bool haveReplyGetAddr;
+    bool haveRepliedGetAddr;
     std::unordered_set<uint64_t> sentAddresses;
 
     // the address queue to send

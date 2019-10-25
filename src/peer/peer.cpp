@@ -12,8 +12,8 @@ Peer::Peer(NetAddress& netAddress,
            AddressManager* addressManager,
            uint64_t myID)
     : address(std::move(netAddress)), isSeed(isSeedPeer), connected_time(time(nullptr)), lastPingTime(time(nullptr)),
-      lastPongTime(time(nullptr)), nPingFailed(0), myID_(myID), addressManager_(addressManager),
-      connection_(connection) {}
+      lastPongTime(time(nullptr)), nPingFailed(0), haveRepliedGetAddr{false}, myID_(myID),
+      addressManager_(addressManager), connection_(connection) {}
 
 Peer::~Peer() {
     delete versionMessage;
@@ -28,10 +28,6 @@ void Peer::ProcessMessage(unique_message_t& msg) {
             }
             case NetMessage::PONG: {
                 ProcessPong(*dynamic_cast<Pong*>(msg.get()));
-                break;
-            }
-            case NetMessage::VERSION_MSG: {
-                ProcessVersionMessage(*dynamic_cast<VersionMessage*>(msg.get()));
                 break;
             }
             case NetMessage::VERSION_ACK: {
@@ -100,13 +96,6 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
         throw ProtocolException("Got two version messages from the peer.");
     }
 
-    // check if we have connected to ourselves
-    if (version.id == myID_) {
-        spdlog::warn("Connected to myself, disconnect");
-        Disconnect();
-        return;
-    }
-
     // check version
     if (version.client_version < kMinProtocolVersion) {
         spdlog::warn("Client version {} < min protocol version {}. Disconnect peer {}", version.client_version,
@@ -121,8 +110,9 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
-    spdlog::info("{}: got version = {}, services = {}, time = {}, height = {}", address.ToString(),
-                 versionMessage->client_version, versionMessage->local_service, std::string(time_buffer),
+    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = {}",
+                 address.ToString(), versionMessage->client_version, versionMessage->address_you.ToString(),
+                 versionMessage->address_me.ToString(), versionMessage->local_service, std::string(time_buffer),
                  versionMessage->current_height);
 
     bool compareHeight = !(isSeed || CONFIG->AmISeed());
@@ -139,7 +129,7 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
     SendMessage(std::make_unique<NetMessage>(NetMessage::VERSION_ACK));
 
     // add the score of the our local address as reported by the peer
-    addressManager_->SeenLocalAddress(version.address_you_);
+    addressManager_->SeenLocalAddress(version.address_you);
     if (!IsInbound()) {
         // send local address
         SendLocalAddress();
@@ -153,15 +143,16 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
 
 void Peer::ProcessGetAddrMessage() {
-    if (!IsInbound() || haveReplyGetAddr) {
+    if (!IsInbound() || haveRepliedGetAddr) {
         return;
     }
     auto addrMsg = std::make_unique<AddressMessage>(addressManager_->GetAddresses());
     for (const auto& addr : addrMsg->addressList) {
         sentAddresses.insert(addr.HashCode());
     }
+    spdlog::debug("Reply GetAddr request to {}", address.ToString());
     SendMessage(std::move(addrMsg));
-    haveReplyGetAddr = true;
+    haveRepliedGetAddr = true;
 }
 
 size_t Peer::GetNPingFailed() const {
@@ -305,9 +296,8 @@ void Peer::SendMessage(unique_message_t&& message) {
 }
 
 void Peer::SendVersion(uint64_t height) {
-    auto addressMe = NetAddress::GetByIP(CONFIG->GetBindAddress(), CONFIG->GetBindPort());
-    assert(addressMe);
-    SendMessage(std::make_unique<VersionMessage>(address, *addressMe, height, 0, 0, myID_));
+    auto addressMe = NetAddress(addressManager_->GetBestLocalAddress(), CONFIG->GetBindPort());
+    SendMessage(std::make_unique<VersionMessage>(address, addressMe, height, myID_, 0, 0));
     spdlog::info("Sent version message to {}", address.ToString());
 }
 
