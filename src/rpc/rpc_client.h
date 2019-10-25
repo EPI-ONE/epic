@@ -42,6 +42,13 @@ public:
     option_string ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
     option_string Login(const std::string& passphrase);
 
+    option_string DisconnectPeer(std::string& address);
+
+    option_string DisconnectAllPeers();
+
+    option_string ConnectPeers(const std::vector<std::string>& addresses);
+
+
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;
     std::unique_ptr<CommanderRPC::Stub> commander_stub_;
