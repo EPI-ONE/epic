@@ -14,23 +14,23 @@ public:
     int client_version     = 0;
     uint64_t local_service = 0;
     uint64_t nTime;
-    NetAddress address_you_;
-    NetAddress address_me_;
+    NetAddress address_you;
+    NetAddress address_me;
     uint64_t current_height;
     uint64_t id;
 
     explicit VersionMessage() : NetMessage(VERSION_MSG) {}
 
-    VersionMessage(NetAddress address_you,
-                   NetAddress address_me,
+    VersionMessage(NetAddress address_you_,
+                   NetAddress address_me_,
                    uint64_t current_height,
                    uint64_t id_,
                    int client_version     = 0,
                    uint64_t local_service = 0,
                    uint64_t nTime         = time(nullptr))
         : NetMessage(VERSION_MSG), client_version(client_version), local_service(local_service), nTime(nTime),
-
-          address_you_(std::move(address_you)),address_me_(std::move(address_me)), current_height(current_height), id(id_) {}
+          address_you(std::move(address_you_)), address_me(std::move(address_me_)), current_height(current_height),
+          id(id_) {}
 
     explicit VersionMessage(VStream& stream) : NetMessage(VERSION_MSG) {
         Deserialize(stream);
@@ -43,8 +43,8 @@ public:
         READWRITE(client_version);
         READWRITE(local_service);
         READWRITE(nTime);
-        READWRITE(address_you_);
-        READWRITE(address_me_);
+        READWRITE(address_you);
+        READWRITE(address_me);
         READWRITE(current_height);
         READWRITE(id);
     }

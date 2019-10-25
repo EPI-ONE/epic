@@ -7,7 +7,10 @@
 #include "mempool.h"
 
 PeerManager::PeerManager() {
-    myID_              = random();
+    std::random_device rd;
+    gen = std::default_random_engine(rd());
+    std::uniform_int_distribution<long long unsigned> distribution(0, UINT64_MAX);
+    myID_              = distribution(gen);
     connectionManager_ = new ConnectionManager();
     addressManager_    = new AddressManager();
 }
@@ -87,13 +90,10 @@ bool PeerManager::Init(std::unique_ptr<Config>& config) {
 
 void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
     std::optional<NetAddress> net_address = NetAddress::GetByIP(connection->GetRemote());
-
-    auto peer = CreatePeer(connection, *net_address);
-
-    AddPeer(connection, peer);
     spdlog::info("{} {}   ({} connected)", connection->IsInbound() ? "Accepted" : "Connected to",
                  connection->GetRemote(), GetConnectedPeerSize());
-
+    auto peer = CreatePeer(connection, *net_address);
+    AddPeer(connection, peer);
     // send version message
     if (!peer->IsInbound()) {
         peer->SendVersion(DAG->GetBestMilestoneHeight());
@@ -107,7 +107,7 @@ void PeerManager::OnConnectionClosed(shared_connection_t& connection) {
 
 void PeerManager::DisconnectAllPeer() {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
-    for (auto peer : peerMap_) {
+    for (const auto& peer : peerMap_) {
         peer.second->Disconnect();
     }
 }
@@ -126,7 +126,9 @@ void PeerManager::ClearPeers() {
 
 void PeerManager::RemovePeer(shared_connection_t connection) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
+    spdlog::info("Delete peer {}", connection->GetRemote());
     peerMap_.erase(connection);
+    PrintConnectedPeers();
 }
 
 bool PeerManager::Listen(uint16_t port) {
@@ -194,6 +196,15 @@ void PeerManager::HandleMessage() {
                     ProcessAddressMessage(*dynamic_cast<AddressMessage*>(msg.second.get()), msg_from);
                     break;
                 }
+                case NetMessage::VERSION_MSG: {
+                    auto versionMsg = *dynamic_cast<VersionMessage*>(msg.second.get());
+                    if (CheckPeerID(versionMsg.id)) {
+                        msg_from->ProcessVersionMessage(versionMsg);
+                    } else {
+                        msg_from->Disconnect();
+                    }
+                    break;
+                }
                 default: {
                     msg_from->ProcessMessage(msg.second);
                 }
@@ -224,7 +235,7 @@ void PeerManager::ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr&
         AddressMessage relayMessage;
         for (auto& addr : addressMessage.addressList) {
             // save addresses
-            if (addr.IsRoutable()) {
+            if (addr.IsRoutable() && !addressManager_->IsLocal(addr)) {
                 addressManager_->AddNewAddress(addr);
                 relayMessage.AddAddress(addr);
                 spdlog::info("Received address {} , will save and relay it", addr.ToString());
@@ -252,8 +263,8 @@ void PeerManager::OpenConnection() {
         }
         auto seed = addressManager_->GetOneSeed();
         if (seed) {
-            NetAddress seed_address = NetAddress(*seed, CONFIG->defaultPort);
-            ConnectTo(seed_address);
+            spdlog::info("Try to connect to seed {}", seed->ToString());
+            ConnectTo(*seed);
         }
 
         int num_tries = 0;
@@ -274,16 +285,16 @@ void PeerManager::OpenConnection() {
             uint64_t now     = time(nullptr);
             uint64_t lastTry = addressManager_->GetLastTry(*try_to_connect);
 
-            // we don't try to connect to an address twice in 2 minutes
-            if (now - lastTry < 120) {
+            // we don't try to connect to an address twice in 3 minutes
+            if (now - lastTry < 180) {
                 continue;
             }
-
-            std::cout << "try to connect to " + try_to_connect->ToString();
+            spdlog::info("[open connection] Select address {} to connect", try_to_connect->ToString());
             ConnectTo(*try_to_connect);
             addressManager_->SetLastTry(*try_to_connect, now);
             break;
         }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
@@ -380,12 +391,14 @@ PeerPtr PeerManager::GetPeer(shared_connection_t& connection) {
 void PeerManager::AddPeer(shared_connection_t& connection, const std::shared_ptr<Peer>& peer) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.insert(std::make_pair(connection, peer));
+    PrintConnectedPeers();
 }
 
 bool PeerManager::HasConnectedTo(const NetAddress& address) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
     for (auto& peer : peerMap_) {
-        if (address == peer.second->address || address == peer.second->versionMessage->address_me_) {
+        bool hasVersionMsg = peer.second->versionMessage != nullptr;
+        if (address == peer.second->address || (hasVersionMsg && address == peer.second->versionMessage->address_me)) {
             return true;
         }
     }
@@ -466,6 +479,10 @@ void PeerManager::InitScheduleTask() {
             it.second->SendPing();
         }
     });
+
+    scheduler_.AddPeriodTask(CONFIG->GetSaveInterval(), [this]() {
+        addressManager_->SaveAddress(CONFIG->GetAddressPath() + '/', CONFIG->GetAddressFilename());
+    });
 }
 
 PeerPtr PeerManager::GetSyncPeer() {
@@ -482,4 +499,28 @@ PeerPtr PeerManager::GetSyncPeer() {
 
 uint64_t PeerManager::GetMyPeerID() const {
     return myID_;
+}
+
+void PeerManager::PrintConnectedPeers() {
+    std::stringstream peerAddresses;
+    for (auto& connected_peer : peerMap_) {
+        peerAddresses << connected_peer.second->address.ToString() << ", ";
+    }
+    spdlog::info("Current connected {} peers: [{}]", peerMap_.size(), peerAddresses.str());
+}
+
+bool PeerManager::CheckPeerID(uint64_t id) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    if (id == myID_) {
+        spdlog::warn("Connected to myself, disconnect");
+        return false;
+    }
+    for (auto& peer : peerMap_) {
+        auto versionMsg = peer.second->versionMessage;
+        if (versionMsg != nullptr && versionMsg->id == id) {
+            spdlog::warn("Connected to the same peer, disconnect");
+            return false;
+        }
+    }
+    return true;
 }

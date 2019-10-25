@@ -50,6 +50,7 @@ public:
 
     void SetUp() {
         addressManager = new AddressManager();
+        addressManager->Init();
         server.Start();
         client.Start();
         server.RegisterNewConnectionCallback(std::bind(&TestSync::ServerCallback, this, std::placeholders::_1));
@@ -79,12 +80,14 @@ TEST_F(TestSync, test_basic_sync_workflow) {
 
     client_connection->SendMessage(
         std::make_unique<VersionMessage>(peer_server->address, peer_server->address, testChainHeight, 0, 100));
+
     usleep(50000);
     connection_message_t message;
 
     ASSERT_TRUE(server.ReceiveMessage(message));
     ASSERT_EQ(message.second->GetType(), NetMessage::VERSION_MSG);
-    peer_server->ProcessMessage(message.second);
+    auto version = dynamic_cast<VersionMessage*>(message.second.get());
+    peer_server->ProcessVersionMessage(*version);
 
     ASSERT_TRUE(client.ReceiveMessage(message));
     ASSERT_TRUE(client.ReceiveMessage(message));
