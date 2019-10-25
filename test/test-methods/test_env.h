@@ -60,6 +60,9 @@ public:
             STORE->Stop();
         if (DAG)
             DAG->Stop();
+        if (WALLET)
+            WALLET->Stop();
+
         STORE.reset();
         DAG.reset();
         MEMPOOL.reset();

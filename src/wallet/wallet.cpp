@@ -169,7 +169,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
 
         auto it = pendingTx.find(tx->GetHash());
         if (it != pendingTx.end()) {
-            if (validity != vertex->VALID) {
+            if (validity != Vertex::Validity::VALID) {
                 spdlog::warn("[Wallet] Tx failed to be confirmed, block hash = {}",
                              std::to_string(vertex->cblock->GetHash()));
 
@@ -191,11 +191,13 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
 
         it = pendingRedemption.find(tx->GetHash());
         if (it != pendingRedemption.end()) {
-            auto output = it->second->GetOutputs()[0];
-            auto keyId  = ParseAddrFromScript(output.listingContent);
-            assert(keyId);
-            SetLastRedemAddress(*keyId);
-            SetLastRedemHash(vertex->cblock->GetHash());
+            if (validity == Vertex::Validity::VALID) {
+                auto output = it->second->GetOutputs()[0];
+                auto keyId  = ParseAddrFromScript(output.listingContent);
+                assert(keyId);
+                SetLastRedemAddress(*keyId);
+                SetLastRedemHash(vertex->cblock->GetHash());
+            }
             pendingRedemption.erase(it);
         }
     }

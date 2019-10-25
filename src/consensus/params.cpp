@@ -141,7 +141,7 @@ UnitTestParams::UnitTestParams() {
     cycleLen             = 0;
     sortitionCoefficient = 1;
     sortitionThreshold   = 2;
-    cacheStatesSize      = 20;
+    cacheStatesSize      = 100;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
 
