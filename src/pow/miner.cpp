@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "miner.h"
+#include "wallet.h"
 
 const size_t headsCacheLimit = 20;
 
@@ -102,6 +103,10 @@ void Miner::Run() {
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
+                if (WALLET) {
+                    WALLET->EnableFirstReg();
+                }
+
                 auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
                 if (!firstRegTx) {
                     spdlog::warn("Paused. Waiting for the first registration.");
@@ -114,11 +119,13 @@ void Miner::Run() {
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
-                prevHash = selfChainHead_->GetHash();
+                prevHash     = selfChainHead_->GetHash();
+                auto max_ntx = GetParams().blockCapacity;
 
                 auto tx = MEMPOOL->GetRedemptionTx(false);
                 if (tx && !tx->IsFirstRegistration()) {
                     b.AddTransaction(std::move(tx));
+                    max_ntx--;
                 }
 
                 if (distanceCal_.Full()) {
@@ -130,7 +137,7 @@ void Miner::Run() {
 
                     auto allowed =
                         CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
-                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, GetParams().blockCapacity));
+                    b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, max_ntx));
                 }
             }
 

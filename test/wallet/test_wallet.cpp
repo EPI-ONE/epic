@@ -215,7 +215,6 @@ TEST_F(TestWallet, workflow) {
     EXPECT_EQ(WALLET->GetPending().size(), 0);
     EXPECT_EQ(WALLET->GetSpent().size(), 1);
 
-    WALLET->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }
 
@@ -290,7 +289,5 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
     ASSERT_EQ(WALLET->GetPending().size(), 0);
     ASSERT_LE(WALLET->GetSpent().size(), 4);
-    DAG->Stop();
-    STORE->Stop();
     EpicTestEnvironment::TearDownDAG(path);
 }

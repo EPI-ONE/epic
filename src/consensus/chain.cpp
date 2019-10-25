@@ -384,15 +384,14 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
     if (vin.outpoint.bHash != prevRedempHash) {
-        spdlog::info(
-            "[Validation] Double redemption on previous registration block: outpoint {} not matching the last valid "
-            "redemption hash {} [{}]",
-            vin.outpoint.bHash.to_substr(), prevRedempHash.to_substr(), hashstr);
+        spdlog::info("[Validation] Double redemption on the previous registration block: outpoint {} not matching  the "
+                     "last valid redemption hash {} [{}]",
+                     vin.outpoint.bHash.to_substr(), prevRedempHash.to_substr(), hashstr);
         return {};
     }
 
     if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
-        spdlog::info("[Validation] Double redemption on previous registration block: already redeemed {} [{}]",
+        spdlog::info("[Validation] Double redemption on the previous registration block: already redeemed {} [{}]",
                      prevRedempHash.to_substr(), hashstr);
         return {};
     }

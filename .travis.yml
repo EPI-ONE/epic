@@ -38,7 +38,7 @@ matrix:
         - g++ -v
         - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         - sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
-        - sudo apt-get update 
+        - sudo apt-get update
         - sudo apt-get install clang-9
         - sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
         - sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
@@ -100,7 +100,7 @@ script:
   - which cmake
   - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
   - make -j2
-  - ./../bin/epictest --gtest_filter="-TestTrimmer*:TestMiner.SolveCuckaroo*"
+  - ./../bin/epictest
 
 notifications:
   slack:

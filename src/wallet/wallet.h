@@ -112,6 +112,10 @@ public:
         enableRedem_ = false;
     }
 
+    void EnableFirstReg() {
+        hasSentFirstRegistration_ = false;
+    }
+
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
     ConcurrentHashMap<TxHash, ConstTxPtr> pendingTx;
