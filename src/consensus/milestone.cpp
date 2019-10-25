@@ -80,7 +80,7 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
     }
 
     // Exponential moving average
-    static const double alpha = 0.8; // smoothing parameter
+    static const float alpha = 0.8; // smoothing parameter
     hashRate =
         hashRate * alpha + ((height - 1) % GetParams().interval + 1) * GetMsDifficulty() / timespan * (1 - alpha);
 

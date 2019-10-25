@@ -81,16 +81,16 @@ TEST_F(TestMemPool, ExtractTransactions) {
     static auto cmpt = [&](uint256 n) -> arith_uint256 { return UintToArith256(n) ^ UintToArith256(blkHash); };
 
     // case 1
-    auto threshold = std::min(cmpt(h1), cmpt(h2)) - 1;
+    auto threshold = std::min(cmpt(h1).GetDouble(), cmpt(h2).GetDouble()) - 1;
     ASSERT_TRUE(pool.ExtractTransactions(blkHash, threshold).empty());
 
     // case 2
-    threshold     = std::max(cmpt(h1), cmpt(h2));
+    threshold     = std::max(cmpt(h1).GetDouble(), cmpt(h2).GetDouble());
     auto pool_cpy = pool;
     ASSERT_EQ(pool_cpy.ExtractTransactions(blkHash, threshold).size(), 1);
 
     // case 3
-    threshold++;
+    threshold = 2 * threshold;
     ASSERT_EQ(pool.ExtractTransactions(blkHash, threshold).size(), 2);
     ASSERT_TRUE(pool.Empty());
 }

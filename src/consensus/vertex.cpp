@@ -79,10 +79,10 @@ size_t Vertex::GetOptimalStorageSize() {
 
     // Milestone
     if (snapshot != nullptr) {
-        optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height)     // ms height
-                                + GetSizeOfVarInt(snapshot->hashRate) // hash rate
-                                + 4                                   // ms target
-                                + 4                                   // block target
+        optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height) // ms height
+                                + 4                               // hash rate
+                                + 4                               // ms target
+                                + 4                               // block target
         );
     }
 

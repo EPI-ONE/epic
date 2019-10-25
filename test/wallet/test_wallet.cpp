@@ -200,6 +200,8 @@ TEST_F(TestWallet, workflow) {
     ASSERT_EQ(WALLET->GetPending().size(), 1);
     ASSERT_TRUE(WALLET->GetUnspent().empty());
 
+    while (MEMPOOL->GetRedemptionTx(false))
+        ;
     MINER->Run();
 
     // Wait until receive the change of the last transaction

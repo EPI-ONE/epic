@@ -238,6 +238,6 @@ arith_uint256 UintToArith256(const uint256& a) {
     return b;
 }
 
-bool PartitionCmp(const arith_uint256& a, const arith_uint256& b) {
-    return a < b;
+bool PartitionCmp(const arith_uint256& a, double b) {
+    return a.GetDouble() < b;
 }
