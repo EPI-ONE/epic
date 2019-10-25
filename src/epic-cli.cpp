@@ -30,7 +30,9 @@ enum CommandType : uint8_t {
     SET_PASSPHRASE,
     CHANGE_PASSPHRASE,
     LOGIN,
-
+    DISCONNECTPEER,
+    CONNECTPEERS,
+    DISCONNECTALLPEERS,
     INVALID
 };
 
@@ -51,9 +53,10 @@ std::unordered_map<std::string, CommandType> InitCommand() {
         {"create-tx", CommandType::CREATE_TX},
         {"set-passphrase", CommandType::SET_PASSPHRASE},
         {"change-passphrase", CommandType::CHANGE_PASSPHRASE},
-        {"login", CommandType::LOGIN}
-
-    };
+        {"login", CommandType::LOGIN},
+        {"disconnect-peer", CommandType ::DISCONNECTPEER},
+        {"disconnect-all", CommandType::DISCONNECTALLPEERS},
+        {"connect-peers", CommandType ::CONNECTPEERS}};
     return command;
 }
 
@@ -111,6 +114,9 @@ int main(int argc, char** argv) {
             "   9. set-passphrase       arg=string: your new passphrase \n"
             "   10. change-passphrase   args=string: your old passphrase, your new passphrase \n"
             "   11. login               arg=string: your current passphrase \n"
+            "   12. disconnect-all \n"
+            "   13. connect-peers       arg=array of string: your specified address string (ip + port)\n"
+            "   14. disconnect-peer     arg=string: network address to disconnect (ip + port)\n"
             "\nAvailable options:"
             ).show_positional_help();
 
@@ -248,7 +254,43 @@ int main(int argc, char** argv) {
                 }
                 break;
             }
+            case CONNECTPEERS: {
+                std::vector<std::string> addresses;
 
+                if (arg_value.empty()) {
+                    std::cout << "please specify at least one address";
+                    return PARAMS_INIT_FAILURE;
+                }
+                addresses.push_back(arg_value);
+                for (auto addr : more_args) {
+                    addresses.emplace_back(addr);
+                }
+                auto r = client.ConnectPeers(addresses);
+                if (r) {
+                    std::cout << (*r) << std::endl;
+                } else {
+                    throw UnconnectedException();
+                }
+                break;
+            }
+            case DISCONNECTALLPEERS: {
+                auto r = client.DisconnectAllPeers();
+                if (r) {
+                    std::cout << (*r) << std::endl;
+                } else {
+                    throw UnconnectedException();
+                }
+                break;
+            }
+            case DISCONNECTPEER: {
+                auto r = client.DisconnectPeer(arg_value);
+                if (r) {
+                    std::cout << (*r) << std::endl;
+                } else {
+                    throw UnconnectedException();
+                }
+                break;
+            }
             case SET_PASSPHRASE: {
                 if (!arg_value.empty()) {
                     return PARAMS_INIT_FAILURE;

@@ -98,6 +98,9 @@ service CommanderRPC {
     rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
     rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
+    rpc DisConnectPeer(DisConnectPeerRequest) returns(DisConnectPeerResponse);
+    rpc DisConnectAllPeers(DisConnectAllRequest) returns (DisConnectAllResponse);
+    rpc ConnectPeer(ConnectRequest) returns (ConnectResponse);
 }
 
 message StopRequest {}
@@ -206,4 +209,26 @@ message StopTaskRequest{
 
 message StopTaskResponse{
     string result = 1 ;
+}
+
+message DisConnectAllRequest{}
+
+message DisConnectAllResponse{
+    string result = 1;
+}
+
+message DisConnectPeerRequest{
+    string address =1;
+}
+
+message DisConnectPeerResponse{
+    string result = 1;
+}
+
+message ConnectRequest{
+    repeated string address = 1;
+}
+
+message ConnectResponse{
+    string result = 1;
 }

@@ -257,6 +257,52 @@ RPCClient::option_string RPCClient::Login(const std::string& passphrase) {
         spdlog::error("No response from RPC server: {}", status.error_message());
         return {};
     }
-
     return response.responseinfo();
+}
+
+RPCClient::option_string RPCClient::ConnectPeers(const std::vector<std::string>& addresses) {
+    ConnectRequest request;
+    ConnectResponse response;
+    grpc::ClientContext context;
+
+    if (addresses.empty()) {
+        spdlog::warn("Please specify at least one address to connect");
+        return {};
+    }
+    for (const auto& address : addresses) {
+        request.add_address(address);
+    }
+    auto status = commander_stub_->ConnectPeer(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.result();
+}
+
+RPCClient::option_string RPCClient::DisconnectPeer(std::string& address) {
+    DisConnectPeerRequest request;
+    DisConnectPeerResponse response;
+    grpc::ClientContext context;
+
+    request.set_address(address);
+    auto status = commander_stub_->DisConnectPeer(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.result();
+}
+
+RPCClient::option_string RPCClient::DisconnectAllPeers() {
+    DisConnectAllRequest request;
+    DisConnectAllResponse response;
+    grpc::ClientContext context;
+
+    auto status = commander_stub_->DisConnectAllPeers(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.result();
 }

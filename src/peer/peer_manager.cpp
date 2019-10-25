@@ -524,3 +524,19 @@ bool PeerManager::CheckPeerID(uint64_t id) {
     }
     return true;
 }
+
+bool PeerManager::DisconnectPeer(const std::string &address) {
+    auto net_addr = NetAddress::GetByIP(address);
+    if (!net_addr) {
+        spdlog::warn("Invalid address {} to disconnect", address);
+        return false;
+    }
+    std::unique_lock<std::shared_mutex> lk(peerLock_);
+    for (auto peer : peerMap_) {
+        if (peer.second->address == *net_addr) {
+            peer.second->Disconnect();
+            return true;
+        }
+    }
+    return false;
+}

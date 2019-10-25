@@ -114,6 +114,12 @@ public:
      */
     uint64_t GetMyPeerID() const;
 
+    void DisconnectAllPeer();
+
+    void ClearPeers();
+
+    bool DisconnectPeer(const std::string &address);
+
 private:
     /*
      * create a peer after a new connection is setup
@@ -121,8 +127,6 @@ private:
     PeerPtr CreatePeer(shared_connection_t& connection, NetAddress& address);
 
     void RemovePeer(shared_connection_t connection);
-
-    void DisconnectAllPeer();
 
     /*
      * check if we have connected to the ip address
@@ -136,8 +140,6 @@ private:
      * @param peer
      */
     void AddPeer(shared_connection_t& connection, const PeerPtr& peer);
-
-    void ClearPeers();
 
     /**
      * a while loop function to receive and process messages

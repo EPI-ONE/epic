@@ -177,6 +177,66 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         }
         return grpc::Status::OK;
     }
+
+    grpc::Status DisConnectPeer(grpc::ServerContext* context,
+                                const rpc::DisConnectPeerRequest* request,
+                                rpc::DisConnectPeerResponse* response) override {
+        if (!PEERMAN) {
+            response->set_result("PeerManager has not been start");
+        } else {
+            if (PEERMAN->DisconnectPeer(request->address())) {
+                response->set_result("Disconnected " + request->address() + " successfully");
+            } else {
+                response->set_result("Failed to disconnect " + request->address());
+            }
+        }
+        return grpc::Status::OK;
+    }
+
+
+    grpc::Status DisConnectAllPeers(grpc::ServerContext* context,
+                                    const rpc::DisConnectAllRequest* request,
+                                    rpc::DisConnectAllResponse* response) override {
+        if (!PEERMAN) {
+            response->set_result("PeerManager has not been start");
+        } else {
+            size_t peer_size = PEERMAN->GetFullyConnectedPeerSize();
+            PEERMAN->DisconnectAllPeer();
+            PEERMAN->ClearPeers();
+            response->set_result("Disconnected " + std::to_string(peer_size) + " peers");
+        }
+        return grpc::Status::OK;
+    }
+
+    grpc::Status ConnectPeer(grpc::ServerContext* context,
+                             const rpc::ConnectRequest* request,
+                             rpc::ConnectResponse* response) override {
+        if (!PEERMAN) {
+            response->set_result("PeerManager has not been start");
+        } else {
+            size_t succeess_size = 0;
+            std::stringstream ss;
+
+            for (int i = 0; i < request->address_size(); ++i) {
+                const auto& address_str = request->address(i);
+                auto address            = NetAddress::GetByIP(address_str);
+                ss << "Index " << i << ": " << address_str;
+                if (!address) {
+                    ss << " is of invalid format, please check it" << '\n';
+                    continue;
+                }
+                if (PEERMAN->ConnectTo(*address)) {
+                    ss << " has been connected successfully" << '\n';
+                    succeess_size++;
+                } else {
+                    ss << " failed to be connected" << '\n';
+                }
+            }
+            ss << '\n' << "Trying to connect " << succeess_size << " peers" << '\n';
+            response->set_result(ss.str());
+        }
+        return grpc::Status::OK;
+    }
 };
 
 #endif // EPIC_COMMAND_LINE_H
