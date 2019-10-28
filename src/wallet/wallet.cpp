@@ -246,22 +246,56 @@ ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& next
     redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{GetLastRedemHash(), UNCONNECTED, UNCONNECTED}, msg))
         .AddOutput(minerInfo.second, nextAddr);
     auto redemPtr = std::make_shared<const Transaction>(std::move(redeem));
-    pendingRedemption.insert({redemPtr->GetHash(), redemPtr});
     return redemPtr;
 }
 
 void Wallet::CreateRedemption(const CKeyID& key) {
     auto redem = CreateRedemption(GetLastRedemAddress(), key, "lalala");
+    pendingRedemption.insert({redem->GetHash(), redem});
     MEMPOOL->PushRedemptionTx(redem);
     spdlog::info("[Wallet] Created redemption of reward {} coins: {}", redem->GetOutputs()[0].value.GetValue(),
                  std::to_string(redem->GetHash()));
 }
 
 ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
-    auto reg                  = std::make_shared<const Transaction>(address);
-    hasSentFirstRegistration_ = true;
+    // Reset miner info and clear redemption caches
+    minerInfo_ = {uint256{}, 0};
+    pendingRedemption.clear();
+    MEMPOOL->ClearRedemptions();
+    lastRedemHash_.SetNull();
+    lastRedemAddress_.SetNull();
+
+    auto reg = std::make_shared<const Transaction>(address);
     pendingRedemption.insert({reg->GetHash(), reg});
+    MEMPOOL->PushRedemptionTx(reg);
+
+    hasSentFirstRegistration_ = true;
+    spdlog::info("[Wallet] Created first registration {}", std::to_string(reg->GetHash()));
     return reg;
+}
+
+std::string Wallet::CreateFirstRegistration() {
+    auto addr = CreateNewKey(true);
+    CreateFirstRegistration(addr);
+    return EncodeAddress(addr);
+}
+
+bool Wallet::CreateFirstRegWhenPossible(const CKeyID& addr) {
+    if (hasSentFirstRegistration_) {
+        return false;
+    }
+
+    CreateFirstRegistration(addr);
+    return true;
+}
+
+std::string Wallet::CreateFirstRegWhenPossible() {
+    auto addr = CreateNewKey(true);
+    if (CreateFirstRegWhenPossible(addr)) {
+        return EncodeAddress(addr);
+    }
+
+    return "";
 }
 
 ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
@@ -367,10 +401,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                 return;
             }
             auto addr = CreateNewKey(true);
-            if (!hasSentFirstRegistration_) {
-                auto reg = CreateFirstRegistration(addr);
-                spdlog::info("[Wallet] Created first registration {}, index = {}", std::to_string(reg->GetHash()), i);
-                MEMPOOL->PushRedemptionTx(reg);
+            if (CreateFirstRegWhenPossible(addr)) {
                 continue;
             }
             if (GetBalance() <= MIN_FEE) {

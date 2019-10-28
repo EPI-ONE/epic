@@ -56,6 +56,9 @@ public:
 
     CKeyID CreateNewKey(bool compressed);
     ConstTxPtr CreateFirstRegistration(const CKeyID&);
+    std::string CreateFirstRegistration();
+    std::string CreateFirstRegWhenPossible();
+    bool CreateFirstRegWhenPossible(const CKeyID&);
     ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
     void CreateRedemption(const CKeyID&);
     ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
@@ -110,10 +113,6 @@ public:
 
     void DisableRedemptions() {
         enableRedem_ = false;
-    }
-
-    void EnableFirstReg() {
-        hasSentFirstRegistration_ = false;
     }
 
 private:

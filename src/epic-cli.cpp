@@ -23,6 +23,7 @@ enum CommandType : uint8_t {
     START_MINER,
     STOP_MINER,
     STOP,
+    CREATE_FIRST_REG,
     CREATE_RANDOM_TX,
     GENERATE_NEWKEY,
     GET_BALANCE,
@@ -47,6 +48,7 @@ std::unordered_map<std::string, CommandType> InitCommand() {
         {"start-miner", CommandType::START_MINER},
         {"stop-miner", CommandType::STOP_MINER},
         {"stop", CommandType::STOP},
+        {"create-first-reg", CommandType::CREATE_FIRST_REG},
         {"create-randomtx", CommandType::CREATE_RANDOM_TX},
         {"generate-newkey", CommandType::GENERATE_NEWKEY},
         {"get-balance", CommandType::GET_BALANCE},
@@ -104,6 +106,8 @@ int main(int argc, char** argv) {
             "   2. start-miner \n"
             "   3. stop-miner \n"
             "   4. stop \n"
+            "   4. create-first-reg     args=string: the encoded address to receive miner reward; \n"
+            "                                        leave it blank to generate a new key \n"
             "   5. create-randomtx      args=size: uint64 (the size of transactions you want to create) \n"
             "   6. generate-newkey \n"
             "   7. get-balance \n"
@@ -147,7 +151,7 @@ int main(int argc, char** argv) {
         switch (commandMap.at(command)) {
             case STATUS: {
                 auto r = client.Status();
-                if (r.has_value()) {
+                if (r) {
                     std::cout << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING")
                               << std::endl;
                     std::cout << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
@@ -168,7 +172,7 @@ int main(int argc, char** argv) {
 
             case START_MINER: {
                 auto r = client.StartMiner();
-                if (r.has_value()) {
+                if (r) {
                     std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
                 } else {
                     throw UnconnectedException();
@@ -178,11 +182,48 @@ int main(int argc, char** argv) {
 
             case STOP_MINER: {
                 auto r = client.StopMiner();
-                if (r.has_value()) {
+                if (r) {
                     std::cout << *r << std::endl;
                 } else {
                     throw UnconnectedException();
                 }
+                break;
+            }
+
+            case CREATE_FIRST_REG: {
+                static const std::unordered_set<std::string> yes = {"Y", "y"};
+                static const std::unordered_set<std::string> no  = {"N", "n"};
+
+                auto success_print = [](std::string s) {
+                    std::cout << "Successfully created the first registration with address " << s << std::endl;
+                };
+
+                auto r = client.CreateFirstReg(arg_value);
+                if (r) {
+                    if (r->empty()) {
+                        std::cout << "Peer chain already exists. Would you like to start a new peer chain with a new "
+                                     "address? [Y/N] ";
+
+                        while (true) {
+                            std::string yn;
+                            std::cin >> yn;
+                            if (yes.find(yn) != yes.end()) {
+                                r = client.CreateFirstReg("", true);
+                                success_print(*r);
+                                break;
+                            } else if (no.find(yn) != no.end()) {
+                                break;
+                            }
+
+                            std::cout << "Wokld you like to start a new peer chain with a new address? [Y/N] ";
+                        }
+                    } else {
+                        success_print(*r);
+                    }
+                } else {
+                    throw UnconnectedException();
+                }
+
                 break;
             }
 
@@ -192,7 +233,7 @@ int main(int argc, char** argv) {
                     size = std::stoi(arg_value);
                 }
                 auto r = client.CreateRandomTx(size);
-                if (r.has_value()) {
+                if (r) {
                     std::cout << *r << std::endl;
                 } else {
                     throw UnconnectedException();
@@ -297,7 +338,7 @@ int main(int argc, char** argv) {
                 }
 
                 auto passphrase = GetNewPassphrase();
-                if (!passphrase.has_value()) {
+                if (!passphrase) {
                     std::cout << "Your passphrases do not match" << std::endl;
                     break;
                 }
@@ -322,7 +363,7 @@ int main(int argc, char** argv) {
                 std::cin >> oldPassphrase;
                 std::cout << std::endl;
                 auto newPassphrase = GetNewPassphrase();
-                if (!newPassphrase.has_value()) {
+                if (!newPassphrase) {
                     std::cout << "Your new passphrases do not match" << std::endl;
                     break;
                 }

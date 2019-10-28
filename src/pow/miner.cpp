@@ -103,10 +103,6 @@ void Miner::Run() {
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
-                if (WALLET) {
-                    WALLET->EnableFirstReg();
-                }
-
                 auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
                 if (!firstRegTx) {
                     spdlog::warn("Paused. Waiting for the first registration.");
@@ -123,9 +119,19 @@ void Miner::Run() {
                 auto max_ntx = GetParams().blockCapacity;
 
                 auto tx = MEMPOOL->GetRedemptionTx(false);
-                if (tx && !tx->IsFirstRegistration()) {
-                    b.AddTransaction(std::move(tx));
-                    max_ntx--;
+
+                if (tx) {
+                    if (tx->IsFirstRegistration()) {
+                        // Start with a new peer chain
+                        selfChainHead_ = nullptr;
+                        prevHash       = GENESIS->GetHash();
+                        selfChainHeads_.clear();
+                        distanceCal_ = Cumulator();
+                        assert(distanceCal_.Empty());
+                    } else {
+                        b.AddTransaction(std::move(tx));
+                        max_ntx--;
+                    }
                 }
 
                 if (distanceCal_.Full()) {
@@ -170,6 +176,10 @@ void Miner::Run() {
                     for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {
                         MEMPOOL->Insert(std::move(txns[i]));
                     }
+                }
+
+                if (!enabled_.load()) {
+                    return;
                 }
 
                 continue;
