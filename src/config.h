@@ -187,6 +187,7 @@ public:
 
     void ShowConfig() {
         std::stringstream ss;
+
         ss << std::endl << "current config: " << std::endl;
         ss << "config file path = " << GetConfigFilePath() << std::endl;
         ss << "logger level = " << loggerLevel_ << std::endl;
@@ -200,10 +201,10 @@ public:
         ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
         ss << "rpc port = " << rpcPort_ << std::endl;
-        ss << "seeds = [" << std::endl;
         ss << "wallet path = " << GetWalletPath() << " with backup period " << GetWalletBackup() << std::endl;
         ss << "solver addr = " << GetSolverAddr() << std::endl;
         ss << "number of solver threads = " << GetSolverThreads() << std::endl;
+        ss << "seeds = [" << std::endl;
 
         for (const NetAddress& addr : seeds_) {
             ss << addr.ToString() << ',' << std::endl;

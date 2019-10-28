@@ -58,7 +58,7 @@ TEST_F(TestNetMsg, AddressMessage) {
 }
 
 TEST_F(TestNetMsg, VersionMessage) {
-    VersionMessage versionMessage(a1,a1, 0, 123);
+    VersionMessage versionMessage(a1, a1, 0, 123, "version info");
     std::stringstream os;
     versionMessage.Serialize(os);
 
@@ -70,6 +70,7 @@ TEST_F(TestNetMsg, VersionMessage) {
     EXPECT_EQ(versionMessage.nTime, versionMessage1.nTime);
     EXPECT_EQ(versionMessage.local_service, versionMessage1.local_service);
     EXPECT_EQ(versionMessage.client_version, versionMessage1.client_version);
+    EXPECT_EQ(versionMessage.version_info, versionMessage1.version_info);
 }
 
 TEST_F(TestNetMsg, Bundle) {

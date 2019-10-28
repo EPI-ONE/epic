@@ -45,6 +45,7 @@ matrix:
         - clang -v
         - clang++ -v
         - pwd
+        - sudo apt-get install -y gdb
         - echo $BUILD_LIB_LPATH
         - echo $EPIC_PATH
         - cd $BUILD_LIB_LPATH
@@ -54,6 +55,11 @@ matrix:
         - pip install --user cpp-coveralls
         - coveralls --help
         - coveralls --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/cuckaroo/.*" -E ".*/src/main.*" -E ".*/src/rpc/proto-gen/.*" -E ".*/src/utils/(memory|spdlog|ar.*|big.*|cpptoml.*|cxx.*|merkle.*|port.*|seri.*|tiny.*|utilstr.*).*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
+      after_failure:
+        - cd $EPIC_PATH/bin
+        - ls
+        - COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1) # find core file
+        - if [[ -f "$COREFILE" ]]; then gdb ./epictest "$COREFILE" example -ex "bt" -ex "set pagination 0" -batch; fi
 
     - os: osx
       osx_image: xcode11.1
@@ -74,6 +80,11 @@ matrix:
       before_install:
         - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         - cd $BUILD_LIB_MPATH
+      after_failure:
+        - ls /cores
+        - COREFILE=$(find /cores -maxdepth 1 -name "core*" | head -n 1) # find core file
+        - echo $COREFILE
+        - lldb "$EPIC_PATH/bin/epictest" -c "$COREFILE" --batch --one-line "bt"
 
 install:
   - clang -v
@@ -91,6 +102,8 @@ install:
   - ls
 
 script:
+  - ulimit -c unlimited -S
+  - ulimit -a
   - ls /usr/local/lib
   - ls -a
   - cd $EPIC_PATH
@@ -100,7 +113,8 @@ script:
   - which cmake
   - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
   - make -j2
-  - ./../bin/epictest
+  - cd ../bin
+  - ./epictest
 
 notifications:
   slack:

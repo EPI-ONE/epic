@@ -110,10 +110,11 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
-    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = {}",
+    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = "
+                 "{}, version info = {}",
                  address.ToString(), versionMessage->client_version, versionMessage->address_you.ToString(),
                  versionMessage->address_me.ToString(), versionMessage->local_service, std::string(time_buffer),
-                 versionMessage->current_height);
+                 versionMessage->current_height, versionMessage->version_info);
 
     bool compareHeight = !(isSeed || CONFIG->AmISeed());
     if (compareHeight && versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
@@ -122,7 +123,8 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     // send version message if peer is inbound
     if (IsInbound()) {
-        SendVersion(DAG->GetBestMilestoneHeight());
+        std::stringstream ss;
+        SendVersion(DAG->GetBestMilestoneHeight(), ss.str());
     }
 
     // send version ack
@@ -295,9 +297,9 @@ void Peer::SendMessage(unique_message_t&& message) {
     connection_->SendMessage(std::move(message));
 }
 
-void Peer::SendVersion(uint64_t height) {
+void Peer::SendVersion(uint64_t height, std::string versionInfo) {
     auto addressMe = NetAddress(addressManager_->GetBestLocalAddress(), CONFIG->GetBindPort());
-    SendMessage(std::make_unique<VersionMessage>(address, addressMe, height, myID_, 0, 0));
+    SendMessage(std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, 0, 0));
     spdlog::info("Sent version message to {}", address.ToString());
 }
 

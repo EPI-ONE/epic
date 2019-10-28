@@ -7,9 +7,7 @@
 
 int main(int argc, char** argv) {
     int init_result = Init(argc, argv);
-    if (!init_result) {
-        CreateDaemon();
-    } else {
+    if(init_result){
         return init_result;
     }
 

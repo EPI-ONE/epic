@@ -57,7 +57,7 @@ public:
      */
     void SendAddresses();
 
-    void SendVersion(uint64_t height);
+    void SendVersion(uint64_t height, std::string versionInfo);
 
     void SendLocalAddress();
 
