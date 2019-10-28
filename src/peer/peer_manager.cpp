@@ -96,7 +96,8 @@ void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
     AddPeer(connection, peer);
     // send version message
     if (!peer->IsInbound()) {
-        peer->SendVersion(DAG->GetBestMilestoneHeight());
+        std::stringstream ss;
+        peer->SendVersion(DAG->GetBestMilestoneHeight(), ss.str());
     }
 }
 

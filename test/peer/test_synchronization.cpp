@@ -78,8 +78,8 @@ TEST_F(TestSync, test_basic_sync_workflow) {
     ASSERT_TRUE(client.Connect(0x7f000001, 12121));
     usleep(50000);
 
-    client_connection->SendMessage(
-        std::make_unique<VersionMessage>(peer_server->address, peer_server->address, testChainHeight, 0, 100));
+    client_connection->SendMessage(std::make_unique<VersionMessage>(peer_server->address, peer_server->address,
+                                                                    testChainHeight, 0, "version_info"));
 
     usleep(50000);
     connection_message_t message;

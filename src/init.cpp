@@ -97,6 +97,8 @@ int Init(int argc, char* argv[]) {
 
     CONFIG->ShowConfig();
 
+    CreateDaemon();
+
     /*
      * Init signal and register handle functions
      */
@@ -316,11 +318,13 @@ void LoadConfigFile() {
     // use ip seeds only when no dns seeds are available
     if (CONFIG->GetSeedSize() == 0) {
         auto ip_seeds = configContent->get_table_array("ip_seeds");
-        for (const auto& seed : *ip_seeds) {
-            auto ip   = seed->get_as<std::string>("ip");
-            auto port = seed->get_as<uint16_t>("port");
-            if (ip && port) {
-                CONFIG->AddSeedByIP(*ip, *port);
+        if (ip_seeds) {
+            for (const auto& seed : *ip_seeds) {
+                auto ip   = seed->get_as<std::string>("ip");
+                auto port = seed->get_as<uint16_t>("port");
+                if (ip && port) {
+                    CONFIG->AddSeedByIP(*ip, *port);
+                }
             }
         }
     }
