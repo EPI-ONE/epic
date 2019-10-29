@@ -3,9 +3,11 @@
 [![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
 [![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=master&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
 
-Epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing the security and decentralization.
+Epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization.
 
-We have released our `testnet 0.1.0`. You may join the testnet by following the [instruction](#compile-and-run).
+Testnet `testnet 0.1.1` is released. You may join the testnet by following the [instruction](#compile-and-run).
+
+Welcome to join the discussion at https://t.me/epi-one
 
 ## Design
 
@@ -22,7 +24,7 @@ The implementation of this peoject is written in C++ 17.
 - `cmake` version 3.15 or up
 
 - (Recommended) `clang` version 8 or up as an alternative (or better) compiler.
-  Note: the llvm `libc++` lacks support of some C++ 17, thus still need the `gcc` (or Mac clang) library.
+  Note: the llvm `libc++` lacks support of some C++ 17, thus still need the `gcc` library.
 
 Builds on several existing projects:
 
@@ -40,7 +42,7 @@ Builds on several existing projects:
     - `gRPC` [version 1.23.0](https://github.com/grpc/grpc) or up
     - `GoogleTest` [version 1.10.0](https://github.com/google/googletest)
 
-We test this project on Ubuntu (18.04), CentOS (7.6) and MacOS X (10.14.6). See [INSTALL.md](./INSTALL.md) for detailed installation instructions.
+This project is tested on Ubuntu (18.04) and MacOS X (10.15). See [INSTALL.md](./INSTALL.md) for detailed installation instructions of the above dependencies.
 
 ## Compile and run
 
@@ -59,11 +61,28 @@ cd ../bin
 ./epic --configpath /path/to/toml
 # send rpc command to daemon
 ./epic-cli [OPTIONS] [COMMAND]
+# type ./epic-cli --help to see the options
 ```
 
-We provide a default [config.toml](./config.toml), where seed address for the testnet is provided. You may customize a number of things, e.g., how to use spdlog, by editing it.
+A default [config.toml](./config.toml) with seed address for the testnet is provided. You may customize a number of things, e.g., how to use `spdlog`, by editing the config file.
 
-### GPU mining
+### Mining
+
+Once a daemon is started, you may start the mining process
+
+```bash
+# 1. set pass phrase
+./epic-cli set-passphrase
+# 2. login
+./epic-cli login
+# 3. (optional) create transactions
+# ./epic-cli create-randomtx 50000
+# ./epic-cli create-tx []
+# 4. start miner
+./epic-cli start-miner
+```
+
+#### GPU mining
 
 The project is enabled with CPU mining by default, if no CUDA installation found on the system.
 It compiles the CUDA code with NVCC if CUDA is found, and GPU mining is then enabled automatically.
@@ -79,4 +98,4 @@ $ export ASAN_OPTIONS="protect_shadow_gap=0"
 ## License
 
 EPIC project is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT). For the submodule [Cuckaroo](src/cuckaroo), we follow the original license from the source [Cuckoo](https://github.com/tromp/cuckoo/blob/master/LICENSE.txt).
+information or see [https://opensource.org/licenses/MIT](https://opensource.org/licenses/MIT). For the submodule [Cuckaroo](src/cuckaroo), the original license from the source [Cuckoo](https://github.com/tromp/cuckoo/blob/master/LICENSE.txt) should be followed.
