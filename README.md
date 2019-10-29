@@ -30,9 +30,9 @@ Builds on several existing projects:
 
 - Our source code has included the code from existing projects:
     - several pieces of code in the [bitcoin](https://github.com/bitcoin/bitcoin) project, some of which with our own modification.
-    - `cxxopts` [v2.0.0](https://github.com/jarro2783/cxxopts)
+    - `cxxopts` [v2.2.0](https://github.com/jarro2783/cxxopts)
     - `cpptoml` [v0.1.1](https://github.com/skystrife/cpptoml)
-    - `spdlog` [v1.3.1](https://github.com/gabime/spdlog) 
+    - `spdlog` [v1.4.2](https://github.com/gabime/spdlog) 
 - The following dependencies need to be installed on your system:
     - `openssl` [version 1.1](https://github.com/openssl/openssl)
     - `libsecp256k1`
