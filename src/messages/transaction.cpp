@@ -146,6 +146,16 @@ bool Transaction::Verify() const {
         outpoints.emplace(input.outpoint);
     }
 
+    // check that all output values are greater than 0
+    if (!IsFirstRegistration()) {
+        for (const auto& output : outputs_) {
+            if (output.value == ZERO_COIN) {
+                spdlog::info("[Syntax] Invalid transaction {} containing zero output value", hash_.to_substr());
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 

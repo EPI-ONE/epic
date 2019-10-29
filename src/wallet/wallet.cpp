@@ -398,7 +398,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             if (!CreateFirstRegWhenPossible(addr).empty()) {
                 continue;
             }
-            if (GetBalance() <= MIN_FEE) {
+            if (GetBalance() <= (MIN_FEE + 1)) {
                 if (CanRedeem()) {
                     CreateRedemption(addr);
                     continue;
@@ -415,7 +415,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     continue;
                 }
             } else {
-                Coin coin{random() % (GetBalance() - MIN_FEE).GetValue()};
+                Coin coin{random() % (GetBalance() - MIN_FEE - 1).GetValue() + MIN_FEE + 1};
                 auto tx = CreateTx({{coin, addr}});
                 SendTxToMemPool(tx);
                 spdlog::info("[Wallet] Sent {} coins to {} in tx {} with index {}", coin.GetValue(),

@@ -57,7 +57,7 @@ Transaction TestFactory::CreateTx(int numTxInput, int numTxOutput) {
     }
 
     for (int i = 0; i < numTxOutput; ++i) {
-        tx.AddOutput(TxOutput(i, Listing(std::vector<unsigned char>(i))));
+        tx.AddOutput(TxOutput(i + 1, Listing(std::vector<unsigned char>(i))));
     }
     tx.FinalizeHash();
     return tx;
