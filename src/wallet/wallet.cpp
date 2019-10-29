@@ -250,6 +250,8 @@ ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& next
 }
 
 void Wallet::CreateRedemption(const CKeyID& key) {
+    assert(!key.IsNull());
+
     auto redem = CreateRedemption(GetLastRedemAddress(), key, "lalala");
     pendingRedemption.insert({redem->GetHash(), redem});
     MEMPOOL->PushRedemptionTx(redem);
@@ -257,7 +259,14 @@ void Wallet::CreateRedemption(const CKeyID& key) {
                  std::to_string(redem->GetHash()));
 }
 
-ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
+std::string Wallet::CreateFirstRegistration(const std::optional<CKeyID>& oaddr) {
+    CKeyID addr;
+    if (!oaddr) {
+        addr = CreateNewKey(true);
+    } else {
+        addr = *oaddr;
+    }
+
     // Reset miner info and clear redemption caches
     minerInfo_ = {uint256{}, 0};
     pendingRedemption.clear();
@@ -265,37 +274,22 @@ ConstTxPtr Wallet::CreateFirstRegistration(const CKeyID& address) {
     lastRedemHash_.SetNull();
     lastRedemAddress_.SetNull();
 
-    auto reg = std::make_shared<const Transaction>(address);
+    auto reg = std::make_shared<const Transaction>(static_cast<const CKeyID>(addr));
     pendingRedemption.insert({reg->GetHash(), reg});
     MEMPOOL->PushRedemptionTx(reg);
 
     hasSentFirstRegistration_ = true;
     spdlog::info("[Wallet] Created first registration {}", std::to_string(reg->GetHash()));
-    return reg;
-}
 
-std::string Wallet::CreateFirstRegistration() {
-    auto addr = CreateNewKey(true);
-    CreateFirstRegistration(addr);
     return EncodeAddress(addr);
 }
 
-bool Wallet::CreateFirstRegWhenPossible(const CKeyID& addr) {
+std::string Wallet::CreateFirstRegWhenPossible(const std::optional<CKeyID>& oaddr) {
     if (hasSentFirstRegistration_) {
-        return false;
+        return "";
     }
 
-    CreateFirstRegistration(addr);
-    return true;
-}
-
-std::string Wallet::CreateFirstRegWhenPossible() {
-    auto addr = CreateNewKey(true);
-    if (CreateFirstRegWhenPossible(addr)) {
-        return EncodeAddress(addr);
-    }
-
-    return "";
+    return CreateFirstRegistration(oaddr);
 }
 
 ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
@@ -401,7 +395,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                 return;
             }
             auto addr = CreateNewKey(true);
-            if (CreateFirstRegWhenPossible(addr)) {
+            if (!CreateFirstRegWhenPossible(addr).empty()) {
                 continue;
             }
             if (GetBalance() <= MIN_FEE) {
@@ -424,7 +418,8 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                 Coin coin{random() % (GetBalance() - MIN_FEE).GetValue()};
                 auto tx = CreateTx({{coin, addr}});
                 SendTxToMemPool(tx);
-                spdlog::info("[Wallet] Created tx {}, index = {}", std::to_string(tx->GetHash()), i);
+                spdlog::info("[Wallet] Sent {} coins to {} in tx {} with index {}", coin.GetValue(),
+                             EncodeAddress(addr), std::to_string(tx->GetHash()), i);
             }
         }
         spdlog::info("Creating {} random transaction task completed", sizeTx);

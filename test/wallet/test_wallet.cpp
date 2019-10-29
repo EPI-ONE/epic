@@ -179,9 +179,7 @@ TEST_F(TestWallet, workflow) {
 
     WALLET->CreateNewKey(true);
     auto registration = WALLET->CreateFirstRegistration(WALLET->GetRandomAddress());
-    ASSERT_TRUE(registration);
-
-    MEMPOOL->PushRedemptionTx(registration);
+    ASSERT_FALSE(registration.empty());
 
     MINER->Run();
 

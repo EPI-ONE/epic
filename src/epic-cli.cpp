@@ -191,34 +191,34 @@ int main(int argc, char** argv) {
             }
 
             case CREATE_FIRST_REG: {
-                static const std::unordered_set<std::string> yes = {"Y", "y"};
-                static const std::unordered_set<std::string> no  = {"N", "n"};
-
-                auto success_print = [](std::string s) {
-                    std::cout << "Successfully created the first registration with address " << s << std::endl;
-                };
-
                 auto r = client.CreateFirstReg(arg_value);
                 if (r) {
                     if (r->empty()) {
-                        std::cout << "Peer chain already exists. Would you like to start a new peer chain with a new "
-                                     "address? [Y/N] ";
+                        std::cout << "Peer chain already exists. Would you like to start a new peer chain? [Y/N] ";
 
                         while (true) {
                             std::string yn;
                             std::cin >> yn;
-                            if (yes.find(yn) != yes.end()) {
-                                r = client.CreateFirstReg("", true);
-                                success_print(*r);
+
+                            if (yn == "Y" || yn == "y") {
+                                std::cout << "Address: (leave it empty if you would like to create a new key) ";
+
+                                std::string addr;
+                                std::cin.get();
+                                getline(std::cin, addr);
+
+                                r = client.CreateFirstReg(addr, true);
+                                std::cout << *r << std::endl;
                                 break;
-                            } else if (no.find(yn) != no.end()) {
+
+                            } else if (yn == "N" || yn == "n") {
                                 break;
                             }
 
-                            std::cout << "Wokld you like to start a new peer chain with a new address? [Y/N] ";
+                            std::cout << "Wokld you like to start a new peer chain? [Y/N] ";
                         }
                     } else {
-                        success_print(*r);
+                        std::cout << *r << std::endl;
                     }
                 } else {
                     throw UnconnectedException();

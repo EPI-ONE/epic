@@ -61,38 +61,21 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         } else if (!WALLET->IsLoggedIn()) {
             reply->set_result("Please log in or set up a new passphrase");
         } else {
-            std::optional<CKeyID> addr;
-            if (request->address() != "") {
-                addr = DecodeAddress(request->address());
-            }
-
-            bool success = false;
+            std::optional<CKeyID> addr{DecodeAddress(request->address())};
             std::string encoded_addr;
 
             if (request->force()) {
-                encoded_addr = WALLET->CreateFirstRegistration();
-                success      = true;
+                encoded_addr = WALLET->CreateFirstRegistration(addr);
 
             } else {
-                if (addr) {
-                    if (WALLET->CreateFirstRegWhenPossible(*addr)) {
-                        success      = true;
-                        encoded_addr = request->address();
-                    }
-                } else {
-                    encoded_addr = WALLET->CreateFirstRegWhenPossible();
-                    if (!encoded_addr.empty()) {
-                        success = true;
-                    }
-                }
+                encoded_addr = WALLET->CreateFirstRegWhenPossible(addr);
             }
 
-            if (success) {
-                reply->set_result(encoded_addr);
-            } else {
-                reply->set_result("");
+            if (!encoded_addr.empty()) {
+                reply->set_result("Successfully created the first registration with address " + encoded_addr);
             }
         }
+
         return grpc::Status::OK;
     }
 

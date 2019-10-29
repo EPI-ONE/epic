@@ -44,7 +44,7 @@ TEST_F(TestMiner, Solve) {
 #ifdef __CUDA_ENABLED__
 TEST_F(TestMiner, SolveCuckaroo) {
     SetLogLevel(SPDLOG_LEVEL_DEBUG);
-    SelectParams(ParamsType::TESTNET);
+    SelectParams(ParamsType::SPADE);
 
     Block b = fac.CreateBlock(2, 2, false, 5);
     SolverManager solverManager(1);

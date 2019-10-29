@@ -14,7 +14,7 @@ public:
 
     void SetUp() override {
         SetLogLevel(SPDLOG_LEVEL_TRACE);
-        SelectParams(ParamsType::TESTNET);
+        SelectParams(ParamsType::SPADE);
     }
     void TearDown() override {
         ResetLogLevel();
