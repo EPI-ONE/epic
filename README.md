@@ -75,8 +75,8 @@ Once a daemon is started, you may start the mining process
 ./epic-cli set-passphrase
 # 2. login
 ./epic-cli login
-# 3. (optional) create transactions
-# ./epic-cli create-randomtx 50000
+# 3. create transactions
+./epic-cli create-randomtx 50000 # any integer larger than or equal to 1
 # ./epic-cli create-tx []
 # 4. start miner
 ./epic-cli start-miner
