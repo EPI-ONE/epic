@@ -8,7 +8,7 @@
 const size_t headsCacheLimit = 20;
 
 Miner::Miner(size_t nThreads) : selfChainHeads_(headsCacheLimit) {
-    if (CYCLELEN) {
+    if (GetParams().cycleLen) {
         solver = new RemoteGPUSolver();
     } else {
         solver = new CPUSolver(nThreads);

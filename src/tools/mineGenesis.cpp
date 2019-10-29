@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
             std::stringstream targetStr;
             targetStr << std::hex << targets[version];
             spdlog::info("Selected params type: {}. cycleLen = {}, target = 0x{}L", ParamsTypeStr[params_type],
-                         CYCLELEN, targetStr.str());
+                         GetParams().cycleLen, targetStr.str());
         } catch (const std::invalid_argument& e) {
             spdlog::error(
                 "{} Please input a valid version number: \n   '1' (MAINNET), '10' (SPADE), '11' (DIAMOND), or "
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     genesisBlock.SetDifficultyTarget(targets[version]);
     genesisBlock.SetTime(1559859000L);
     genesisBlock.SetNonce(0);
-    genesisBlock.InitProofSize(CYCLELEN);
+    genesisBlock.InitProofSize(GetParams().cycleLen);
     genesisBlock.AddTransaction(tx);
     genesisBlock.SetMerkle();
     genesisBlock.FinalizeHash();

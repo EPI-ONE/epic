@@ -168,7 +168,6 @@ set(SRC_CODE
         ${MEMORY_SRCS}
         ${INTERFACE_SRCS}
         ${WALLET_SRCS}
-        ${CUCKAROO_SRCS}
         ${CONSENSUS_SRCS}
         ${MESSAGES_SRCS}
         ${POW_SRCS}
@@ -212,7 +211,10 @@ set(TEST_CODE
         )
 set(TEST_MAIN test/main.cpp)
 
+add_library(cucakroo STATIC ${CUCKAROO_SRCS})
 add_library(epiccore STATIC ${SRC_CODE})
+target_link_libraries(epiccore cucakroo)
+add_dependencies(epiccore cucakroo)
 
 # CUDA
 option(EPIC_ENABLE_CUDA "Enable GPU mining when possible" ON)
@@ -239,11 +241,14 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
 
     set(SRC_SOLVER  src/tools/solver_manager.cpp ${GRPC_SRCS})
     add_library(solver_lib STATIC ${SRC_SOLVER})
+    target_link_libraries(solver_lib epiccuda)
+
     target_link_libraries(epiccore solver_lib)
-    target_link_libraries(epiccore epiccuda)
+    add_dependencies(epiccore solver_lib)
 
     add_executable(solver src/tools/epic_solver.cpp)
-    target_link_libraries(solver epiccore)
+    target_link_libraries(solver cucakroo)
+    add_dependencies(solver cucakroo)
 
 else ()
     message(STATUS "CUDA disabled. Using CPU miner.")

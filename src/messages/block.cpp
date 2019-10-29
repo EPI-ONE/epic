@@ -343,7 +343,7 @@ void Block::CalculateHash() {
 
     VStream s(header_);
 
-    if (CYCLELEN) {
+    if (GetParams().cycleLen) {
         proofHash_ = HashBLAKE2<256>(proof_.data(), proof_.size() * sizeof(word_t));
     } else {
         proofHash_ = (uint256) HashBLAKE2<256>(s);
@@ -423,19 +423,19 @@ bool Block::CheckPOW() const {
     assert(!hash_.IsNull());
     assert(!proofHash_.IsNull());
 
-    if (proof_.size() != CYCLELEN) {
-        spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), CYCLELEN, std::to_string(hash_));
+    if (proof_.size() != GetParams().cycleLen) {
+        spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), GetParams().cycleLen, std::to_string(hash_));
         return false;
     }
 
     // Initilize siphash keys by block header
     VStream vs(header_);
-    if (CYCLELEN) {
+    if (GetParams().cycleLen) {
         siphash_keys sipkeys;
         SetHeader(vs.data(), vs.size(), &sipkeys);
 
         // Verify cuckaroo pow
-        auto status = VerifyProof(proof_.data(), sipkeys);
+        auto status = VerifyProof(proof_.data(), sipkeys, GetParams().cycleLen);
         if (status != POW_OK) {
             spdlog::info("[Syntax] Invalid proof of edges: {}", ErrStr[status]);
             return false;
