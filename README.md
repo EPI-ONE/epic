@@ -11,7 +11,10 @@ Welcome to join the discussion at https://t.me/epi-one.
 
 ## Design
 
-The design of the consensus mechanism is based on a Structured DAG. Refer to the [paper](https://arxiv.org/abs/1901.02755) for details.
+The design of the consensus mechanism is based on a Structured DAG. 
+
+-   Here is the the [paper](https://arxiv.org/abs/1901.02755) for details.
+-   This youtube [video](https://youtu.be/UEeYkIvl6dA) provides a verbal+slides explanation. 
 
 ## Implementation
 
