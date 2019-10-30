@@ -139,3 +139,7 @@ ConstTxPtr MemPool::GetRedemptionTx(bool IsFirstReg) {
     }
     return nullptr;
 }
+
+void MemPool::ClearRedemptions() {
+    redemptionTxQueue_.Clear();
+}

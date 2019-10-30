@@ -139,7 +139,7 @@ size_t OrphanBlocksContainer::Prune(uint32_t secs) {
         DeleteBlockTree(blk_hash);
     }
 
-    spdlog::debug("Pruned {} blocks and {} void blocks in obc", pruned_block.size(), old_dependency.size());
+    spdlog::debug("Pruned {} block(s) and {} void block(s) in obc", pruned_block.size(), old_dependency.size());
 
     return pruned_block.size() + old_dependency.size();
 }

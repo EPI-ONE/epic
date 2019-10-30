@@ -154,6 +154,20 @@ RPCClient::option_string RPCClient::StopMiner() {
     return response.result();
 }
 
+RPCClient::option_string RPCClient::CreateFirstReg(std::string addr, bool force) {
+    CreateFirstRegRequest request;
+    CreateFirstRegResponse response;
+    grpc::ClientContext context;
+    request.set_address(addr);
+    request.set_force(force);
+    auto status = commander_stub_->CreateFirstReg(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.result();
+}
+
 std::optional<std::string> RPCClient::CreateRandomTx(size_t size) {
     CreateRandomTxRequest request;
     CreateRandomTxResponse response;
@@ -211,7 +225,7 @@ RPCClient::option_string RPCClient::GenerateNewKey() {
         return {};
     }
 
-    return "Address = " + response.address() + '\n';
+    return response.address();
 }
 
 RPCClient::option_string RPCClient::SetPassphrase(const std::string& passphrase) {

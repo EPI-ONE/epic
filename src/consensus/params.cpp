@@ -95,7 +95,7 @@ MainNetParams::MainNetParams() {
         "7fd2c4759b263e1b31b4";
 }
 
-TestNetParams::TestNetParams() {
+TestNetSpadeParams::TestNetSpadeParams() {
     version              = 10;
     targetTimespan       = 100;
     timeInterval         = TIME_INTERVAL;
@@ -104,7 +104,7 @@ TestNetParams::TestNetParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 1;
+    reward               = 10;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 4;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -119,12 +119,43 @@ TestNetParams::TestNetParams() {
     };
 
     genesisHexStr =
-        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
-        "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021030000003c8dcb0244c0c70c51e6ae0e4b592f0f01"
-        "01e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
-        "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c"
-        "20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4";
+        "0a00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e464"
+        "9b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b758dbec2"
+        "530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021030000003c8dcb0244c0c70c51e6ae0e4b592f0f0101e3b0c44298"
+        "fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f77"
+        "2074656e20706173742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e672101"
+        "4200142ac277ce311a053c91e47fd2c4759b263e1b31b4";
+}
+
+TestNetDiamondParams::TestNetDiamondParams() {
+    version              = 11;
+    targetTimespan       = 100;
+    timeInterval         = TIME_INTERVAL;
+    interval             = targetTimespan / (double) timeInterval;
+    targetTPS            = 1000;
+    punctualityThred     = PUNTUALITY_THRESHOLD;
+    maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
+    maxMoney             = MAX_MONEY;
+    reward               = 10;
+    msRewardCoefficient  = REWARD_COEFFICIENT;
+    cycleLen             = 0;
+    sortitionCoefficient = SORTITION_COEFFICIENT;
+    sortitionThreshold   = 100;
+    cacheStatesSize      = CACHE_STATES;
+    deleteForkThreshold  = 5;
+    blockCapacity        = BLK_CAPACITY;
+
+    keyPrefixes = {
+        0,  // keyPrefixes[PUBKEY_ADDRESS]
+        128 // keyPrefixes[SECRET_KEY]
+    };
+
+    genesisHexStr = "0b00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb9"
+                    "2427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    "5b9fa07329a2149b758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021050000000101e3b0c4"
+                    "4298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
+                    "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e64207765206172652073"
+                    "74696c6c20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4";
 }
 
 UnitTestParams::UnitTestParams() {
@@ -141,7 +172,7 @@ UnitTestParams::UnitTestParams() {
     cycleLen             = 0;
     sortitionCoefficient = 1;
     sortitionThreshold   = 2;
-    cacheStatesSize      = 100;
+    cacheStatesSize      = 20;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
 
@@ -150,13 +181,12 @@ UnitTestParams::UnitTestParams() {
         128 // keyPrefixes[SECRET_KEY]
     };
 
-    genesisHexStr =
-        "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41"
-        "e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b8555b9fa07329a2149b"
-        "758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021000000000101e3b0c44298fc1c149afbf4c8996fb9"
-        "2427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d0104454974206973206e6f772074656e20706173"
-        "742074656e20696e20746865206576656e696e6720616e6420776520617265207374696c6c20776f726b696e6721014200142ac277"
-        "ce311a053c91e47fd2c4759b263e1b31b4";
+    genesisHexStr = "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb9"
+                    "2427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    "5b9fa07329a2149b758dbec2530cd81cbe05b33cdb32b6b03470fb6601ef3255388ff95cffff0021000000000101e3b0c4"
+                    "4298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855ffffffffffffffff00484704ffff001d01044549"
+                    "74206973206e6f772074656e20706173742074656e20696e20746865206576656e696e6720616e64207765206172652073"
+                    "74696c6c20776f726b696e6721014200142ac277ce311a053c91e47fd2c4759b263e1b31b4";
 }
 
 void UnitTestParams::SetGenesisParams(const std::shared_ptr<Vertex>& genesisVertex) const {
@@ -175,8 +205,10 @@ const Params& GetParams() {
 void SelectParams(ParamsType type, bool withGenesis) {
     if (type == ParamsType::MAINNET) {
         pparams = std::make_unique<MainNetParams>();
-    } else if (type == ParamsType::TESTNET) {
-        pparams = std::make_unique<TestNetParams>();
+    } else if (type == ParamsType::SPADE) {
+        pparams = std::make_unique<TestNetSpadeParams>();
+    } else if (type == ParamsType::DIAMOND) {
+        pparams = std::make_unique<TestNetDiamondParams>();
     } else if (type == ParamsType::UNITTEST) {
         pparams = std::make_unique<UnitTestParams>();
     } else {

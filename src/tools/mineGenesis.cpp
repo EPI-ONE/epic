@@ -5,7 +5,8 @@
 #include "test_factory.h"
 
 int main(int argc, char* argv[]) {
-    std::map<std::string, uint32_t> targets = {{"1", 0x2100ffffL}, {"10", 0x2100ffffL}, {"100", 0x2100ffffL}};
+    std::map<std::string, uint32_t> targets = {
+        {"1", 0x2100ffffL}, {"10", 0x2100ffffL}, {"11", 0x2100ffffL}, {"100", 0x2100ffffL}};
 
     std::string version;
     if (argc == 1) {
@@ -13,10 +14,15 @@ int main(int argc, char* argv[]) {
         version = "100";
         SelectParams(ParamsType::UNITTEST, false);
     } else {
-        version          = argv[1];
+        version = argv[1];
+
+        // clang-format off
         auto params_type = version == "1" ? ParamsType::MAINNET :
-                                            version == "10" ? ParamsType::TESTNET :
-                                                              version == "100" ? ParamsType::UNITTEST : (ParamsType) 66;
+                           version == "10" ? ParamsType::SPADE :
+                           version == "11" ? ParamsType::DIAMOND :
+                           version == "100" ? ParamsType::UNITTEST :
+                           (ParamsType) 66;
+        // clang-format on
 
         try {
             SelectParams(params_type, false);
@@ -26,7 +32,8 @@ int main(int argc, char* argv[]) {
                          CYCLELEN, targetStr.str());
         } catch (const std::invalid_argument& e) {
             spdlog::error(
-                "{} Please input a valid version number: \n   '1' (MAINNET), '10' (TESTNET), or '100' (UNITTEST). ",
+                "{} Please input a valid version number: \n   '1' (MAINNET), '10' (SPADE), '11' (DIAMOND), or "
+                "'100' (UNITTEST). ",
                 e.what());
             return 66;
         }
@@ -79,9 +86,15 @@ int main(int argc, char* argv[]) {
                   275375962, 288281853, 297815130, 310645549, 328132943, 347080859, 347600807,
                   349758923, 370329272, 375881440, 410271724, 411860289, 415421890, 425097674,
                   465253991, 471572753, 480185136, 480539041, 482914708, 495008315, 523604902}
-     TESTNET:
+
+     SPADE:
          nonce = 2
          proof = {110002832, 187793670, 201366278, 448514938}
+
+     DIAMOND:
+        nonce = 5
+        proof = { }
+
      UNITTEST:
          nonce = 0
          proof = { }

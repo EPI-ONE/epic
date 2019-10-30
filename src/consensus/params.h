@@ -18,13 +18,15 @@ class Vertex;
 
 enum ParamsType : uint8_t {
     MAINNET = 0,
-    TESTNET,
+    SPADE,
+    DIAMOND,
     UNITTEST,
 };
 
 static const std::string ParamsTypeStr[] = {
     "MAINNET",
-    "TESTNET",
+    "SPADE",
+    "DIAMOND",
     "UNITTEST",
 };
 
@@ -80,9 +82,14 @@ public:
     MainNetParams();
 };
 
-class TestNetParams : public Params {
+class TestNetSpadeParams : public Params {
 public:
-    TestNetParams();
+    TestNetSpadeParams();
+};
+
+class TestNetDiamondParams : public Params {
+public:
+    TestNetDiamondParams();
 };
 
 class UnitTestParams : public Params {

@@ -63,6 +63,8 @@ public:
 
     ConstTxPtr GetRedemptionTx(bool IsRegistration);
 
+    void ClearRedemptions();
+
 private:
     std::unordered_set<ConstTxPtr,
                        std::function<size_t(const ConstTxPtr&)>,

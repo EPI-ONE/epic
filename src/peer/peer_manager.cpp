@@ -525,7 +525,7 @@ bool PeerManager::CheckPeerID(uint64_t id) {
     return true;
 }
 
-bool PeerManager::DisconnectPeer(const std::string &address) {
+bool PeerManager::DisconnectPeer(const std::string& address) {
     auto net_addr = NetAddress::GetByIP(address);
     if (!net_addr) {
         spdlog::warn("Invalid address {} to disconnect", address);

@@ -110,6 +110,14 @@ TEST_F(TestConsensus, SyntaxChecking) {
     double_spent.AddTransaction(tx1);
     EXPECT_FALSE(SealAndCheck(double_spent));
 
+    // zero output
+    Block zero_out            = fac.CreateBlock();
+    Transaction tx2           = fac.CreateTx(1, 1);
+    tx2.GetOutputs()[0].value = 0;
+    tx2.FinalizeHash();
+    zero_out.AddTransaction(tx2);
+    EXPECT_FALSE(SealAndCheck(zero_out));
+
     // Duplicated txns
     Block dup_txns = fac.CreateBlock(1, 1);
     for (int i = 0; i < 5; ++i) {
@@ -250,6 +258,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     usleep(50000);
+    STORE->Wait();
     STORE->Stop();
     DAG->Stop();
 

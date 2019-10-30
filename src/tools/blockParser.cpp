@@ -41,8 +41,10 @@ int main(int argc, char** argv) {
     std::string net_type;
     auto init_res = ParseArg(argc, argv, rootpath, net_type);
     if (!init_res) {
-        const std::map<std::string, ParamsType> parseType = {
-            {"Mainnet", ParamsType::MAINNET}, {"Testnet", ParamsType::TESTNET}, {"Unittest", ParamsType::UNITTEST}};
+        const std::map<std::string, ParamsType> parseType = {{"Mainnet", ParamsType::MAINNET},
+                                                             {"Spade", ParamsType::SPADE},
+                                                             {"Diamond", ParamsType::DIAMOND},
+                                                             {"Unittest", ParamsType::UNITTEST}};
         try {
             SelectParams(parseType.at(net_type));
         } catch (const std::out_of_range& err) {

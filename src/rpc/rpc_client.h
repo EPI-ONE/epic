@@ -30,6 +30,8 @@ public:
 
     option_string StopMiner();
 
+    option_string CreateFirstReg(std::string addr, bool force = false);
+
     option_string CreateRandomTx(size_t size);
 
     option_string CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outpus, uint64_t fee);

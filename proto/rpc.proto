@@ -91,6 +91,7 @@ service CommanderRPC {
     rpc Stop (StopRequest) returns (StopResponse);
     rpc StartMiner (StartMinerRequest) returns (StartMinerResponse);
     rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
+    rpc CreateFirstReg (CreateFirstRegRequest) returns (CreateFirstRegResponse);
     rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
     rpc GenerateNewKey(GenerateNewKeyRequest) returns (GenerateNewKeyResponse);
     rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
@@ -124,6 +125,15 @@ message StatusRequest {}
 message StatusResponse {
     bool isMinerRunning = 1;
     Hash latestMSHash = 2;
+}
+
+message CreateFirstRegRequest {
+    string address = 1;
+    bool force = 2;
+}
+
+message CreateFirstRegResponse {
+    string result = 1;
 }
 
 message CreateRandomTxRequest{

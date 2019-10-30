@@ -426,7 +426,6 @@ void BlockStore::Wait() {
 
 void BlockStore::Stop() {
     spdlog::info("Stopping store...");
-    Wait();
     obcThread_.Abort();
     obcThread_.Stop();
     interrupt = true;

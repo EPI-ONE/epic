@@ -105,8 +105,10 @@ int Init(int argc, char* argv[]) {
     /*
      * Set global variables
      */
-    const std::map<std::string, ParamsType> parseType = {
-        {"Mainnet", ParamsType::MAINNET}, {"Testnet", ParamsType::TESTNET}, {"Unittest", ParamsType::UNITTEST}};
+    const std::map<std::string, ParamsType> parseType = {{"Mainnet", ParamsType::MAINNET},
+                                                         {"Spade", ParamsType::SPADE},
+                                                         {"Diamond", ParamsType::DIAMOND},
+                                                         {"Unittest", ParamsType::UNITTEST}};
     try {
         SelectParams(parseType.at(CONFIG->GetNetworkType()));
     } catch (const std::out_of_range& err) {

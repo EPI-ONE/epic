@@ -53,6 +53,36 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         return grpc::Status::OK;
     }
 
+    grpc::Status CreateFirstReg(grpc::ServerContext* context,
+                                const CreateFirstRegRequest* request,
+                                CreateFirstRegResponse* reply) override {
+        if (!WALLET) {
+            reply->set_result("Wallet has not been started");
+        } else if (!WALLET->IsLoggedIn()) {
+            reply->set_result("Please log in or set up a new passphrase");
+        } else {
+            std::optional<CKeyID> addr{DecodeAddress(request->address())};
+
+            if (addr) {
+                std::string encoded_addr;
+                if (request->force()) {
+                    encoded_addr = WALLET->CreateFirstRegistration(*addr);
+                } else {
+                    encoded_addr = WALLET->CreateFirstRegWhenPossible(*addr);
+                }
+
+                if (!encoded_addr.empty()) {
+                    reply->set_result("Successfully created the first registration with address " + encoded_addr);
+                }
+
+            } else {
+                reply->set_result("Invalid address: " + request->address());
+            }
+        }
+
+        return grpc::Status::OK;
+    }
+
     grpc::Status CreateRandomTx(grpc::ServerContext* context,
                                 const CreateRandomTxRequest* request,
                                 CreateRandomTxResponse* reply) override {
