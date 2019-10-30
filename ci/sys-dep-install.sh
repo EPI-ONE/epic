@@ -60,5 +60,5 @@ then
   ../install-grpc.sh &
   ../install-rocksdb.sh &
 else
-  echo "This script only supports Mac OS X and Ubuntu Linux 18.04"
+  echo "This script only supports macOS 10.15 and Ubuntu Linux 18.04"
 fi

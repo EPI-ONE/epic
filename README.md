@@ -5,7 +5,7 @@
 
 Epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization. Detailed information about this project (overview, economic model, installation, mining, architecture) is organized in https://epi-one.gitbook.io/epic/.
 
-Testnet `testnet 0.1.1` is released. You may join the testnet by following the [instruction](https://github.com/EPI-ONE/epic/wiki/Testnet).
+Check out [this github wiki](https://github.com/EPI-ONE/epic/wiki/Testnet) to join the testnet.
 
 Welcome to join the discussion at https://t.me/epi-one.
 
