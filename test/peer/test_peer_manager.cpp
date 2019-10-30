@@ -21,11 +21,13 @@ public:
         EpicTestEnvironment::TearDownDAG("test_peer_manager/");
     }
     void SetUp() {
+        CONFIG->SetAmISeed(true);
         server.Start();
         client.Start();
     }
 
     void TearDown() {
+        CONFIG->SetAmISeed(false);
         server.Stop();
         client.Stop();
     }
