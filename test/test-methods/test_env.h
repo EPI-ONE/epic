@@ -56,12 +56,16 @@ public:
     }
 
     static void TearDownDAG(const std::string& dirPath) {
-        if (STORE)
+        if (STORE) {
+            STORE->Wait();
             STORE->Stop();
-        if (DAG)
+        }
+        if (DAG) {
             DAG->Stop();
-        if (WALLET)
+        }
+        if (WALLET) {
             WALLET->Stop();
+        }
 
         STORE.reset();
         DAG.reset();

@@ -245,12 +245,11 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_GT(balance.GetValue(), 0);
     WALLET.reset(nullptr);
 
-    usleep(100000);
-
     WALLET.reset(new Wallet("test_wallet_data//data/", 0));
     DAG->RegisterOnLvsConfirmedCallback(
         [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
     WALLET->CheckPassphrase("");
+    WALLET->DisableRedemptions();
     WALLET->Start();
 
     ASSERT_TRUE(WALLET->ExistMaster());
@@ -258,7 +257,8 @@ TEST_F(TestWallet, normal_workflow) {
 
     MINER->Run();
 
-    WALLET->CreateRandomTx(1);
+    auto tx = WALLET->CreateTx({{1, WALLET->GetRandomAddress()}}, MIN_FEE);
+    WALLET->SendTxToMemPool(tx);
     usleep(500000);
     while (WALLET->GetPending().size() != 0 || WALLET->GetPendingTx().size() != 0) {
         usleep(500000);

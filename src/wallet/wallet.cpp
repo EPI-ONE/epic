@@ -95,7 +95,7 @@ void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
         threadPool_.Execute([&]() {
             if (rpcLoggedin_) {
                 rpcLoggedin_ = false;
-                spdlog::debug("wallet login session expired!\n");
+                spdlog::debug("wallet login session expired!");
             }
         });
     });
@@ -119,6 +119,10 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
         for (auto& stxo : STXOs) {
             ProcessSTXO(stxo);
         }
+
+        // for (auto& u : unspent) {
+        // std::cout << "unspent " << std::get<3>(u.second) << std::endl;
+        //}
     });
 
     static Coin rewards = GetParams().reward * RedemptionInterval;
@@ -415,7 +419,7 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     continue;
                 }
             } else {
-                Coin coin{random() % (GetBalance() - MIN_FEE - 1).GetValue() + MIN_FEE + 1};
+                Coin coin{random() % (GetBalance() - MIN_FEE - 2).GetValue() + MIN_FEE + 1};
                 auto tx = CreateTx({{coin, addr}});
                 SendTxToMemPool(tx);
                 spdlog::info("[Wallet] Sent {} coins to {} in tx {} with index {}", coin.GetValue(),

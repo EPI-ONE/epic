@@ -258,6 +258,7 @@ TEST_F(TestConsensus, AddNewBlocks) {
     }
 
     usleep(50000);
+    STORE->Wait();
     STORE->Stop();
     DAG->Stop();
 

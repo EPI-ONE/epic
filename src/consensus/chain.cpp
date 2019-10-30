@@ -153,8 +153,8 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     }
 
     result.shrink_to_fit();
-    spdlog::debug("[Validation] {} blocks sorted, {} pending blocks left. Total ratio: {}", result.size(), pendingBlocks_.size(),
-                  static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
+    spdlog::debug("[Validation] {} block(s) sorted, {} pending block(s) left. Ratio: {}", result.size(),
+                  pendingBlocks_.size(), static_cast<double>(result.size()) / (result.size() + pendingBlocks_.size()));
     return result;
 }
 
@@ -387,7 +387,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
     if (vin.outpoint.bHash != prevRedempHash) {
-        spdlog::info("[Validation] Double redemption on the previous registration block: outpoint {} not matching  the "
+        spdlog::info("[Validation] Double redemption on the previous registration block: outpoint {} not matching the "
                      "last valid redemption hash {} [{}]",
                      vin.outpoint.bHash.to_substr(), prevRedempHash.to_substr(), hashstr);
         return {};
