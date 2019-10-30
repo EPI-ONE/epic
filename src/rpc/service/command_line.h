@@ -62,17 +62,21 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             reply->set_result("Please log in or set up a new passphrase");
         } else {
             std::optional<CKeyID> addr{DecodeAddress(request->address())};
-            std::string encoded_addr;
 
-            if (request->force()) {
-                encoded_addr = WALLET->CreateFirstRegistration(addr);
+            if (addr) {
+                std::string encoded_addr;
+                if (request->force()) {
+                    encoded_addr = WALLET->CreateFirstRegistration(*addr);
+                } else {
+                    encoded_addr = WALLET->CreateFirstRegWhenPossible(*addr);
+                }
+
+                if (!encoded_addr.empty()) {
+                    reply->set_result("Successfully created the first registration with address " + encoded_addr);
+                }
 
             } else {
-                encoded_addr = WALLET->CreateFirstRegWhenPossible(addr);
-            }
-
-            if (!encoded_addr.empty()) {
-                reply->set_result("Successfully created the first registration with address " + encoded_addr);
+                reply->set_result("Invalid address: " + request->address());
             }
         }
 

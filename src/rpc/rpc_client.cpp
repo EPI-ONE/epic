@@ -225,7 +225,7 @@ RPCClient::option_string RPCClient::GenerateNewKey() {
         return {};
     }
 
-    return "Address = " + response.address() + '\n';
+    return response.address();
 }
 
 RPCClient::option_string RPCClient::SetPassphrase(const std::string& passphrase) {

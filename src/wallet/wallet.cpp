@@ -119,10 +119,6 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
         for (auto& stxo : STXOs) {
             ProcessSTXO(stxo);
         }
-
-        // for (auto& u : unspent) {
-        // std::cout << "unspent " << std::get<3>(u.second) << std::endl;
-        //}
     });
 
     static Coin rewards = GetParams().reward * RedemptionInterval;
@@ -263,13 +259,8 @@ void Wallet::CreateRedemption(const CKeyID& key) {
                  std::to_string(redem->GetHash()));
 }
 
-std::string Wallet::CreateFirstRegistration(const std::optional<CKeyID>& oaddr) {
-    CKeyID addr;
-    if (!oaddr) {
-        addr = CreateNewKey(true);
-    } else {
-        addr = *oaddr;
-    }
+std::string Wallet::CreateFirstRegistration(const CKeyID& addr) {
+    assert(!addr.IsNull());
 
     // Reset miner info and clear redemption caches
     minerInfo_ = {uint256{}, 0};
@@ -288,12 +279,14 @@ std::string Wallet::CreateFirstRegistration(const std::optional<CKeyID>& oaddr) 
     return EncodeAddress(addr);
 }
 
-std::string Wallet::CreateFirstRegWhenPossible(const std::optional<CKeyID>& oaddr) {
+std::string Wallet::CreateFirstRegWhenPossible(const CKeyID& addr) {
+    assert(!addr.IsNull());
+
     if (hasSentFirstRegistration_) {
         return "";
     }
 
-    return CreateFirstRegistration(oaddr);
+    return CreateFirstRegistration(addr);
 }
 
 ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {

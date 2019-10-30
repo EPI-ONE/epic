@@ -191,7 +191,15 @@ int main(int argc, char** argv) {
             }
 
             case CREATE_FIRST_REG: {
-                auto r = client.CreateFirstReg(arg_value);
+                std::string addr;
+                if (arg_value.empty()) {
+                    addr = *client.GenerateNewKey();
+                } else {
+                    addr = arg_value;
+                }
+
+                auto r = client.CreateFirstReg(addr);
+
                 if (r) {
                     if (r->empty()) {
                         std::cout << "Peer chain already exists. Would you like to start a new peer chain? [Y/N] ";
@@ -206,6 +214,10 @@ int main(int argc, char** argv) {
                                 std::string addr;
                                 std::cin.get();
                                 getline(std::cin, addr);
+
+                                if (addr.empty()) {
+                                    addr = *client.GenerateNewKey();
+                                }
 
                                 r = client.CreateFirstReg(addr, true);
                                 std::cout << *r << std::endl;
