@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
 [![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=master&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
 
-epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization. 
+epic is a proof-of-work blockchain system that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization. 
 
 -   Main document (under construction)
 
