@@ -64,8 +64,9 @@ void Wallet::Load() {
     }
 
     hasSentFirstRegistration_ = walletStore_.GetFirstRegInfo();
-    if (auto last_redem_addr = walletStore_.GetLastRedemAddr()) {
-        lastRedemAddress_ = *last_redem_addr;
+    if (auto last_redem = walletStore_.GetLastRedem()) {
+        lastRedemHash_    = last_redem->first;
+        lastRedemAddress_ = last_redem->second;
     }
 
     pendingTx = walletStore_.GetAllTx();
@@ -209,8 +210,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
                 auto output = it->second->GetOutputs()[0];
                 auto keyId  = ParseAddrFromScript(output.listingContent);
                 assert(keyId);
-                SetLastRedemAddress(*keyId);
-                SetLastRedemHash(vertex->cblock->GetHash());
+                SetLastRedem(vertex->cblock->GetHash(), *keyId);
             }
             pendingRedemption.erase(it);
         }
@@ -453,20 +453,16 @@ CKeyID Wallet::GetLastRedemAddress() const {
     return lastRedemAddress_;
 }
 
-void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
+void Wallet::SetLastRedem(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     lastRedemAddress_ = lastRedemAddress;
-    walletStore_.StoreLastRedemAddr(lastRedemAddress_);
+    lastRedemHash_    = lastRedemHash;
+    walletStore_.StoreLastRedem(lastRedemHash_, lastRedemAddress_);
 }
 
 uint256 Wallet::GetLastRedemHash() const {
     READER_LOCK(lock_);
     return lastRedemHash_;
-}
-
-void Wallet::SetLastRedemHash(const uint256& h) {
-    WRITER_LOCK(lock_)
-    lastRedemHash_ = h;
 }
 
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {

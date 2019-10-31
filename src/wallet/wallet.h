@@ -153,10 +153,9 @@ private:
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
 
     CKeyID GetLastRedemAddress() const;
-    void SetLastRedemAddress(const CKeyID& lastRedemAddress);
-
     uint256 GetLastRedemHash() const;
-    void SetLastRedemHash(const uint256&);
+
+    void SetLastRedem(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
 
     std::atomic_bool cryptedFlag_ = false;
     SecureByte master_{};

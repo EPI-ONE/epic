@@ -30,7 +30,7 @@ public:
     bool StoreSpent(const uint256&, const CKeyID&, uint32_t, uint32_t, uint64_t);
     bool StoreMasterInfo(const MasterInfo&);
     bool StoreFirstRegInfo();
-    bool StoreLastRedemAddr(const CKeyID&);
+    bool StoreLastRedem(const uint256&, const CKeyID&);
 
     bool IsExistKey(const CKeyID&);
     std::optional<std::tuple<CiphertextKey, CPubKey>> GetKey(const CKeyID&);
@@ -43,7 +43,7 @@ public:
 
     std::optional<MasterInfo> GetMasterInfo();
     bool GetFirstRegInfo();
-    std::optional<CKeyID> GetLastRedemAddr();
+    std::optional<std::pair<uint256, CKeyID>> GetLastRedem();
 
     // returns 0 upon success or non-zero value on error.
     int KeysToFile(std::string filePath);
