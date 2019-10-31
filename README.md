@@ -7,14 +7,13 @@ Epic is a pow chain that achieves an order of magnitude improvement on the throu
 
 -   Main document (under construction)
 
-    https://epi-one.gitbook.io/epic/
-
+    [epi-one.gitbook.io](https://epi-one.gitbook.io/epic/)
+    
     Overview, economic model, mining, architecture, ....
 
 -   GitHub [wiki](https://github.com/EPI-ONE/epic/wiki)
     -   How to join the [testnet](https://github.com/EPI-ONE/epic/wiki/Testnet)
     -   [Dependencies](https://github.com/EPI-ONE/epic/wiki/Installation-of-dependencies), [compile](https://github.com/EPI-ONE/epic/wiki/Compile-and-run), ...
-
 -   Telegram discuss group [t.me/epi_one](https://t.me/epi_one)
 -   Welcome to report issues and send PR.
 
