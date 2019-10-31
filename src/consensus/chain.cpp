@@ -188,7 +188,7 @@ void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
             previous = GetVertex(cursor->GetPrevHash());
 
             if (!previous) {
-                // cannot happen
+                // should not happen
                 throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap.");
             }
             cum.Add(previous->cblock, false);
@@ -639,6 +639,12 @@ bool Cumulator::Full() const {
 
 bool Cumulator::Empty() const {
     return timestamps.empty();
+}
+
+void Cumulator::Clear() {
+    chainworks.clear();
+    timestamps.clear();
+    sum = 0;
 }
 
 std::string std::to_string(const Cumulator& cum) {

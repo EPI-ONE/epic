@@ -10,7 +10,7 @@ class TestInit : public testing::Test {};
 
 TEST_F(TestInit, test_init_dag) {
     const std::string dir          = "test_init/";
-    const uint32_t testChainHeight = GetParams().cacheStatesSize;
+    const uint32_t testChainHeight = GetParams().punctualityThred;
 
     file::SetDataDirPrefix(dir);
     STORE                             = std::make_unique<BlockStore>(dir);

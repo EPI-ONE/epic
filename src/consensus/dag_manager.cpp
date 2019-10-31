@@ -258,6 +258,7 @@ void DAGManager::EnableOBC() {
 /////////////////////////////////////
 // End of synchronization methods
 //
+
 void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         spdlog::trace("[Verify Thread] Adding blocks to pending {}", blk->GetHash().to_substr());
@@ -363,7 +364,7 @@ bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) 
     assert(milestoneChains.best());
 
     auto bestHeight = GetBestMilestoneHeight();
-    if (bestHeight > ms->height && (bestHeight - ms->height) > GetParams().cacheStatesSize) {
+    if (bestHeight > ms->height && (bestHeight - ms->height) >= GetParams().punctualityThred) {
         spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height, bestHeight,
                      std::to_string(blk->GetHash()));
         return false;
@@ -543,7 +544,7 @@ void DAGManager::Wait() {
 
 void DAGManager::FlushTrigger() {
     const auto& bestChain = milestoneChains.best();
-    if (bestChain->GetStates().size() <= GetParams().cacheStatesSize) {
+    if (bestChain->GetStates().size() <= GetParams().punctualityThred) {
         return;
     }
     std::vector<ConcurrentQueue<MilestonePtr>::const_iterator> forks;
@@ -557,7 +558,7 @@ void DAGManager::FlushTrigger() {
 
     auto cursor = bestChain->GetStates().begin();
     for (int i = 0;
-         i < bestChain->GetStates().size() - GetParams().cacheStatesSize && cursor != bestChain->GetStates().end();
+         i < bestChain->GetStates().size() - GetParams().punctualityThred && cursor != bestChain->GetStates().end();
          i++, cursor++) {
         if ((*cursor)->stored) {
             for (auto& fork_it : forks) {

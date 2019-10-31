@@ -61,8 +61,6 @@ public:
     // proof-of-work parameter
     int cycleLen;
 
-    size_t cacheStatesSize;
-
     size_t blockCapacity;
 
     unsigned char GetKeyPrefix(KeyPrefixType type) const;

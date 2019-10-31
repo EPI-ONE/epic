@@ -25,6 +25,7 @@ public:
     uint32_t TimeSpan() const;
     bool Full() const;
     bool Empty() const;
+    void Clear();
 
     friend std::string std::to_string(const Cumulator&);
 

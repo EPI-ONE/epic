@@ -126,8 +126,7 @@ void Miner::Run() {
                         selfChainHead_ = nullptr;
                         prevHash       = GENESIS->GetHash();
                         selfChainHeads_.clear();
-                        distanceCal_ = Cumulator();
-                        assert(distanceCal_.Empty());
+                        distanceCal_.Clear();
                     } else {
                         b.AddTransaction(std::move(tx));
                         max_ntx--;
@@ -185,7 +184,6 @@ void Miner::Run() {
                 continue;
             }
 
-            assert(b.CheckPOW());
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);
