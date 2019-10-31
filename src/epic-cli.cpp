@@ -181,6 +181,7 @@ int main(int argc, char** argv) {
             case START_MINER: {
                 auto sync_completed = client.SyncCompleted();
                 if (!sync_completed || !(*sync_completed)) {
+                    std::cout << "The initial synchronization is not completed. Abort starting miner." << std::endl;
                     break;
                 }
 

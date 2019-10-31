@@ -302,7 +302,8 @@ void Peer::SendMessage(unique_message_t&& message) {
 
 void Peer::SendVersion(uint64_t height, std::string versionInfo) {
     auto addressMe = NetAddress(addressManager_->GetBestLocalAddress(), CONFIG->GetBindPort());
-    SendMessage(std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, 0, 0));
+    SendMessage(
+        std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, GetParams().version, 0));
     spdlog::info("Sent version message to {}", address.ToString());
 }
 
