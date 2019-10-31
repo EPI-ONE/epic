@@ -260,6 +260,18 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         }
         return grpc::Status::OK;
     }
+
+    grpc::Status SyncCompleted(grpc::ServerContext* context,
+                               const rpc::SyncStatusRequest* request,
+                               rpc::SyncStatusResponse* response) override {
+        if (PEERMAN) {
+            response->set_completed(PEERMAN->InitialSyncCompleted());
+        } else {
+            response->set_completed(false);
+        }
+
+        return grpc::Status::OK;
+    }
 };
 
 #endif // EPIC_COMMAND_LINE_H

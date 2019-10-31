@@ -118,7 +118,9 @@ public:
 
     void ClearPeers();
 
-    bool DisconnectPeer(const std::string &address);
+    bool DisconnectPeer(const std::string& address);
+
+    bool InitialSyncCompleted() const;
 
 private:
     /*

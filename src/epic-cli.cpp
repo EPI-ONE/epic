@@ -179,6 +179,11 @@ int main(int argc, char** argv) {
             }
 
             case START_MINER: {
+                auto sync_completed = client.SyncCompleted();
+                if (!sync_completed || !(*sync_completed)) {
+                    break;
+                }
+
                 auto r = client.StartMiner();
                 if (r) {
                     std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;

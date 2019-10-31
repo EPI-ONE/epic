@@ -41,6 +41,7 @@ public:
 
     option_string ConnectPeers(const std::vector<std::string>& addresses);
 
+    std::optional<bool> SyncCompleted();
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;

@@ -54,6 +54,8 @@ using rpc::StopMinerRequest;
 using rpc::StopMinerResponse;
 using rpc::StopRequest;
 using rpc::StopResponse;
+using rpc::SyncStatusRequest;
+using rpc::SyncStatusResponse;
 
 using rpc::POWResult;
 using rpc::POWTask;

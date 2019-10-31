@@ -340,6 +340,10 @@ void PeerManager::CheckTimeout() {
     }
 }
 
+bool PeerManager::InitialSyncCompleted() const {
+    return !initial_sync_;
+}
+
 void PeerManager::InitialSync() {
     while (!interrupt_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
