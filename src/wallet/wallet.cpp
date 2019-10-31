@@ -5,6 +5,7 @@
 #include "wallet.h"
 #include "mempool.h"
 #include "random.h"
+#include "tasm.h"
 
 #include <algorithm>
 #include <chrono>
@@ -14,9 +15,12 @@
 #include <utility>
 
 Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession)
-    : threadPool_(2), walletStore_(walletPath), totalBalance_{0} {
-    if (backupPeriod || loginSession) {
-        scheduleFunc_ = [&, backupPeriod, loginSession]() { SendPeriodicTasks(backupPeriod, loginSession); };
+    : threadPool_(2), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
+          rpcLoggedin_ = false;
+          spdlog::trace("[Wallet] wallet login session expired!");
+      }) {
+    if (backupPeriod) {
+        scheduleFunc_ = [&, backupPeriod]() { SendPeriodicTasks(backupPeriod); };
     }
     Load();
     EnableRedemptions();
@@ -80,45 +84,36 @@ void Wallet::Load() {
     totalBalance_ = balance;
 }
 
-void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
+void Wallet::SendPeriodicTasks(uint32_t storagePeriod) {
     // periodic task of storing data
-    if (storagePeriod) {
-        scheduler_.AddPeriodTask(storagePeriod, [&]() {
-            threadPool_.Execute([&]() {
-                walletStore_.ClearOldData();
-                spdlog::trace("[Wallet] Back up wallet data...");
+    scheduler_.AddPeriodTask(storagePeriod, [&]() {
+        threadPool_.Execute([&]() {
+            walletStore_.ClearOldData();
+            spdlog::trace("[Wallet] Back up wallet data...");
 
-                for (const auto& pairTx : pendingTx) {
-                    walletStore_.StoreTx(*pairTx.second);
-                }
-                for (const auto& [utxoKey, utxoTuple] : unspent) {
-                    walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
-                                              std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
-                }
-                for (const auto& [utxoKey, utxoTuple] : pending) {
-                    walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
-                                              std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
-                }
-            });
+            for (const auto& pairTx : pendingTx) {
+                walletStore_.StoreTx(*pairTx.second);
+            }
+            for (const auto& [utxoKey, utxoTuple] : unspent) {
+                walletStore_.StoreUnspent(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
+                                          std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
+            }
+            for (const auto& [utxoKey, utxoTuple] : pending) {
+                walletStore_.StorePending(utxoKey, std::get<CKEY_ID>(utxoTuple), std::get<TX_INDEX>(utxoTuple),
+                                          std::get<OUTPUT_INDEX>(utxoTuple), std::get<COIN>(utxoTuple));
+            }
         });
-    }
-
-    // login session expires
-    if (loginSession) {
-        scheduler_.AddPeriodTask(loginSession, [&]() {
-            threadPool_.Execute([&]() {
-                if (rpcLoggedin_) {
-                    rpcLoggedin_ = false;
-                    spdlog::trace("[Wallet] wallet login session expired!");
-                }
-            });
-        });
-    }
+    });
 
     while (!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         scheduler_.Loop();
     }
+}
+
+void Wallet::RPCLogin() {
+    rpcLoggedin_ = true;
+    timer_.Reset();
 }
 
 void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,

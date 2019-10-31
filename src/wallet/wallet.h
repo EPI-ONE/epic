@@ -10,7 +10,6 @@
 #include "key.h"
 #include "mnemonics.h"
 #include "scheduler.h"
-#include "tasm.h"
 #include "threadpool.h"
 #include "vertex.h"
 #include "wallet_store.h"
@@ -18,6 +17,8 @@
 #include <array>
 #include <atomic>
 #include <utility>
+
+class Tasm;
 
 constexpr uint64_t MIN_FEE            = 1;
 constexpr uint64_t RedemptionInterval = 6;
@@ -34,6 +35,7 @@ private:
     enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
+    Wallet() = delete;
     Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession);
 
     ~Wallet();
@@ -89,9 +91,7 @@ public:
     bool ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase);
     bool CheckPassphrase(const SecureString& phrase);
 
-    void RPCLogin() {
-        rpcLoggedin_ = true;
-    }
+    void RPCLogin();
     bool IsLoggedIn() const {
         return rpcLoggedin_;
     }
@@ -145,7 +145,7 @@ private:
 
     TxInput CreateSignedVin(const CKeyID&, TxOutPoint, const std::string&);
 
-    void SendPeriodicTasks(uint32_t, uint32_t);
+    void SendPeriodicTasks(uint32_t);
 
     bool CanRedeem(Coin coins = 1);
 
@@ -166,6 +166,7 @@ private:
     // check if the old pass phrase matches
     std::optional<Crypter> CheckPassphraseMatch(const SecureString&) const;
     std::atomic_bool rpcLoggedin_ = false;
+    Timer timer_;
 };
 
 extern std::unique_ptr<Wallet> WALLET;

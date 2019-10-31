@@ -46,5 +46,40 @@ private:
     std::vector<PeriodTask> period_tasks_;
 };
 
+class Timer {
+public:
+    Timer(uint32_t _duration, std::function<void()>&& f) : duration_(_duration), f_(std::move(f)), stop_(true) {}
+    ~Timer() {
+        Stop();
+    }
+
+    void Reset() {
+        if (duration_ == 0) {
+            return;
+        }
+
+        Stop();
+        stop_   = false;
+        thread_ = std::thread{[&, end = std::chrono::steady_clock::now() + std::chrono::seconds{duration_}]() {
+            while (!stop_ && std::chrono::steady_clock::now() < end) {
+                std::this_thread::sleep_for(std::chrono::milliseconds{500});
+            }
+            f_();
+        }};
+    }
+
+    void Stop() {
+        if (thread_.joinable()) {
+            stop_ = true;
+            thread_.join();
+        }
+    }
+
+private:
+    uint32_t duration_;
+    std::function<void()> f_;
+    std::atomic_bool stop_;
+    std::thread thread_;
+};
 
 #endif // EPIC_SCHEDULER_H
