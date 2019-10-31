@@ -64,4 +64,4 @@ test_*/
 src/rpc/proto-gen/
 
 # dependencies install files
-ci/sys-dep-install
+ci/sys-dep-install/

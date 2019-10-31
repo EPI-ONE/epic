@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ev
-EPIC_GRPC_VERSION="1.24.0"
+EPIC_GRPC_VERSION="1.24.3"
 EPIC_GRPC_DIR=""grpc-"$EPIC_GRPC_VERSION"
 
 if [[ ! -d ${EPIC_GRPC_DIR} ]];then
