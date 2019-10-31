@@ -3,11 +3,20 @@
 [![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
 [![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=master&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
 
-Epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization. Detailed information about this project (overview, economic model, installation, mining, architecture) is organized in https://epi-one.gitbook.io/epic/.
+Epic is a pow chain that achieves an order of magnitude improvement on the throughput without sacrificing  security and decentralization. 
 
-Check out [this github wiki](https://github.com/EPI-ONE/epic/wiki/Testnet) to join the testnet.
+-   Main document (under construction)
 
-Welcome to join the discussion at https://t.me/epi-one.
+    https://epi-one.gitbook.io/epic/
+
+    Overview, economic model, mining, architecture, ....
+
+-   GitHub [wiki](https://github.com/EPI-ONE/epic/wiki)
+    -   How to join the [testnet](https://github.com/EPI-ONE/epic/wiki/Testnet)
+    -   [Dependencies](https://github.com/EPI-ONE/epic/wiki/Installation-of-dependencies), [compile](https://github.com/EPI-ONE/epic/wiki/Compile-and-run), ...
+
+-   Telegram discuss group [t.me/epi_one](https://t.me/epi_one)
+-   Welcome to report issues and send PR.
 
 ## Design
 
