@@ -65,3 +65,5 @@ src/rpc/proto-gen/
 
 # dependencies install files
 ci/sys-dep-install/
+# auto generated config files
+src/config/

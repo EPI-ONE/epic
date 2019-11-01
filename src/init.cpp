@@ -64,8 +64,6 @@ void CreateRoot(const std::string& path) {
 }
 
 int Init(int argc, char* argv[]) {
-    std::cout << "Start initializing...\n" << std::endl;
-
     /*
      *  Create config instance
      */
@@ -192,11 +190,12 @@ void SetupCommandline(cxxopts::Options& options) {
     ("configpath", "specified config path", cxxopts::value<std::string>()->default_value("config.toml"))
     ("b,bindip", "bind ip address", cxxopts::value<std::string>())
     ("p,bindport", "bind port", cxxopts::value<uint16_t>())
-    ("connect","connect", cxxopts::value<std::string>())
+    ("connect", "connect", cxxopts::value<std::string>())
     ("disable-rpc", "disable rpc server", cxxopts::value<bool>())
-    ("D,daemon","make the program running in a daemon process", cxxopts::value<bool>())
-    ("N,newdb","start with the new db", cxxopts::value<bool>())
-    ("S,seed","start as a seed",cxxopts::value<bool>())
+    ("D,daemon", "make the program running in a daemon process", cxxopts::value<bool>())
+    ("N,newdb", "start with the new db", cxxopts::value<bool>())
+    ("S,seed", "start as a seed",cxxopts::value<bool>())
+    ("version", "version information", cxxopts::value<bool>())
     ;
     // clang-format on
 }
@@ -205,6 +204,12 @@ void ParseCommandLine(int argc, char** argv, cxxopts::Options& options) {
     auto result = options.parse(argc, argv);
     if (result["help"].as<bool>()) {
         std::cout << options.help() << std::endl;
+        exit(0);
+    }
+    if (result["version"].as<bool>()) {
+        std::cout << "EPIC Version:" << GetVersionNum() << " ";
+        std::cout << "Commit:" << GetCommitHash() << " ";
+        std::cout << "Compile time:" << GetVersionTimestamp() << std::endl;
         exit(0);
     }
     // since these two params have been set default values, there is no need to

@@ -9,6 +9,7 @@
 
 #include "net_address.h"
 #include "spdlog.h"
+#include "version.h"
 
 #include <memory>
 #include <sstream>
@@ -188,6 +189,10 @@ public:
     void ShowConfig() {
         std::stringstream ss;
 
+        ss << std::endl << "current version info:" << std::endl;
+        ss << "commit hash = " << GetCommitHash() << std::endl;
+        ss << "compile time = " << GetVersionTimestamp() << std::endl;
+        ss << "version = " << GetVersionNum() << std::endl;
         ss << std::endl << "current config: " << std::endl;
         ss << "config file path = " << GetConfigFilePath() << std::endl;
         ss << "logger level = " << loggerLevel_ << std::endl;
