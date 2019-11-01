@@ -1,0 +1,12 @@
+// Copyright (c) 2019 EPI-ONE Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef EPIC_VERSION_CONFIG_H
+#define EPIC_VERSION_CONFIG_H
+
+#cmakedefine EPIC_VERSION "@EPIC_VERSION@"
+#cmakedefine GIT_COMMIT "@GIT_COMMIT@"
+#cmakedefine BUILD_TIMESTAMP "@BUILD_TIMESTAMP@"
+
+#endif // EPIC_VERSION_CONFIG_H

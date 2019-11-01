@@ -5,6 +5,7 @@
 #include "cxxopts.h"
 #include "rpc_client.h"
 #include "spdlog/spdlog.h"
+#include "version.h"
 
 #include <termios.h>
 #include <unistd.h>
@@ -134,7 +135,7 @@ int main(int argc, char** argv) {
 
     options.add_options()
     ("h, help", "print this message", cxxopts::value<bool>())
-
+    ("version", "version information", cxxopts::value<bool>())
     ("rpc-port", "client rpc port which is used to connect to the server", cxxopts::value<uint16_t>(rpc_port)->default_value("3777"))
     ;
 
@@ -144,6 +145,13 @@ int main(int argc, char** argv) {
         auto parsed_options = options.parse(argc, argv);
         if (parsed_options["help"].as<bool>()) {
             std::cout << options.help() << std::endl;
+            return NORMAL_EXIT;
+        }
+
+        if (parsed_options["version"].as<bool>()) {
+            std::cout << "EPIC command line tool Version:" << GetVersionNum() << " ";
+            std::cout << "Commit:" << GetCommitHash() << " ";
+            std::cout << "Compile time:" << GetVersionTimestamp() << std::endl;
             return NORMAL_EXIT;
         }
         auto client = CreateClient("0.0.0.0", rpc_port);

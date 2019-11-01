@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(epic)
+set(EPIC_MAJOR_VERSION 0)
+set(EPIC_MINOR_VERSION 1)
+set(EPIC_PATCH_VERSION 1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin/)
@@ -77,6 +80,16 @@ file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
 # Protobuf and gRPC autogeneration
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROTO_SRC_DIR} ${PROTOS})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${PROTO_SRC_DIR} ${PROTOS})
+
+# generate version info
+add_custom_target(version ALL
+        ${CMAKE_COMMAND}
+        -DSRC=${CMAKE_SOURCE_DIR}/cmake/version_config.h.in
+        -DDST=${CMAKE_SOURCE_DIR}/src/config/version_config.h
+        -DEPIC_VERSION="${EPIC_MAJOR_VERSION}.${EPIC_MINOR_VERSION}.${EPIC_PATCH_VERSION}"
+        -P ${CMAKE_SOURCE_DIR}/cmake/version.cmake
+)
+include_directories(${CMAKE_SOURCE_DIR}/src/config)
 
 # src codes
 set(NET_DIR src/net)
@@ -242,11 +255,14 @@ add_executable(epic-cli ${SRC_CLIENT_MAIN}
         ${RPC_DIR}/rpc_client.cpp
         ${PROTO_SRCS}
         ${GRPC_SRCS}
+        src/version.cpp
         )
 target_link_libraries(epic-cli protobuf::libprotobuf)
 target_link_libraries(epic-cli gRPC::grpc++_reflection)
 target_link_libraries(epic epiccore)
 add_dependencies(epic epiccore)
+add_dependencies(epic version)
+add_dependencies(epic-cli version)
 
 # test executable
 add_executable(epictest ${TEST_MAIN} ${TEST_CODE})

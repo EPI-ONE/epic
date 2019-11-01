@@ -97,6 +97,9 @@ void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
     // send version message
     if (!peer->IsInbound()) {
         std::stringstream ss;
+        ss << "commit hash = " << GetCommitHash() << ", ";
+        ss << "compile time = " << GetVersionTimestamp() << ", ";
+        ss << "version no = " << GetVersionNum();
         peer->SendVersion(DAG->GetBestMilestoneHeight(), ss.str());
     }
 }

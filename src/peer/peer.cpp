@@ -124,6 +124,9 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
     // send version message if peer is inbound
     if (IsInbound()) {
         std::stringstream ss;
+        ss << "commit hash = " << GetCommitHash() << ", ";
+        ss << "compile time = " << GetVersionTimestamp() << ", ";
+        ss << "version no = " << GetVersionNum();
         SendVersion(DAG->GetBestMilestoneHeight(), ss.str());
     }
 
