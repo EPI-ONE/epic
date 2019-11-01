@@ -37,7 +37,7 @@ protected:
 };
 
 std::string TestRocksDB::prefix = "test_rocks/"; // temporary db folder prefix
-DBStore* TestRocksDB::db   = nullptr;
+DBStore* TestRocksDB::db        = nullptr;
 
 TEST_F(TestRocksDB, single_insertion_and_deletion) {
     // Consturct a milestone file position

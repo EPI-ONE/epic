@@ -178,3 +178,35 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     auto newout = STORE->GetVertex(blocks[0]->cblock->GetHash());
     ASSERT_EQ(copyVtx, *newout);
 }
+
+TEST_F(TestFileStorage, test_modifier) {
+    EpicTestEnvironment::SetUpDAG(prefix);
+
+    // Construct a fake ms vertex
+    auto vertex                = fac.CreateVertexPtr(1, 1, true);
+    vertex->snapshot           = std::make_shared<Milestone>();
+    vertex->snapshot->height   = 1;
+    vertex->isRedeemed         = Vertex::NOT_YET_REDEEMED;
+    std::vector<VertexPtr> lvs = {vertex};
+
+    // Store it to file
+    auto vtx_hash = vertex->cblock->GetHash();
+    STORE->StoreLevelSet(lvs);
+
+    // Retrive it from file and make sure nothing is modified
+    auto vtx_from_file = STORE->GetVertex(vtx_hash);
+    ASSERT_EQ(*vtx_from_file, *vertex);
+
+    // Modify the redemption status and destruct it
+    vtx_from_file->isRedeemed = Vertex::IS_REDEEMED;
+    vtx_from_file.reset();
+
+    // Retrive it again from file and make sure the redemption status
+    // in the file is also modified
+    auto vtx_modified = STORE->GetVertex(vtx_hash);
+    ASSERT_EQ(vtx_modified->isRedeemed, Vertex::IS_REDEEMED);
+
+    // Make sure that everything else stays the same
+    vtx_modified->isRedeemed = Vertex::NOT_YET_REDEEMED;
+    ASSERT_EQ(*vtx_modified, *vertex);
+}
