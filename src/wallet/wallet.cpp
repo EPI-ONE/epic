@@ -15,7 +15,7 @@
 #include <utility>
 
 Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession)
-    : threadPool_(2), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
+    : threadPool_(2), verifyThread_(1), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
           rpcLoggedin_ = false;
           spdlog::trace("[Wallet] wallet login session expired!");
       }) {
@@ -23,11 +23,11 @@ Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSess
         scheduleFunc_ = [&, backupPeriod]() { SendPeriodicTasks(backupPeriod); };
     }
     Load();
-    EnableRedemptions();
 }
 
 void Wallet::Start() {
     stopFlag_ = false;
+    verifyThread_.Start();
     threadPool_.Start();
 
     if (scheduleFunc_) {
@@ -41,6 +41,7 @@ void Wallet::Stop() {
     if (scheduleTask_.joinable()) {
         scheduleTask_.join();
     }
+    verifyThread_.Stop();
     threadPool_.Stop();
     spdlog::info("Wallet stopped.");
 }
@@ -119,7 +120,7 @@ void Wallet::RPCLogin() {
 void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
                             std::unordered_map<uint256, UTXOPtr> UTXOs,
                             std::unordered_set<uint256> STXOs) {
-    threadPool_.Execute([=, vertices = std::move(vertices), UTXOs = std::move(UTXOs), STXOs = std::move(STXOs)]() {
+    verifyThread_.Execute([=, vertices = std::move(vertices), UTXOs = std::move(UTXOs), STXOs = std::move(STXOs)]() {
         for (auto& vertex : vertices) {
             ProcessVertex(vertex);
         }
@@ -130,11 +131,6 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
             ProcessSTXO(stxo);
         }
     });
-
-    static Coin rewards = GetParams().reward * RedemptionInterval;
-    if (enableRedem_.load() && CanRedeem(rewards)) {
-        CreateRedemption(CreateNewKey(true));
-    }
 }
 
 void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
@@ -298,16 +294,18 @@ std::string Wallet::CreateFirstRegWhenPossible(const CKeyID& addr) {
     return CreateFirstRegistration(addr);
 }
 
-ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
-    auto totalCost = std::accumulate(outputs.begin(), outputs.end(), Coin{0},
-                                     [](Coin prev, auto pair) { return prev + pair.first; });
-    totalCost      = totalCost + (fee < MIN_FEE ? MIN_FEE : fee);
-    if (totalCost > totalBalance_) {
-        spdlog::info("[Wallet] too much money that we can't afford. Current balance = {}", totalBalance_);
+ConstTxPtr Wallet::CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee, const Coin& change) {
+    auto totalOutputs      = std::accumulate(outputs.begin(), outputs.end(), Coin{0},
+                                        [](Coin prev, auto pair) { return prev + pair.first; });
+    auto totalCost         = totalOutputs + (fee < MIN_FEE ? MIN_FEE : fee);
+    auto totalInputsNeeded = totalCost + change;
+    if (totalInputsNeeded > totalBalance_) {
+        spdlog::info("[Wallet] too much money that we can't afford. Current balance = {}, inputs needed = {}",
+                     totalBalance_, totalInputsNeeded.GetValue());
         return nullptr;
     }
 
-    auto [totalInput, toSpend] = Select(totalCost);
+    auto [totalInput, toSpend] = Select(totalInputsNeeded);
     Transaction tx;
 
     for (auto& utxo : toSpend) {
@@ -371,14 +369,6 @@ CKeyID Wallet::GetRandomAddress() {
     return keyBook.begin()->first;
 }
 
-void Wallet::ImportKey(const CKey& key, const CPubKey& pubKey) {
-    CiphertextKey ciphertext;
-    auto addr = pubKey.GetID();
-    crypter_.EncryptKey(master_, pubKey, key, ciphertext);
-    walletStore_.StoreKeys(addr, ciphertext, pubKey);
-    keyBook.insert_or_assign(addr, {ciphertext, pubKey});
-}
-
 bool Wallet::SendTxToMemPool(ConstTxPtr txPtr) {
     if (!MEMPOOL) {
         return false;
@@ -390,7 +380,7 @@ Coin Wallet::GetCurrentMinerReward() const {
     return GetMinerInfo().second;
 }
 
-bool Wallet::CanRedeem(Coin coins) {
+bool Wallet::CanRedeem(const Coin& coins) {
     return GetMinerInfo().second >= coins && pendingRedemption.empty();
 }
 
@@ -404,12 +394,15 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             if (!CreateFirstRegWhenPossible(addr).empty()) {
                 continue;
             }
-            if (GetBalance() <= (MIN_FEE + 1)) {
-                if (CanRedeem()) {
+
+            Coin minInputs = MIN_FEE + 2;
+            // guarantee that every time outputs size = 2, then output1 >=1, change >=1, inputs value >= fee + 2
+            if (GetBalance() < minInputs) {
+                if (CanRedeem(minInputs)) {
                     CreateRedemption(addr);
                     continue;
                 } else {
-                    while (GetBalance() <= MIN_FEE && !CanRedeem()) {
+                    while (GetBalance() <= MIN_FEE && !CanRedeem(minInputs)) {
                         // give up creating tx if we don't have enough balance nor can't redeem
                         std::this_thread::yield();
                         if (stopFlag_) {
@@ -421,8 +414,11 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     continue;
                 }
             } else {
-                Coin coin{random() % (GetBalance() - MIN_FEE - 2).GetValue() + MIN_FEE + 1};
-                auto tx = CreateTx({{coin, addr}});
+                // 1 <= output <= balance - fee -2
+                Coin coin{random() % (GetBalance() - minInputs).GetValue() + 1};
+
+                // change >= 1
+                auto tx = CreateTx({{coin, addr}}, MIN_FEE, 1);
                 SendTxToMemPool(tx);
                 spdlog::info("[Wallet] Sent {} coins to {} in tx {} with index {}", coin.GetValue(),
                              EncodeAddress(addr), std::to_string(tx->GetHash()), i);
@@ -460,8 +456,10 @@ uint256 Wallet::GetLastRedemHash() const {
     return lastRedemHash_;
 }
 
-ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
-    auto tx = CreateTx(outputs, fee);
+ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs,
+                                   const Coin& fee,
+                                   const Coin& change) {
+    auto tx = CreateTx(outputs, fee, change);
     if (tx) {
         SendTxToMemPool(tx);
     }

@@ -18,9 +18,12 @@ public:
     const uint32_t period  = 600;
     TestFactory fac;
 
-    void SetUp() override {}
+    void SetUp() override {
+        EpicTestEnvironment::SetUpDAG(path, true, true);
+    }
 
     void TearDown() override {
+        EpicTestEnvironment::TearDownDAG(path);
         std::string cmd = "exec rm -rf " + dir + " " + path;
         system(cmd.c_str());
     }
@@ -31,7 +34,6 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
     auto wallet = new Wallet{dir, 1, 0};
     wallet->GenerateMaster();
     wallet->SetPassphrase("");
-    wallet->DisableRedemptions();
     wallet->Start();
     wallet->CreateNewKey(false);
     MEMPOOL   = std::make_unique<MemPool>();
@@ -172,121 +174,150 @@ TEST_F(TestWallet, test_wallet_store) {
 }
 
 TEST_F(TestWallet, workflow) {
-    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");
     WALLET->Start();
 
     WALLET->CreateNewKey(true);
+
+    // 1. first registration
     auto registration = WALLET->CreateFirstRegistration(WALLET->GetRandomAddress());
     ASSERT_FALSE(registration.empty());
 
     MINER->Run();
 
-    while (WALLET->GetBalance() < 30) {
+    // 2. first redemption => unspent = 1
+    while (!WALLET->CanRedeem(10)) {
         std::this_thread::yield();
     }
-    WALLET->DisableRedemptions();
+    WALLET->CreateRedemption(WALLET->CreateNewKey(false));
+
+    while (WALLET->GetBalance() < 10) {
+        std::this_thread::yield();
+    }
     MINER->Stop();
 
     ASSERT_EQ(WALLET->GetUnspent().size(), 1);
 
-    auto tx = WALLET->CreateTx({{WALLET->GetBalance() - MIN_FEE, WALLET->GetRandomAddress()}});
-    ASSERT_EQ(WALLET->GetBalance().GetValue(), 0);
+    // 3. first normal transaction => unspent = 0, pending = 1, balance = 0, outputs size = 2 (receiver + change)
+    auto tx = WALLET->CreateTx({{WALLET->GetBalance() - MIN_FEE - 1, WALLET->GetRandomAddress()}}, MIN_FEE, 1);
+    ASSERT_EQ(tx->GetOutputs().size(), 2);
     ASSERT_TRUE(WALLET->SendTxToMemPool(tx));
+
+    ASSERT_EQ(WALLET->GetBalance().GetValue(), 0);
     ASSERT_EQ(WALLET->GetPendingTx().size(), 1);
     ASSERT_EQ(WALLET->GetPending().size(), 1);
     ASSERT_TRUE(WALLET->GetUnspent().empty());
 
-    while (MEMPOOL->GetRedemptionTx(false))
-        ;
     MINER->Run();
 
+    while (MEMPOOL->Empty()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    spdlog::info("[WalletTest-workflow] Mempool has sent the tx to miner");
+
     // Wait until receive the change of the last transaction
-    while (!MEMPOOL->Empty() || WALLET->GetUnspent().empty()) {
-        usleep(50000);
+    while (WALLET->GetUnspent().empty()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     MINER->Stop();
 
-    ASSERT_EQ(WALLET->GetUnspent().size(), 1);
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
-    ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_EQ(WALLET->GetSpent().size(), 1);
-
-    EpicTestEnvironment::TearDownDAG(path);
+    EXPECT_EQ(WALLET->GetUnspent().size(), 2);
+    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
+    EXPECT_EQ(WALLET->GetPending().size(), 0);
+    EXPECT_EQ(WALLET->GetSpent().size(), 1);
 }
 
 TEST_F(TestWallet, normal_workflow) {
-    EpicTestEnvironment::SetUpDAG(path, true, true);
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");
     WALLET->Start();
 
     WALLET->CreateNewKey(false);
-    WALLET->DisableRedemptions();
 
+    /*
+     * The 3 random transactions:
+     * -- 1. first registration
+     * -- 2. first redemption
+     * -- 3. normal transaction, with change at least 1
+     */
+    WALLET->CreateRandomTx(3);
     MINER->Run();
 
-    WALLET->CreateRandomTx(4);
-
-    // receive the change of last transaction
+    // wait until the third transaction is confirmed
     while (WALLET->GetSpent().size() != 1) {
         usleep(500000);
     }
-    MINER->Stop();
 
-    ASSERT_EQ(WALLET->GetUnspent().size(), 3);
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
-    ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_EQ(WALLET->GetSpent().size(), 1);
+    ASSERT_TRUE(MINER->Stop());
 
-    // check wallet restart
+    EXPECT_EQ(WALLET->GetUnspent().size(), 2);
+    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
+    EXPECT_EQ(WALLET->GetPending().size(), 0);
+    EXPECT_EQ(WALLET->GetSpent().size(), 1);
     auto balance = WALLET->GetBalance();
-    ASSERT_GT(balance.GetValue(), 0);
-    WALLET.reset(nullptr);
+    ASSERT_NE(balance.GetValue(), 0);
 
-    WALLET.reset(new Wallet("test_wallet_data//data/", 0, 0));
+    spdlog::info("[WalletTest-normal-workflow] Begin to restart wallet");
+    // check wallet restart
+    WALLET.reset(nullptr);
+    WALLET = std::make_unique<Wallet>("test_wallet_data//data/", 0, 0);
+
+    // register wallet interface
     DAG->RegisterOnLvsConfirmedCallback(
         [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
     WALLET->CheckPassphrase("");
-    WALLET->DisableRedemptions();
     WALLET->Start();
 
     ASSERT_TRUE(WALLET->ExistMasterInfo());
     ASSERT_EQ(balance, WALLET->GetBalance());
 
+    auto tx = WALLET->CreateTx({{1, WALLET->GetRandomAddress()}}, MIN_FEE, 1);
+    spdlog::info("[WalletTest-normal-workflow] Created the 4th transaction");
+
+    // since wallet has 2 unspent now, we are not sure how much money do they have, then we are not sure how many utxos
+    // are used to create new transaction as inputs
+    size_t current_unspent = WALLET->GetUnspent().size();
+
+    WALLET->SendTxToMemPool(tx);
     MINER->Run();
 
-    auto tx = WALLET->CreateTx({{1, WALLET->GetRandomAddress()}}, MIN_FEE);
-    WALLET->SendTxToMemPool(tx);
-    usleep(500000);
-    while (WALLET->GetPending().size() != 0 || WALLET->GetPendingTx().size() != 0) {
-        usleep(500000);
+    // wait until the 4th transaction is confirmed
+    while (!WALLET->GetPending().empty() || !WALLET->GetPendingTx().empty()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    MINER->Stop();
+    ASSERT_TRUE(MINER->Stop());
 
-    ASSERT_GE(WALLET->GetUnspent().size(), 3);
+    ASSERT_EQ(WALLET->GetUnspent().size(), current_unspent + 2);
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
     ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_LE(WALLET->GetSpent().size(), 3);
+    ASSERT_EQ(WALLET->GetSpent().size(), 2);
 
     SecureString newPhrase = "realone";
     ASSERT_TRUE(WALLET->ChangePassphrase("", newPhrase));
     ASSERT_TRUE(WALLET->CheckPassphrase(newPhrase));
+
+    // wallet will create a normal transaction rather than a redemption
     WALLET->CreateRandomTx(1);
+
+    // wait until the transaction is created
+    while (MEMPOOL->Empty()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    current_unspent      = WALLET->GetUnspent().size();
+    auto current_pending = WALLET->GetPendingTx().size();
 
     MINER->Run();
 
-    usleep(500000);
-    while (WALLET->GetPending().size() != 0 || WALLET->GetPendingTx().size() != 0) {
-        usleep(500000);
+    // wait until the 5th transaction is confirmed
+    while (!WALLET->GetPending().empty() || !WALLET->GetPendingTx().empty()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    MINER->Stop();
+    ASSERT_TRUE(MINER->Stop());
 
-    ASSERT_GE(WALLET->GetUnspent().size(), 3);
-    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
-    ASSERT_EQ(WALLET->GetPending().size(), 0);
-    ASSERT_LE(WALLET->GetSpent().size(), 4);
-
-    EpicTestEnvironment::TearDownDAG(path);
+    EXPECT_EQ(WALLET->GetUnspent().size(), current_unspent + 2);
+    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
+    EXPECT_EQ(WALLET->GetPending().size(), 0);
+    EXPECT_EQ(WALLET->GetSpent().size(), current_pending + 2);
 }
