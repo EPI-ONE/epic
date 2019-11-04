@@ -6,6 +6,7 @@
 #define EPIC_THREADPOOL_H
 
 #include "blocking_queue.h"
+#include "spdlog.h"
 
 #include <exception>
 #include <future>
@@ -77,7 +78,9 @@ public:
      */
     template <typename FunctionType>
     void Execute(FunctionType&& f) {
+        spdlog::trace("[ThreadPool] Executing task, task_queue_enabled_ = {}", task_queue_enabled_.load());
         if (task_queue_enabled_.load()) {
+            spdlog::trace("[ThreadPool] Executing task");
             task_queue_.Put(std::move(f));
         }
     }

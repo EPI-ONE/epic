@@ -110,11 +110,11 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
-    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = "
-                 "{}, version info = {}",
+    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = {}",
                  address.ToString(), versionMessage->client_version, versionMessage->address_you.ToString(),
                  versionMessage->address_me.ToString(), versionMessage->local_service, std::string(time_buffer),
-                 versionMessage->current_height, versionMessage->version_info);
+                 versionMessage->current_height);
+    spdlog::info("Git version info: {}", versionMessage->version_info);
 
     bool compareHeight = !(isSeed || CONFIG->AmISeed());
     if (compareHeight && versionMessage->current_height > DAG->GetBestMilestoneHeight()) {

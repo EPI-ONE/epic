@@ -47,7 +47,7 @@ bool CPUSolver::Solve(Block& b) {
     final_nonce = 0;
     final_time  = b.GetTime();
     found_sols  = false;
-    const VStream vs(b.GetHeader());
+    VStream vs(b.GetHeader());
 
     for (std::size_t i = 0; i < nthreads; ++i) {
         solverPool_.Execute([&, i]() {
