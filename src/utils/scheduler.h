@@ -5,6 +5,8 @@
 #ifndef EPIC_SCHEDULER_H
 #define EPIC_SCHEDULER_H
 
+#include "spdlog/spdlog.h"
+
 #include <chrono>
 #include <functional>
 #include <thread>
@@ -48,7 +50,11 @@ private:
 
 class Timer {
 public:
-    Timer(uint32_t _duration, std::function<void()>&& f) : duration_(_duration), f_(std::move(f)), stop_(true) {}
+    Timer(uint32_t _duration, std::function<void()>&& f) : duration_(_duration), f_(std::move(f)), stop_(true) {
+        if (duration_ == 0) {
+            spdlog::trace("Created a time of invalid duration");
+        }
+    }
     ~Timer() {
         Stop();
     }

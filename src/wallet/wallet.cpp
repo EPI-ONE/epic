@@ -205,7 +205,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
                 auto output = it->second->GetOutputs()[0];
                 auto keyId  = ParseAddrFromScript(output.listingContent);
                 assert(keyId);
-                SetLastRedem(vertex->cblock->GetHash(), *keyId);
+                SetLastRedempInfo(vertex->cblock->GetHash(), *keyId);
             }
             pendingRedemption.erase(it);
         }
@@ -448,11 +448,11 @@ CKeyID Wallet::GetLastRedemAddress() const {
     return lastRedemAddress_;
 }
 
-void Wallet::SetLastRedem(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
+void Wallet::SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     lastRedemAddress_ = lastRedemAddress;
     lastRedemHash_    = lastRedemHash;
-    walletStore_.StoreLastRedem(lastRedemHash_, lastRedemAddress_);
+    walletStore_.StoreLastRedempInfo(lastRedemHash_, lastRedemAddress_);
 }
 
 uint256 Wallet::GetLastRedemHash() const {

@@ -234,7 +234,7 @@ std::optional<MasterInfo> WalletStore::GetMasterInfo() {
     return {};
 }
 
-bool WalletStore::StoreLastRedem(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
+bool WalletStore::StoreLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
     VStream key, value;
     key << kLastRedem;
     value << lastRedemHash << lastRedemAddress;

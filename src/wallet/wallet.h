@@ -155,7 +155,7 @@ private:
     CKeyID GetLastRedemAddress() const;
     uint256 GetLastRedemHash() const;
 
-    void SetLastRedem(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
+    void SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
 
     std::atomic_bool cryptedFlag_ = false;
     SecureByte master_{};
