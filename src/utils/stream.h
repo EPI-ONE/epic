@@ -56,17 +56,8 @@ public:
         ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 
-    VStream& operator=(const VStream& b) {
-        readPos_ = b.readPos_;
-        chars_   = b.chars_;
-        return *this;
-    }
-
-    VStream& operator=(VStream&& b) noexcept {
-        readPos_ = b.readPos_;
-        chars_   = std::move(b.chars_);
-        return *this;
-    }
+    VStream& operator=(const VStream& b) = default;
+    VStream& operator=(VStream&& b) = default;
 
     VStream& operator+=(const VStream& b) {
         chars_.insert(chars_.end(), b.cbegin(), b.cend());
