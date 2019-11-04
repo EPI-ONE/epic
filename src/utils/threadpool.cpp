@@ -52,6 +52,7 @@ void ThreadPool::Start() {
 }
 
 void ThreadPool::Stop() {
+    spdlog::debug("Stopping threadPool...");
     task_queue_.Quit();
     for (auto& worker : workers_) {
         if (worker.joinable()) {
@@ -64,6 +65,7 @@ void ThreadPool::Stop() {
         delete working_states;
         working_states = nullptr;
     }
+    spdlog::debug("ThreadPool stopped.");
 }
 
 std::size_t ThreadPool::GetThreadSize() const {
@@ -99,12 +101,6 @@ void ThreadPool::ClearAndDisableTasks() {
 
 void ThreadPool::Abort() {
     ClearAndDisableTasks();
-
-    task_queue_enabled_ = false;
-    if (!task_queue_.Empty()) {
-        task_queue_.Clear();
-    }
-
 
     while (!IsIdle()) {
         std::this_thread::yield();

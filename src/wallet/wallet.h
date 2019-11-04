@@ -20,8 +20,7 @@
 
 class Tasm;
 
-constexpr uint64_t MIN_FEE            = 1;
-constexpr uint64_t RedemptionInterval = 6;
+constexpr uint64_t MIN_FEE = 1;
 
 std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content);
 
@@ -35,7 +34,6 @@ private:
     enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
-    Wallet() = delete;
     Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession);
 
     ~Wallet();
@@ -50,15 +48,26 @@ public:
 
     CKeyID GetRandomAddress();
 
-    void ImportKey(const CKey& key, const CPubKey& pubKey);
-
     CKeyID CreateNewKey(bool compressed);
     std::string CreateFirstRegistration(const CKeyID&);
     std::string CreateFirstRegWhenPossible(const CKeyID&);
     ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
     void CreateRedemption(const CKeyID&);
-    ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
-    ConstTxPtr CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee = 0);
+
+    /**
+     * create a normal transaction
+     * @param outputs vector of outputs(value + address)
+     * @param fee transaction fee, default to be MIN_FEE(1)
+     * @param change the minimum change that the transaction should contain, default to be 0
+     * @return
+     */
+    ConstTxPtr CreateTx(const std::vector<std::pair<Coin, CKeyID>>& outputs,
+                        const Coin& fee    = MIN_FEE,
+                        const Coin& change = 0);
+
+    ConstTxPtr CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs,
+                               const Coin& fee    = MIN_FEE,
+                               const Coin& change = 0);
 
     void CreateRandomTx(size_t size);
 
@@ -99,15 +108,11 @@ public:
     bool ExistMasterInfo() const {
         return !masterInfo_.IsNull();
     }
+
+    bool CanRedeem(const Coin& coins = 1);
+
     bool GenerateMaster();
 
-    void EnableRedemptions() {
-        enableRedem_ = true;
-    }
-
-    void DisableRedemptions() {
-        enableRedem_ = false;
-    }
 
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
@@ -117,6 +122,8 @@ private:
 
     ThreadPool threadPool_;
 
+    ThreadPool verifyThread_;
+
     WalletStore walletStore_;
 
     std::atomic_bool stopFlag_;
@@ -125,7 +132,6 @@ private:
     std::thread scheduleTask_;
 
     mutable std::shared_mutex lock_;
-    std::atomic_bool enableRedem_ = true;
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};
     CKeyID lastRedemAddress_;
     uint256 lastRedemHash_;
@@ -146,8 +152,6 @@ private:
     TxInput CreateSignedVin(const CKeyID&, TxOutPoint, const std::string&);
 
     void SendPeriodicTasks(uint32_t);
-
-    bool CanRedeem(Coin coins = 1);
 
     std::pair<uint256, Coin> GetMinerInfo() const;
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
