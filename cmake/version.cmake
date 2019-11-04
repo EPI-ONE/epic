@@ -1,5 +1,5 @@
 find_package(Git)
-if(GIT_FOUND)
+if (GIT_FOUND)
     execute_process(
             COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -7,8 +7,16 @@ if(GIT_FOUND)
             ERROR_QUIET
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-else()
-    set(GIT_COMMIT "git unknown")
-endif()
+endif ()
+
+if (NOT GIT_COMMIT)
+    set(GIT_COMMIT "unknown")
+endif ()
+
 string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S")
+
+MESSAGE(STATUS "Version: " ${EPIC_VERSION})
+MESSAGE(STATUS "Commit: " ${GIT_COMMIT})
+MESSAGE(STATUS "Build time: " ${BUILD_TIMESTAMP})
+
 configure_file(${SRC} ${DST} @ONLY)
