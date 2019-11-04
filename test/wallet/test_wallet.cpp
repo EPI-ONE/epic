@@ -28,7 +28,7 @@ public:
 
 TEST_F(TestWallet, basic_workflow_in_wallet) {
     Coin init_money{100};
-    auto wallet = new Wallet{dir, 1};
+    auto wallet = new Wallet{dir, 1, 0};
     wallet->GenerateMaster();
     wallet->SetPassphrase("");
     wallet->DisableRedemptions();
@@ -113,7 +113,7 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
 
     delete wallet;
 
-    Wallet newWallet{dir, period};
+    Wallet newWallet{dir, period, 0};
     ASSERT_EQ(newWallet.GetUnspent().size(), 1);
     ASSERT_EQ(newWallet.GetPending().size(), 0);
     ASSERT_EQ(newWallet.GetSpent().size(), 1);
@@ -208,10 +208,10 @@ TEST_F(TestWallet, workflow) {
     }
     MINER->Stop();
 
-    EXPECT_EQ(WALLET->GetUnspent().size(), 1);
-    EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
-    EXPECT_EQ(WALLET->GetPending().size(), 0);
-    EXPECT_EQ(WALLET->GetSpent().size(), 1);
+    ASSERT_EQ(WALLET->GetUnspent().size(), 1);
+    ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
+    ASSERT_EQ(WALLET->GetPending().size(), 0);
+    ASSERT_EQ(WALLET->GetSpent().size(), 1);
 
     EpicTestEnvironment::TearDownDAG(path);
 }
@@ -245,14 +245,14 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_GT(balance.GetValue(), 0);
     WALLET.reset(nullptr);
 
-    WALLET.reset(new Wallet("test_wallet_data//data/", 0));
+    WALLET.reset(new Wallet("test_wallet_data//data/", 0, 0));
     DAG->RegisterOnLvsConfirmedCallback(
         [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
     WALLET->CheckPassphrase("");
     WALLET->DisableRedemptions();
     WALLET->Start();
 
-    ASSERT_TRUE(WALLET->ExistMaster());
+    ASSERT_TRUE(WALLET->ExistMasterInfo());
     ASSERT_EQ(balance, WALLET->GetBalance());
 
     MINER->Run();
@@ -287,5 +287,6 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_EQ(WALLET->GetPendingTx().size(), 0);
     ASSERT_EQ(WALLET->GetPending().size(), 0);
     ASSERT_LE(WALLET->GetSpent().size(), 4);
+
     EpicTestEnvironment::TearDownDAG(path);
 }

@@ -36,6 +36,7 @@ port = 3777
 [wallet]
 path = "wallet/"
 backup_period = 600
+login_session = 60
 
 [miner]
 solver_addr = ""

@@ -83,6 +83,9 @@ int Init(int argc, char* argv[]) {
         return COMMANDLINE_INIT_FAILURE;
     }
 
+    std::cout << "Start initializing...\n" << std::endl;
+
+
     /*
      *  Load config file
      */
@@ -154,7 +157,7 @@ int Init(int argc, char* argv[]) {
     /*
      * Load wallet
      */
-    WALLET = std::make_unique<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup());
+    WALLET = std::make_unique<Wallet>(CONFIG->GetWalletPath(), CONFIG->GetWalletBackup(), CONFIG->GetWalletLogin());
     DAG->RegisterOnLvsConfirmedCallback(
         [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
 
@@ -364,6 +367,10 @@ void LoadConfigFile() {
         if (wallet_backup) {
             CONFIG->SetWalletBackup(*wallet_backup);
         }
+        auto wallet_login = wallet_config->get_as<uint32_t>("login_session");
+        if (wallet_login) {
+            CONFIG->SetWalletLogin(*wallet_login);
+        }
     }
 
     // miner
@@ -413,7 +420,7 @@ bool Start() {
     }
     PEERMAN->Start();
     WALLET->Start();
-    if (!WALLET->ExistMaster() && !WALLET->GenerateMaster()) {
+    if (!WALLET->ExistMasterInfo() && !WALLET->GenerateMaster()) {
         std::cerr << "Failed to generate master key for wallet" << std::endl;
         return false;
     } // TODO: make it from rpc calls

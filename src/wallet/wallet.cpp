@@ -5,6 +5,7 @@
 #include "wallet.h"
 #include "mempool.h"
 #include "random.h"
+#include "tasm.h"
 
 #include <algorithm>
 #include <chrono>
@@ -13,13 +14,24 @@
 #include <tuple>
 #include <utility>
 
+Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession)
+    : threadPool_(2), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
+          rpcLoggedin_ = false;
+          spdlog::trace("[Wallet] wallet login session expired!");
+      }) {
+    if (backupPeriod) {
+        scheduleFunc_ = [&, backupPeriod]() { SendPeriodicTasks(backupPeriod); };
+    }
+    Load();
+    EnableRedemptions();
+}
+
 void Wallet::Start() {
     stopFlag_ = false;
     threadPool_.Start();
 
-    // zero period means no storing
-    if (storePeriod_ != 0) {
-        scheduleTask_ = std::thread([&]() { SendPeriodicTasks(storePeriod_, 20); });
+    if (scheduleFunc_) {
+        scheduleTask_ = std::thread(scheduleFunc_);
     }
 }
 
@@ -39,7 +51,13 @@ Wallet::~Wallet() {
 }
 
 void Wallet::Load() {
-    // an old wallet should always have keys
+    // a wallet should always have keys once generated master
+    if (auto info = walletStore_.GetMasterInfo()) {
+        masterInfo_  = std::move(*info);
+        cryptedFlag_ = true;
+    }
+
+    // an old wallet with miner chain should always have keys
     auto keysMap = walletStore_.GetAllKey();
     if (keysMap.empty()) {
         return;
@@ -49,14 +67,10 @@ void Wallet::Load() {
         keyBook.emplace(addr, std::make_pair(std::get<0>(encryptedPair), std::get<1>(encryptedPair)));
     }
 
-    if (auto info = walletStore_.GetMasterInfo()) {
-        masterInfo_  = std::move(*info);
-        cryptedFlag_ = true;
-    }
-
     hasSentFirstRegistration_ = walletStore_.GetFirstRegInfo();
-    if (auto last_redem_addr = walletStore_.GetLastRedemAddr()) {
-        lastRedemAddress_ = *last_redem_addr;
+    if (auto last_redem = walletStore_.GetLastRedem()) {
+        lastRedemHash_    = last_redem->first;
+        lastRedemAddress_ = last_redem->second;
     }
 
     pendingTx = walletStore_.GetAllTx();
@@ -70,12 +84,12 @@ void Wallet::Load() {
     totalBalance_ = balance;
 }
 
-void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
+void Wallet::SendPeriodicTasks(uint32_t storagePeriod) {
     // periodic task of storing data
     scheduler_.AddPeriodTask(storagePeriod, [&]() {
         threadPool_.Execute([&]() {
             walletStore_.ClearOldData();
-            spdlog::debug("Back up wallet data...");
+            spdlog::trace("[Wallet] Back up wallet data...");
 
             for (const auto& pairTx : pendingTx) {
                 walletStore_.StoreTx(*pairTx.second);
@@ -91,19 +105,15 @@ void Wallet::SendPeriodicTasks(uint32_t storagePeriod, uint32_t loginSession) {
         });
     });
 
-    scheduler_.AddPeriodTask(loginSession, [&]() {
-        threadPool_.Execute([&]() {
-            if (rpcLoggedin_) {
-                rpcLoggedin_ = false;
-                spdlog::debug("wallet login session expired!");
-            }
-        });
-    });
-
     while (!stopFlag_) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         scheduler_.Loop();
     }
+}
+
+void Wallet::RPCLogin() {
+    rpcLoggedin_ = true;
+    timer_.Reset();
 }
 
 void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
@@ -195,8 +205,7 @@ void Wallet::ProcessVertex(const VertexPtr& vertex) {
                 auto output = it->second->GetOutputs()[0];
                 auto keyId  = ParseAddrFromScript(output.listingContent);
                 assert(keyId);
-                SetLastRedemAddress(*keyId);
-                SetLastRedemHash(vertex->cblock->GetHash());
+                SetLastRedempInfo(vertex->cblock->GetHash(), *keyId);
             }
             pendingRedemption.erase(it);
         }
@@ -210,7 +219,7 @@ CKeyID Wallet::CreateNewKey(bool compressed) {
     auto addr      = pubkey.GetID();
 
     CiphertextKey ciphertext;
-    crypter_.EncryptKey(pubkey, privkey, ciphertext);
+    crypter_.EncryptKey(master_, pubkey, privkey, ciphertext);
 
     walletStore_.StoreKeys(addr, ciphertext, pubkey);
     keyBook.emplace(addr, std::make_pair(ciphertext, pubkey));
@@ -228,7 +237,7 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
         std::cout << e.what() << " when creating signed vin\n";
     }
     CKey privkey{};
-    if (!crypter_.DecryptKey(pubkey, ciphertext, privkey)) {
+    if (!crypter_.DecryptKey(master_, pubkey, ciphertext, privkey)) {
         spdlog::error("[Wallet] Fail to decrypt private keys");
         return TxInput{};
     }
@@ -365,7 +374,7 @@ CKeyID Wallet::GetRandomAddress() {
 void Wallet::ImportKey(const CKey& key, const CPubKey& pubKey) {
     CiphertextKey ciphertext;
     auto addr = pubKey.GetID();
-    crypter_.EncryptKey(pubKey, key, ciphertext);
+    crypter_.EncryptKey(master_, pubKey, key, ciphertext);
     walletStore_.StoreKeys(addr, ciphertext, pubKey);
     keyBook.insert_or_assign(addr, {ciphertext, pubKey});
 }
@@ -439,10 +448,11 @@ CKeyID Wallet::GetLastRedemAddress() const {
     return lastRedemAddress_;
 }
 
-void Wallet::SetLastRedemAddress(const CKeyID& lastRedemAddress) {
+void Wallet::SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
     WRITER_LOCK(lock_)
     lastRedemAddress_ = lastRedemAddress;
-    walletStore_.StoreLastRedemAddr(lastRedemAddress_);
+    lastRedemHash_    = lastRedemHash;
+    walletStore_.StoreLastRedempInfo(lastRedemHash_, lastRedemAddress_);
 }
 
 uint256 Wallet::GetLastRedemHash() const {
@@ -450,14 +460,11 @@ uint256 Wallet::GetLastRedemHash() const {
     return lastRedemHash_;
 }
 
-void Wallet::SetLastRedemHash(const uint256& h) {
-    WRITER_LOCK(lock_)
-    lastRedemHash_ = h;
-}
-
 ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& outputs, const Coin& fee) {
     auto tx = CreateTx(outputs, fee);
-    SendTxToMemPool(tx);
+    if (tx) {
+        SendTxToMemPool(tx);
+    }
     return tx;
 }
 
@@ -499,7 +506,7 @@ bool Wallet::SetPassphrase(const SecureString& phrase) {
     if (!crypter_.SetKeyFromPassphrase(phrase, masterInfo_.salt, masterInfo_.nDeriveIterations)) {
         return false;
     }
-    if (!crypter_.EncryptMaster(masterInfo_.cryptedMaster)) {
+    if (!crypter_.EncryptMaster(master_, masterInfo_.cryptedMaster)) {
         return false;
     }
 
@@ -531,9 +538,9 @@ bool Wallet::ChangePassphrase(const SecureString& oldPhrase, const SecureString&
     for (auto it = keyBook.begin(); it != keyBook.end(); it++) {
         auto value = it->second;
         CKey priv{};
-        oldCrypter.DecryptKey(value.second, value.first, priv);
+        oldCrypter.DecryptKey(master_, value.second, value.first, priv);
         CiphertextKey newCiphterText{};
-        crypter_.EncryptKey(value.second, priv, newCiphterText);
+        crypter_.EncryptKey(master_, value.second, priv, newCiphterText);
         value.first = newCiphterText;
 
         if (!walletStore_.StoreKeys(it->first, value.first, value.second)) {
@@ -555,10 +562,9 @@ bool Wallet::CheckPassphrase(const SecureString& phrase) {
                 return false;
             }
 
-            crypter_           = std::move(*oCrypter);
-            const auto& master = crypter_.GetMaster();
-            master_.resize(master.size());
-            memcpy(master_.data(), master.data(), master.size());
+            crypter_ = std::move(*oCrypter);
+            crypter_.DecryptMaster(masterInfo_.cryptedMaster, master_);
+
             return crypter_.IsReady();
         }
     } else {
@@ -572,13 +578,17 @@ std::optional<Crypter> Wallet::CheckPassphraseMatch(const SecureString& phrase) 
         return {};
     }
 
-    if (master_.empty() && tmpcrypter.DecryptMaster(masterInfo_.cryptedMaster)) {
-        return tmpcrypter;
+    if (master_.empty()) {
+        // TODO check
+        SecureByte tmpMaster{};
+        if (tmpcrypter.DecryptMaster(masterInfo_.cryptedMaster, tmpMaster)) {
+            return tmpcrypter;
+        }
+        return {};
     }
 
     std::vector<unsigned char> ciphertext{};
-    tmpcrypter.SetMaster(master_);
-    if (tmpcrypter.EncryptMaster(ciphertext) &&
+    if (tmpcrypter.EncryptMaster(master_, ciphertext) &&
         memcmp(ciphertext.data(), masterInfo_.cryptedMaster.data(), ciphertext.size()) == 0) {
         return tmpcrypter;
     }
@@ -597,6 +607,5 @@ bool Wallet::GenerateMaster() {
     // TODO: add mnemonics printing
     // mne.PrintToFile(CONFIG->GetWalletPath());
     std::tie(master_, chaincode_) = mne.GetMasterKeyAndSeed();
-    crypter_.SetMaster(master_);
     return true;
 }

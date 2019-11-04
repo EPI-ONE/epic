@@ -3,8 +3,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_WALLET_CRYPTER_H
-#define BITCOIN_WALLET_CRYPTER_H
+#ifndef EPIC_WALLET_CRYPTER_H
+#define EPIC_WALLET_CRYPTER_H
 
 #include "key.h"
 #include "secure.h"
@@ -58,15 +58,15 @@ public:
     }
 };
 
-
-/** Encryption/decryption context with key information */
+/** 
+ * Encryption/decryption context with key information
+ * It should be used along with a master key in wallet
+ */
 class Crypter {
 private:
     SecureByte passphraseKey_;
     SecureByte passphraseIV_;
-    SecureByte master_;
     bool fKeySet_;
-    bool fMaster_;
 
     bool SetKey(const SecureByte& chNewKey, const std::vector<unsigned char>& chNewIV);
 
@@ -74,23 +74,16 @@ public:
     bool SetKeyFromPassphrase(const SecureString& strKeyData,
                               const std::vector<unsigned char>& chSalt,
                               const unsigned int nRounds);
-    bool EncryptMaster(std::vector<unsigned char>& ciphertext) const;
-    bool DecryptMaster(const std::vector<unsigned char>& ciphertext);
-    bool EncryptKey(const CPubKey& pubkey, const CKey& key, std::vector<unsigned char>& cryptedPriv) const;
-    bool DecryptKey(const CPubKey& pubkey, const std::vector<unsigned char>& cryptedPriv, CKey& key) const;
-
-    bool SetMaster(const SecureByte& master) {
-        if (master.size() != 32) {
-            return false;
-        }
-        memcpy(master_.data(), master.data(), master.size());
-        fMaster_ = true;
-        return true;
-    } 
-
-    SecureByte GetMaster() const {
-        return master_;
-    }
+    bool EncryptMaster(const SecureByte& master, std::vector<unsigned char>& ciphertext) const;
+    bool DecryptMaster(const std::vector<unsigned char>& ciphertext, SecureByte& master) const;
+    bool EncryptKey(const SecureByte& master,
+                    const CPubKey& pubkey,
+                    const CKey& key,
+                    std::vector<unsigned char>& cryptedPriv) const;
+    bool DecryptKey(const SecureByte& master,
+                    const CPubKey& pubkey,
+                    const std::vector<unsigned char>& cryptedPriv,
+                    CKey& key) const;
 
     void CleanKey() {
         memory_cleanse(passphraseKey_.data(), passphraseKey_.size());
@@ -98,26 +91,18 @@ public:
         fKeySet_ = false;
     }
 
-    inline bool IsReady() const {
-        return fKeySet_ && fMaster_;
+    bool IsReady() const {
+        return fKeySet_;
     }
 
-    Crypter() : fKeySet_(false) , fMaster_(false) {
+    Crypter() : fKeySet_(false) {
         passphraseKey_.resize(WALLET_CRYPTO_KEY_SIZE);
         passphraseIV_.resize(WALLET_CRYPTO_IV_SIZE);
-        master_.resize(WALLET_CRYPTO_KEY_SIZE);
-    }
-
-    explicit Crypter(const SecureByte& masterKey) : master_(masterKey), fKeySet_(false), fMaster_(true) {
-        passphraseKey_.resize(WALLET_CRYPTO_KEY_SIZE);
-        passphraseIV_.resize(WALLET_CRYPTO_IV_SIZE);
-        master_.resize(WALLET_CRYPTO_KEY_SIZE);
     }
 
     ~Crypter() {
         CleanKey();
-        memory_cleanse(master_.data(), master_.size());
     }
 };
 
-#endif // BITCOIN_WALLET_CRYPTER_H
+#endif // EPIC_WALLET_CRYPTER_H

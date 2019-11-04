@@ -11,22 +11,24 @@
 #include "test_env.h"
 
 #include <chrono>
+#include <string>
 
 class TestRPCServer : public testing::Test {
 public:
     TestFactory fac;
     std::string prefix = "test_rpc/";
-    static std::string adr;
+    static std::string addr;
     const uint256 double0hash = Hash::GetDoubleZeroHash();
 
     static void SetUpTestCase() {
-        adr = "0.0.0.0:3778";
+        addr = "0.0.0.0:3789";
     }
 
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
-        auto netAddress = NetAddress::GetByIP(adr);
-        RPC             = std::make_unique<RPCServer>(*netAddress, std::vector{RPCServiceType::BLOCK_EXPLORER_SERVER});
+        auto netAddress = NetAddress::GetByIP(addr);
+        RPC             = std::make_unique<RPCServer>(
+            *netAddress, std::vector{RPCServiceType::BLOCK_EXPLORER_SERVER, RPCServiceType::COMMAND_LINE_SERVER});
         RPC->Start();
 
         while (!RPC->IsRunning()) {
@@ -40,10 +42,10 @@ public:
     }
 };
 
-std::string TestRPCServer::adr = "";
+std::string TestRPCServer::addr = "";
 
 TEST_F(TestRPCServer, GetBlock) {
-    RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
+    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 
     auto req_hash = std::to_string(GENESIS->GetHash());
     auto res      = client.GetBlock(req_hash);
@@ -78,7 +80,7 @@ TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
     }
     ASSERT_TRUE(STORE->StoreLevelSet(lvs));
 
-    RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
+    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 
     for (int i = 0; i < size; ++i) {
         auto req_hash = std::to_string(lvs[i]->cblock->GetHash());
@@ -109,7 +111,7 @@ TEST_F(TestRPCServer, GetLatestMilestone) {
     usleep(50000);
     DAG->Stop();
 
-    RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
+    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 
     auto res = client.GetLatestMilestone();
     ASSERT_TRUE(res.has_value());
@@ -148,7 +150,7 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
     usleep(50000);
     DAG->Stop();
 
-    RPCClient client(grpc::CreateChannel(adr, grpc::InsecureChannelCredentials()));
+    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
 
     size_t request_milestone_number = 3;
     auto req_hash                   = std::to_string(mss_to_check[0]->cblock->GetHash());
@@ -159,4 +161,130 @@ TEST_F(TestRPCServer, GetNewMilestoneSince) {
         auto res_blk = ToBlock(res.value()[i]);
         EXPECT_EQ(res_blk, *mss_to_check[i + 1]->cblock);
     }
+}
+
+TEST_F(TestRPCServer, wallet_passphrase) {
+    RPCClient client{grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())};
+
+    enum class PhraseCode { NOTSTART, ENCRYPTED, NOPHRASE, FAILTOSET, FAILTOLOGIN, FAILTOCHANGE, LOGIN, SET, UPDATE };
+
+    auto testCode = std::map<PhraseCode, std::string>{
+        {PhraseCode::NOTSTART, "Wallet has not been started"},
+        {PhraseCode::ENCRYPTED, "Wallet has already be encrypted with a passphrase"},
+        {PhraseCode::NOPHRASE, "Wallet has no phrase set. Please set one first"},
+        {PhraseCode::FAILTOSET, "Failed to set passphrase"},
+        {PhraseCode::FAILTOLOGIN, "Failed to login with the passphrase. Please check passphrase"},
+        {PhraseCode::FAILTOCHANGE, "Failed to change passphrase. Please check passphrase"},
+        {PhraseCode::LOGIN, "You are already logged in"},
+        {PhraseCode::SET, "Your passphrase has been successfully set!"},
+        {PhraseCode::UPDATE, "Your passphrase is successfully updated!"},
+    };
+
+    std::string phrase = "mypass";
+    std::string phrase_phantom = "phantom";
+    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::NOTSTART]);
+    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOTSTART]);
+    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::NOTSTART]);
+
+    WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
+    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::NOPHRASE]);
+    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOPHRASE]);
+    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::FAILTOSET]);
+
+    ASSERT_TRUE(WALLET->GenerateMaster());
+    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::SET]);
+
+    std::string phrase_wrong = "wrong";
+    ASSERT_EQ(client.SetPassphrase(phrase_wrong).value(), testCode[PhraseCode::ENCRYPTED]);
+    ASSERT_EQ(client.ChangePassphrase(phrase_wrong, phrase_phantom).value(), testCode[PhraseCode::FAILTOCHANGE]);
+    ASSERT_EQ(client.Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
+
+    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::LOGIN]);
+    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::UPDATE]);
+    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client.Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
+
+    // restart wallet
+    WALLET.reset();
+    WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
+    ASSERT_TRUE(WALLET->ExistMasterInfo());
+    ASSERT_EQ(client.Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client.Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
+
+    WALLET.reset();
+}
+
+TEST_F(TestRPCServer, transaction_and_miner) {
+    RPCClient client{grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())};
+    MEMPOOL = std::make_unique<MemPool>();
+    MINER   = std::make_unique<Miner>(4);
+
+    enum class AnswerCode {
+        MINER_NOT_RUNNING,
+        MINER_STOP_FAIL,
+        MINER_STOP,
+        WALLET_NOT_START,
+        NOT_LOG_IN,
+        NO_OUTPUT,
+        WRONG_ADDR,
+        CREATE_TX_FAIL,
+        CREATE_TX
+    };
+
+    auto testCode = std::map<AnswerCode, std::string>{
+        {AnswerCode::MINER_NOT_RUNNING, "Miner is not running yet"},
+        {AnswerCode::MINER_STOP_FAIL, "Failed to stop miner"},
+        {AnswerCode::MINER_STOP, "Miner is successfully stopped"},
+        {AnswerCode::WALLET_NOT_START, "Wallet has not been started"},
+        {AnswerCode::NOT_LOG_IN, "Please log in or set up a new passphrase"},
+        {AnswerCode::NO_OUTPUT, "Please specify at least one output"},
+        {AnswerCode::WRONG_ADDR, "Wrong address: "},
+        {AnswerCode::CREATE_TX_FAIL, "Failed to create tx. Please check if you have enough balance."},
+        {AnswerCode::CREATE_TX, "Now wallet is creating tx"},
+    };
+
+    ASSERT_EQ(client.StopMiner().value(), testCode[AnswerCode::MINER_NOT_RUNNING]);
+    ASSERT_EQ(client.StartMiner().value(), true);
+    ASSERT_EQ(client.StartMiner().value(), false);
+
+    ASSERT_EQ(client.CreateRandomTx(1).value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client.CreateTx({}, 0).value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client.GenerateNewKey().value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client.GetBalance().value(), testCode[AnswerCode::WALLET_NOT_START]);
+
+    WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
+    ASSERT_EQ(client.CreateRandomTx(1).value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client.CreateTx({}, 0).value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client.GenerateNewKey().value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client.GetBalance().value(), testCode[AnswerCode::NOT_LOG_IN]);
+
+    DAG->RegisterOnLvsConfirmedCallback(
+        [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
+    WALLET->GenerateMaster();
+    WALLET->SetPassphrase("");
+    WALLET->RPCLogin();
+    WALLET->Start();
+
+    ASSERT_EQ(client.CreateRandomTx(2).value(), testCode[AnswerCode::CREATE_TX]);
+    ASSERT_EQ(client.CreateTx({}, 1).value(), testCode[AnswerCode::NO_OUTPUT]);
+    while (WALLET->GetBalance() < 10) {
+        std::this_thread::yield();
+    }
+
+    // malicious address 
+    std::string wrong_addr = std::to_string(fac.CreateKeyPair().second.GetID()) + "deadbeef";
+    ASSERT_EQ(client.CreateTx({{1, wrong_addr}}, 0).value(), testCode[AnswerCode::WRONG_ADDR] + wrong_addr);
+
+    auto opAddr = client.GenerateNewKey();
+    ASSERT_TRUE(opAddr.has_value());
+
+    // not enough balance
+    ASSERT_EQ(client.CreateTx({{1100, *opAddr}}, 1010), testCode[AnswerCode::CREATE_TX_FAIL]);
+    auto opBalance = client.GetBalance();
+    ASSERT_TRUE(opBalance.has_value());
+    ASSERT_TRUE(client.CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
+
+    ASSERT_EQ(client.StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
+    ASSERT_TRUE(client.Stop());
 }

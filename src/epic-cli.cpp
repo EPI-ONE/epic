@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
             case GENERATE_NEWKEY: {
                 auto r = client.GenerateNewKey();
                 if (r) {
-                    std::cout << (*r) << std::endl;
+                    std::cout << "Address = " << (*r) << std::endl;
                 } else {
                     throw UnconnectedException();
                 }

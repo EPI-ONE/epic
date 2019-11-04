@@ -181,14 +181,14 @@ std::optional<std::string> RPCClient::CreateRandomTx(size_t size) {
     return response.result();
 }
 
-RPCClient::option_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outpus,
+RPCClient::option_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs,
                                              uint64_t fee) {
     CreateTxRequest request;
     CreateTxResponse response;
     grpc::ClientContext context;
 
     request.set_fee(fee);
-    for (auto& output : outpus) {
+    for (auto& output : outputs) {
         auto rpc_output = request.add_outputs();
         rpc_output->set_address(output.second);
         rpc_output->set_money(output.first);

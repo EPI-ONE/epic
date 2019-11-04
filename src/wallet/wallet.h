@@ -10,7 +10,6 @@
 #include "key.h"
 #include "mnemonics.h"
 #include "scheduler.h"
-#include "tasm.h"
 #include "threadpool.h"
 #include "vertex.h"
 #include "wallet_store.h"
@@ -18,6 +17,8 @@
 #include <array>
 #include <atomic>
 #include <utility>
+
+class Tasm;
 
 constexpr uint64_t MIN_FEE            = 1;
 constexpr uint64_t RedemptionInterval = 6;
@@ -34,11 +35,8 @@ private:
     enum { CKEY_ID = 0, TX_INDEX, OUTPUT_INDEX, COIN };
 
 public:
-    Wallet(std::string walletPath, uint32_t period)
-        : threadPool_(2), walletStore_(walletPath), storePeriod_(period), totalBalance_{0} {
-        Load();
-        EnableRedemptions();
-    }
+    Wallet() = delete;
+    Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession);
 
     ~Wallet();
 
@@ -93,14 +91,12 @@ public:
     bool ChangePassphrase(const SecureString& oldPhrase, const SecureString& newPhrase);
     bool CheckPassphrase(const SecureString& phrase);
 
-    void RPCLogin() {
-        rpcLoggedin_ = true;
-    }
+    void RPCLogin();
     bool IsLoggedIn() const {
         return rpcLoggedin_;
     }
 
-    bool ExistMaster() const {
+    bool ExistMasterInfo() const {
         return !masterInfo_.IsNull();
     }
     bool GenerateMaster();
@@ -124,8 +120,8 @@ private:
     WalletStore walletStore_;
 
     std::atomic_bool stopFlag_;
-    uint32_t storePeriod_;
     Scheduler scheduler_;
+    std::function<void(void)> scheduleFunc_ = nullptr;
     std::thread scheduleTask_;
 
     mutable std::shared_mutex lock_;
@@ -149,7 +145,7 @@ private:
 
     TxInput CreateSignedVin(const CKeyID&, TxOutPoint, const std::string&);
 
-    void SendPeriodicTasks(uint32_t, uint32_t);
+    void SendPeriodicTasks(uint32_t);
 
     bool CanRedeem(Coin coins = 1);
 
@@ -157,13 +153,12 @@ private:
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
 
     CKeyID GetLastRedemAddress() const;
-    void SetLastRedemAddress(const CKeyID& lastRedemAddress);
-
     uint256 GetLastRedemHash() const;
-    void SetLastRedemHash(const uint256&);
+
+    void SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
 
     std::atomic_bool cryptedFlag_ = false;
-    SecureByte master_;
+    SecureByte master_{};
     uint256 chaincode_;
     MasterInfo masterInfo_;
     Crypter crypter_;
@@ -171,6 +166,7 @@ private:
     // check if the old pass phrase matches
     std::optional<Crypter> CheckPassphraseMatch(const SecureString&) const;
     std::atomic_bool rpcLoggedin_ = false;
+    Timer timer_;
 };
 
 extern std::unique_ptr<Wallet> WALLET;

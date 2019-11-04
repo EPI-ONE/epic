@@ -1,9 +1,9 @@
-#ifndef __SRC_UTIL_RANDOM__
-#define __SRC_UTIL_RANDOM__
+#ifndef EPIC_UTIL_RANDOM
+#define EPIC_UTIL_RANDOM
 
-#include <immintrin.h>
+#include <cstddef>
 
 void GetRDRandBytes(unsigned char* buf, size_t size) noexcept;
 bool GetOpenSSLRand(unsigned char* buf, size_t size) noexcept;
 
-#endif // __SRC_UTIL_RANDOM__
+#endif // EPIC_UTIL_RANDOM

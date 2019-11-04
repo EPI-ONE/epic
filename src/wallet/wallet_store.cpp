@@ -234,23 +234,24 @@ std::optional<MasterInfo> WalletStore::GetMasterInfo() {
     return {};
 }
 
-bool WalletStore::StoreLastRedemAddr(const CKeyID& addr) {
+bool WalletStore::StoreLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
     VStream key, value;
     key << kLastRedem;
-    value << addr;
+    value << lastRedemHash << lastRedemAddress;
     return put(db_, handleMap_.at(kInfo), key, value);
 }
 
-std::optional<CKeyID> WalletStore::GetLastRedemAddr() {
+std::optional<std::pair<uint256, CKeyID>> WalletStore::GetLastRedem() {
     VStream key;
     key << kLastRedem;
     PinnableSlice valueSlice;
     if (db_->Get(ReadOptions(), handleMap_.at(kInfo), Slice{key.data(), key.size()}, &valueSlice).ok()) {
         try {
             VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
-            CKeyID addr{};
-            value >> addr;
-            return addr;
+            uint256 lastRedemHash{};
+            CKeyID lastRedemAddress{};
+            value >> lastRedemHash >> lastRedemAddress;
+            return {{lastRedemHash, lastRedemAddress}};
         } catch (const std::exception& e) {
             spdlog::info("Fail when reading last redemption hash from wallet store with error {}", e.what());
         }
@@ -260,13 +261,11 @@ std::optional<CKeyID> WalletStore::GetLastRedemAddr() {
 
 bool WalletStore::StoreFirstRegInfo() {
     VStream key;
-    std::cout << key.str() << std::endl;
     return put(db_, handleMap_.at(kInfo), key, VStream{true});
 }
 
 bool WalletStore::GetFirstRegInfo() {
     VStream key;
-    std::cout << key.str() << std::endl;
     return !RocksDB::Get(kInfo, Slice{key.data(), key.size()}).empty();
 }
 

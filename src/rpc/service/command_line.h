@@ -45,11 +45,11 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
                            StopMinerResponse* reply) override {
         if (!MINER->IsRunning()) {
             reply->set_result("Miner is not running yet");
-        }
-        if (!MINER->Stop()) {
+        } else if (!MINER->Stop()) {
             reply->set_result("Failed to stop miner");
+        } else {
+            reply->set_result("Miner is successfully stopped");
         }
-        reply->set_result("Miner is successfully stopped");
         return grpc::Status::OK;
     }
 
@@ -161,7 +161,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
                                SetPassphraseResponse* reply) override {
         if (!WALLET) {
             reply->set_responseinfo("Wallet has not been started");
-        } else if (WALLET->IsCrypted() || WALLET->ExistMaster()) {
+        } else if (WALLET->IsCrypted() || WALLET->ExistMasterInfo()) {
             reply->set_responseinfo("Wallet has already be encrypted with a passphrase");
         } else if (!WALLET->SetPassphrase(SecureString{request->passphrase()})) {
             reply->set_responseinfo("Failed to set passphrase");
@@ -176,7 +176,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
                                   ChangePassphraseResponse* reply) override {
         if (!WALLET) {
             reply->set_responseinfo("Wallet has not been started");
-        } else if (!WALLET->IsCrypted() && !WALLET->ExistMaster()) {
+        } else if (!WALLET->IsCrypted() && !WALLET->ExistMasterInfo()) {
             reply->set_responseinfo("Wallet has no phrase set. Please set one first");
         } else if (!WALLET->ChangePassphrase(SecureString{request->oldpassphrase()},
                                              SecureString{request->newpassphrase()})) {
@@ -190,14 +190,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     grpc::Status Login(grpc::ServerContext* context, const LoginRequest* request, LoginResponse* reply) override {
         if (!WALLET) {
             reply->set_responseinfo("Wallet has not been started");
-        } else if (WALLET->ExistMaster()) {
-            if (!WALLET->CheckPassphrase(SecureString{request->passphrase()})) {
-                reply->set_responseinfo("Failed to login with the passphrase. Please check passphrase");
-            }
-            reply->set_responseinfo("You are already logged in");
-            WALLET->RPCLogin();
-            return grpc::Status::OK;
-        } else if (!WALLET->IsCrypted()) {
+        } else if (!WALLET->ExistMasterInfo() && !WALLET->IsCrypted()) {
             reply->set_responseinfo("Wallet has no phrase set. Please set one first");
         } else if (!WALLET->CheckPassphrase(SecureString{request->passphrase()})) {
             reply->set_responseinfo("Failed to login with the passphrase. Please check passphrase");
