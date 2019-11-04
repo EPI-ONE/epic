@@ -107,6 +107,9 @@ TEST_F(TestWallet, basic_workflow_in_wallet) {
     while (wallet->GetBalance() == init_money - spent_money - MIN_FEE) {
         std::this_thread::yield();
     }
+
+    sleep(1);
+
     wallet->Stop();
     ASSERT_EQ(wallet->GetUnspent().size(), 1);
     ASSERT_EQ(wallet->GetPending().size(), 0);
