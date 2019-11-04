@@ -302,7 +302,11 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     set(SOLVER_RPC
             src/rpc/basic_rpc_server.cpp)
 
-    set(SRC_SOLVER  src/tools/solver_manager.cpp ${SOLVER_RPC} ${SOLVER_UTILS_SRCS} ${SOLVER_HASH_SRCS})
+    include_directories(src/remote_solver)
+    aux_source_directory(src/remote_solver REMOTE_SOLVER_SRCS)
+    list(REMOVE_ITEM REMOTE_SOLVER_SRCS src/remote_solver/epic_solver.cpp)
+
+    set(SRC_SOLVER ${REMOTE_SOLVER_SRCS} ${SOLVER_RPC} ${SOLVER_UTILS_SRCS} ${SOLVER_HASH_SRCS})
     add_library(solver_lib STATIC ${SRC_SOLVER})
 
     target_link_libraries(solver_lib cucakroo)
@@ -311,7 +315,7 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     target_link_libraries(solver_lib protobuf::libprotobuf)
     target_link_libraries(solver_lib gRPC::grpc++_reflection)
 
-    add_executable(solver src/tools/epic_solver.cpp)
+    add_executable(solver src/remote_solver/epic_solver.cpp)
     target_link_libraries(solver solver_lib)
 
     target_link_libraries(epiccore solver_lib)
