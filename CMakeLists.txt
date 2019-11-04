@@ -156,8 +156,6 @@ include_directories(src
 
 set(SRC_CODE
         ${RPC_SRCS}
-        ${PROTO_SRCS}
-        ${GRPC_SRCS}
         ${NET_SRCS}
         ${PEER_SRCS}
         ${UTIL_SRCS}
@@ -168,15 +166,51 @@ set(SRC_CODE
         ${MEMORY_SRCS}
         ${INTERFACE_SRCS}
         ${WALLET_SRCS}
-        ${CUCKAROO_SRCS}
         ${CONSENSUS_SRCS}
         ${MESSAGES_SRCS}
         ${POW_SRCS}
         ${STORAGE_SRCS}
         )
 
+add_library(cucakroo STATIC ${CUCKAROO_SRCS})
+add_library(epic_grpc STATIC ${PROTO_SRCS} ${GRPC_SRCS})
+add_library(epiccore STATIC ${SRC_CODE})
+
+# link epiccore with external libs
+target_link_libraries(epiccore epic_grpc)
+target_link_libraries(epiccore cucakroo)
+target_link_libraries(epiccore ${OPENSSL_CRYPTO_LIBRARY})
+target_link_libraries(epiccore ${LIBEVENT_SHARED_LIBRARIES})
+target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
+target_link_libraries(epiccore ${Secp256k1_LIBRARY})
+target_link_libraries(epiccore protobuf::libprotobuf)
+target_link_libraries(epiccore gRPC::grpc++_reflection)
+if (GMP_FOUND)
+    target_link_libraries(epiccore ${GMP_LIBRARY})
+endif ()
+if (NOT CMAKE_HOST_APPLE)
+    target_link_libraries(epiccore atomic)
+endif ()
+
+
+# daemon
 set(SRC_MAIN src/epic.cpp)
+add_executable(epic ${SRC_MAIN})
+target_link_libraries(epic epiccore)
+add_dependencies(epic epiccore)
+add_dependencies(epic version)
+
+# commandline
 set(SRC_CLIENT_MAIN src/epic-cli.cpp)
+add_executable(epic-cli ${SRC_CLIENT_MAIN}
+        ${RPC_DIR}/rpc_client.cpp
+        ${PROTO_SRCS}
+        ${GRPC_SRCS}
+        src/version.cpp
+        )
+target_link_libraries(epic-cli protobuf::libprotobuf)
+target_link_libraries(epic-cli gRPC::grpc++_reflection)
+add_dependencies(epic-cli version)
 
 # test codes
 set(TEST_METHODS_DIR test/test-methods)
@@ -212,9 +246,22 @@ set(TEST_CODE
         )
 set(TEST_MAIN test/main.cpp)
 
-add_library(epiccore STATIC ${SRC_CODE})
+# test executable
+add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
+target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(epictest epiccore)
+add_dependencies(epictest epiccore)
 
-# CUDA
+# tools executables
+add_executable(parseBlocks src/tools/blockParser.cpp)
+target_link_libraries(parseBlocks epiccore)
+add_dependencies(parseBlocks epiccore)
+
+add_executable(mineGenesis src/tools/mineGenesis.cpp ${TEST_METHODS_SRCS})
+target_link_libraries(mineGenesis epiccore)
+add_dependencies(mineGenesis epiccore)
+
+# solver based on CUDA
 option(EPIC_ENABLE_CUDA "Enable GPU mining when possible" ON)
 find_package(CUDA)
 if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
@@ -237,62 +284,46 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     cuda_add_library(epiccuda STATIC ${sources} ${headers})
     set_target_properties(epiccuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-    set(SRC_SOLVER  src/tools/solver_manager.cpp ${GRPC_SRCS})
-    add_library(solver_lib STATIC ${SRC_SOLVER})
-    target_link_libraries(epiccore solver_lib)
-    target_link_libraries(epiccore epiccuda)
+    # utils, hash and grpc codes used in solver
+    set(SOLVER_UTILS_SRCS
+            src/utils/threadpool.cpp
+            src/utils/arith_uint256.cpp
+            src/utils/big_uint.cpp
+            src/utils/utilstrencodings.cpp
+            src/utils/memory/cleanse.cpp
+            )
 
-    add_executable(solver src/tools/epic_solver.cpp)
-    target_link_libraries(solver epiccore)
+    set(SOLVER_HASH_SRCS
+            src/hash/hash.cpp
+            src/hash/sha256.cpp
+            src/hash/blake2b.cpp
+            )
+
+    set(SOLVER_RPC
+            src/rpc/basic_rpc_server.cpp)
+
+    include_directories(src/remote_solver)
+    aux_source_directory(src/remote_solver REMOTE_SOLVER_SRCS)
+    list(REMOVE_ITEM REMOTE_SOLVER_SRCS src/remote_solver/epic_solver.cpp)
+
+    set(SRC_SOLVER ${REMOTE_SOLVER_SRCS} ${SOLVER_RPC} ${SOLVER_UTILS_SRCS} ${SOLVER_HASH_SRCS})
+    add_library(solver_lib STATIC ${SRC_SOLVER})
+
+    target_link_libraries(solver_lib cucakroo)
+    target_link_libraries(solver_lib epiccuda)
+    target_link_libraries(solver_lib epic_grpc)
+    target_link_libraries(solver_lib protobuf::libprotobuf)
+    target_link_libraries(solver_lib gRPC::grpc++_reflection)
+
+    add_executable(solver src/remote_solver/epic_solver.cpp)
+    target_link_libraries(solver solver_lib)
+
+    target_link_libraries(epiccore solver_lib)
+    add_dependencies(epiccore solver_lib)
 
 else ()
     message(STATUS "CUDA disabled. Using CPU miner.")
 endif ()
-
-# daemon and cli executables
-add_executable(epic ${SRC_MAIN})
-add_executable(epic-cli ${SRC_CLIENT_MAIN}
-        ${RPC_DIR}/rpc_client.cpp
-        ${PROTO_SRCS}
-        ${GRPC_SRCS}
-        src/version.cpp
-        )
-target_link_libraries(epic-cli protobuf::libprotobuf)
-target_link_libraries(epic-cli gRPC::grpc++_reflection)
-target_link_libraries(epic epiccore)
-add_dependencies(epic epiccore)
-add_dependencies(epic version)
-add_dependencies(epic-cli version)
-
-# test executable
-add_executable(epictest ${TEST_MAIN} ${TEST_CODE})
-
-target_link_libraries(epiccore ${OPENSSL_CRYPTO_LIBRARY})
-target_link_libraries(epiccore ${LIBEVENT_SHARED_LIBRARIES})
-target_link_libraries(epiccore ${ROCKSDB_LIBRARIES})
-target_link_libraries(epiccore ${Secp256k1_LIBRARY})
-if (GMP_FOUND)
-    target_link_libraries(epiccore ${GMP_LIBRARY})
-endif ()
-target_link_libraries(epiccore protobuf::libprotobuf)
-target_link_libraries(epiccore gRPC::grpc++_reflection)
-
-if (NOT CMAKE_HOST_APPLE)
-    target_link_libraries(epiccore atomic)
-endif ()
-
-target_link_libraries(epictest ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(epictest epiccore)
-add_dependencies(epictest epiccore)
-
-# tools executables
-add_executable(parseBlocks src/tools/blockParser.cpp)
-target_link_libraries(parseBlocks epiccore)
-add_dependencies(parseBlocks epiccore)
-
-add_executable(mineGenesis src/tools/mineGenesis.cpp ${TEST_METHODS_SRCS})
-target_link_libraries(mineGenesis epiccore)
-add_dependencies(mineGenesis epiccore)
 
 option(UNITTEST_COVERAGE "coverage compile flag" OFF)
 if (UNITTEST_COVERAGE)

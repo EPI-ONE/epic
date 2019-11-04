@@ -4,7 +4,6 @@
 #pragma once
 
 #include "blake2b.h"
-#include "params.h"
 #include "siphash.h"
 #include "spdlog.h"
 
@@ -84,7 +83,7 @@ static const std::string ErrStr[] = {"OK",
                                      "cycle too short"};
 
 // verify that edges are ascending and form a cycle in header-generated graph
-int VerifyProof(const word_t* edges, const siphash_keys& keys);
+int VerifyProof(const uint32_t *edges, const siphash_keys &keys, uint32_t cycle_length);
 
 // convenience function for extracting siphash keys from header
 void SetHeader(const char* header, uint32_t headerlen, siphash_keys* keys);

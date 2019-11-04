@@ -66,10 +66,10 @@ TEST_F(TestTrimmer, GPU) {
     spdlog::info("{} with {}{}B @ {} bits x {}MHz", prop.name, (uint32_t) dbytes, " KMGT"[dunit], prop.memoryBusWidth,
                  prop.memoryClockRate / 1000);
 
-    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.", CYCLELEN,
+    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.", GetParams().cycleLen,
                  EDGEBITS, header.str().c_str(), nonce, params.ntrims);
 
-    auto* ctx = CreateSolverCtx(params, CYCLELEN);
+    auto* ctx = CreateSolverCtx(params, GetParams().cycleLen);
 
     uint64_t bytes = ctx->trimmer.globalbytes();
     int unit;
@@ -100,10 +100,10 @@ TEST_F(TestTrimmer, GPU) {
     // Verify trim result
     for (unsigned s = 0; s < nsols; s++) {
         spdlog::trace("Solution");
-        uint32_t* prf = &ctx->sols[s * CYCLELEN];
-        for (uint32_t i = 0; i < CYCLELEN; i++)
+        uint32_t* prf = &ctx->sols[s * GetParams().cycleLen];
+        for (uint32_t i = 0; i < GetParams().cycleLen; i++)
             spdlog::trace(" {}", (uintmax_t) prf[i]);
-        int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys);
+        int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys, GetParams().cycleLen);
         if (pow_rc == POW_OK) {
             spdlog::trace("Verified with cyclehash ");
             auto cyclehash = HashBLAKE2<256>((char*) prf, PROOFSIZE);

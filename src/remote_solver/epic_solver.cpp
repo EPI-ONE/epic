@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "basic_rpc_server.h"
-#include "block.h"
 #include "cxxopts.h"
 #include "service/rpc_service.h"
 #include "service/solver.h"

@@ -153,7 +153,7 @@ bool RemoteGPUSolver::Solve(Block& b) {
     request.set_init_nonce(0);
     request.set_init_time(b.GetTime());
     request.set_step(1);
-    request.set_cycle_length(CYCLELEN);
+    request.set_cycle_length(GetParams().cycleLen);
     request.set_target(target.GetHex());
     request.set_header(vs.data(), vs.size());
 
