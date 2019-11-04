@@ -20,7 +20,7 @@ uint64_t sipblock(const siphash_keys& keys, word_t edge, uint64_t* buf) {
     return buf[edge & EDGE_BLOCK_MASK];
 }
 
-int VerifyProof(const uint32_t *edges, const siphash_keys &keys, uint32_t cycle_length) {
+int VerifyProof(const word_t *edges, const siphash_keys &keys, uint32_t cycle_length) {
     word_t xor0 = 0, xor1 = 0;
     uint64_t sips[EDGE_BLOCK_SIZE];
     word_t uvs[2 * cycle_length];
