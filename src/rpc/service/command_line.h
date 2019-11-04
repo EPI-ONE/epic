@@ -11,22 +11,21 @@
 #include "wallet.h"
 
 class CommanderRPCServiceImpl final : public CommanderRPC::Service {
-    grpc::Status Status(grpc::ServerContext* context, const StatusRequest* request, StatusResponse* reply) override {
-        auto latestMS     = DAG->GetMilestoneHead();
-        auto latestMSHash = ToRPCHash(latestMS->cblock->GetHash());
-        reply->set_allocated_latestmshash(latestMSHash);
+    grpc::Status Status(grpc::ServerContext* context, const EmptyRequest* request, StatusResponse* reply) override {
+        const auto& latestMS = DAG->GetMilestoneHead();
+        reply->set_latestmshash(std::to_string(latestMS->cblock->GetHash()));
         reply->set_isminerrunning(MINER->IsRunning());
 
         return grpc::Status::OK;
     }
 
-    grpc::Status Stop(grpc::ServerContext* context, const StopRequest* request, StopResponse* reply) override {
+    grpc::Status Stop(grpc::ServerContext* context, const EmptyRequest* request, StopResponse* reply) override {
         b_shutdown = true;
         return grpc::Status::OK;
     }
 
     grpc::Status StartMiner(grpc::ServerContext* context,
-                            const StartMinerRequest* request,
+                            const EmptyRequest* request,
                             StartMinerResponse* reply) override {
         if (MINER->IsRunning()) {
             reply->set_success(false);
@@ -41,7 +40,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     }
 
     grpc::Status StopMiner(grpc::ServerContext* context,
-                           const StopMinerRequest* request,
+                           const EmptyRequest* request,
                            StopMinerResponse* reply) override {
         if (!MINER->IsRunning()) {
             reply->set_result("Miner is not running yet");
@@ -110,9 +109,9 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         } else {
             for (auto& output : request->outputs()) {
                 Coin coin(output.money());
-                auto address = DecodeAddress(output.address());
+                auto address = DecodeAddress(output.listing());
                 if (!address) {
-                    reply->set_txinfo("Wrong address: " + output.address());
+                    reply->set_txinfo("Wrong address: " + output.listing());
                     return grpc::Status::OK;
                 } else {
                     outputs.emplace_back(std::make_pair(coin, *address));
@@ -129,7 +128,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     }
 
     grpc::Status GenerateNewKey(grpc::ServerContext* context,
-                                const GenerateNewKeyRequest* request,
+                                const EmptyRequest* request,
                                 GenerateNewKeyResponse* reply) override {
         if (!WALLET) {
             reply->set_address("Wallet has not been started");
@@ -143,7 +142,7 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     }
 
     grpc::Status GetBalance(grpc::ServerContext* context,
-                            const GetBalanceRequest* request,
+                            const EmptyRequest* request,
                             GetBalanceResponse* reply) override {
         if (!WALLET) {
             reply->set_coin("Wallet has not been started");
@@ -201,9 +200,9 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         return grpc::Status::OK;
     }
 
-    grpc::Status DisConnectPeer(grpc::ServerContext* context,
-                                const rpc::DisConnectPeerRequest* request,
-                                rpc::DisConnectPeerResponse* response) override {
+    grpc::Status DisconnectPeer(grpc::ServerContext* context,
+                                const rpc::DisconnectPeerRequest* request,
+                                rpc::DisconnectPeerResponse* response) override {
         if (!PEERMAN) {
             response->set_result("PeerManager has not been start");
         } else {
@@ -219,9 +218,9 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     }
 
 
-    grpc::Status DisConnectAllPeers(grpc::ServerContext* context,
-                                    const rpc::DisConnectAllRequest* request,
-                                    rpc::DisConnectAllResponse* response) override {
+    grpc::Status DisconnectAllPeers(grpc::ServerContext* context,
+                                    const rpc::EmptyRequest* request,
+                                    rpc::DisconnectAllResponse* response) override {
         if (!PEERMAN) {
             response->set_result("PeerManager has not been start");
         } else {
@@ -264,14 +263,13 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
     }
 
     grpc::Status SyncCompleted(grpc::ServerContext* context,
-                               const rpc::SyncStatusRequest* request,
+                               const rpc::EmptyRequest* request,
                                rpc::SyncStatusResponse* response) override {
         if (PEERMAN) {
             response->set_completed(PEERMAN->InitialSyncCompleted());
         } else {
             response->set_completed(false);
         }
-
         return grpc::Status::OK;
     }
 

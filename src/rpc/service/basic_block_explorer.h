@@ -5,74 +5,55 @@
 #ifndef EPIC_BASIC_BLOCK_EXPLORER_H
 #define EPIC_BASIC_BLOCK_EXPLORER_H
 
-#include "dag_manager.h"
-#include "rpc_tools.h"
 #include "rpc_service.h"
 
 class BasicBlockExplorerRPCServiceImpl final : public BasicBlockExplorerRPC::Service {
 public:
     grpc::Status GetBlock(grpc::ServerContext* context,
                           const GetBlockRequest* request,
-                          GetBlockResponse* reply) override {
-        auto vertex = DAG->GetMainChainVertex(ToHash(request->hash()));
-        if (!vertex) {
-            return grpc::Status::OK;
-        }
-        rpc::Block* b = ToRPCBlock(*(vertex->cblock));
-        reply->set_allocated_block(b);
-        return grpc::Status::OK;
-    }
-
-    grpc::Status GetLevelSet(grpc::ServerContext* context,
-                             const GetLevelSetRequest* request,
-                             GetLevelSetResponse* reply) override {
-        auto ls = DAG->GetMainChainLevelSet(ToHash(request->hash()));
-        if (ls.empty()) {
-            return grpc::Status::OK;
-        }
-        for (const auto& localBlock : ls) {
-            auto newBlock   = reply->add_blocks();
-            auto blockValue = ToRPCBlock(*localBlock);
-            *newBlock       = *blockValue;
-            delete blockValue;
-        }
-        return grpc::Status::OK;
-    }
-
-    grpc::Status GetLevelSetSize(grpc::ServerContext* context,
-                                 const GetLevelSetSizeRequest* request,
-                                 GetLevelSetSizeResponse* reply) override {
-        auto ls = DAG->GetMainChainLevelSet(ToHash(request->hash()));
-        reply->set_size(ls.size());
-        return grpc::Status::OK;
-    }
+                          GetBlockResponse* reply) override;
 
     grpc::Status GetNewMilestoneSince(grpc::ServerContext* context,
                                       const GetNewMilestoneSinceRequest* request,
-                                      GetNewMilestoneSinceResponse* reply) override {
-        auto vertex = DAG->GetState(ToHash(request->hash()));
-        if (!vertex) {
-            return grpc::Status::OK;
-        }
-        auto milestone_hashes = DAG->TraverseMilestoneForward(vertex, request->number());
-        for (size_t i = 0; i < milestone_hashes.size(); ++i) {
-            auto vtx        = DAG->GetState(milestone_hashes[i]);
-            auto newBlock   = reply->add_blocks();
-            auto blockValue = ToRPCBlock(*(vtx->cblock));
-            *newBlock       = *blockValue;
-            delete blockValue;
-        }
-        return grpc::Status::OK;
-    }
-
+                                      GetNewMilestoneSinceResponse* reply) override;
+    
     grpc::Status GetLatestMilestone(grpc::ServerContext* context,
-                                    const GetLatestMilestoneRequest* request,
-                                    GetLatestMilestoneResponse* reply) override {
-        auto vertex   = DAG->GetMilestoneHead();
-        rpc::Block* b = ToRPCBlock(*(vertex->cblock));
-        reply->set_allocated_milestone(b);
-        return grpc::Status::OK;
-    }
+                                    const EmptyRequest* request,
+                                    GetLatestMilestoneResponse* reply) override;
+
+    grpc::Status GetLevelSet(grpc::ServerContext* context,
+                             const GetLevelSetRequest* request,
+                             GetLevelSetResponse* reply) override;
+
+    grpc::Status GetLevelSetSize(grpc::ServerContext* context,
+                                 const GetLevelSetSizeRequest* request,
+                                 GetLevelSetSizeResponse* reply) override;
+
+    grpc::Status GetVertex(grpc::ServerContext* context,
+                           const GetVertexRequest* request,
+                           GetVertexResponse* response) override;
+
+    grpc::Status GetMilestone(grpc::ServerContext* context,
+                              const GetBlockRequest* request,
+                              GetMilestoneResponse* response) override;
+
+    grpc::Status GetForks(grpc::ServerContext* context,
+                          const EmptyRequest* request,
+                          GetForksResponse* response) override;
+
+    grpc::Status GetPeerChains(grpc::ServerContext* context,
+                               const EmptyRequest* request,
+                               GetPeerChainsResponse* response) override;
+
+    grpc::Status GetRecentStat(grpc::ServerContext* context,
+                               const EmptyRequest* request,
+                               GetRecentStatResponse* response) override;
+
+    grpc::Status Statistic(grpc::ServerContext* context,
+                           const EmptyRequest* request,
+                           StatisticResponse* response) override;
+
+    ~BasicBlockExplorerRPCServiceImpl() = default;
 };
 
 #endif // EPIC_BASIC_BLOCK_EXPLORER_H

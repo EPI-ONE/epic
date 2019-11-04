@@ -2,23 +2,19 @@ syntax = "proto3";
 
 package rpc;
 
-message Hash {
-    bytes hash = 1;
-}
-
 message Outpoint {
-    Hash fromblock = 1;
+    string fromblock = 1;
     uint32 txidx = 2;
     uint32 outidx = 3;
 }
 
 message Input {
     Outpoint outpoint = 1;
-    bytes listing = 2;
+    string listing = 2;
 }
 
 message Output{
-    bytes address = 1;
+    string listing = 1;
     uint64 money = 2;
 }
 
@@ -28,15 +24,44 @@ message Transaction {
 }
 
 message Block {
-  uint32 version = 1;
-  Hash milestoneBlockHash = 2;
-  Hash prevBlockHash = 3;
-  Hash tipBlockHash = 4;
-  uint32 diffTarget = 5;
-  uint32 nonce = 6;
-  uint64 time = 7;
-  repeated uint32 proof = 8;
-  repeated Transaction transactions = 9;
+  string hash = 1;
+  uint32 version = 2;
+  string msHash = 3;
+  string prevHash = 4;
+  string tipHash = 5;
+  uint32 diffTarget = 6;
+  uint32 nonce = 7;
+  uint64 time = 8;
+  repeated uint32 proof = 9;
+  repeated Transaction transactions = 10;
+}
+
+message Vertex {
+    Block block = 1;
+    uint64 height = 2;
+    bool isMilestone = 3;
+    uint32 redemptionStatus = 4;
+    repeated bool txStatus = 5;
+    uint64 rewards = 6;
+}
+
+message Milestone {
+    uint64 height = 1;
+    string chainwork = 2;
+    uint64 blkDiff = 3;
+    uint64 msDiff = 4;
+    uint64 hashRate = 5;
+}
+
+message Chain {
+    string headHash = 1;
+    uint64 PCHeight = 3;
+    uint32 time = 4;
+}
+
+message MsChain {
+    Chain chain = 1;
+    Milestone milestone = 2;
 }
 
 message Peer {
@@ -54,14 +79,24 @@ message Peer {
 
 service BasicBlockExplorerRPC {
     rpc GetBlock (GetBlockRequest) returns (GetBlockResponse);
+    rpc GetVertex (GetVertexRequest) returns (GetVertexResponse);
     rpc GetNewMilestoneSince (GetNewMilestoneSinceRequest) returns (GetNewMilestoneSinceResponse);
-    rpc GetLatestMilestone (GetLatestMilestoneRequest) returns (GetLatestMilestoneResponse);
+    rpc GetLatestMilestone (EmptyRequest) returns (GetLatestMilestoneResponse);
+    rpc GetMilestone (GetBlockRequest) returns (GetMilestoneResponse);
+
     rpc GetLevelSet (GetLevelSetRequest) returns (GetLevelSetResponse);
     rpc GetLevelSetSize (GetLevelSetSizeRequest) returns (GetLevelSetSizeResponse);
+
+    rpc GetForks (EmptyRequest) returns (GetForksResponse);
+    rpc GetPeerChains (EmptyRequest) returns (GetPeerChainsResponse);
+    rpc GetRecentStat (EmptyRequest) returns (GetRecentStatResponse);
+    rpc Statistic (EmptyRequest) returns (StatisticResponse);
 }
 
+message EmptyRequest {}
+
 message GetBlockRequest {
-    Hash hash = 1;
+    string hash = 1;
 }
 
 message GetBlockResponse {
@@ -69,7 +104,7 @@ message GetBlockResponse {
 }
 
 message GetNewMilestoneSinceRequest {
-    Hash hash = 1;
+    string hash = 1;
     int64 number = 2;
 }
 
@@ -77,14 +112,12 @@ message GetNewMilestoneSinceResponse {
     repeated Block blocks = 1;
 }
 
-message GetLatestMilestoneRequest {}
-
 message GetLatestMilestoneResponse {
     Block milestone = 1;
 }
 
 message GetLevelSetRequest {
-    Hash hash = 1;
+    string hash = 1;
 }
 
 message GetLevelSetResponse {
@@ -92,54 +125,89 @@ message GetLevelSetResponse {
 }
 
 message GetLevelSetSizeRequest {
-    Hash hash = 1;
+    string hash = 1;
 }
 
 message GetLevelSetSizeResponse {
     uint64 size = 1;
 }
 
+message GetVertexRequest {
+    string hash = 1;
+}
+
+message GetVertexResponse {
+    Vertex vertex = 1;
+}
+
+message GetMilestoneResponse {
+    Milestone milestone = 1;
+}
+
+message GetForksResponse {
+    repeated MsChain chains = 1;
+}
+
+message GetPeerChainsResponse {
+    repeated Chain peerChains = 1;
+}
+
+message GetRecentStatResponse {
+    double tps = 1;
+    uint32 timefrom = 2;
+    uint32 timeto = 3;
+    uint32 nblks = 4;
+    uint32 ntxs = 5;
+}
+
+message StatisticResponse {
+    uint64 height = 1;
+    uint64 nblks = 2;
+    uint64 ntxs = 3;
+    double tps = 4;
+    uint32 mempool = 5;
+}
+
 service CommanderRPC {
-    rpc Status (StatusRequest) returns (StatusResponse);
-    rpc Stop (StopRequest) returns (StopResponse);
-    rpc StartMiner (StartMinerRequest) returns (StartMinerResponse);
-    rpc StopMiner (StopMinerRequest) returns (StopMinerResponse);
+    // Command for EPIC program
+    rpc Stop (EmptyRequest) returns (StopResponse);
+
+    // Command for Miner
+    rpc Status (EmptyRequest) returns (StatusResponse);
+    rpc StartMiner (EmptyRequest) returns (StartMinerResponse);
+    rpc StopMiner (EmptyRequest) returns (StopMinerResponse);
+
+    // Command for Wallet
     rpc CreateFirstReg (CreateFirstRegRequest) returns (CreateFirstRegResponse);
     rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
-    rpc GenerateNewKey(GenerateNewKeyRequest) returns (GenerateNewKeyResponse);
-    rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse);
+    rpc GenerateNewKey(EmptyRequest) returns (GenerateNewKeyResponse);
+    rpc GetBalance(EmptyRequest) returns (GetBalanceResponse);
     rpc CreateTx(CreateTxRequest) returns (CreateTxResponse);
     rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
     rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
-    rpc DisConnectPeer(DisConnectPeerRequest) returns(DisConnectPeerResponse);
-    rpc DisConnectAllPeers(DisConnectAllRequest) returns (DisConnectAllResponse);
-    rpc ConnectPeer(ConnectRequest) returns (ConnectResponse);
-    rpc SyncCompleted(SyncStatusRequest) returns (SyncStatusResponse);
+
+    // Command for Peer
+    rpc DisconnectPeer (DisconnectPeerRequest) returns (DisconnectPeerResponse);
+    rpc DisconnectAllPeers (EmptyRequest) returns (DisconnectAllResponse);
+    rpc ConnectPeer (ConnectRequest) returns (ConnectResponse);
+    rpc SyncCompleted(EmptyRequest) returns (SyncStatusResponse);
     rpc ShowPeer(ShowPeerRequest) returns (ShowPeerResponse);
 }
 
-message StopRequest {}
-
 message StopResponse {}
-
-message StartMinerRequest {}
 
 message StartMinerResponse {
     bool success = 1;
 }
 
-message StopMinerRequest {}
-
 message StopMinerResponse {
     string result = 1;
 }
 
-message StatusRequest {}
-
 message StatusResponse {
     bool isMinerRunning = 1;
-    Hash latestMSHash = 2;
+    string latestMSHash = 2;
 }
 
 message CreateFirstRegRequest {
@@ -151,32 +219,28 @@ message CreateFirstRegResponse {
     string result = 1;
 }
 
-message CreateRandomTxRequest{
+message CreateRandomTxRequest {
     uint64 size = 1;
 }
 
-message CreateRandomTxResponse{
+message CreateRandomTxResponse {
     string result = 1;
 }
 
-message GenerateNewKeyRequest{}
-
-message GenerateNewKeyResponse{
+message GenerateNewKeyResponse {
     string address = 1;
 }
 
-message GetBalanceRequest{}
-
-message GetBalanceResponse{
+message GetBalanceResponse {
     string coin = 1;
 }
 
-message CreateTxRequest{
+message CreateTxRequest {
     uint64 fee = 1;
     repeated Output outputs = 2;
 }
 
-message CreateTxResponse{
+message CreateTxResponse {
     string txInfo = 1;
 }
 
@@ -228,29 +292,27 @@ message POWResult{
     uint32 error_code = 5;
 }
 
-message StopTaskRequest{
+message StopTaskRequest {
     uint32 task_id = 1;
 }
 
-message StopTaskResponse{
+message StopTaskResponse {
     string result = 1 ;
 }
 
-message DisConnectAllRequest{}
-
-message DisConnectAllResponse{
+message DisconnectAllResponse {
     string result = 1;
 }
 
-message DisConnectPeerRequest{
+message DisconnectPeerRequest {
     repeated string address = 1;
 }
 
-message DisConnectPeerResponse{
+message DisconnectPeerResponse {
     string result = 1;
 }
 
-message ConnectRequest{
+message ConnectRequest {
     repeated string address = 1;
 }
 
@@ -258,7 +320,9 @@ message ConnectResponse{
     string result = 1;
 }
 
-message SyncStatusRequest {}
+message GetPeersResponse {
+    repeated string address = 1;
+}
 
 message SyncStatusResponse {
     bool completed = 1;

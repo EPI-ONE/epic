@@ -7,47 +7,50 @@
 
 #include "rpc/service/rpc_service.h"
 
+#include <optional>
+
 class RPCClient {
-    using option_string = std::optional<std::string>;
-
 public:
-    RPCClient(std::shared_ptr<grpc::Channel> channel);
+    explicit RPCClient(std::shared_ptr<grpc::Channel> channel);
 
-    std::optional<rpc::Block> GetBlock(std::string);
-    std::optional<std::vector<rpc::Block>> GetLevelSet(std::string);
-    std::optional<size_t> GetLevelSetSize(std::string);
-    std::optional<rpc::Block> GetLatestMilestone();
-    std::optional<std::vector<rpc::Block>> GetNewMilestoneSince(std::string, size_t);
-    std::optional<StatusResponse> Status();
+    std::optional<std::string> GetBlock(std::string);
+    std::optional<std::string> GetLevelSet(std::string);
+    std::optional<std::string> GetLevelSetSize(std::string);
+    std::optional<std::string> GetLatestMilestone();
+    std::optional<std::string> GetNewMilestoneSince(std::string, size_t);
+    std::optional<std::string> GetVertex(std::string);
+    std::optional<std::string> GetMilestone(std::string);
+    std::optional<std::string> GetForks();
+    std::optional<std::string> GetPeerChains();
+    std::optional<std::string> GetRecentStat();
+    std::optional<std::string> Statistic();
+
+    std::optional<std::string> Status();
 
     bool Stop();
 
     std::optional<bool> StartMiner();
-    option_string StopMiner();
+    std::optional<std::string> StopMiner();
 
-    option_string CreateFirstReg(std::string addr, bool force = false);
-    option_string CreateRandomTx(size_t size);
-    option_string CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee);
-    option_string GetBalance();
-    option_string GenerateNewKey();
+    std::optional<std::string> CreateFirstReg(std::string addr, bool force = false);
+    std::optional<std::string> CreateRandomTx(size_t size);
+    std::optional<std::string> CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee);
+    std::optional<std::string> GetBalance();
+    std::optional<std::string> GenerateNewKey();
 
-    option_string SetPassphrase(const std::string& passphrase);
-    option_string ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
-    option_string Login(const std::string& passphrase);
+    std::optional<std::string> SetPassphrase(const std::string& passphrase);
+    std::optional<std::string> ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
+    std::optional<std::string> Login(const std::string& passphrase);
 
-    option_string DisconnectPeers(const std::vector<std::string>& addresses);
-
-    option_string DisconnectAllPeers();
-
-    option_string ConnectPeers(const std::vector<std::string>& addresses);
-
+    std::optional<std::string> DisconnectPeers(const std::vector<std::string>& addresses);
+    std::optional<std::string> DisconnectAllPeers();
+    std::optional<std::string> ConnectPeers(const std::vector<std::string>& addresses);
     std::optional<bool> SyncCompleted();
-
     std::optional<rpc::ShowPeerResponse> ShowPeer(std::string&);
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;
     std::unique_ptr<CommanderRPC::Stub> commander_stub_;
-};
+    };
 
 #endif // EPIC_RPC_CLIENT_H

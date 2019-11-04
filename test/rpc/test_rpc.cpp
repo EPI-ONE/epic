@@ -4,25 +4,24 @@
 
 #include <gtest/gtest.h>
 
-#include "key.h"
 #include "rpc_client.h"
 #include "rpc_server.h"
-#include "rpc_tools.h"
 #include "test_env.h"
 
 #include <chrono>
+#include <google/protobuf/util/json_util.h>
 #include <string>
+
+using google::protobuf::StringPiece;
+using google::protobuf::util::JsonStringToMessage;
 
 class TestRPCServer : public testing::Test {
 public:
     TestFactory fac;
-    std::string prefix = "test_rpc/";
-    static std::string addr;
-    const uint256 double0hash = Hash::GetDoubleZeroHash();
-
-    static void SetUpTestCase() {
-        addr = "0.0.0.0:3789";
-    }
+    const std::string prefix   = "test_rpc/";
+    const std::string addr     = "0.0.0.0:3789";
+    const uint256& double0hash = Hash::GetDoubleZeroHash();
+    std::unique_ptr<RPCClient> client;
 
     void SetUp() {
         EpicTestEnvironment::SetUpDAG(prefix);
@@ -34,139 +33,253 @@ public:
         while (!RPC->IsRunning()) {
             std::this_thread::yield();
         }
+        client = std::make_unique<RPCClient>(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
     }
 
     void TearDown() {
-        EpicTestEnvironment::TearDownDAG(prefix);
         RPC->Shutdown();
+        EpicTestEnvironment::TearDownDAG(prefix);
+    }
+
+    bool SameHash(const uint256& _hash, const std::string& strhash) {
+        return std::to_string(_hash) == strhash;
+    }
+
+    bool SameOutpoint(const TxOutPoint& outpoint, const rpc::Outpoint& rpc_outpoint) {
+        return SameHash(outpoint.bHash, rpc_outpoint.fromblock()) && outpoint.txIndex == rpc_outpoint.txidx() &&
+               outpoint.outIndex == rpc_outpoint.outidx();
+    }
+
+    bool SameTx(const Transaction& tx, const rpc::Transaction& rpcTx) {
+        const auto& input   = tx.GetInputs();
+        const auto& output  = tx.GetOutputs();
+        const auto& rpc_in  = rpcTx.inputs();
+        const auto& rpc_out = rpcTx.outputs();
+
+        if (!(input.size() == rpc_in.size() && output.size() == rpc_out.size())) {
+            return false;
+        }
+
+        for (size_t i = 0; i < input.size(); i++) {
+            if (!(SameOutpoint(input[i].outpoint, rpc_in[i].outpoint()))) {
+                return false;
+            }
+
+            if (std::to_string(input[i].listingContent) != rpc_in[i].listing()) {
+                return false;
+            }
+        }
+
+        for (size_t i = 0; i < output.size(); i++) {
+            if (std::to_string(output[i].listingContent) != rpc_out[i].listing()) {
+                return false;
+            }
+
+            if (output[i].value.GetValue() != rpc_out[i].money()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool SameBlock(const Block& blk, const rpc::Block& rpcBlk) {
+        if (!SameHash(blk.GetHash(), rpcBlk.hash()) || !SameHash(blk.GetMilestoneHash(), rpcBlk.mshash()) ||
+            !SameHash(blk.GetPrevHash(), rpcBlk.prevhash()) || !SameHash(blk.GetTipHash(), rpcBlk.tiphash())) {
+            return false;
+        }
+
+        if (blk.GetVersion() != rpcBlk.version() || blk.GetDifficultyTarget() != rpcBlk.difftarget() ||
+            blk.GetNonce() != rpcBlk.nonce() || blk.GetTime() != rpcBlk.time()) {
+            return false;
+        }
+
+        const auto& prf    = blk.GetProof();
+        const auto& rpcPrf = rpcBlk.proof();
+        const auto& txs    = blk.GetTransactions();
+        const auto& rpcTxs = rpcBlk.transactions();
+
+        if (prf.size() != rpcPrf.size() || txs.size() != rpcTxs.size()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < prf.size(); i++) {
+            if (prf[i] != rpcPrf[i]) {
+                return false;
+            }
+        }
+
+        for (size_t i = 0; i < txs.size(); i++) {
+            if (!SameTx(*txs[i], rpcTxs[i])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool SameVertex(const Vertex& vertex, const rpc::Vertex rpcVer) {
+        if (!SameBlock(*vertex.cblock, rpcVer.block())) {
+            return false;
+        }
+
+        if (vertex.height != rpcVer.height() || vertex.isMilestone != rpcVer.ismilestone() ||
+            vertex.isRedeemed != rpcVer.redemptionstatus() || vertex.cumulativeReward.GetValue() != rpcVer.rewards()) {
+            return false;
+        }
+
+        const auto& txStatus = vertex.validity;
+        const auto& rpcTxSta = rpcVer.txstatus();
+
+        if (txStatus.size() != rpcTxSta.size()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < txStatus.size(); i++) {
+            if (txStatus[i] != rpcTxSta[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool SameMilstone(const Milestone& ms, const rpc::Milestone rpcMs) {
+        if (ms.height != rpcMs.height() || static_cast<uint64_t>(ms.hashRate) != rpcMs.hashrate()) {
+            return false;
+        }
+
+        if (std::to_string(ms.chainwork) != rpcMs.chainwork()) {
+            return false;
+        }
+
+        if (ms.GetBlockDifficulty() != rpcMs.blkdiff() || ms.GetMsDifficulty() != rpcMs.msdiff()) {
+            return false;
+        }
+
+        return true;
     }
 };
 
-std::string TestRPCServer::addr = "";
-
-TEST_F(TestRPCServer, GetBlock) {
-    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
-
-    auto req_hash = std::to_string(GENESIS->GetHash());
-    auto res      = client.GetBlock(req_hash);
-    ASSERT_TRUE(res.has_value());
-
-    auto blk = ToBlock(*res);
-    ASSERT_EQ(blk, *GENESIS);
-
-    auto res_fake = client.GetBlock(std::to_string(double0hash));
-    ASSERT_TRUE(res_fake.has_value());
-
-    auto blk_fake    = ToBlock(*res_fake);
-    auto blk_default = ToBlock(rpc::Block().default_instance());
-    ASSERT_EQ(blk_fake, blk_default);
-}
-
-TEST_F(TestRPCServer, GetLevelSetAndItsSize) {
-    int size = 1;
-    std::vector<VertexPtr> lvs;
-    lvs.reserve(size);
-    auto ms = fac.CreateVertexPtr(1, 1, true);
-    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, ms);
-    ms->isMilestone      = true;
-    ms->snapshot->height = 1;
-    ms->height           = 1;
-    lvs.push_back(ms);
-    for (int i = 1; i < size; ++i) {
-        auto b         = fac.CreateVertexPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
-        b->isMilestone = false;
-        b->height      = ms->height;
-        lvs.push_back(b);
-    }
-    ASSERT_TRUE(STORE->StoreLevelSet(lvs));
-
-    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
-
-    for (int i = 0; i < size; ++i) {
-        auto req_hash = std::to_string(lvs[i]->cblock->GetHash());
-        auto res_size = client.GetLevelSetSize(req_hash);
-        ASSERT_TRUE(res_size.has_value());
-        EXPECT_EQ(res_size.value(), size);
-    }
-    auto req_hash = std::to_string(lvs[0]->cblock->GetHash());
-    auto res_set  = client.GetLevelSet(req_hash);
-    ASSERT_TRUE(res_set.has_value());
-
-    for (size_t i = 0; i < lvs.size(); ++i) {
-        auto res_blk = ToBlock(res_set.value()[i]);
-        EXPECT_EQ(res_blk, *lvs[i]->cblock);
-    }
-}
-
-TEST_F(TestRPCServer, GetLatestMilestone) {
-    int size       = 5;
-    auto chain     = fac.CreateChain(GENESIS_VERTEX, size);
-    auto latest_ms = chain.back().back();
-    for (auto lvs : chain) {
-        for (auto elem : lvs) {
-            DAG->AddNewBlock(elem->cblock, nullptr);
+TEST_F(TestRPCServer, basic_dag_info_query) {
+    // add blocks into dag
+    std::vector<VertexPtr> blocks;
+    const auto HEIGHT = static_cast<size_t>(500);
+    auto chain        = fac.CreateChain(GENESIS_VERTEX, HEIGHT, false);
+    auto latest_ms    = chain.back().back();
+    for (auto& lvs : chain) {
+        for (auto b : lvs) {
+            blocks.emplace_back(std::move(b));
         }
     }
 
-    usleep(50000);
-    DAG->Stop();
+    STORE->EnableOBC();
 
-    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
-
-    auto res = client.GetLatestMilestone();
-    ASSERT_TRUE(res.has_value());
-
-    auto res_blk = ToBlock(*res);
-    EXPECT_EQ(res_blk, *latest_ms->cblock);
-}
-
-TEST_F(TestRPCServer, GetNewMilestoneSince) {
-    int size = 5;
-    std::vector<VertexPtr> mss;
-    std::vector<VertexPtr> mss_to_check;
-    auto first_ms = fac.CreateVertexPtr(1, 1, true);
-    fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, first_ms);
-    first_ms->isMilestone      = true;
-    first_ms->snapshot->height = 1;
-    first_ms->height           = 1;
-    mss.push_back(first_ms);
-    mss_to_check.push_back(first_ms);
-    ASSERT_TRUE(STORE->StoreLevelSet(mss));
-    mss.clear();
-    auto prev = first_ms->snapshot;
-    for (int i = 2; i < size; ++i) {
-        auto ms = fac.CreateVertexPtr(i, i, true);
-        fac.CreateMilestonePtr(prev, ms);
-        ms->isMilestone            = true;
-        first_ms->snapshot->height = i;
-        ms->height                 = i;
-        mss.push_back(ms);
-        mss_to_check.push_back(ms);
-        ASSERT_TRUE(STORE->StoreLevelSet(mss));
-        mss.clear();
-        prev = ms->snapshot;
+    // SetLogLevel(SPDLOG_LEVEL_DEBUG);
+    for (auto& vtx : blocks) {
+        DAG->AddNewBlock(vtx->cblock, nullptr);
     }
-    STORE->SaveHeadHeight(size - 1);
 
     usleep(50000);
+    STORE->Wait();
+    STORE->Stop();
     DAG->Stop();
 
-    RPCClient client(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+    const auto STORED_HEIGHT = HEIGHT - GetParams().punctualityThred;
 
-    size_t request_milestone_number = 3;
-    auto req_hash                   = std::to_string(mss_to_check[0]->cblock->GetHash());
-    auto res                        = client.GetNewMilestoneSince(req_hash, request_milestone_number);
-    ASSERT_TRUE(res.has_value());
-    ASSERT_EQ(res.value().size(), request_milestone_number);
-    for (int i = 0; i < request_milestone_number; ++i) {
-        auto res_blk = ToBlock(res.value()[i]);
-        EXPECT_EQ(res_blk, *mss_to_check[i + 1]->cblock);
+    for (size_t i = 0; i < STORED_HEIGHT; i++) {
+        const auto& hash = chain[i].back()->cblock->GetHash();
+        const auto req_hash = std::to_string(hash);
+
+        auto re_size = client->GetLevelSetSize(req_hash); // get level set size
+        GetLevelSetSizeResponse rpc_get_lvs_size;
+        JsonStringToMessage(StringPiece(*re_size), &rpc_get_lvs_size);
+        ASSERT_EQ(rpc_get_lvs_size.size(), chain[i].size());
+
+        auto re_set = client->GetLevelSet(req_hash); // get level set
+        GetLevelSetResponse rpc_get_lvs;
+        JsonStringToMessage(StringPiece(*re_set), &rpc_get_lvs);
+
+        for (size_t j = 0; j < chain[i].size(); j++) {
+            ASSERT_TRUE(SameBlock(*(chain[i][j]->cblock), rpc_get_lvs.blocks()[j]));
+        }
+
+        auto re_ms = client->GetMilestone(req_hash); // get milestone
+        rpc::GetMilestoneResponse rpc_get_ms;
+        JsonStringToMessage(StringPiece(*re_ms), &rpc_get_ms);
+        ASSERT_TRUE(SameMilstone(*(DAG->GetMsVertex(hash)->snapshot), rpc_get_ms.milestone()));
     }
+
+    auto re_latest = client->GetLatestMilestone(); // get lastest milestone
+    GetLatestMilestoneResponse rpc_latest;
+    JsonStringToMessage(StringPiece(*re_latest), &rpc_latest);
+    ASSERT_TRUE(SameBlock(*latest_ms->cblock, rpc_latest.milestone()));
+
+    // get milestone from block xxx to next yyy milestone
+    constexpr size_t HEIGHT_GET      = 100;
+    constexpr size_t HEIGHT_GET_FROM = 200;
+
+    auto req_hash  = std::to_string(chain[HEIGHT_GET_FROM].back()->cblock->GetHash());
+    auto re_new_ms = client->GetNewMilestoneSince(req_hash, HEIGHT_GET);
+
+    GetNewMilestoneSinceResponse rpc_new_ms;
+    JsonStringToMessage(StringPiece(*re_new_ms), &rpc_new_ms);
+
+    auto iter = rpc_new_ms.blocks().cbegin();
+    for (size_t i = HEIGHT_GET_FROM; i < HEIGHT_GET; i++) {
+        for (size_t j = 0; j < chain[i + 1].size(); j++) {
+            ASSERT_TRUE(SameBlock(*(chain[i + 1][j]->cblock), *iter));
+            iter++;
+        }
+    }
+
+    for (const auto& blk : blocks) {
+        const auto& pick_hash    = blk->cblock->GetHash();
+        const auto pick_hash_str = std::to_string(pick_hash);
+
+        auto re_block  = client->GetBlock(pick_hash_str);  // get blocks
+        auto re_vertex = client->GetVertex(pick_hash_str); // get vertices
+
+        GetBlockResponse rpc_get_blk;
+        JsonStringToMessage(StringPiece(*re_block), &rpc_get_blk);
+        ASSERT_TRUE(SameBlock(*(blk->cblock), rpc_get_blk.block()));
+
+        GetVertexResponse rpc_get_ver;
+        JsonStringToMessage(StringPiece(*re_vertex), &rpc_get_ver);
+        ASSERT_TRUE(SameVertex(*(DAG->GetMainChainVertex(pick_hash)), rpc_get_ver.vertex()));
+    }
+
+    auto re_forks = client->GetForks(); // get forks
+    GetForksResponse rpc_forks;
+    JsonStringToMessage(StringPiece(*re_forks), &rpc_forks);
+    ASSERT_EQ(rpc_forks.chains().size(), 1);
+
+    auto re_pc = client->GetPeerChains(); // get peer chains
+    GetPeerChainsResponse rpc_pc;
+    JsonStringToMessage(StringPiece(*re_pc), &rpc_pc);
+    ASSERT_EQ(rpc_pc.peerchains().size(), 1);
+
+    uint32_t nBlkCached = 0;
+    for (size_t i = STORED_HEIGHT; i < HEIGHT; i++) {
+        nBlkCached += chain[i].size();
+    }
+    auto re_recent_stat = client->GetRecentStat(); // get recent statistic data
+    GetRecentStatResponse rpc_recent_stat;
+    JsonStringToMessage(StringPiece(*re_recent_stat), &rpc_recent_stat);
+    ASSERT_EQ(rpc_recent_stat.nblks(), nBlkCached);
+
+    auto re_stat = client->Statistic(); // get total statistic data
+    StatisticResponse rpc_stat;
+    JsonStringToMessage(StringPiece(*re_stat), &rpc_stat);
+    ASSERT_EQ(rpc_stat.height(), HEIGHT);
+
+    uint32_t nBlkStored = 0;
+    for (size_t i = 0; i < STORED_HEIGHT; i++) {
+        nBlkStored += chain[i].size();
+    }
+    ASSERT_EQ(rpc_stat.nblks(), nBlkStored);
 }
 
 TEST_F(TestRPCServer, wallet_passphrase) {
-    RPCClient client{grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())};
-
     enum class PhraseCode { NOTSTART, ENCRYPTED, NOPHRASE, FAILTOSET, FAILTOLOGIN, FAILTOCHANGE, LOGIN, SET, UPDATE };
 
     auto testCode = std::map<PhraseCode, std::string>{
@@ -183,41 +296,40 @@ TEST_F(TestRPCServer, wallet_passphrase) {
 
     std::string phrase         = "mypass";
     std::string phrase_phantom = "phantom";
-    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::NOTSTART]);
-    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOTSTART]);
-    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::NOTSTART]);
+    ASSERT_EQ(client->SetPassphrase(phrase).value(), testCode[PhraseCode::NOTSTART]);
+    ASSERT_EQ(client->ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOTSTART]);
+    ASSERT_EQ(client->Login(phrase).value(), testCode[PhraseCode::NOTSTART]);
 
     WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
-    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::NOPHRASE]);
-    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOPHRASE]);
-    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::FAILTOSET]);
+    ASSERT_EQ(client->Login(phrase).value(), testCode[PhraseCode::NOPHRASE]);
+    ASSERT_EQ(client->ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOPHRASE]);
+    ASSERT_EQ(client->SetPassphrase(phrase).value(), testCode[PhraseCode::FAILTOSET]);
 
     ASSERT_TRUE(WALLET->GenerateMaster());
-    ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::SET]);
+    ASSERT_EQ(client->SetPassphrase(phrase).value(), testCode[PhraseCode::SET]);
 
     std::string phrase_wrong = "wrong";
-    ASSERT_EQ(client.SetPassphrase(phrase_wrong).value(), testCode[PhraseCode::ENCRYPTED]);
-    ASSERT_EQ(client.ChangePassphrase(phrase_wrong, phrase_phantom).value(), testCode[PhraseCode::FAILTOCHANGE]);
-    ASSERT_EQ(client.Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client->SetPassphrase(phrase_wrong).value(), testCode[PhraseCode::ENCRYPTED]);
+    ASSERT_EQ(client->ChangePassphrase(phrase_wrong, phrase_phantom).value(), testCode[PhraseCode::FAILTOCHANGE]);
+    ASSERT_EQ(client->Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
 
-    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::LOGIN]);
-    ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::UPDATE]);
-    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
-    ASSERT_EQ(client.Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
+    ASSERT_EQ(client->Login(phrase).value(), testCode[PhraseCode::LOGIN]);
+    ASSERT_EQ(client->ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::UPDATE]);
+    ASSERT_EQ(client->Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client->Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
 
     // restart wallet
     WALLET.reset();
     WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
     ASSERT_TRUE(WALLET->ExistMasterInfo());
-    ASSERT_EQ(client.Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
-    ASSERT_EQ(client.Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
-    ASSERT_EQ(client.Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
+    ASSERT_EQ(client->Login(phrase_wrong).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client->Login(phrase).value(), testCode[PhraseCode::FAILTOLOGIN]);
+    ASSERT_EQ(client->Login(phrase_phantom).value(), testCode[PhraseCode::LOGIN]);
 
     WALLET.reset();
 }
 
 TEST_F(TestRPCServer, transaction_and_miner) {
-    RPCClient client{grpc::CreateChannel(addr, grpc::InsecureChannelCredentials())};
     MEMPOOL = std::make_unique<MemPool>();
     MINER   = std::make_unique<Miner>(4);
 
@@ -245,20 +357,20 @@ TEST_F(TestRPCServer, transaction_and_miner) {
         {AnswerCode::CREATE_TX, "Now wallet is creating tx"},
     };
 
-    ASSERT_EQ(client.StopMiner().value(), testCode[AnswerCode::MINER_NOT_RUNNING]);
-    ASSERT_EQ(client.StartMiner().value(), true);
-    ASSERT_EQ(client.StartMiner().value(), false);
+    ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_NOT_RUNNING]);
+    ASSERT_EQ(client->StartMiner().value(), true);
+    ASSERT_EQ(client->StartMiner().value(), false);
 
-    ASSERT_EQ(client.CreateRandomTx(1).value(), testCode[AnswerCode::WALLET_NOT_START]);
-    ASSERT_EQ(client.CreateTx({}, 0).value(), testCode[AnswerCode::WALLET_NOT_START]);
-    ASSERT_EQ(client.GenerateNewKey().value(), testCode[AnswerCode::WALLET_NOT_START]);
-    ASSERT_EQ(client.GetBalance().value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client->CreateRandomTx(1).value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client->CreateTx({}, 0).value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client->GenerateNewKey().value(), testCode[AnswerCode::WALLET_NOT_START]);
+    ASSERT_EQ(client->GetBalance().value(), testCode[AnswerCode::WALLET_NOT_START]);
 
     WALLET = std::make_unique<Wallet>(prefix + "/data/", 0, 0);
-    ASSERT_EQ(client.CreateRandomTx(1).value(), testCode[AnswerCode::NOT_LOG_IN]);
-    ASSERT_EQ(client.CreateTx({}, 0).value(), testCode[AnswerCode::NOT_LOG_IN]);
-    ASSERT_EQ(client.GenerateNewKey().value(), testCode[AnswerCode::NOT_LOG_IN]);
-    ASSERT_EQ(client.GetBalance().value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client->CreateRandomTx(1).value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client->CreateTx({}, 0).value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client->GenerateNewKey().value(), testCode[AnswerCode::NOT_LOG_IN]);
+    ASSERT_EQ(client->GetBalance().value(), testCode[AnswerCode::NOT_LOG_IN]);
 
     DAG->RegisterOnLvsConfirmedCallback(
         [&](auto vec, auto map1, auto map2) { WALLET->OnLvsConfirmed(vec, map1, map2); });
@@ -267,25 +379,25 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     WALLET->RPCLogin();
     WALLET->Start();
 
-    ASSERT_EQ(client.CreateRandomTx(2).value(), testCode[AnswerCode::CREATE_TX]);
-    ASSERT_EQ(client.CreateTx({}, 1).value(), testCode[AnswerCode::NO_OUTPUT]);
+    ASSERT_EQ(client->CreateRandomTx(2).value(), testCode[AnswerCode::CREATE_TX]);
+    ASSERT_EQ(client->CreateTx({}, 1).value(), testCode[AnswerCode::NO_OUTPUT]);
     while (WALLET->GetBalance() < 10) {
         std::this_thread::yield();
     }
 
     // malicious address
     std::string wrong_addr = std::to_string(fac.CreateKeyPair().second.GetID()) + "deadbeef";
-    ASSERT_EQ(client.CreateTx({{1, wrong_addr}}, 0).value(), testCode[AnswerCode::WRONG_ADDR] + wrong_addr);
+    ASSERT_EQ(client->CreateTx({{1, wrong_addr}}, 0).value(), testCode[AnswerCode::WRONG_ADDR] + wrong_addr);
 
-    auto opAddr = client.GenerateNewKey();
+    auto opAddr = client->GenerateNewKey();
     ASSERT_TRUE(opAddr.has_value());
 
     // not enough balance
-    ASSERT_EQ(client.CreateTx({{1100, *opAddr}}, 1010), testCode[AnswerCode::CREATE_TX_FAIL]);
-    auto opBalance = client.GetBalance();
+    ASSERT_EQ(client->CreateTx({{1100, *opAddr}}, 1010), testCode[AnswerCode::CREATE_TX_FAIL]);
+    auto opBalance = client->GetBalance();
     ASSERT_TRUE(opBalance.has_value());
-    ASSERT_TRUE(client.CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
+    ASSERT_TRUE(client->CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
 
-    ASSERT_EQ(client.StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
-    ASSERT_TRUE(client.Stop());
+    ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
+    ASSERT_TRUE(client->Stop());
 }

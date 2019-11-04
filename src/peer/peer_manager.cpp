@@ -570,3 +570,19 @@ bool PeerManager::DisconnectPeer(const std::string& address) {
     }
     return false;
 }
+
+std::vector<std::string> PeerManager::GetConnectedPeers() {
+    std::vector<std::string> peerAddrs;
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    peerAddrs.reserve(peerMap_.size());
+
+    for (const auto& peer : peerMap_) {
+        if (peer.second->peer_id == myID_) {
+            continue;
+        }
+        const auto& netAddr = peer.second->address;
+        peerAddrs.emplace_back(netAddr.ToString());
+    }
+
+    return peerAddrs;
+}

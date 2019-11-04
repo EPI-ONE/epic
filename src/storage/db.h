@@ -5,12 +5,13 @@
 #ifndef EPIC_DB_H
 #define EPIC_DB_H
 
-#include "file_utils.h"
 #include "rocksdb.h"
 #include "vertex.h"
 
 #include <string>
 #include <vector>
+
+struct FilePos;
 
 class DBStore : public RocksDB {
 public:

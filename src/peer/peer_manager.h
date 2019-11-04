@@ -75,7 +75,6 @@ public:
      */
     size_t GetConnectedPeerSize();
 
-
     /*
      * get size of all peers(including not fully connected ones)
      * @return
@@ -125,6 +124,8 @@ public:
     bool DisconnectPeer(const std::string& address);
 
     bool InitialSyncCompleted() const;
+
+    std::vector<std::string> GetConnectedPeers();
 
 private:
     /*

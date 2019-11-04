@@ -42,12 +42,12 @@ public:
         return c->prevRegsToModify_;
     }
 
-    std::unique_ptr<Chain> make_chain(const ConcurrentQueue<MilestonePtr>& states,
+    std::unique_ptr<Chain> make_chain(const ConcurrentQueue<MilestonePtr>& msChain,
                                       const std::vector<VertexPtr>& vtcs,
                                       bool ismain = false) {
         auto chain          = std::make_unique<Chain>();
         chain->ismainchain_ = ismain;
-        chain->states_      = states;
+        chain->milestones_  = msChain;
         for (const auto& pVtx : vtcs) {
             chain->recentHistory_.emplace(pVtx->cblock->GetHash(), pVtx);
         }
@@ -181,7 +181,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
         c.AddPendingBlock(blkptr);
         if (isMilestone[i]) {
             auto ms = c.Verify(blkptr);
-            c.AddNewState(*ms);
+            c.AddNewMilestone(*ms);
 
             prevMs = c.GetChainHead();
             ASSERT_EQ(c.GetPendingBlockCount(), 0);
@@ -448,7 +448,7 @@ TEST_F(TestChainVerification, ChainForking) {
         vtcs.emplace_back(fac.CreateConsecutiveVertexPtr(fac.NextTime(), m));
         dqms.push_back(fac.CreateMilestonePtr(dqms.back(), vtcs[i - 1]));
         if (i == 5) {
-            // create a forked chain state at height 5
+            // create a forked milestone chain at height 5
             auto blk = fac.CreateBlock();
             split    = dqms.back();
             blk.SetMilestoneHash(split->GetMilestoneHash());

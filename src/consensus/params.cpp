@@ -46,10 +46,10 @@ std::shared_ptr<Vertex> Params::CreateGenesis() const {
     uint64_t hashRate         = (arith_uint256{maxTarget} / (msTarget + 1)).GetLow64() / timeInterval;
     auto chainwork            = maxTarget / arith_uint256().SetCompact(genesisBlock.GetDifficultyTarget());
 
-    static auto genesisState = std::make_shared<Milestone>(
-        0, chainwork, msTarget, blockTarget, hashRate, genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex});
+    static auto genesisMs = std::make_shared<Milestone>(0, chainwork, msTarget, blockTarget, hashRate,
+                                                        genesisBlock.GetTime(), std::vector<VertexWPtr>{genesisVertex});
 
-    genesisVertex->LinkMilestone(genesisState);
+    genesisVertex->LinkMilestone(genesisMs);
     SetGenesisParams(genesisVertex);
     return genesisVertex;
 }

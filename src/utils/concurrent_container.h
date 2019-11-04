@@ -167,12 +167,12 @@ public:
 
     std::pair<iterator, bool> insert_or_assign(const key_type& k, mapped_type&& obj) {
         WRITER_LOCK(base::mutex_)
-        return base::c.insert_or_assign(k, obj);
+        return base::c.insert_or_assign(k, std::forward<mapped_type>(obj));
     }
 
     std::pair<iterator, bool> insert_or_assign(key_type&& k, mapped_type&& obj) {
         WRITER_LOCK(base::mutex_)
-        return base::c.insert_or_assign(k, obj);
+        return base::c.insert_or_assign(k, std::forward<mapped_type>(obj));
     }
 
     using base::insert;
@@ -212,6 +212,28 @@ public:
     bool contains(const key_type& k) const {
         READER_LOCK(base::mutex_)
         return base::c.find(k) != base::c.end();
+    }
+
+    bool update_key(const key_type& oldKey, const key_type& newKey) {
+        WRITER_LOCK(base::mutex_)
+        auto entry = base::c.extract(oldKey);
+        if (entry) {
+            entry.key() = newKey;
+            return base::c.insert(std::move(entry)).inserted;
+        }
+
+        return false;
+    }
+
+    bool update_value(const K& k, const V& v) {
+        WRITER_LOCK(base::mutex_)
+        auto entry = base::c.find(k);
+        if (entry != base::c.end()) {
+            entry->second = v;
+            return true;
+        }
+
+        return false;
     }
 
     std::vector<key_type> key_set() const {
@@ -361,7 +383,7 @@ public:
     void shrink_to_fit() {
         WRITER_LOCK(base::mutex_)
         base::c.shrink_to_fit();
-    } // TODO: check what lock should I use
+    }
 
     // modifiers
     void push_back(const T& t) {

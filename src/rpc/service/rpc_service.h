@@ -13,7 +13,7 @@
 using rpc::BasicBlockExplorerRPC;
 using rpc::GetBlockRequest;
 using rpc::GetBlockResponse;
-using rpc::GetLatestMilestoneRequest;
+using rpc::EmptyRequest;
 using rpc::GetLatestMilestoneResponse;
 using rpc::GetLevelSetRequest;
 using rpc::GetLevelSetResponse;
@@ -21,6 +21,14 @@ using rpc::GetLevelSetSizeRequest;
 using rpc::GetLevelSetSizeResponse;
 using rpc::GetNewMilestoneSinceRequest;
 using rpc::GetNewMilestoneSinceResponse;
+using rpc::GetVertexRequest;
+using rpc::GetVertexResponse;
+
+using rpc::GetMilestoneResponse;
+using rpc::GetForksResponse;
+using rpc::GetPeerChainsResponse;
+using rpc::GetRecentStatResponse;
+using rpc::StatisticResponse;
 
 using rpc::ChangePassphraseRequest;
 using rpc::ChangePassphraseResponse;
@@ -33,13 +41,10 @@ using rpc::CreateRandomTxRequest;
 using rpc::CreateRandomTxResponse;
 using rpc::CreateTxRequest;
 using rpc::CreateTxResponse;
-using rpc::DisConnectAllRequest;
-using rpc::DisConnectAllResponse;
-using rpc::DisConnectPeerRequest;
-using rpc::DisConnectPeerResponse;
-using rpc::GenerateNewKeyRequest;
+using rpc::DisconnectAllResponse;
+using rpc::DisconnectPeerRequest;
+using rpc::DisconnectPeerResponse;
 using rpc::GenerateNewKeyResponse;
-using rpc::GetBalanceRequest;
 using rpc::GetBalanceResponse;
 using rpc::LoginRequest;
 using rpc::LoginResponse;
@@ -48,15 +53,10 @@ using rpc::SetPassphraseRequest;
 using rpc::SetPassphraseResponse;
 using rpc::ShowPeerRequest;
 using rpc::ShowPeerResponse;
-using rpc::StartMinerRequest;
 using rpc::StartMinerResponse;
-using rpc::StatusRequest;
 using rpc::StatusResponse;
-using rpc::StopMinerRequest;
 using rpc::StopMinerResponse;
-using rpc::StopRequest;
 using rpc::StopResponse;
-using rpc::SyncStatusRequest;
 using rpc::SyncStatusResponse;
 
 using rpc::POWResult;
@@ -64,4 +64,5 @@ using rpc::POWTask;
 using rpc::RemoteSolver;
 using rpc::StopTaskRequest;
 using rpc::StopTaskResponse;
+
 #endif // EPIC_RPC_SERVICE_H

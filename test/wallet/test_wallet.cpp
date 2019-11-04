@@ -282,7 +282,7 @@ TEST_F(TestWallet, normal_workflow) {
 
     // since wallet has 2 unspent now, we are not sure how much money do they have, then we are not sure how many utxos
     // are used to create new transaction as inputs
-    size_t current_unspent = WALLET->GetUnspent().size();
+    const size_t current_unspent = WALLET->GetUnspent().size();
 
     WALLET->SendTxToMemPool(tx);
     MINER->Run();
@@ -302,6 +302,7 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_TRUE(WALLET->ChangePassphrase("", newPhrase));
     ASSERT_TRUE(WALLET->CheckPassphrase(newPhrase));
 
+    const size_t current_unspent_1 = WALLET->GetUnspent().size();
     // wallet will create a normal transaction rather than a redemption
     WALLET->CreateRandomTx(1);
 
@@ -309,8 +310,8 @@ TEST_F(TestWallet, normal_workflow) {
     while (MEMPOOL->Empty()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    current_unspent      = WALLET->GetUnspent().size();
-    auto current_pending = WALLET->GetPendingTx().size();
+    const size_t current_unspent_2 = WALLET->GetUnspent().size();
+    const auto current_spent       = current_unspent_1 - current_unspent_2;
 
     MINER->Run();
 
@@ -320,8 +321,8 @@ TEST_F(TestWallet, normal_workflow) {
     }
     ASSERT_TRUE(MINER->Stop());
 
-    EXPECT_EQ(WALLET->GetUnspent().size(), current_unspent + 2);
+    EXPECT_EQ(WALLET->GetUnspent().size(), current_unspent_2 + 2);
     EXPECT_EQ(WALLET->GetPendingTx().size(), 0);
     EXPECT_EQ(WALLET->GetPending().size(), 0);
-    EXPECT_EQ(WALLET->GetSpent().size(), current_pending + 2);
+    EXPECT_EQ(WALLET->GetSpent().size(), current_spent + 2);
 }

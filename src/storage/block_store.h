@@ -8,6 +8,7 @@
 #include "circular_queue.h"
 #include "dag_manager.h"
 #include "db.h"
+#include "file_utils.h"
 #include "obc.h"
 #include "scheduler.h"
 #include "threadpool.h"
@@ -40,6 +41,7 @@ public:
     VStream GetRawLevelSetBetween(size_t height1, size_t height2, file::FileType = file::FileType::BLK) const;
     std::vector<ConstBlockPtr> GetLevelSetBlksAt(size_t height) const;
     std::vector<VertexPtr> GetLevelSetVtcsAt(size_t height, bool withBlock = true) const;
+
     size_t GetHeight(const uint256&) const;
     uint64_t GetHeadHeight() const;
     bool SaveHeadHeight(uint64_t height) const;
@@ -47,6 +49,7 @@ public:
     bool SaveBestChainWork(const uint256&) const;
     CircularQueue<uint256> GetMinerChainHeads() const;
     bool SaveMinerChainHeads(const CircularQueue<uint256>&) const;
+
     bool ExistsUTXO(const uint256&) const;
     std::unique_ptr<UTXO> GetUTXO(const uint256&) const;
     std::unordered_map<uint256, std::unique_ptr<UTXO>> GetAllUTXO() const;

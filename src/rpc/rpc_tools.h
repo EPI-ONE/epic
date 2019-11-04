@@ -5,18 +5,19 @@
 #ifndef EPIC_RPC_TOOLS_H
 #define EPIC_RPC_TOOLS_H
 
-#include "block.h"
-
 #include <grpc++/grpc++.h>
 #include <rpc.grpc.pb.h>
 #include <rpc.pb.h>
+#include <string>
 
-uint256 ToHash(const rpc::Hash&);
+class Block;
+class Vertex;
 
-rpc::Hash* ToRPCHash(const uint256&);
-
+// functions below will pass the ownvership of the allocated object to rpc to handle its lifetime
 rpc::Block* ToRPCBlock(const Block&);
-
-Block ToBlock(const rpc::Block&);
+rpc::Vertex* ToRPCVertex(const Vertex&);
+rpc::Chain* ToRPCChain(const Vertex&);
+rpc::Milestone* ToRPCMilestone(const Vertex&);
+rpc::MsChain* ToRPCMsChain(const Vertex&);
 
 #endif // EPIC_RPC_TOOLS_H

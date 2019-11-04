@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-
 #include "epic-cli.h"
 #include <ctime>
 #include <iomanip>
@@ -199,8 +198,7 @@ void EpicCli::Close(std::ostream& out) {
 void EpicCli::Status(std::ostream& out) {
     auto r = rpc_->Status();
     if (r) {
-        out << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING") << std::endl;
-        out << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
+        out << *r << std::endl;
     } else {
         Close(out);
     }
@@ -289,7 +287,6 @@ void EpicCli::CreateFirstReg(std::ostream& out, std::string& address) {
                     } else {
                         Close(out);
                     }
-
                     break;
 
                 } else if (yn == "N" || yn == "n") {

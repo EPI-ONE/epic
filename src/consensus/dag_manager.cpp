@@ -5,10 +5,11 @@
 #include "dag_manager.h"
 #include "block_store.h"
 #include "peer_manager.h"
+#include "rpc_server.h"
 
 DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
-    milestoneChains.push(std::make_unique<Chain>());
-    globalStates_.emplace(GENESIS->GetHash(), GENESIS_VERTEX);
+    milestoneChains_.push(std::make_unique<Chain>());
+    msVertices_.emplace(GENESIS->GetHash(), GENESIS_VERTEX);
 
     // Start threadpools
     verifyThread_.Start();
@@ -18,7 +19,7 @@ DAGManager::DAGManager() : verifyThread_(1), syncPool_(1), storagePool_(1) {
 
 bool DAGManager::Init() {
     // dag should have only one chain when calling Init()
-    return milestoneChains.size() == 1;
+    return milestoneChains_.size() == 1;
 }
 
 /////////////////////////////////////
@@ -88,7 +89,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
                 return;
             }
             if (IsMainChainMS(start)) {
-                auto startMs = GetState(start);
+                auto startMs = GetMsVertex(start);
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
                 spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->height);
@@ -169,14 +170,14 @@ void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
 void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requestFrom) {
     auto message = std::make_unique<GetData>(GetDataTask::LEVEL_SET);
     for (auto& h : requests) {
-        if (downloading.contains(h) || STORE->DAGExists(h)) {
+        if (downloading_.contains(h) || STORE->DAGExists(h)) {
             continue;
         }
 
         auto task = std::make_shared<GetDataTask>(GetDataTask::LEVEL_SET, h, sync_task_timeout);
         message->AddItem(h, task->nonce);
         requestFrom->AddPendingGetDataTask(task);
-        downloading.insert(h);
+        downloading_.insert(h);
 
         if (message->hashes.size() >= maxGetDataSize) {
             spdlog::debug("Requesting lvs {} to {}", message->hashes.front().to_substr(),
@@ -194,7 +195,7 @@ void DAGManager::RequestData(std::vector<uint256>& requests, const PeerPtr& requ
 }
 
 std::vector<uint256> DAGManager::ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr& peer) {
-    const VertexPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetState(fromHash);
+    const VertexPtr startMilestone = fromHash.IsNull() ? GetMilestoneHead() : GetMsVertex(fromHash);
     if (!startMilestone) {
         return {};
     }
@@ -213,7 +214,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(VertexPtr cursor, siz
         if (cursor->cblock->GetHash() == GENESIS->GetHash()) {
             break;
         }
-        cursor = GetState(cursor->cblock->GetMilestoneHash());
+        cursor = GetMsVertex(cursor->cblock->GetMilestoneHash());
     }
 
     return result;
@@ -222,8 +223,8 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(VertexPtr cursor, siz
 std::vector<uint256> DAGManager::TraverseMilestoneForward(const VertexPtr cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
-    const auto& bestChain = milestoneChains.best();
-    std::shared_lock<std::shared_mutex> reader(bestChain->GetStates().get_mutex());
+    const auto& bestChain = milestoneChains_.best();
+    std::shared_lock<std::shared_mutex> reader(bestChain->GetMilestones().get_mutex());
 
     size_t cursorHeight = cursor->height + 1;
 
@@ -233,13 +234,13 @@ std::vector<uint256> DAGManager::TraverseMilestoneForward(const VertexPtr cursor
         ++cursorHeight;
     }
 
-    if (!bestChain->GetStates().empty()) {
-        uint64_t min_height = bestChain->GetStates().front()->height;
-        uint64_t max_height = bestChain->GetStates().back()->height;
+    if (!bestChain->GetMilestones().empty()) {
+        uint64_t min_height = bestChain->GetMilestones().front()->height;
+        uint64_t max_height = bestChain->GetMilestones().back()->height;
         // If we have reached the hightest milestone in DB and still don't get enough hashes,
         // continue to traverse the best chain cache until we reach the head or the capacity.
         while (cursorHeight <= max_height && result.size() <= length) {
-            result.push_back(bestChain->GetStates()[cursorHeight - min_height]->GetMilestoneHash());
+            result.push_back(bestChain->GetMilestones()[cursorHeight - min_height]->GetMilestoneHash());
             ++cursorHeight;
         }
     }
@@ -299,7 +300,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
             // We have not received at least one of its parents.
 
             // Drop if the block is too old
-            VertexPtr ms = GetState(msHash, false);
+            VertexPtr ms = GetMsVertex(msHash, false);
             if (ms && !CheckPuntuality(blk, ms)) {
                 return;
             }
@@ -315,7 +316,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         // Check difficulty target //////
 
-        VertexPtr ms = GetState(msHash, false);
+        VertexPtr ms = GetMsVertex(msHash, false);
         if (!ms) {
             spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
@@ -350,9 +351,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 }
 
 bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const {
-    assert(ms);
-    assert(milestoneChains.size() > 0);
-    assert(milestoneChains.best());
+    assert(milestoneChains_.size() > 0);
+    assert(milestoneChains_.best());
 
     auto bestHeight = GetBestMilestoneHeight();
     if (bestHeight > ms->height && (bestHeight - ms->height) >= GetParams().punctualityThred) {
@@ -377,7 +377,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     }
 
     // Add to pending on every chain
-    for (const auto& chain : milestoneChains) {
+    for (const auto& chain : milestoneChains_) {
         chain->AddPendingBlock(block);
         if (!block->IsFirstRegistration()) {
             chain->AddPendingUTXOs(utxos);
@@ -385,7 +385,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     }
 
     // Check if it's a new ms from the main chain
-    auto& mainchain    = milestoneChains.best();
+    auto& mainchain    = milestoneChains_.best();
     const auto& msHash = block->GetMilestoneHash();
     VertexPtr msBlock  = mainchain->GetMsVertexCache(msHash);
     if (!msBlock) {
@@ -408,17 +408,17 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre main chain MS {} --- "
                               "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
-                              milestoneChains.size());
-                auto new_fork = std::make_unique<Chain>(*milestoneChains.best(), block);
+                              milestoneChains_.size());
+                auto new_fork = std::make_unique<Chain>(*milestoneChains_.best(), block);
                 ProcessMilestone(new_fork, block);
-                milestoneChains.emplace(std::move(new_fork));
+                milestoneChains_.emplace(std::move(new_fork));
             }
         }
         return;
     }
 
     // Check if it's a milestone on any other chain
-    for (auto chainIt = milestoneChains.begin(); chainIt != milestoneChains.end(); ++chainIt) {
+    for (auto chainIt = milestoneChains_.begin(); chainIt != milestoneChains_.end(); ++chainIt) {
         ChainPtr& chain = *chainIt;
 
         if (chain->IsMainChain()) {
@@ -439,9 +439,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] A fork grows MS block {} pre MS {}", block->GetHash().to_substr(),
                               block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
-                if (milestoneChains.update_best(chainIt)) {
+                if (milestoneChains_.update_best(chainIt)) {
                     spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
-                                  milestoneChains.best()->GetChainHead()->GetMilestoneHash().to_substr());
+                                  milestoneChains_.best()->GetChainHead()->GetMilestoneHash().to_substr());
                 }
                 return;
             } else {
@@ -449,10 +449,10 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre forked chain MS {} --- "
                               "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
-                              milestoneChains.size());
+                              milestoneChains_.size());
                 auto new_fork = std::make_unique<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
-                milestoneChains.emplace(std::move(new_fork));
+                milestoneChains_.emplace(std::move(new_fork));
                 return;
             }
         }
@@ -461,45 +461,45 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
 
 void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& block) {
     auto newMs = chain->Verify(block);
-    globalStates_.emplace(block->GetHash(), newMs);
-    chain->AddNewState(*newMs);
+    msVertices_.emplace(block->GetHash(), newMs);
+    chain->AddNewMilestone(*newMs);
 
     if (EraseDownloading(block->GetHash())) {
-        spdlog::debug("[Verify Thread] Size of downloading = {}, removed successfully", downloading.size());
+        spdlog::debug("[Verify Thread] Size of downloading = {}, removed successfully", downloading_.size());
     }
 }
 
 void DAGManager::DeleteFork() {
-    const auto& states = GetBestChain().GetStates();
-    if (states.size() <= GetParams().deleteForkThreshold) {
+    const auto& milestones = GetBestChain().GetMilestones();
+    if (milestones.size() <= GetParams().deleteForkThreshold) {
         return;
     }
-    auto targetChainWork = (*(states.end() - GetParams().deleteForkThreshold))->chainwork;
-    for (auto chain_it = milestoneChains.begin(); chain_it != milestoneChains.end();) {
-        if (*chain_it == milestoneChains.best()) {
+    auto targetChainWork = (*(milestones.end() - GetParams().deleteForkThreshold))->chainwork;
+    for (auto chain_it = milestoneChains_.begin(); chain_it != milestoneChains_.end();) {
+        if (*chain_it == milestoneChains_.best()) {
             chain_it++;
             continue;
         }
         // try delete
         if ((*chain_it)->GetChainHead()->chainwork < targetChainWork) {
-            for (auto it = (*chain_it)->GetStates().rbegin(); it != (*chain_it)->GetStates().rend(); ++it) {
+            for (auto it = (*chain_it)->GetMilestones().rbegin(); it != (*chain_it)->GetMilestones().rend(); ++it) {
                 if (GetBestChain().GetMsVertexCache((*it)->GetMilestoneHash()) != nullptr) {
                     break;
                 }
-                globalStates_.erase((*it)->GetMilestoneHash());
+                msVertices_.erase((*it)->GetMilestoneHash());
             }
             spdlog::info("[Verify Thread] Deleting fork with chain head {} --- total chains {}",
-                         (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr(), milestoneChains.size());
-            chain_it = milestoneChains.erase(chain_it);
+                         (*chain_it)->GetChainHead()->GetMilestoneHash().to_substr(), milestoneChains_.size());
+            chain_it = milestoneChains_.erase(chain_it);
         } else {
             chain_it++;
         }
     }
 }
 
-VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
-    auto search = globalStates_.find(msHash);
-    if (search != globalStates_.end()) {
+VertexPtr DAGManager::GetMsVertex(const uint256& msHash, bool withBlock) const {
+    auto search = msVertices_.find(msHash);
+    if (search != msVertices_.end()) {
         return search->second;
     }
 
@@ -509,14 +509,14 @@ VertexPtr DAGManager::GetState(const uint256& msHash, bool withBlock) const {
     }
 
     // will happen only for finding ms of nonsolid block
-    // may return nullptr when rpc is requesting some non-existing states
+    // may return nullptr when rpc is requesting some non-existing milestones
     auto ms = GetBestChain().GetVertexCache(msHash);
     spdlog::trace("Milestone with hash {} is not found", msHash.to_substr());
     return nullptr;
 }
 
 Chain& DAGManager::GetBestChain() const {
-    return *milestoneChains.best();
+    return *milestoneChains_.best();
 }
 
 void DAGManager::Stop() {
@@ -525,6 +525,7 @@ void DAGManager::Stop() {
     syncPool_.Stop();
     verifyThread_.Stop();
     storagePool_.Stop();
+    spdlog::info("DAG stopped");
 }
 
 void DAGManager::Wait() {
@@ -534,22 +535,22 @@ void DAGManager::Wait() {
 }
 
 void DAGManager::FlushTrigger() {
-    const auto& bestChain = milestoneChains.best();
-    if (bestChain->GetStates().size() <= GetParams().punctualityThred) {
+    const auto& bestChain = milestoneChains_.best();
+    if (bestChain->GetMilestones().size() <= GetParams().punctualityThred) {
         return;
     }
     std::vector<ConcurrentQueue<MilestonePtr>::const_iterator> forks;
-    forks.reserve(milestoneChains.size() - 1);
-    for (auto& chain : milestoneChains) {
+    forks.reserve(milestoneChains_.size() - 1);
+    for (auto& chain : milestoneChains_) {
         if (chain == bestChain) {
             continue;
         }
-        forks.emplace_back(chain->GetStates().begin());
+        forks.emplace_back(chain->GetMilestones().begin());
     }
 
-    auto cursor = bestChain->GetStates().begin();
-    for (int i = 0;
-         i < bestChain->GetStates().size() - GetParams().punctualityThred && cursor != bestChain->GetStates().end();
+    auto cursor = bestChain->GetMilestones().begin();
+    for (int i = 0; i < bestChain->GetMilestones().size() - GetParams().punctualityThred &&
+                    cursor != bestChain->GetMilestones().end();
          i++, cursor++) {
         if ((*cursor)->stored) {
             for (auto& fork_it : forks) {
@@ -574,12 +575,17 @@ void DAGManager::FlushTrigger() {
 void DAGManager::FlushToSTORE(MilestonePtr ms) {
     spdlog::debug("[Verify Thread] Flushing {} at height {}", ms->GetMilestoneHash().to_substr(), ms->height);
 
+    UpdateStatOnLvsStored(ms);
+
     // first store data to STORE
-    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
+    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains_.best()->GetDataToSTORE(ms);
 
     ms->stored = true;
     storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
+        spdlog::debug("[Storage pool] Flushing {} vertices, {} utxos to store, {} utxos to remove", vtxToStore.size(),
+                      utxoToStore.size(), utxoToRemove.size());
+
         std::vector<VertexPtr> blocksToListener;
         blocksToListener.reserve(vtxToStore.size());
 
@@ -595,17 +601,18 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
             STORE->AddUTXO(utxoKey, utxoPtr);
         }
+
         for (const auto& utxoKey : utxoToRemove) {
             STORE->RemoveUTXO(utxoKey);
         }
         STORE->SaveHeadHeight(ms.height);
 
         // notify the listener
-        if (onLvsConfirmedCallback) {
-            onLvsConfirmedCallback(std::move(blocksToListener), utxoToStore, utxoToRemove);
+        if (onLvsConfirmedCallback_) {
+            onLvsConfirmedCallback_(std::move(blocksToListener), utxoToStore, utxoToRemove);
         }
 
-        // then remove chain states from chains
+        // then remove the milestone from chains
         std::vector<uint256> vtxHashes{};
         vtxHashes.reserve(vtxToStore.size());
         std::unordered_set<uint256> utxoCreated{};
@@ -624,8 +631,8 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         verifyThread_.Execute([=, msHash = ms.cblock->GetHash(), vtxHashes = std::move(vtxHashes),
                                txocToRemove = std::move(txocToRemove)]() {
             spdlog::trace("[Verify Thread] Removing level set {} cache", msHash.to_substr());
-            globalStates_.erase(msHash);
-            for (auto& chain : milestoneChains) {
+            msVertices_.erase(msHash);
+            for (auto& chain : milestoneChains_) {
                 chain->PopOldest(vtxHashes, txocToRemove);
             }
         });
@@ -638,7 +645,7 @@ bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
 }
 
 VertexPtr DAGManager::GetMilestoneHead() const {
-    if (GetBestChain().GetStates().empty()) {
+    if (GetBestChain().GetMilestones().empty()) {
         return STORE->GetMilestoneAt(STORE->GetHeadHeight());
     }
 
@@ -646,7 +653,7 @@ VertexPtr DAGManager::GetMilestoneHead() const {
 }
 
 size_t DAGManager::GetBestMilestoneHeight() const {
-    if (GetBestChain().GetStates().empty()) {
+    if (GetBestChain().GetMilestones().empty()) {
         return STORE->GetHeadHeight();
     }
     return GetBestChain().GetChainHead()->height;
@@ -676,7 +683,7 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     if (height < leastHeightCached) {
         lvs = STORE->GetLevelSetBlksAt(height);
     } else {
-        auto vtcs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+        auto vtcs = bestChain.GetMilestones()[height - leastHeightCached]->GetLevelSet();
 
         lvs.reserve(vtcs.size());
         for (auto& rwp : vtcs) {
@@ -699,9 +706,9 @@ std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool wi
     if (height < leastHeightCached) {
         lvs = STORE->GetLevelSetVtcsAt(height, withBlock);
     } else {
-        auto state = GetState(blockHash);
-        if (state) {
-            auto vtcs = state->snapshot->GetLevelSet();
+        auto msVer = GetMsVertex(blockHash);
+        if (msVer) {
+            auto vtcs = msVer->snapshot->GetLevelSet();
             lvs.reserve(vtcs.size());
             for (auto& rwp : vtcs) {
                 lvs.push_back(rwp.lock());
@@ -722,7 +729,7 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     }
 
     // Find in cache
-    auto vtcs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
+    auto vtcs = bestChain.GetMilestones()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
     std::swap(vtcs.front(), vtcs.back());
@@ -740,7 +747,7 @@ VStream DAGManager::GetMainChainRawLevelSet(const uint256& blockHash) const {
 }
 
 bool DAGManager::ExistsNode(const uint256& h) const {
-    for (const auto& chain : milestoneChains) {
+    for (const auto& chain : milestoneChains_) {
         if (chain->GetVertex(h)) {
             return true;
         }
@@ -749,5 +756,19 @@ bool DAGManager::ExistsNode(const uint256& h) const {
 }
 
 void DAGManager::RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func) {
-    onLvsConfirmedCallback = std::move(callback_func);
+    onLvsConfirmedCallback_ = callback_func;
+}
+
+StatData DAGManager::GetStatData() const {
+    std::shared_lock<std::shared_mutex> lk(statLock_);
+    return stat_;
+}
+
+void DAGManager::UpdateStatOnLvsStored(const MilestonePtr& pms) {
+    std::unique_lock<std::shared_mutex> lk(statLock_);
+    stat_.nTxCnt += pms->GetNumOfValidTxns();
+    stat_.nBlkCnt += pms->GetLevelSet().size();
+    if (stat_.tStart == 0) {
+        stat_.tStart = pms->GetLevelSet().front().lock()->cblock->GetTime();
+    }
 }
