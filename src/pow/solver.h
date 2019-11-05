@@ -17,12 +17,9 @@ public:
     Solver()          = default;
     virtual ~Solver() = default;
 
-    virtual bool Start() = 0;
-    virtual bool Stop()  = 0;
-    virtual void Abort() = 0;
-    virtual void Resume() {
-        aborted = false;
-    }
+    virtual bool Start()       = 0;
+    virtual bool Stop()        = 0;
+    virtual void Abort()       = 0;
     virtual bool Solve(Block&) = 0;
 
     uint32_t GetTaskID() {
