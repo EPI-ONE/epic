@@ -28,8 +28,9 @@ public:
     }
 
 protected:
-    std::atomic_bool enabled = false;
-    std::atomic_bool aborted = false;
+    std::atomic_bool enabled   = false;
+    std::atomic_bool aborted   = false;
+    std::atomic_bool found_sol = false;
 
     std::atomic_uint32_t current_task_id = 0;
     ConcurrentQueue<std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>> task_results;

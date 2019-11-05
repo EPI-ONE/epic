@@ -41,7 +41,8 @@ void CPUSolver::Abort() {
 }
 
 bool CPUSolver::Solve(Block& b) {
-    aborted = false;
+    aborted   = false;
+    found_sol = false;
 
     size_t nthreads = solverPool_.GetThreadSize();
     auto task_id    = GetTaskID();
@@ -58,12 +59,13 @@ bool CPUSolver::Solve(Block& b) {
                     SetTimestamp(vs, timestamp);
                 }
 
-                if (aborted.load()) {
+                if (found_sol.load() || aborted.load()) {
                     return;
                 }
 
                 uint256 blkHash = HashBLAKE2<256>(vs.data(), vs.size());
                 if (UintToArith256(blkHash) <= target) {
+                    found_sol = true;
                     task_results.push_back({task_id, {timestamp, nonce, std::vector<uint32_t>{}}});
                     break;
                 }
@@ -88,16 +90,18 @@ bool CPUSolver::Solve(Block& b) {
         break;
     }
 
-    aborted = true;
     solverPool_.Abort();
 
-    auto last_result = task_results.front().second;
-    task_results.pop_front();
+    if (!task_results.empty()) {
+        auto last_result = std::move(task_results.front().second);
+        task_results.pop_front();
 
-    b.SetTime(std::get<0>(last_result));
-    b.SetNonce(std::get<1>(last_result));
-    b.CalculateHash();
-    b.CalculateOptimalEncodingSize();
+        b.SetTime(std::get<0>(last_result));
+        b.SetNonce(std::get<1>(last_result));
+        b.CalculateHash();
+        b.CalculateOptimalEncodingSize();
+    }
+
     return true;
 }
 
