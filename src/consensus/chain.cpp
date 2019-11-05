@@ -379,7 +379,11 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     spdlog::trace("[Validate] Validating redemption in block {}", blkHash.to_substr());
 
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
-    auto prevReg           = GetVertex(prevRedempHash);
+    VertexPtr prevReg      = GetVertexCache(prevRedempHash);
+    if (!prevReg || prevReg->height <= STORE->GetHeadHeight()) {
+        // This is to make sure that the file will be modified
+        prevReg = STORE->GetVertex(prevRedempHash);
+    }
     assert(prevReg);
 
     const auto& redem = vertex.cblock->GetTransactions().at(0);
