@@ -12,8 +12,7 @@
 
 class TestFileStorage : public testing::Test {
 public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
-    Miner m{1};
+    TestFactory fac    = EpicTestEnvironment::GetFactory();
     std::string prefix = "test_file_store/";
 
     void SetUp() override {
@@ -26,6 +25,9 @@ public:
 };
 
 TEST_F(TestFileStorage, basic_read_write) {
+    Miner m{1};
+    m.Start();
+
     // data preparation
     auto blk = fac.CreateBlock();
     m.Solve(blk);

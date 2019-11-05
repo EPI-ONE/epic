@@ -414,8 +414,13 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     continue;
                 }
             } else {
-                // 1 <= output <= balance - fee -2
-                Coin coin{random() % (GetBalance() - minInputs).GetValue() + 1};
+                Coin coin;
+                if (GetBalance() == minInputs) {
+                    coin = 1;
+                } else {
+                    // 1 <= output <= balance - fee -2
+                    coin = random() % (GetBalance() - minInputs).GetValue() + 1;
+                }
 
                 // change >= 1
                 auto tx = CreateTx({{coin, addr}}, MIN_FEE, 1);

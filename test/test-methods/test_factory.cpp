@@ -108,10 +108,14 @@ VertexPtr TestFactory::CreateVertexPtr(int numTxInput, int numTxOutput, bool fin
     return std::make_shared<Vertex>(CreateVertex(CreateBlockPtr(numTxInput, numTxOutput, finalize, maxTxns)));
 }
 
-VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset) {
+VertexPtr TestFactory::CreateConsecutiveVertexPtr(uint32_t timeToset, Miner& m) {
     Block b = CreateBlock(0, 0, false);
     b.SetTime(timeToset);
-    Miner m{1};
+
+    if (!m.IsRunning()) {
+        m.Start();
+    }
+
     do {
         b.SetNonce(b.GetNonce() + 1);
         m.Solve(b);

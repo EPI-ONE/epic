@@ -6,10 +6,10 @@
 #define EPIC_THREADPOOL_H
 
 #include "blocking_queue.h"
-#include "spdlog.h"
 
 #include <exception>
 #include <future>
+#include <optional>
 
 class CallableWrapper {
 public:
@@ -78,9 +78,7 @@ public:
      */
     template <typename FunctionType>
     void Execute(FunctionType&& f) {
-        spdlog::trace("[ThreadPool] Executing task, task_queue_enabled_ = {}", task_queue_enabled_.load());
         if (task_queue_enabled_.load()) {
-            spdlog::trace("[ThreadPool] Executing task");
             task_queue_.Put(std::move(f));
         }
     }
@@ -93,9 +91,9 @@ public:
      * @return
      */
     template <typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type> Submit(FunctionType&& f) {
+    std::optional<std::future<typename std::result_of<FunctionType()>::type>> Submit(FunctionType&& f) {
         if (!task_queue_enabled_.load()) {
-            throw std::runtime_error("Task queue disabled! Cannot add new task.");
+            return {};
         }
 
         typedef typename std::result_of<FunctionType()>::type result_type;

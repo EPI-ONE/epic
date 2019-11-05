@@ -67,7 +67,7 @@ public:
     ConstBlockPtr CreateBlockPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
     Vertex CreateVertex(ConstBlockPtr b);
     VertexPtr CreateVertexPtr(int numTxInput = 0, int numTxOutput = 0, bool finalize = false, int maxTxns = 1);
-    VertexPtr CreateConsecutiveVertexPtr(uint32_t);
+    VertexPtr CreateConsecutiveVertexPtr(uint32_t, Miner&);
     MilestonePtr CreateMilestonePtr(MilestonePtr previous, VertexPtr& pVtx);
     MilestonePtr CreateMilestonePtr(MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& hashes);
     std::tuple<TestRawChain, std::vector<VertexPtr>> CreateRawChain(const VertexPtr& startMs,

@@ -99,7 +99,6 @@ void Miner::Run() {
 
         while (enabled_.load()) {
             abort_ = false;
-            solver->Resume();
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
@@ -184,6 +183,7 @@ void Miner::Run() {
                 continue;
             }
 
+            assert(b.CheckPOW());
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);

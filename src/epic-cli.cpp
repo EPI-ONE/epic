@@ -180,18 +180,35 @@ int main(int argc, char** argv) {
 
             case START_MINER: {
                 auto sync_completed = client.SyncCompleted();
-                if (!sync_completed || !(*sync_completed)) {
-                    std::cout << "The initial synchronization is not completed. Abort starting miner." << std::endl;
+                if (!sync_completed) {
+                    throw UnconnectedException();
+                }
+
+                if (*sync_completed) {
+                EXECUTE_MINER:
+                    auto r = client.StartMiner();
+                    if (r) {
+                        std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
+                    } else {
+                        throw UnconnectedException();
+                    }
                     break;
                 }
 
-                auto r = client.StartMiner();
-                if (r) {
-                    std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
-                } else {
-                    throw UnconnectedException();
+                std::cout << "The initial synchronization is not completed.\nWould you like to force the miner to "
+                             "start? [Y/N] ";
+                while (true) {
+                    std::string yn;
+                    std::cin >> yn;
+
+                    if (yn == "Y" || yn == "y") {
+                        goto EXECUTE_MINER;
+                    } else if (yn == "N" || yn == "n") {
+                        break;
+                    }
+
+                    std::cout << "Would you like to force the miner to start? [Y/N] ";
                 }
-                break;
             }
 
             case STOP_MINER: {

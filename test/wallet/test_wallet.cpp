@@ -20,14 +20,12 @@ public:
 
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG(path, true, true);
-        SetLogLevel(SPDLOG_LEVEL_TRACE);
     }
 
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG(path);
         std::string cmd = "exec rm -rf " + dir + " " + path;
         system(cmd.c_str());
-        ResetLogLevel();
     }
 };
 

@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "threadpool.h"
+#include "spdlog.h"
 
 CallableWrapper& CallableWrapper::operator=(CallableWrapper&& other) noexcept {
     impl = std::move(other.impl);
@@ -25,10 +26,8 @@ void ThreadPool::WorkerThread(uint32_t id) {
             run = task_queue_.Take(task);
             if (task_queue_enabled_.load() && run) {
                 working_states->at(id) = true;
-                spdlog::trace("[ThreadPool] Set working_states true, task id = {}", id);
                 task();
                 working_states->at(id) = false;
-                spdlog::trace("[ThreadPool] Set working_states false, task id = {}", id);
             }
         } while (run);
 
@@ -94,7 +93,6 @@ bool ThreadPool::IsIdle() const {
 }
 
 void ThreadPool::ClearAndDisableTasks() {
-    spdlog::trace("[ThreadPool] Clearing tasks");
     task_queue_enabled_ = false;
     if (!task_queue_.Empty()) {
         task_queue_.Clear();
@@ -104,11 +102,9 @@ void ThreadPool::ClearAndDisableTasks() {
 void ThreadPool::Abort() {
     ClearAndDisableTasks();
 
-    spdlog::trace("[ThreadPool] Checking idleness");
     while (!IsIdle()) {
         std::this_thread::yield();
     }
-    spdlog::trace("[ThreadPool] After checking idleness");
     task_queue_enabled_ = true;
 }
 

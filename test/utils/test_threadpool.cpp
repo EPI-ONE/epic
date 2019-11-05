@@ -64,29 +64,29 @@ TEST_F(TestThreadPool, TestNormalFunction) {
 
     int a       = 2;
     auto result = threadPool.Submit(std::bind(f6, &a));
-    EXPECT_EQ(result.get(), 3);
+    EXPECT_EQ(result->get(), 3);
 }
 
 TEST_F(TestThreadPool, TestFunction) {
     threadPool.Execute(f1);
     auto result = threadPool.Submit(f2);
-    EXPECT_EQ(result.get(), 1);
+    EXPECT_EQ(result->get(), 1);
 }
 
 TEST_F(TestThreadPool, TestStructMemberFunction) {
     Foo foo;
     threadPool.Execute(std::bind(&Foo::f3, &foo));
     auto result = threadPool.Submit(Foo::f4);
-    EXPECT_EQ(3, result.get());
+    EXPECT_EQ(3, result->get());
 }
 
 TEST_F(TestThreadPool, TestClassMemberFunction) {
     Bar bar(2);
     auto result = threadPool.Submit(std::bind(&Bar::f4, &bar));
-    EXPECT_EQ(result.get(), 2);
+    EXPECT_EQ(result->get(), 2);
 }
 
 TEST_F(TestThreadPool, TestlambaFunction) {
     auto result = threadPool.Submit([]() { return "lambda function"; });
-    EXPECT_EQ("lambda function", result.get());
+    EXPECT_EQ("lambda function", result->get());
 }

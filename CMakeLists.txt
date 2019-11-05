@@ -110,6 +110,7 @@ set(CONSENSUS_DIR src/consensus)
 set(MESSAGES_DIR src/messages)
 set(POW_DIR src/pow)
 set(STORAGE_DIR src/storage)
+set(REMOTE_SOLVER_DIR src/remote_solver)
 aux_source_directory(${RPC_DIR} RPC_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${PEER_DIR} PEER_SRCS)
@@ -126,6 +127,7 @@ aux_source_directory(${CONSENSUS_DIR} CONSENSUS_SRCS)
 aux_source_directory(${MESSAGES_DIR} MESSAGES_SRCS)
 aux_source_directory(${POW_DIR} POW_SRCS)
 aux_source_directory(${STORAGE_DIR} STORAGE_SRCS)
+aux_source_directory(${REMOTE_SOLVER_DIR} REMOTE_SOLVER_SRCS)
 
 list(REMOVE_ITEM ROOT_SRCS src/epic.cpp)
 list(REMOVE_ITEM ROOT_SRCS src/epic-cli.cpp)
@@ -152,6 +154,7 @@ include_directories(src
         ${POW_DIR}
         ${STORAGE_DIR}
         ${TOOLS_DIR}
+        ${REMOTE_SOLVER_DIR}
         )
 
 set(SRC_CODE
@@ -302,8 +305,6 @@ if (CUDA_FOUND AND EPIC_ENABLE_CUDA)
     set(SOLVER_RPC
             src/rpc/basic_rpc_server.cpp)
 
-    include_directories(src/remote_solver)
-    aux_source_directory(src/remote_solver REMOTE_SOLVER_SRCS)
     list(REMOVE_ITEM REMOTE_SOLVER_SRCS src/remote_solver/epic_solver.cpp)
 
     set(SRC_SOLVER ${REMOTE_SOLVER_SRCS} ${SOLVER_RPC} ${SOLVER_UTILS_SRCS} ${SOLVER_HASH_SRCS})

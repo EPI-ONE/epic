@@ -22,6 +22,7 @@ public:
 
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG(prefix);
+        m.Start();
     }
 
     void TearDown() override {
@@ -173,7 +174,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
     ASSERT_EQ(0, arrayMs[0]->height);
 
     for (size_t i = 1; i < HEIGHT; i++) {
-        auto vtx = fac.CreateConsecutiveVertexPtr(timeGenerator.NextTime());
+        auto vtx = fac.CreateConsecutiveVertexPtr(timeGenerator.NextTime(), m);
 
         // Generate some "valid" txns
         auto s = (i - 1) % GetParams().blockCapacity + 1;

@@ -56,6 +56,9 @@ public:
     }
 
     static void TearDownDAG(const std::string& dirPath) {
+        if (MINER) {
+            MINER->Stop();
+        }
         if (STORE) {
             STORE->Wait();
             STORE->Stop();
