@@ -41,55 +41,61 @@ void CPUSolver::Abort() {
 }
 
 bool CPUSolver::Solve(Block& b) {
-    arith_uint256 target = b.GetTargetAsInteger();
-    size_t nthreads      = solverPool_.GetThreadSize();
+    aborted = false;
 
-    final_nonce = 0;
-    final_time  = b.GetTime();
-    found_sols  = false;
+    size_t nthreads = solverPool_.GetThreadSize();
+    auto task_id    = GetTaskID();
     VStream vs(b.GetHeader());
 
     for (std::size_t i = 0; i < nthreads; ++i) {
-        solverPool_.Execute([&, i]() {
-            auto blkStream     = vs;
-            uint32_t nonce     = b.GetNonce() + i - nthreads;
-            uint32_t timestamp = final_time.load();
-
+        solverPool_.Execute([i, nthreads, target = b.GetTargetAsInteger(), task_id, nonce = b.GetNonce() + i,
+                             timestamp = b.GetTime(), vs, this]() mutable {
             while (enabled.load()) {
-                nonce += nthreads;
-                SetNonce(blkStream, nonce);
+                SetNonce(vs, nonce);
 
                 if (nonce >= i - nthreads) {
                     timestamp = time(nullptr);
-                    SetTimestamp(blkStream, timestamp);
+                    SetTimestamp(vs, timestamp);
                 }
 
-                if (found_sols.load() || aborted.load()) {
+                if (aborted.load()) {
                     return;
                 }
 
-                uint256 blkHash = HashBLAKE2<256>(blkStream.data(), blkStream.size());
+                uint256 blkHash = HashBLAKE2<256>(vs.data(), vs.size());
                 if (UintToArith256(blkHash) <= target) {
-                    bool f = false;
-                    if (found_sols.compare_exchange_strong(f, true)) {
-                        final_nonce = nonce;
-                        final_time  = timestamp;
-                    }
+                    task_results.push_back({task_id, {timestamp, nonce, std::vector<uint32_t>{}}});
                     break;
                 }
+
+                nonce += nthreads;
             }
         });
     }
 
     // Block the main thread until a nonce is solved
-    while (!found_sols.load() && enabled.load() && !aborted.load()) {
-        std::this_thread::yield();
+    while (enabled.load() && !aborted.load()) {
+        if (task_results.empty()) {
+            std::this_thread::yield();
+            continue;
+        }
+
+        if (task_results.front().first != task_id) {
+            task_results.pop_front();
+            continue;
+        }
+
+        break;
     }
 
+    aborted = true;
     solverPool_.Abort();
 
-    b.SetNonce(final_nonce.load());
-    b.SetTime(final_time.load());
+    auto last_result = task_results.front().second;
+    task_results.pop_front();
+
+    b.SetTime(std::get<0>(last_result));
+    b.SetNonce(std::get<1>(last_result));
     b.CalculateHash();
     b.CalculateOptimalEncodingSize();
     return true;
@@ -139,7 +145,7 @@ void RemoteGPUSolver::Abort() {
     grpc::ClientContext context;
     StopTaskRequest request;
     StopTaskResponse response;
-    request.set_task_id(current_task_id_);
+    request.set_task_id(current_task_id);
     client->AbortTask(&context, request, &response);
 }
 
@@ -149,7 +155,7 @@ bool RemoteGPUSolver::Solve(Block& b) {
     grpc::ClientContext context;
     POWTask request;
     POWResult reply;
-    request.set_task_id(rand());
+    request.set_task_id(GetTaskID());
     request.set_init_nonce(0);
     request.set_init_time(b.GetTime());
     request.set_step(1);
@@ -157,7 +163,6 @@ bool RemoteGPUSolver::Solve(Block& b) {
     request.set_target(target.GetHex());
     request.set_header(vs.data(), vs.size());
 
-    current_task_id_ = request.task_id();
     if (!sent_task_) {
         sent_task_ = true;
     }

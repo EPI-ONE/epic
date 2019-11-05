@@ -35,7 +35,8 @@ public:
     word_t** sols = nullptr;
     uint32_t nsols;
 
-    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits, int cyclelen) : visited(2 * maxnodes) {
+    graph(word_t maxedges, word_t maxnodes, uint32_t maxsols, uint32_t compressbits, int cyclelen)
+        : visited(2 * maxnodes) {
         cycle_len = cyclelen;
         maxEdges  = maxedges;
         maxNodes  = maxnodes;

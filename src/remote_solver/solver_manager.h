@@ -10,7 +10,6 @@
 #include "solver_task.h"
 #include "threadpool.h"
 
-
 class SolverManager {
 public:
     explicit SolverManager(size_t nThreads);
@@ -23,15 +22,14 @@ public:
 
 private:
     std::atomic_bool enabled_ = false;
+    std::atomic_bool aborted_ = false;
     BlockingQueue<uint32_t> task_queue_;
     ConcurrentHashMap<uint32_t, std::shared_ptr<SolverTask>> tasks;
     std::atomic_bool isIdle = true;
 
     ThreadPool solverPool_;
     SolverParams solverParams_;
-    std::atomic<uint32_t> final_nonce;
-    std::atomic<uint64_t> final_time;
-    std::atomic<bool> found_sols;
+    ConcurrentQueue<std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>> task_results;
 };
 
 

@@ -14,7 +14,7 @@ static constexpr uint32_t INTERVAL = TARGET_TIMESPAN / static_cast<double>(TIME_
 // transaction per second
 static constexpr uint32_t TPS = 1000;
 // threshold for rejecting an old block
-static constexpr uint32_t PUNTUALITY_THRESHOLD = 2 * 60 * 60;
+static constexpr uint32_t PUNTUALITY_THRESHOLD = 100;
 // max amount of money allowed in one output
 static constexpr uint64_t MAX_MONEY = 9999999999L;
 // version of genesis block
@@ -27,8 +27,6 @@ static constexpr float SORTITION_COEFFICIENT = 0.01;
 static constexpr size_t SORTITION_THRESHOLD = 1000;
 // coefficient of taking additional reward for milestone
 static constexpr uint32_t REWARD_COEFFICIENT = 50;
-// the number of milestones to be cached in each chain
-static constexpr size_t CACHE_STATES = 100;
 // capacity of transactions in a block
 static constexpr size_t BLK_CAPACITY = 128;
 
@@ -74,7 +72,6 @@ MainNetParams::MainNetParams() {
     cycleLen             = 42;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = SORTITION_THRESHOLD;
-    cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
 
@@ -109,7 +106,6 @@ TestNetSpadeParams::TestNetSpadeParams() {
     cycleLen             = 4;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = 100;
-    cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
 
@@ -141,7 +137,6 @@ TestNetDiamondParams::TestNetDiamondParams() {
     cycleLen             = 0;
     sortitionCoefficient = SORTITION_COEFFICIENT;
     sortitionThreshold   = 100;
-    cacheStatesSize      = CACHE_STATES;
     deleteForkThreshold  = 5;
     blockCapacity        = BLK_CAPACITY;
 
@@ -164,7 +159,7 @@ UnitTestParams::UnitTestParams() {
     timeInterval         = 3; // cannot be less than 3
     interval             = targetTimespan / (double) timeInterval;
     targetTPS            = 100;
-    punctualityThred     = PUNTUALITY_THRESHOLD;
+    punctualityThred     = 20;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
     reward               = 10;
@@ -172,7 +167,6 @@ UnitTestParams::UnitTestParams() {
     cycleLen             = 0;
     sortitionCoefficient = 1;
     sortitionThreshold   = 2;
-    cacheStatesSize      = 20;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
 

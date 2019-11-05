@@ -83,13 +83,13 @@ ConstBlockPtr BlockStore::FindBlock(const uint256& blkHash) const {
 }
 
 VertexPtr BlockStore::GetMilestoneAt(size_t height) const {
-    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetMsPos(height));
+    VertexPtr vtx(ConstructNRFromFile(dbStore_.GetMsPos(height)));
     vtx->snapshot->PushBlkToLvs(vtx);
     return vtx;
 }
 
 VertexPtr BlockStore::GetVertex(const uint256& blkHash, bool withBlock) const {
-    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock);
+    VertexPtr vtx(ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock));
     if (vtx && vtx->isMilestone) {
         vtx->snapshot->PushBlkToLvs(vtx);
     }

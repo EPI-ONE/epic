@@ -56,7 +56,7 @@ void Peer::ProcessMessage(unique_message_t& msg) {
             }
             case NetMessage::NOT_FOUND: {
                 auto* notfound = dynamic_cast<NotFound*>(msg.get());
-                spdlog::warn("Not found: {}", notfound->hash.to_substr());
+                spdlog::warn("Block not found: {}", std::to_string(notfound->hash));
                 ProcessNotFound(notfound->nonce);
                 break;
             }
@@ -88,7 +88,7 @@ void Peer::ProcessPing(const Ping& ping) {
 void Peer::ProcessPong(const Pong& pong) {
     lastPongTime = time(nullptr);
     nPingFailed  = pong.nonce == lastNonce ? 0 : nPingFailed + 1;
-    spdlog::info("Received pong from {} with nonce = {}", address.ToString(), pong.nonce);
+    spdlog::trace("Received pong from {} with nonce = {}", address.ToString(), pong.nonce);
 }
 
 void Peer::ProcessVersionMessage(VersionMessage& version) {
@@ -98,7 +98,7 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     // check version
     if (version.client_version < kMinProtocolVersion) {
-        spdlog::warn("Client version {} < min protocol version {}. Disconnect peer {}", version.client_version,
+        spdlog::warn("Client version {} < min protocol version {}. Disconnecting peer {}", version.client_version,
                      kMinProtocolVersion, address.ToString());
         Disconnect();
         return;
@@ -110,11 +110,11 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     char time_buffer[20];
     strftime(time_buffer, 20, "%Y-%m-%d %H:%M:%S", localtime((time_t*) &(versionMessage->nTime)));
-    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = "
-                 "{}, version info = {}",
+    spdlog::info("{}: got version = {}, address_you = {}, address_me = {}, services = {}, time = {}, height = {}",
                  address.ToString(), versionMessage->client_version, versionMessage->address_you.ToString(),
                  versionMessage->address_me.ToString(), versionMessage->local_service, std::string(time_buffer),
-                 versionMessage->current_height, versionMessage->version_info);
+                 versionMessage->current_height);
+    spdlog::info("Git version info: {}", versionMessage->version_info);
 
     bool compareHeight = !(isSeed || CONFIG->AmISeed());
     if (compareHeight && versionMessage->current_height > DAG->GetBestMilestoneHeight()) {
@@ -155,7 +155,7 @@ void Peer::ProcessGetAddrMessage() {
     for (const auto& addr : addrMsg->addressList) {
         sentAddresses.insert(addr.HashCode());
     }
-    spdlog::debug("Reply GetAddr request to {}", address.ToString());
+    spdlog::debug("Replying GetAddr request to {}", address.ToString());
     SendMessage(std::move(addrMsg));
     haveRepliedGetAddr = true;
 }
@@ -168,7 +168,7 @@ void Peer::SendPing() {
     if (isFullyConnected) {
         lastNonce = time(nullptr);
         SendMessage(std::make_unique<Ping>(lastNonce));
-        spdlog::info("Sent ping to {} with nonce = {}", address.ToString(), lastNonce);
+        spdlog::trace("Sent ping to {} with nonce = {}", address.ToString(), lastNonce);
     }
 }
 
@@ -202,7 +202,7 @@ void Peer::ProcessGetInv(GetInv& getInv) {
 }
 
 void Peer::ProcessInv(std::unique_ptr<Inv> inv) {
-    spdlog::debug("Received inventory message: size = {}, from {} ", inv->hashes.size(), address.ToString());
+    spdlog::debug("Received an inventory message: size = {}, from {} ", inv->hashes.size(), address.ToString());
     if (!InvTaskContains(inv->nonce)) {
         spdlog::debug("Unknown Inv with nonce = {}", inv->nonce);
         return;
@@ -260,7 +260,7 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
             for (auto& block : bundle->blocks) {
                 DAG->AddNewBlock(block, nullptr);
             }
-            spdlog::info("Receive pending set");
+            spdlog::info("Received the pending set");
         }
 
         getDataTasks.Pop();
@@ -302,7 +302,8 @@ void Peer::SendMessage(unique_message_t&& message) {
 
 void Peer::SendVersion(uint64_t height, std::string versionInfo) {
     auto addressMe = NetAddress(addressManager_->GetBestLocalAddress(), CONFIG->GetBindPort());
-    SendMessage(std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, 0, 0));
+    SendMessage(
+        std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, GetParams().version, 0));
     spdlog::info("Sent version message to {}", address.ToString());
 }
 
@@ -322,7 +323,7 @@ void Peer::StartSync() {
     }
 
     if (getDataTasks.Empty() && InvTaskEmpty()) {
-        spdlog::info("Syncing start {}", address.ToString());
+        spdlog::info("Starting synchronization with {}", address.ToString());
         DAG->RequestInv(uint256(), 5, weak_peer_.lock());
     }
 }
@@ -358,6 +359,6 @@ void Peer::RelayAddrMsg(std::vector<NetAddress>& addresses) {
     }
     if (!addrMsg->addressList.empty()) {
         SendMessage(std::move(addrMsg));
-        spdlog::info("Relay address message to {}", address.ToString());
+        spdlog::debug("Relayed address message to {}", address.ToString());
     }
 }

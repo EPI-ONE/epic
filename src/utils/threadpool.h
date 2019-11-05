@@ -9,6 +9,7 @@
 
 #include <exception>
 #include <future>
+#include <optional>
 
 class CallableWrapper {
 public:
@@ -90,9 +91,9 @@ public:
      * @return
      */
     template <typename FunctionType>
-    std::future<typename std::result_of<FunctionType()>::type> Submit(FunctionType&& f) {
+    std::optional<std::future<typename std::result_of<FunctionType()>::type>> Submit(FunctionType&& f) {
         if (!task_queue_enabled_.load()) {
-            throw std::runtime_error("Task queue disabled! Cannot add new task.");
+            return {};
         }
 
         typedef typename std::result_of<FunctionType()>::type result_type;

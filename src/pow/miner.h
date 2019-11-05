@@ -25,7 +25,7 @@ public:
     bool Solve(Block&);
     void Run();
 
-    bool IsRunning() {
+    bool IsRunning() const {
         return enabled_.load();
     }
 

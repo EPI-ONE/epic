@@ -102,6 +102,7 @@ service CommanderRPC {
     rpc DisConnectPeer(DisConnectPeerRequest) returns(DisConnectPeerResponse);
     rpc DisConnectAllPeers(DisConnectAllRequest) returns (DisConnectAllResponse);
     rpc ConnectPeer(ConnectRequest) returns (ConnectResponse);
+    rpc SyncCompleted(SyncStatusRequest) returns (SyncStatusResponse);
 }
 
 message StopRequest {}
@@ -241,4 +242,10 @@ message ConnectRequest{
 
 message ConnectResponse{
     string result = 1;
+}
+
+message SyncStatusRequest {}
+
+message SyncStatusResponse {
+    bool completed = 1;
 }

@@ -41,12 +41,17 @@ public:
 
     /////////////////////////////// Verification /////////////////////////////////////
 
-    /*
+    /**
      * Submits tasks to a single thread in which it checks its syntax.
      * If the block passes the checking, add them to pendings in dag_manager.
      * Returns true only if the new block is successfully submitted to pendings.
      */
     void AddNewBlock(ConstBlockPtr block, PeerPtr peer);
+
+    /**
+     * Checks whether the block links to an old milestone
+     */
+    bool CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const;
 
     //////////////////////// APIs for retriving data from DAG ////////////////////////
 
@@ -147,8 +152,6 @@ private:
     /** Delete the chain who loses in the race competition */
     void DeleteFork();
 
-    bool CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const;
-
     /**
      * Adds a newly received block to the corresponding chain
      * that passes syntax checking .
@@ -181,7 +184,6 @@ private:
     void FlushToSTORE(MilestonePtr); // flush the oldest chain states
 
     void EnableOBC();
-
 };
 
 bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m);

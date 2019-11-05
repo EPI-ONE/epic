@@ -18,10 +18,12 @@ public:
 
     void SetUp() override {
         EpicTestEnvironment::SetUpDAG(prefix);
+        m.Start();
     }
 
     void TearDown() override {
         EpicTestEnvironment::TearDownDAG(prefix);
+        m.Stop();
     }
 
     void AddToHistory(Chain* c, VertexPtr pvtx) {
@@ -425,7 +427,7 @@ TEST_F(TestChainVerification, ChainForking) {
     ConstBlockPtr forkblk;
     MilestonePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
-        vtcs.emplace_back(fac.CreateConsecutiveVertexPtr(fac.NextTime()));
+        vtcs.emplace_back(fac.CreateConsecutiveVertexPtr(fac.NextTime(), m));
         dqcs.push_back(fac.CreateMilestonePtr(dqcs.back(), vtcs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5

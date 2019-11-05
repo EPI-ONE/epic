@@ -99,7 +99,6 @@ void Miner::Run() {
 
         while (enabled_.load()) {
             abort_ = false;
-            solver->Resume();
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
@@ -126,8 +125,7 @@ void Miner::Run() {
                         selfChainHead_ = nullptr;
                         prevHash       = GENESIS->GetHash();
                         selfChainHeads_.clear();
-                        distanceCal_ = Cumulator();
-                        assert(distanceCal_.Empty());
+                        distanceCal_.Clear();
                     } else {
                         b.AddTransaction(std::move(tx));
                         max_ntx--;

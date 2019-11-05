@@ -16,7 +16,7 @@ int ParseArg(int argc, char** argv, std::string& root, std::string& type) {
     options.add_options()
     ("h,help", "print this message", cxxopts::value<bool>())
     ("r,root", "root path of data, example: data",cxxopts::value<std::string>(root))
-    ("t,type", "network type, one of Mainnet, Testnet and Unittest",cxxopts::value<std::string>(type));
+    ("t,type", "network type, one of Mainnet, Diamond (Testnet), Spade (Testnet), and Unittest",cxxopts::value<std::string>(type));
     // clang-format on
 
     try {

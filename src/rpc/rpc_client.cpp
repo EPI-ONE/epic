@@ -320,3 +320,16 @@ RPCClient::option_string RPCClient::DisconnectAllPeers() {
     }
     return response.result();
 }
+
+std::optional<bool> RPCClient::SyncCompleted() {
+    SyncStatusRequest request;
+    SyncStatusResponse response;
+    grpc::ClientContext context;
+
+    auto status = commander_stub_->SyncCompleted(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response.completed();
+}

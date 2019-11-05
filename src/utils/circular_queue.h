@@ -18,7 +18,9 @@ public:
     explicit CircularQueue(size_t s) : base(), cap(s) {}
 
     void pop() {
-        base::pop_back();
+        if (!base::empty()) {
+            base::pop_back();
+        }
     }
 
     void push(const T& value) {

@@ -76,29 +76,25 @@ TaskStatus SolverManager::ProcessTask(const std::shared_ptr<SolverTask>& task) {
 
 
 TaskStatus SolverManager::Solve(std::shared_ptr<SolverTask> task) {
+    aborted_ = false;
     TaskStatus status;
 
     size_t nthreads = solverPool_.GetThreadSize();
-    final_nonce     = 0;
-    final_time      = task->init_time;
-    found_sols      = false;
-    std::vector<uint32_t> final_sol(task->cycle_length);
     std::vector<SolverCtx*> ctx_q(nthreads);
 
     try {
         for (size_t i = 0; i < nthreads; ++i) {
-            solverPool_.Execute([&, i]() {
+            solverPool_.Execute([i, nthreads, nonce = task->init_nonce + i * task->step, timestamp = task->init_time,
+                                 &task, &ctx_q, this]() mutable {
                 auto params    = solverParams_;
                 params.device  = i;
                 SolverCtx* ctx = nullptr;
-                while (!found_sols.load() && !ctx) {
+                while (!aborted_ && !task->abort_ && !ctx) {
                     ctx = CreateSolverCtx(params, task->cycle_length);
                 }
                 ctx_q[i] = ctx;
 
-                auto blkStream     = task->blockHeader;
-                uint32_t nonce     = task->init_nonce + i * task->step;
-                uint32_t timestamp = final_time.load();
+                auto blkStream = task->blockHeader;
 
                 while (enabled_.load()) {
                     SetNonce(blkStream, nonce);
@@ -110,7 +106,7 @@ TaskStatus SolverManager::Solve(std::shared_ptr<SolverTask> task) {
 
                     ctx->SetHeader(blkStream.data(), blkStream.size());
 
-                    if (found_sols.load() || task->abort_.load()) {
+                    if (aborted_ || task->abort_.load()) {
                         delete ctx;
                         return;
                     }
@@ -120,14 +116,9 @@ TaskStatus SolverManager::Solve(std::shared_ptr<SolverTask> task) {
                                                   ctx->sols.end()); // the last solution
                         uint256 cyclehash = HashBLAKE2<256>(sol.data(), (size_t) task->cycle_length * sizeof(word_t));
                         if (UintToArith256(cyclehash) <= task->target) {
-                            bool f = false;
-                            if (found_sols.compare_exchange_strong(f, true)) {
-                                final_nonce = nonce;
-                                final_time  = timestamp;
-                                final_sol   = std::move(sol);
-                                spdlog::trace("Found solution: thread {}, nonce {}, time {}, cycle hash {}", i, nonce,
-                                              timestamp, cyclehash.to_substr());
-                            }
+                            task_results.push_back({task->id, {timestamp, nonce, std::move(sol)}});
+                            spdlog::trace("Found solution: thread {}, nonce {}, time {}, cycle hash {}", i, nonce,
+                                          timestamp, cyclehash.to_substr());
                             delete ctx;
                             break;
                         }
@@ -138,11 +129,22 @@ TaskStatus SolverManager::Solve(std::shared_ptr<SolverTask> task) {
             });
         }
 
-        while (!found_sols.load() && enabled_.load() && !task->abort_.load()) {
-            usleep(500000);
+        while (enabled_.load() && !aborted_.load() && !task->abort_.load()) {
+            if (task_results.empty()) {
+                usleep(500000);
+                continue;
+            }
+
+            if (task_results.front().first != task->id) {
+                task_results.pop_front();
+                continue;
+            }
+
+            break;
         }
 
         // Abort unfinished tasks
+        aborted_ = true;
         solverPool_.ClearAndDisableTasks();
         for (const auto& ctx : ctx_q) {
             if (ctx) {
@@ -150,17 +152,21 @@ TaskStatus SolverManager::Solve(std::shared_ptr<SolverTask> task) {
             }
         }
         solverPool_.Abort();
-        if (found_sols) {
-            status.first = std::make_unique<TaskResult>();
 
-            status.first->final_time  = final_time;
-            status.first->final_nonce = final_nonce;
-            status.first->proof       = final_sol;
-            status.second             = SolverResult::ErrorCode ::SUCCESS;
-        } else if (!enabled_) {
+        if (!enabled_) {
             status.second = SolverResult::ErrorCode ::SERVER_ABORT;
         } else if (task->abort_) {
             status.second = SolverResult::ErrorCode ::TASK_CANCELED_BY_CLIENT;
+        } else {
+            status.first = std::make_unique<TaskResult>();
+
+            auto last_result = task_results.front().second;
+            task_results.pop_front();
+
+            status.first->final_time  = std::get<0>(last_result);
+            status.first->final_nonce = std::get<1>(last_result);
+            status.first->proof       = std::move(std::get<2>(last_result));
+            status.second             = SolverResult::ErrorCode ::SUCCESS;
         }
 
     } catch (std::exception& e) {

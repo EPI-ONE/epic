@@ -6,6 +6,7 @@
 #define EPIC_SOLVER_H
 
 #include "block.h"
+#include "concurrent_container.h"
 #include "service/rpc_service.h"
 #include "threadpool.h"
 
@@ -19,18 +20,19 @@ public:
     virtual bool Start()       = 0;
     virtual bool Stop()        = 0;
     virtual void Abort()       = 0;
-    virtual void Resume(){
-        aborted = false;
-    }
     virtual bool Solve(Block&) = 0;
+
+    uint32_t GetTaskID() {
+        current_task_id.fetch_add(1);
+        return current_task_id.load();
+    }
 
 protected:
     std::atomic_bool enabled = false;
     std::atomic_bool aborted = false;
 
-    std::atomic_uint32_t final_nonce = 0;
-    std::atomic_uint64_t final_time  = 0;
-    std::atomic_bool found_sols      = false;
+    std::atomic_uint32_t current_task_id = 0;
+    ConcurrentQueue<std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>> task_results;
 };
 
 class CPUSolver : public Solver {
@@ -80,7 +82,6 @@ public:
 
 private:
     std::unique_ptr<SolverRPCClient> client;
-    std::atomic_uint32_t current_task_id_;
     std::atomic_bool sent_task_ = false;
 };
 

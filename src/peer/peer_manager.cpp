@@ -37,7 +37,7 @@ void PeerManager::Start() {
     scheduleTask_      = std::thread(std::bind(&PeerManager::ScheduleTask, this));
     if (connect_.empty()) {
         if (CONFIG->AmISeed()) {
-            spdlog::info("I am a seed, then don't start the openConnection thread");
+            spdlog::info("I am a seed, so I'm not starting the openConnection thread.");
         } else {
             openConnectionTask_ = std::thread(std::bind(&PeerManager::OpenConnection, this));
         }
@@ -49,7 +49,7 @@ void PeerManager::Start() {
 }
 
 void PeerManager::Stop() {
-    spdlog::info("Stopping peer manager...");
+    spdlog::info("Stopping the peer manager...");
     interrupt_ = true;
     connectionManager_->QuitQueue();
 
@@ -80,7 +80,7 @@ bool PeerManager::Init(std::unique_ptr<Config>& config) {
         return false;
     }
     if (!Listen(config->GetBindPort())) {
-        spdlog::warn("Failed to listen port {}.", config->GetBindPort());
+        spdlog::warn("Failed to listen on port {}.", config->GetBindPort());
         return false;
     }
 
@@ -130,7 +130,7 @@ void PeerManager::ClearPeers() {
 
 void PeerManager::RemovePeer(shared_connection_t connection) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
-    spdlog::info("Delete peer {}", connection->GetRemote());
+    spdlog::info("Deleted peer {}", connection->GetRemote());
     peerMap_.erase(connection);
     PrintConnectedPeers();
 }
@@ -232,19 +232,19 @@ void PeerManager::ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer) {
 
 void PeerManager::ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr& peer) {
     if (addressMessage.addressList.size() > AddressMessage::kMaxAddressSize) {
-        spdlog::warn("Received too many addresses, abort them");
+        spdlog::warn("Received too many addresses. Abort them");
     } else {
-        spdlog::info("Received addresses from peer {}, size = {}", peer->address.ToString(),
-                     addressMessage.addressList.size());
+        spdlog::trace("Received addresses from peer {}, size = {}", peer->address.ToString(),
+                      addressMessage.addressList.size());
         AddressMessage relayMessage;
         for (auto& addr : addressMessage.addressList) {
             // save addresses
             if (addr.IsRoutable() && !addressManager_->IsLocal(addr)) {
                 addressManager_->AddNewAddress(addr);
                 relayMessage.AddAddress(addr);
-                spdlog::info("Received address {} , will save and relay it", addr.ToString());
+                spdlog::trace("Received address {}. Will save and relay it.", addr.ToString());
             } else {
-                spdlog::info("Received address {} which is local or invalid, abort it", addr.ToString());
+                spdlog::trace("Received address {} which is local or invalid. Ignore it.", addr.ToString());
             }
         }
         if (!relayMessage.addressList.empty()) {
@@ -254,7 +254,7 @@ void PeerManager::ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr&
 
     // disconnect the connection after we get the addresses if the peer is a seed
     if (peer->isSeed) {
-        spdlog::warn("Disconnect the seed {} after receiving addresses from it", peer->address.ToString());
+        spdlog::warn("Disconnected the seed {} after receiving addresses from it.", peer->address.ToString());
         peer->Disconnect();
     }
 }
@@ -267,7 +267,7 @@ void PeerManager::OpenConnection() {
         }
         auto seed = addressManager_->GetOneSeed();
         if (seed) {
-            spdlog::info("Try to connect to seed {}", seed->ToString());
+            spdlog::info("Trying to connect to seed {}", seed->ToString());
             ConnectTo(*seed);
         }
 
@@ -293,7 +293,8 @@ void PeerManager::OpenConnection() {
             if (now - lastTry < 180) {
                 continue;
             }
-            spdlog::info("[open connection] Select address {} to connect", try_to_connect->ToString());
+            spdlog::info("[Open Connection] Trying to connect {} selected from the address book.",
+                         try_to_connect->ToString());
             ConnectTo(*try_to_connect);
             addressManager_->SetLastTry(*try_to_connect, now);
             break;
@@ -340,6 +341,10 @@ void PeerManager::CheckTimeout() {
     }
 }
 
+bool PeerManager::InitialSyncCompleted() const {
+    return !initial_sync_;
+}
+
 void PeerManager::InitialSync() {
     while (!interrupt_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -347,7 +352,7 @@ void PeerManager::InitialSync() {
         if (DAG->GetMilestoneHead()->cblock->GetTime() >= now - kSyncTimeThreshold) {
             initial_sync_      = false;
             initial_sync_peer_ = nullptr;
-            spdlog::info("Initial sync finished");
+            spdlog::info("Initial sync finished.");
             break;
         }
 
@@ -510,19 +515,19 @@ void PeerManager::PrintConnectedPeers() {
     for (auto& connected_peer : peerMap_) {
         peerAddresses << connected_peer.second->address.ToString() << ", ";
     }
-    spdlog::info("Current connected {} peers: [{}]", peerMap_.size(), peerAddresses.str());
+    spdlog::info("Currently connected to {} peers: [{}]", peerMap_.size(), peerAddresses.str());
 }
 
 bool PeerManager::CheckPeerID(uint64_t id) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
     if (id == myID_) {
-        spdlog::warn("Connected to myself, disconnect");
+        spdlog::warn("Connecting to myself. Abort.");
         return false;
     }
     for (auto& peer : peerMap_) {
         auto versionMsg = peer.second->versionMessage;
         if (versionMsg != nullptr && versionMsg->id == id) {
-            spdlog::warn("Connected to the same peer, disconnect");
+            spdlog::warn("Duplicated connection to the same peer. Abort.");
             return false;
         }
     }
