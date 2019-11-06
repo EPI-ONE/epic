@@ -351,15 +351,6 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
 bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const {
     assert(ms);
-
-    if (blk->IsFirstRegistration()) {
-        return true;
-    }
-
-    if (blk->GetMilestoneHash() == GENESIS->GetHash()) {
-        return true;
-    }
-
     assert(milestoneChains.size() > 0);
     assert(milestoneChains.best());
 
