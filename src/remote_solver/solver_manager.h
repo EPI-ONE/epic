@@ -29,7 +29,9 @@ private:
 
     ThreadPool solverPool_;
     SolverParams solverParams_;
-    ConcurrentQueue<std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>> task_results;
+
+    using Solution = std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>;
+    BlockingQueue<Solution> solutions;
 };
 
 

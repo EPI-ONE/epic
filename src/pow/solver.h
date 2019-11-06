@@ -20,6 +20,7 @@ public:
     virtual bool Start()       = 0;
     virtual bool Stop()        = 0;
     virtual void Abort()       = 0;
+    virtual void Enable()      = 0;
     virtual bool Solve(Block&) = 0;
 
     uint32_t GetTaskID() {
@@ -28,12 +29,12 @@ public:
     }
 
 protected:
-    std::atomic_bool enabled   = false;
-    std::atomic_bool aborted   = false;
-    std::atomic_bool found_sol = false;
+    std::atomic_bool enabled = false;
 
     std::atomic_uint32_t current_task_id = 0;
-    ConcurrentQueue<std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>> task_results;
+
+    using Solution = std::pair<uint32_t, std::tuple<uint32_t, uint32_t, std::vector<uint32_t>>>;
+    BlockingQueue<Solution> solutions;
 };
 
 class CPUSolver : public Solver {
@@ -49,6 +50,7 @@ public:
     bool Start() override;
     bool Stop() override;
     void Abort() override;
+    void Enable() override;
     bool Solve(Block&) override;
 
 private:
@@ -79,6 +81,7 @@ public:
     bool Start() override;
     bool Stop() override;
     void Abort() override;
+    void Enable() override {}
     bool Solve(Block&) override;
 
 private:

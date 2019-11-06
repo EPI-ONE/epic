@@ -17,32 +17,28 @@ inline void SetTimestamp(VStream& vs, uint32_t t) {
 }
 
 bool CPUSolver::Start() {
-    bool flag = false;
-    if (enabled.compare_exchange_strong(flag, true)) {
-        solverPool_.Start();
-        return true;
-    }
-
-    return false;
+    solverPool_.Start();
+    return true;
 }
 
 bool CPUSolver::Stop() {
-    bool flag = true;
-    if (enabled.compare_exchange_strong(flag, false)) {
-        solverPool_.Stop();
-        return true;
-    }
-
-    return false;
+    enabled = false;
+    solverPool_.Stop();
+    return true;
 }
 
 void CPUSolver::Abort() {
-    aborted = true;
+    enabled = false;
+    solutions.Quit();
+}
+
+void CPUSolver ::Enable() {
+    enabled = true;
+    solutions.Enable();
 }
 
 bool CPUSolver::Solve(Block& b) {
-    aborted   = false;
-    found_sol = false;
+    Enable();
 
     size_t nthreads = solverPool_.GetThreadSize();
     auto task_id    = GetTaskID();
@@ -59,14 +55,9 @@ bool CPUSolver::Solve(Block& b) {
                     SetTimestamp(vs, timestamp);
                 }
 
-                if (found_sol.load() || aborted.load()) {
-                    return;
-                }
-
                 uint256 blkHash = HashBLAKE2<256>(vs.data(), vs.size());
                 if (UintToArith256(blkHash) <= target) {
-                    found_sol = true;
-                    task_results.push_back({task_id, {timestamp, nonce, std::vector<uint32_t>{}}});
+                    solutions.Put({task_id, {timestamp, nonce, std::vector<uint32_t>{}}});
                     break;
                 }
 
@@ -76,31 +67,20 @@ bool CPUSolver::Solve(Block& b) {
     }
 
     // Block the main thread until a nonce is solved
-    while (enabled.load() && !aborted.load()) {
-        if (task_results.empty()) {
-            std::this_thread::yield();
-            continue;
-        }
+    Solution last_result;
+    while (solutions.Take(last_result)) {
+        if (last_result.first == task_id) {
+            Abort();
+            b.SetTime(std::get<0>(last_result.second));
+            b.SetNonce(std::get<1>(last_result.second));
+            b.CalculateHash();
+            b.CalculateOptimalEncodingSize();
 
-        if (task_results.front().first != task_id) {
-            task_results.pop_front();
-            continue;
+            break;
         }
-
-        break;
     }
 
     solverPool_.Abort();
-
-    if (!task_results.empty()) {
-        auto last_result = std::move(task_results.front().second);
-        task_results.pop_front();
-
-        b.SetTime(std::get<0>(last_result));
-        b.SetNonce(std::get<1>(last_result));
-        b.CalculateHash();
-        b.CalculateOptimalEncodingSize();
-    }
 
     return true;
 }
