@@ -88,7 +88,7 @@ static void EventCallback(bufferevent_t* bev, short events, void* ctx) {
     if (events & BEV_EVENT_CONNECTED) {
         bufferevent_enable(bev, EV_READ);
         cmptr->NewConnectionCallback(handle->GetHandlePtr());
-        spdlog::info("[net] Socket connected: {}", remote);
+        spdlog::info("[net] Connected to peer: {}", remote);
     }
 
     /* socket error */
@@ -189,7 +189,7 @@ bool ConnectionManager::Connect(uint32_t ip, uint16_t port) {
         return false;
     }
 
-    spdlog::info("[net] Trying to connect: {}", remote);
+    spdlog::trace("[net] Trying to connect: {}", remote);
     return true;
 }
 
