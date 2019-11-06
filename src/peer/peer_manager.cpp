@@ -272,7 +272,7 @@ void PeerManager::OpenConnection() {
         }
 
         int num_tries = 0;
-        while (num_tries < 100) {
+        while (num_tries < 100 && !interrupt_) {
             ++num_tries;
             auto try_to_connect = addressManager_->GetOneAddress(false);
 
@@ -293,8 +293,8 @@ void PeerManager::OpenConnection() {
             if (now - lastTry < 180) {
                 continue;
             }
-            spdlog::info("[Open Connection] Trying to connect {} selected from the address book.",
-                         try_to_connect->ToString());
+            spdlog::trace("[Open Connection] Trying to connect {} selected from the address book.",
+                          try_to_connect->ToString());
             ConnectTo(*try_to_connect);
             addressManager_->SetLastTry(*try_to_connect, now);
             break;
