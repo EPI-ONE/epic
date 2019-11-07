@@ -64,7 +64,6 @@ jobs:
         brew update && brew upgrade && brew cleanup
         brew install autoconf automake libtool
         brew install openssl@1.1
-        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         brew install cmake 
         brew install gmp 
         brew install grpc 
@@ -74,7 +73,9 @@ jobs:
     - name: Install secp256k1
       run: cd ci && ./install-secp256k1.sh
     - name: Install libevent
-      run: cd ci && ./install-libevent.sh
+      run: |
+        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+        cd ci && ./install-libevent.sh
     - name: Install googletest
       run: cd ci && ./install-googletest.sh
 
