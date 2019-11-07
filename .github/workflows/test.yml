@@ -72,7 +72,6 @@ jobs:
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
       run: cd build && make -j2
-    steps:
     - name: Run epic test
       run: ./bin/epictest
 
