@@ -15,9 +15,9 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
     - name: Install build tools
-      run:  sudo apt-get install autoconf libtool pkg-config libgmp-dev
+      run: sudo apt-get install autoconf libtool pkg-config libgmp-dev
     - name: Install clang-9
-    - run: |
+      run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
         sudo apt-get update
