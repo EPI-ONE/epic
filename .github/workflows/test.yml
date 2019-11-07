@@ -3,7 +3,7 @@ name: C/C++ CI
 on: [push]
 
 jobs:
-  dependency-install-ubuntu:
+  test-ubuntu:
     runs-on: ubuntu-18.04
     steps:
     - name: Install build tools
@@ -47,8 +47,15 @@ jobs:
     - name: Install googletest
       run: cd ci && ./install-googletest.sh
 
-  dependency-install-mac:
-    runs-on: [macos-latex]
+    - name: cmake
+      run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+    - name: make
+      run: cd build && make -j2
+    - name: Run epic test
+      run: ./bin/epictest
+
+  test-macOS:
+    runs-on: [macos-latest]
     steps:
     - name: install brew
       run: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -65,9 +72,6 @@ jobs:
     - name: Install googletest
       run: cd ci && ./install-googletest.sh
 
-  build-and-test:
-    runs-on: [ubuntu-18.04, macos-latest]
-    steps:
     - name: cmake
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
