@@ -80,7 +80,9 @@ jobs:
       run: cd ci && ./install-googletest.sh
 
     - name: cmake
-      run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+      run: |
+        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+        mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
       run: cd build && make -j2
     - name: Run epic test
