@@ -9,11 +9,42 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: Install dependencies
-      run: cd ci && ./sys-dep-install.sh
+
+    - name: Install gcc8
+      run:  sudo apt-get install gcc-8 g++-8
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
+    - name: Install build tools
+      run:  sudo apt-get install autoconf libtool pkg-config libgmp-dev
+    - name: Install clang-9
+    - run:  wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+            sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+            sudo apt-get update
+            sudo apt-get install clang-9
+            sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
+            sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
+
+    - name: Install cmake 
+      run: cd ci && ./install-cmake.sh
+    - name: Install openssl 
+      run: cd ci && ./install-openssl.sh
+    - name: Install secp256k1
+      run: cd ci && ./install-secp256k1.sh
+    - name: Install libevent
+      run: cd ci && ./install-libevent.sh
+    - name: Install googletest
+      run: cd ci && ./install-googletest.sh
+    - name: Install protobuf
+      run: cd ci && ./install-protobuf.sh
+    - name: Install grpc
+      run: cd ci && ./install-grpc.sh
+    - name: Install rocksdb
+      run: cd ci && ./install-rocksdb.sh
+
     - name: build
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
-      run: make -j2
+      run: cd build && make -j2
     - name: test
       run: ./bin/epictest
+
