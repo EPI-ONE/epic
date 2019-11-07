@@ -29,6 +29,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         clang -v
         clang++ -v
+    - uses: actions/checkout@v1
     - name: Install cmake 
       run: cd ci && ./install-cmake.sh
     - name: Install openssl 
@@ -45,7 +46,6 @@ jobs:
       run: cd ci && ./install-grpc.sh
     - name: Install rocksdb
       run: cd ci && ./install-rocksdb.sh
-    - uses: actions/checkout@v1
     - name: build
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
