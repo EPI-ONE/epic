@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-18.04
     
     steps:
+    - name: Install build tools
+      run: |
+        sudo apt-get install autoconf libtool pkg-config libgmp-dev
+        sudo apt-get autoremove
     - name: Install gcc8
       run: |
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -17,8 +21,6 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
         gcc -v
         g++ -v
-    - name: Install build tools
-      run: sudo apt-get install autoconf libtool pkg-config libgmp-dev
     - name: Install clang-9
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
