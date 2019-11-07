@@ -9,7 +9,6 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-
     - name: Install gcc8
       run: |
         sudo apt-get install gcc-8 g++-8
@@ -25,7 +24,6 @@ jobs:
         sudo apt-get install clang-9
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
-
     - name: Install cmake 
       run: cd ci && ./install-cmake.sh
     - name: Install openssl 
@@ -42,7 +40,6 @@ jobs:
       run: cd ci && ./install-grpc.sh
     - name: Install rocksdb
       run: cd ci && ./install-rocksdb.sh
-
     - name: build
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
