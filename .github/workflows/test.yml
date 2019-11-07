@@ -70,6 +70,7 @@ jobs:
         brew install grpc 
         brew install rocksdb 
         brew install protobuf
+    - uses: actions/checkout@v1
     - name: Install secp256k1
       run: cd ci && ./install-secp256k1.sh
     - name: Install libevent
