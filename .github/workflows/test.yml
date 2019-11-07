@@ -10,12 +10,10 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Install dependencies
-      run: ./ci/sys-dep-install.sh
+      run: cd ci && ./sys-dep-install.sh
     - name: build
-      run: mkdir build && cd build 
-    - name: cmake
-      run: cmake -DCAMKE_BUILD_TYPE=Release ..
+      run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
     - name: make
       run: make -j2
     - name: test
-      run: ../bin/epictest
+      run: ./bin/epictest
