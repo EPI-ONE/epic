@@ -2,6 +2,9 @@
 
 [![Build Status](https://travis-ci.com/EPI-ONE/epic.svg?token=xx2m4HADP8ipz4gYg3xd&branch=master)](https://travis-ci.com/EPI-ONE/epic)
 [![Coverage Status](https://coveralls.io/repos/github/EPI-ONE/epic/badge.svg?branch=master&t=OvdAhL)](https://coveralls.io/github/EPI-ONE/epic?branch=master)
+[![Github Actions](https://github.com/epi-one/epic/workflows/test-mac/badge.svg)](https://github.com/EPI-ONE/epic/actions)
+[![Github Actions](https://github.com/epi-one/epic/workflows/test-ubuntu/badge.svg)](https://github.com/EPI-ONE/epic/actions)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](COPYING)
 
 EPIC is a proof-of-work blockchain system that achieves an order of magnitude improvement on the throughput without sacrificing security and decentralization. 
 
@@ -20,7 +23,7 @@ EPIC is a proof-of-work blockchain system that achieves an order of magnitude im
 ### Discuss
 
 -   Telegram discuss group [t.me/epi_one](https://t.me/epi_one)
--   Welcome to report issues and send PR.
+-   Welcome to report [issues](https://github.com/EPI-ONE/epic/issues) and send [pull requests](https://github.com/EPI-ONE/epic/pulls).
 
 ### Design
 
