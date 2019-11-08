@@ -1,0 +1,45 @@
+name: test-mac
+
+on: [push]
+
+jobs:
+
+  test-macOS:
+    runs-on: [macos-latest]
+    steps:
+    - name: install brew
+      run: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    
+    - name: install dependencies via brew
+      run: |
+        brew update && brew upgrade && brew cleanup
+        brew install autoconf automake libtool
+        brew install openssl@1.1
+        brew install cmake 
+        brew install gmp 
+        brew install grpc 
+        brew install rocksdb 
+        brew install protobuf
+
+    - uses: actions/checkout@v1
+    
+    - name: Install secp256k1 from source
+      run: cd ci && ./install-secp256k1.sh
+    - name: Install libevent from source
+      run: |
+        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+        cd ci && ./install-libevent.sh
+    - name: Install googletest from source
+      run: cd ci && ./install-googletest.sh
+
+    - name: cmake
+      run: |
+        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+        mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+   
+    - name: make
+      run: cd build && make -j2
+    
+    - name: Run epic test
+      run: ./bin/epictest
+
