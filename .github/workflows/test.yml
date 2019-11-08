@@ -29,9 +29,13 @@ jobs:
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         clang -v
         clang++ -v
+    - name: Install cmake 3.15 
+      run: |
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+        sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
+        sudo apt-get update
+        sudo apt-get install cmake
     - uses: actions/checkout@v1
-    - name: Install cmake 
-      run: cd ci && ./install-cmake.sh
     - name: Install openssl 
       run: cd ci && ./install-openssl.sh
     - name: Install protobuf

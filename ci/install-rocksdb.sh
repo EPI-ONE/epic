@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ev
-EPIC_ROCKSDB_VERSION="6.3.6"
+EPIC_ROCKSDB_VERSION="6.4.6"
 EPIC_ROCKSDB_DIR=""rocksdb-"$EPIC_ROCKSDB_VERSION"
 
 if [[ ! -d ${EPIC_ROCKSDB_DIR} ]];then
