@@ -6,11 +6,13 @@ jobs:
   test-ubuntu:
     runs-on: ubuntu-18.04
     steps:
-    - name: Install build tools
+    
+    - name: Install build tools (apt-get)
       run: |
         sudo apt-get install autoconf libtool pkg-config libgmp-dev
         sudo apt-get autoremove
-    - name: Install gcc8
+    
+    - name: Install gcc8 (apt-get)
       run: |
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
@@ -19,7 +21,8 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
         gcc -v
         g++ -v
-    - name: Install clang-9
+    
+    - name: Install clang-9 (apt-get)
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
@@ -29,32 +32,38 @@ jobs:
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         clang -v
         clang++ -v
-    - name: Install cmake 3.15 
+    
+    - name: Install cmake 3.15 (apt-get)
       run: |
         wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
         sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
         sudo apt-get update
         sudo apt-get install cmake
+        type -a cmake
+
     - uses: actions/checkout@v1
-    - name: Install openssl 
+
+    - name: Install openssl from source 
       run: cd ci && ./install-openssl.sh
-    - name: Install protobuf
+    - name: Install protobuf from source 
       run: cd ci && ./install-protobuf.sh
-    - name: Install grpc
+    - name: Install grpc from source 
       run: cd ci && ./install-grpc.sh
-    - name: Install rocksdb
+    - name: Install rocksdb from source 
       run: cd ci && ./install-rocksdb.sh
-    - name: Install secp256k1
+    - name: Install secp256k1 from source 
       run: cd ci && ./install-secp256k1.sh
-    - name: Install libevent
+    - name: Install libevent from source 
       run: cd ci && ./install-libevent.sh
-    - name: Install googletest
+    - name: Install googletest from source 
       run: cd ci && ./install-googletest.sh
 
     - name: cmake
       run: mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+
     - name: make
       run: cd build && make -j2
+
     - name: Run epic test
       run: ./bin/epictest
 
@@ -63,7 +72,8 @@ jobs:
     steps:
     - name: install brew
       run: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-    - name: install via brew
+    
+    - name: install dependencies via brew
       run: |
         brew update && brew upgrade && brew cleanup
         brew install autoconf automake libtool
@@ -73,22 +83,26 @@ jobs:
         brew install grpc 
         brew install rocksdb 
         brew install protobuf
+
     - uses: actions/checkout@v1
-    - name: Install secp256k1
+    
+    - name: Install secp256k1 from source
       run: cd ci && ./install-secp256k1.sh
-    - name: Install libevent
+    - name: Install libevent from source
       run: |
         export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         cd ci && ./install-libevent.sh
-    - name: Install googletest
+    - name: Install googletest from source
       run: cd ci && ./install-googletest.sh
 
     - name: cmake
       run: |
         export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
         mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+   
     - name: make
       run: cd build && make -j2
+    
     - name: Run epic test
       run: ./bin/epictest
 
