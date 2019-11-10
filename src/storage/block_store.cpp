@@ -4,6 +4,31 @@
 
 #include "block_store.h"
 
+template <typename P>
+std::vector<std::shared_ptr<P>> DeserializeRawLvs(VStream&& vs) {
+    if (vs.empty()) {
+        return {};
+    }
+
+    std::vector<std::shared_ptr<P>> blocks;
+
+    try {
+        auto ms = std::make_shared<P>(vs);
+
+        while (vs.in_avail()) {
+            blocks.emplace_back(std::make_shared<P>(vs));
+        }
+        blocks.emplace_back(std::move(ms));
+    } catch (const std::exception&) {
+        spdlog::error("Error occurs deserializing raw level set: {} {}", __FILE__, __LINE__);
+    }
+
+    return blocks;
+}
+
+template std::vector<ConstBlockPtr> DeserializeRawLvs(VStream&&);
+template std::vector<VertexPtr> DeserializeRawLvs(VStream&&);
+
 BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
     currentBlkEpoch_ = dbStore_.GetInfo<uint32_t>("blkE");
     currentVtxEpoch_ = dbStore_.GetInfo<uint32_t>("vtxE");
@@ -98,19 +123,10 @@ VertexPtr BlockStore::GetVertex(const uint256& blkHash, bool withBlock) const {
 
 std::vector<VertexPtr> BlockStore::GetLevelSetVtcsAt(size_t height, bool withBlock) const {
     // Get vertices
-    auto vs = GetRawLevelSetAt(height, file::FileType::VTX);
-
-    if (vs.empty()) {
-        return {};
-    }
-
-    std::vector<VertexPtr> result;
-    while (vs.in_avail()) {
-        result.emplace_back(std::make_shared<Vertex>(vs));
-    }
-
+    auto result = DeserializeRawLvs<Vertex>(GetRawLevelSetAt(height, file::FileType::VTX));
     assert(!result.empty());
-    const auto& ms = result[0];
+
+    const auto& ms = result.back();
     for (const auto& b : result) {
         ms->snapshot->PushBlkToLvs(b);
     }
@@ -151,7 +167,7 @@ StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
             }
             if (ptr->isRedeemed == Vertex::IS_REDEEMED) {
                 FileModifier vtxmod{file::VTX, pos};
-                vtxmod << *ptr;
+                vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
             }
             delete ptr;
         });
@@ -163,17 +179,7 @@ StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
 }
 
 std::vector<ConstBlockPtr> BlockStore::GetLevelSetBlksAt(size_t height) const {
-    auto vs = GetRawLevelSetAt(height);
-
-    if (vs.empty()) {
-        return {};
-    }
-
-    std::vector<ConstBlockPtr> blocks;
-    while (vs.in_avail()) {
-        blocks.emplace_back(std::make_shared<const Block>(vs));
-    }
-    return blocks;
+    return DeserializeRawLvs<const Block>(GetRawLevelSetAt(height));
 }
 
 VStream BlockStore::GetRawLevelSetAt(size_t height, file::FileType fType) const {
@@ -333,19 +339,23 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         FileWriter blkFs{file::BLK, msBlkPos};
         FileWriter vtxFs{file::VTX, msVtxPos};
 
+        const auto& ms  = (*lvs.back().lock());
+        uint64_t height = ms.height;
+
+        // Store ms to file
+        blkFs << *ms.cblock;
+        blkFs.Flush();
+        vtxFs << ms;
+        vtxFs.Flush();
+        dbStore_.WriteVtxPos(ms.cblock->GetHash(), height, 0, 0);
+
         uint32_t blkOffset;
         uint32_t vtxOffset;
-        uint32_t msBlkOffset = msBlkPos.nOffset;
-        uint32_t msVtxOffset = msVtxPos.nOffset;
-
-        const auto& ms  = (*lvs.front().lock());
-        uint64_t height = ms.snapshot->height;
-
-        for (const auto& vtx_wpt : lvs) {
-            // Write to file
-            const auto& vtx = (*vtx_wpt.lock());
-            blkOffset       = blkFs.GetOffset() - msBlkOffset;
-            vtxOffset       = vtxFs.GetOffset() - msVtxOffset;
+        for (size_t i = 0; i < lvs.size() - 1; ++i) {
+            // Write block to file
+            const auto& vtx = (*lvs[i].lock());
+            blkOffset       = blkFs.GetOffset() - msBlkPos.nOffset;
+            vtxOffset       = vtxFs.GetOffset() - msVtxPos.nOffset;
             blkFs << *(vtx.cblock);
             blkFs.Flush();
             vtxFs << vtx;

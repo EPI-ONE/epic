@@ -180,7 +180,7 @@ TEST_F(TestRPCServer, wallet_passphrase) {
         {PhraseCode::UPDATE, "Your passphrase is successfully updated!"},
     };
 
-    std::string phrase = "mypass";
+    std::string phrase         = "mypass";
     std::string phrase_phantom = "phantom";
     ASSERT_EQ(client.SetPassphrase(phrase).value(), testCode[PhraseCode::NOTSTART]);
     ASSERT_EQ(client.ChangePassphrase(phrase, phrase_phantom).value(), testCode[PhraseCode::NOTSTART]);
@@ -272,7 +272,7 @@ TEST_F(TestRPCServer, transaction_and_miner) {
         std::this_thread::yield();
     }
 
-    // malicious address 
+    // malicious address
     std::string wrong_addr = std::to_string(fac.CreateKeyPair().second.GetID()) + "deadbeef";
     ASSERT_EQ(client.CreateTx({{1, wrong_addr}}, 0).value(), testCode[AnswerCode::WRONG_ADDR] + wrong_addr);
 

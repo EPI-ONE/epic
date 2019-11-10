@@ -45,15 +45,15 @@ static const std::vector<std::string> COLUMN_NAMES = {
 DBStore::DBStore(string dbPath) : RocksDB(std::move(dbPath), COLUMN_NAMES) {}
 
 bool DBStore::Exists(const uint256& blockHash) const {
-    MAKE_KEY_SLICE((uint64_t) GetHeight(blockHash));
+    MAKE_KEY_SLICE((uint64_t) GetHeight(blockHash))
     return !RocksDB::Get("ms", keySlice).empty();
 }
 
 size_t DBStore::GetHeight(const uint256& blkHash) const {
-    MAKE_KEY_SLICE(blkHash);
+    MAKE_KEY_SLICE(blkHash)
 
     uint64_t height = UINT_FAST64_MAX;
-    GET_VALUE(db_->DefaultColumnFamily(), height);
+    GET_VALUE(db_->DefaultColumnFamily(), height)
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -77,8 +77,8 @@ bool DBStore::IsMilestone(const uint256& blkHash) const {
 }
 
 optional<pair<FilePos, FilePos>> DBStore::GetMsPos(const uint64_t& height) const {
-    MAKE_KEY_SLICE(height);
-    GET_VALUE(handleMap_.at("ms"), {});
+    MAKE_KEY_SLICE(height)
+    GET_VALUE(handleMap_.at("ms"), {})
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -168,13 +168,13 @@ bool DBStore::WriteMsPos(const uint64_t& key,
 
 
 bool DBStore::ExistsUTXO(const uint256& key) const {
-    MAKE_KEY_SLICE(key);
+    MAKE_KEY_SLICE(key)
     return !RocksDB::Get("utxo", keySlice).empty();
 }
 
 std::unique_ptr<UTXO> DBStore::GetUTXO(const uint256& key) const {
-    MAKE_KEY_SLICE(key);
-    GET_VALUE(handleMap_.at("utxo"), nullptr);
+    MAKE_KEY_SLICE(key)
+    GET_VALUE(handleMap_.at("utxo"), nullptr)
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -187,7 +187,7 @@ std::unique_ptr<UTXO> DBStore::GetUTXO(const uint256& key) const {
 }
 
 bool DBStore::WriteUTXO(const uint256& key, const UTXOPtr& utxo) const {
-    MAKE_KEY_SLICE(key);
+    MAKE_KEY_SLICE(key)
 
     VStream value(utxo);
     Slice valueSlice(value.data(), value.size());
@@ -215,8 +215,8 @@ bool DBStore::DeleteMsPos(const uint256& h) const {
 }
 
 uint256 DBStore::GetLastReg(const uint256& key) const {
-    MAKE_KEY_SLICE(key);
-    GET_VALUE(handleMap_.at("reg"), uint256{});
+    MAKE_KEY_SLICE(key)
+    GET_VALUE(handleMap_.at("reg"), uint256{})
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -260,7 +260,7 @@ template bool DBStore::WriteInfo(const std::string&, const CircularQueue<uint256
 template <typename V>
 V DBStore::GetInfo(const std::string& k) const {
     Slice keySlice(k);
-    GET_VALUE(handleMap_.at("info"), V{});
+    GET_VALUE(handleMap_.at("info"), V{})
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
         valueSlice.Reset();
@@ -278,8 +278,8 @@ template uint16_t DBStore::GetInfo(const std::string&) const;
 template CircularQueue<uint256> DBStore::GetInfo(const std::string&) const;
 
 uint256 DBStore::GetMsHashAt(const uint64_t& height) const {
-    MAKE_KEY_SLICE(height);
-    GET_VALUE(handleMap_.at("ms"), uint256());
+    MAKE_KEY_SLICE(height)
+    GET_VALUE(handleMap_.at("ms"), uint256())
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -294,8 +294,8 @@ uint256 DBStore::GetMsHashAt(const uint64_t& height) const {
 }
 
 optional<tuple<uint64_t, uint32_t, uint32_t>> DBStore::GetVertexOffsets(const uint256& blkHash) const {
-    MAKE_KEY_SLICE(blkHash);
-    GET_VALUE(db_->DefaultColumnFamily(), {});
+    MAKE_KEY_SLICE(blkHash)
+    GET_VALUE(db_->DefaultColumnFamily(), {})
 
     try {
         VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
@@ -333,7 +333,7 @@ bool DBStore::DeleteRegSet(const std::unordered_set<std::pair<uint256, uint256>>
 
 template <typename K, typename H, typename P1, typename P2>
 bool DBStore::WritePosImpl(const string& column, const K& key, const H& h, const P1& b, const P2& r) const {
-    MAKE_KEY_SLICE(key);
+    MAKE_KEY_SLICE(key)
 
     VStream value;
     value.reserve(sizeof(H) + sizeof(P1) + sizeof(P2));

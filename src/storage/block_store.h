@@ -55,7 +55,7 @@ public:
     /**
      * Flushes a level set to db.
      * Note that this method assumes that the milestone is
-     * the first block in the lvs.
+     * the last block in the lvs.
      */
     bool StoreLevelSet(const std::vector<VertexWPtr>& lvs);
     bool StoreLevelSet(const std::vector<VertexPtr>& lvs);

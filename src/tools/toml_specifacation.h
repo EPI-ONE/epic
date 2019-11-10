@@ -118,7 +118,6 @@ auto VertexToToml(const VertexPtr& vertex) {
     if (vertex->isMilestone) {
         auto state_info = cpptoml::make_table();
 
-        state_info->insert("milestone_height", vertex->snapshot->height);
         state_info->insert("chain_work", vertex->snapshot->chainwork.GetCompact(false));
         state_info->insert("block_diff_target", vertex->snapshot->blockTarget.GetCompact(false));
         state_info->insert("ms_diff_target", vertex->snapshot->milestoneTarget.GetCompact(false));

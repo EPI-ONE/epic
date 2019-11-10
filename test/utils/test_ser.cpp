@@ -247,4 +247,5 @@ TEST_F(TestSer, SerializeEqDeserializeVertex) {
     ASSERT_EQ(soutput.size(), block1.GetOptimalStorageSize());
     ASSERT_EQ(s, soutput.str());
     ASSERT_EQ(block, block1);
+    ASSERT_EQ(block.height, block1.snapshot->height);
 }

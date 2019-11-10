@@ -28,9 +28,9 @@ public:
     };
 
     enum RedemptionStatus : uint8_t {
-        IS_NOT_REDEMPTION = 0, // double zero hash
-        NOT_YET_REDEEMED  = 1, // hash of previous redemption block
-        IS_REDEEMED       = 2, // null hash
+        IS_NOT_REDEMPTION = 0,
+        NOT_YET_REDEEMED  = 1,
+        IS_REDEEMED       = 2,
     };
 
     ConstBlockPtr cblock;
@@ -63,11 +63,11 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(isRedeemed);
         READWRITE(VARINT(height));
         READWRITE(cumulativeReward);
         READWRITE(VARINT(minerChainHeight));
         READWRITE(validity);
-        READWRITE(isRedeemed);
 
         if (ser_action.ForRead()) {
             auto msFlag = static_cast<MilestoneStatus>(ser_readdata8(s));
@@ -75,7 +75,8 @@ public:
             if (msFlag > 0) {
                 Milestone ms{};
                 ::Deserialize(s, ms);
-                snapshot = std::make_shared<Milestone>(std::move(ms));
+                snapshot         = std::make_shared<Milestone>(std::move(ms));
+                snapshot->height = height;
                 if (snapshot->IsDiffTransition() && cblock) {
                     snapshot->lastUpdateTime = cblock->GetTime();
                 }
