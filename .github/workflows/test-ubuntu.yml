@@ -1,10 +1,14 @@
 name: test-ubuntu
 
-on: [push]
+on:
+  pull_request:
+  push:
+    branches: master
 
 jobs:
   test-ubuntu:
     runs-on: ubuntu-18.04
+    timeout-minutes: 60
     steps:
     
     - name: Install build tools (apt-get)
@@ -68,5 +72,12 @@ jobs:
       run: cd build && make -j4
 
     - name: Run epic test
-      run: ./bin/epictest
-
+      run: |
+        ulimit -c unlimited -S
+        ulimit -a
+        cd ./bin
+        ./epictest
+        ls
+        COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
+        echo $COREFILE
+        if [[ -f "$COREFILE" ]]; then gdb ./epictest "$COREFILE" example -ex "bt" -ex "set pagination 0" -batch; fi
