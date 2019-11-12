@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ev
-EPIC_CMAKE_VERSION="3.15.4"
+EPIC_CMAKE_VERSION="3.15.5"
 EPIC_CMAKE_DIR=""cmake-"$EPIC_CMAKE_VERSION"
 
 if [[ ! -d ${EPIC_CMAKE_DIR} ]];then

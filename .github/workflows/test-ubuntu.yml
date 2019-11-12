@@ -1,0 +1,72 @@
+name: test-ubuntu
+
+on: [push]
+
+jobs:
+  test-ubuntu:
+    runs-on: ubuntu-18.04
+    steps:
+    
+    - name: Install build tools (apt-get)
+      run: |
+        sudo apt-get install autoconf libtool pkg-config libgmp-dev
+        sudo apt-get autoremove
+    
+    - name: Install gcc8 (apt-get)
+      run: |
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+        sudo apt update
+        sudo apt-get install gcc-8 g++-8
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
+        gcc -v
+        g++ -v
+    
+    - name: Install clang-9 (apt-get)
+      run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-9 main"
+        sudo apt-get update
+        sudo apt-get install clang-9
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
+        clang -v
+        clang++ -v
+    
+    - name: Install cmake 3.15 (apt-get)
+      run: |
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+        sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
+        sudo apt-get update
+        sudo apt-get install cmake
+        type -a cmake
+        /usr/bin/cmake --version
+
+    - uses: actions/checkout@v1
+
+    - name: Install openssl from source 
+      run: cd ci && ./install-openssl.sh
+    - name: Install protobuf from source 
+      run: cd ci && ./install-protobuf.sh
+    - name: Install grpc from source 
+      run: cd ci && ./install-grpc.sh
+    - name: Install rocksdb from source 
+      run: cd ci && ./install-rocksdb.sh
+    - name: Install secp256k1 from source 
+      run: cd ci && ./install-secp256k1.sh
+    - name: Install libevent from source 
+      run: cd ci && ./install-libevent.sh
+    - name: Install googletest from source 
+      run: cd ci && ./install-googletest.sh
+
+    - name: cmake
+      run: |
+        mkdir build && cd build 
+        /usr/bin/cmake -DCAMKE_BUILD_TYPE=Release ..
+
+    - name: make
+      run: cd build && make -j4
+
+    - name: Run epic test
+      run: ./bin/epictest
+
