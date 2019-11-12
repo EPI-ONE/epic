@@ -207,10 +207,12 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
         if (!PEERMAN) {
             response->set_result("PeerManager has not been start");
         } else {
-            if (PEERMAN->DisconnectPeer(request->address())) {
-                response->set_result("Disconnected " + request->address() + " successfully");
-            } else {
-                response->set_result("Failed to disconnect " + request->address());
+            for (int i = 0; i < request->address_size(); ++i) {
+                if (PEERMAN->DisconnectPeer(request->address(i))) {
+                    response->set_result("Disconnected " + request->address(i) + " successfully");
+                } else {
+                    response->set_result("Failed to disconnect " + request->address(i));
+                }
             }
         }
         return grpc::Status::OK;
@@ -268,6 +270,43 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
             response->set_completed(PEERMAN->InitialSyncCompleted());
         } else {
             response->set_completed(false);
+        }
+
+        return grpc::Status::OK;
+    }
+
+    void AddPeer(rpc::ShowPeerResponse* response, PeerPtr peer) {
+        auto rpc_peer = response->add_peer();
+        rpc_peer->set_id(peer->peer_id);
+        rpc_peer->set_socket(peer->address.ToString());
+        rpc_peer->set_valid(peer->IsVaild());
+        rpc_peer->set_inbound(peer->IsInbound());
+        rpc_peer->set_isfullyconnected(peer->isFullyConnected);
+        rpc_peer->set_issyncavailable(peer->isSyncAvailable);
+        rpc_peer->set_connected_time(peer->connected_time);
+        if (peer->versionMessage) {
+            rpc_peer->set_block_version(peer->versionMessage->client_version);
+            rpc_peer->set_local_service(peer->versionMessage->local_service);
+            rpc_peer->set_app_version(peer->versionMessage->version_info);
+        }
+    }
+
+    grpc::Status ShowPeer(grpc::ServerContext* context,
+                          const rpc::ShowPeerRequest* request,
+                          rpc::ShowPeerResponse* response) override {
+        auto address = request->address();
+        std::transform(address.begin(), address.end(), address.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+        if (address == "all") {
+            auto peers = PEERMAN->GetAllPeer();
+            for (auto& peer : peers) {
+                AddPeer(response, peer);
+            }
+        } else {
+            auto peer = PEERMAN->GetPeer(address);
+            if (peer) {
+                AddPeer(response, peer);
+            }
         }
 
         return grpc::Status::OK;

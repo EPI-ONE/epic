@@ -35,13 +35,15 @@ public:
     option_string ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
     option_string Login(const std::string& passphrase);
 
-    option_string DisconnectPeer(std::string& address);
+    option_string DisconnectPeers(const std::vector<std::string>& addresses);
 
     option_string DisconnectAllPeers();
 
     option_string ConnectPeers(const std::vector<std::string>& addresses);
 
     std::optional<bool> SyncCompleted();
+
+    std::optional<rpc::ShowPeerResponse> ShowPeer(std::string&);
 
 private:
     std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;

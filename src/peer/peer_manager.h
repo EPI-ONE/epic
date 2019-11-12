@@ -89,6 +89,10 @@ public:
      */
     PeerPtr GetPeer(shared_connection_t& connection);
 
+    PeerPtr GetPeer(const std::string& address);
+
+    std::vector<PeerPtr> GetAllPeer();
+
     /**
      * relay block to neighbors
      * @param ConstBlockPtr, PeerPtr

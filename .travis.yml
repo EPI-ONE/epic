@@ -82,7 +82,7 @@ matrix:
         - cd $BUILD_LIB_MPATH
       after_failure:
         - ls /cores
-        - COREFILE=$(find /cores -maxdepth 1 -name "core*" | head -n 1)
+        - COREFILE=$(find /cores -maxdepth 1 -name "core*" | tail -n 1)
         - echo $COREFILE
         - if [[ -f "$COREFILE" ]]; then lldb ./epictest -c $COREFILE --batch --one-line "bt"; fi
 

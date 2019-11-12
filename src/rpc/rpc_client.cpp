@@ -294,12 +294,14 @@ RPCClient::option_string RPCClient::ConnectPeers(const std::vector<std::string>&
     return response.result();
 }
 
-RPCClient::option_string RPCClient::DisconnectPeer(std::string& address) {
+RPCClient::option_string RPCClient::DisconnectPeers(const std::vector<std::string>& addresses) {
     DisConnectPeerRequest request;
     DisConnectPeerResponse response;
     grpc::ClientContext context;
 
-    request.set_address(address);
+    for (const auto& address : addresses) {
+        request.add_address(address);
+    }
     auto status = commander_stub_->DisConnectPeer(&context, request, &response);
     if (!status.ok()) {
         spdlog::error("No response from RPC server: {}", status.error_message());
@@ -332,4 +334,18 @@ std::optional<bool> RPCClient::SyncCompleted() {
         return {};
     }
     return response.completed();
+}
+
+std::optional<rpc::ShowPeerResponse> RPCClient::ShowPeer(std::string& address) {
+    ShowPeerRequest request;
+    ShowPeerResponse response;
+    grpc::ClientContext context;
+
+    request.set_address(address);
+    auto status = commander_stub_->ShowPeer(&context, request, &response);
+    if (!status.ok()) {
+        spdlog::error("No response from RPC server: {}", status.error_message());
+        return {};
+    }
+    return response;
 }

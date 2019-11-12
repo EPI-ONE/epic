@@ -2,461 +2,448 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "cxxopts.h"
-#include "rpc_client.h"
-#include "spdlog/spdlog.h"
-#include "version.h"
 
+#include "epic-cli.h"
+#include <ctime>
+#include <iomanip>
 #include <termios.h>
-#include <unistd.h>
 
-enum : uint8_t {
-    NORMAL_EXIT = 0,
-    COMMANDLINE_INIT_FAILURE,
-    LOG_INIT_FAILURE,
-    PARAMS_INIT_FAILURE,
-};
+class ParsePairException : public std::exception {};
 
-class UnconnectedException : public std::exception {};
+void PrintBanner() {
+    std::string banner[] = {
+        "******************************************************************",
+        "        |                                                  |      ",
+        "       / \\            ______ _____ _____ _____            / \\     ",
+        "      / _ \\          |  ____|  __ \\_   _/ ____|          / _ \\    ",
+        "     |.o '.|         | |__  | |__) || || |              |.o '.|   ",
+        "     |'._.'|         |  __| |  ___/ | || |              |'._.'|   ",
+        "     |     |         | |____| |    _| || |____          |     |   ",
+        "   ,'|  |  |`.       |______|_|   |_____\\_____|       ,'|  |  |`. ",
+        "  /  |  |  |  \\                                      /  |  |  |  \\",
+        "  |,-'--|--'-.|                                      |,-'--|--'-.|",
+        "*******************************************************************",
+    };
 
-enum CommandType : uint8_t {
-    STATUS = 0,
-    START_MINER,
-    STOP_MINER,
-    STOP,
-    CREATE_FIRST_REG,
-    CREATE_RANDOM_TX,
-    GENERATE_NEWKEY,
-    GET_BALANCE,
-    CREATE_TX,
-    SET_PASSPHRASE,
-    CHANGE_PASSPHRASE,
-    LOGIN,
-    DISCONNECTPEER,
-    CONNECTPEERS,
-    DISCONNECTALLPEERS,
-    INVALID
-};
-
-RPCClient CreateClient(std::string ip, uint16_t port) {
-    return RPCClient(grpc::CreateChannel(ip + ":" + std::to_string(port), grpc::InsecureChannelCredentials()));
-}
-
-std::unordered_map<std::string, CommandType> InitCommand() {
-    std::unordered_map<std::string, CommandType> command{
-
-        {"status", CommandType::STATUS},
-        {"start-miner", CommandType::START_MINER},
-        {"stop-miner", CommandType::STOP_MINER},
-        {"stop", CommandType::STOP},
-        {"create-first-reg", CommandType::CREATE_FIRST_REG},
-        {"create-randomtx", CommandType::CREATE_RANDOM_TX},
-        {"generate-newkey", CommandType::GENERATE_NEWKEY},
-        {"get-balance", CommandType::GET_BALANCE},
-        {"create-tx", CommandType::CREATE_TX},
-        {"set-passphrase", CommandType::SET_PASSPHRASE},
-        {"change-passphrase", CommandType::CHANGE_PASSPHRASE},
-        {"login", CommandType::LOGIN},
-        {"disconnect-peer", CommandType ::DISCONNECTPEER},
-        {"disconnect-all", CommandType::DISCONNECTALLPEERS},
-        {"connect-peers", CommandType ::CONNECTPEERS}};
-    return command;
-}
-
-void SetStdinEcho(bool enable = true) {
-    struct termios tty;
-    tcgetattr(STDIN_FILENO, &tty);
-    if (!enable) {
-        tty.c_lflag &= ~ECHO;
-    } else {
-        tty.c_lflag |= ECHO;
+    for (auto& line : banner) {
+        std::cout << line << std::endl;
     }
-    (void) tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 }
 
-std::optional<std::string> GetNewPassphrase() {
-    std::string passphrase;
-    std::string comfirm;
-    std::cout << "Passphrase:";
-    SetStdinEcho(false);
-    std::cin >> passphrase;
-    std::cout << "\nComfirm Passphrase:";
-    std::cin >> comfirm;
-    SetStdinEcho(true);
-    std::cout << std::endl;
+std::vector<std::string> split(std::string input, char separator) {
+    std::vector<std::string> output;
+    while (!input.empty()) {
+        auto pos = input.find(separator);
+        output.emplace_back(input, 0, pos);
+        if (pos == std::string::npos) {
+            break;
+        } else {
+            input = input.substr(pos + 1);
+        }
+    }
+    return output;
+}
 
-    if (passphrase != comfirm) {
-        return {};
+std::optional<std::string> get_pair_string(std::string& input) {
+    auto left = input.find('{');
+    if (left != std::string::npos) {
+        auto right = input.find('}', left);
+        if (right != std::string::npos) {
+            auto result = std::string(input, left + 1, right - left - 1);
+            input       = input.substr(right + 1);
+            return result;
+        } else {
+            throw ParsePairException();
+        }
+    }
+    return {};
+}
+
+template <typename P1, typename P2>
+std::pair<P1, P2> get_pair(std::string& input) {
+    auto str = split(input, ',');
+    if (str.size() != 2) {
+        throw ParsePairException();
     }
 
-    comfirm.clear();
-    return passphrase;
+    return std::pair<P1, P2>(lexical_cast<P1>(str[0]), lexical_cast<P2>(str[1]));
+}
+
+template <typename P1, typename P2>
+std::vector<std::pair<P1, P2>> parse_pair(std::string input) {
+    std::vector<std::pair<P1, P2>> output;
+
+    while (auto pair_str = get_pair_string(input)) {
+        output.emplace_back(get_pair<P1, P2>(*pair_str));
+    }
+
+    return output;
 }
 
 int main(int argc, char** argv) {
-    std::string command;
-    std::string arg_value;
-    uint16_t rpc_port;
-    const auto commandMap = InitCommand();
-    // clang-format off
-    cxxopts::Options options("epic-cli", "epic client");
-    options.positional_help(
-            "COMMAND \n\n"
-            "Available commands: \n"
-            "   1. status \n"
-            "   2. start-miner \n"
-            "   3. stop-miner \n"
-            "   4. stop \n"
-            "   4. create-first-reg     args=string: the encoded address to receive miner reward; \n"
-            "                                        leave it blank to generate a new key \n"
-            "   5. create-randomtx      args=size: uint64 (the size of transactions you want to create) \n"
-            "   6. generate-newkey \n"
-            "   7. get-balance \n"
-            "   8. create-tx            args=fee: uint64 (optional, default to be 1),   \n"
-            "                                outputValue1: uint64, outputAddr1: string, \n"
-            "                                outputValue2: uint64, outputAddr2: string, \n"
-            "                                ...\n"
-            "   9. set-passphrase       arg=string: your new passphrase \n"
-            "   10. change-passphrase   args=string: your old passphrase, your new passphrase \n"
-            "   11. login               arg=string: your current passphrase \n"
-            "   12. disconnect-all \n"
-            "   13. connect-peers       arg=array of string: your specified address string (ip + port)\n"
-            "   14. disconnect-peer     arg=string: network address to disconnect (ip + port)\n"
-            "\nAvailable options:"
-            ).show_positional_help();
+    PrintBanner();
+    EpicCli cli("epic");
+    cli.Start();
+    return 0;
+}
 
-    std::vector<std::string> more_args;
-    options
-    .add_options("command")
-    ("command", "Command", cxxopts::value<std::string>(command)->default_value(""))
-    ("value", "Value", cxxopts::value<std::string>(arg_value)->default_value(""))
-    ("more_value", "more argruments", cxxopts::value<std::vector<std::string>>(more_args))
-    ;
+EpicCli::EpicCli(std::string name) : exit_(false), name_(std::move(name)) {
+    cli_     = std::make_unique<Cli>(CreateRootMenu(), [&, this](auto& out) { exit_ = true; });
+    session_ = std::make_unique<CliLocalTerminalSession>(*cli_, std::cout);
+}
 
-    options.add_options()
-    ("h, help", "print this message", cxxopts::value<bool>())
-    ("version", "version information", cxxopts::value<bool>())
-    ("rpc-port", "client rpc port which is used to connect to the server", cxxopts::value<uint16_t>(rpc_port)->default_value("3777"))
-    ;
-
-    options.parse_positional({"command", "value", "more_value"});
-    // clang-format on
-    try {
-        auto parsed_options = options.parse(argc, argv);
-        if (parsed_options["help"].as<bool>()) {
-            std::cout << options.help() << std::endl;
-            return NORMAL_EXIT;
-        }
-
-        if (parsed_options["version"].as<bool>()) {
-            std::cout << "EPIC command line tool Version:" << GetVersionNum() << " ";
-            std::cout << "Commit:" << GetCommitHash() << " ";
-            std::cout << "Compile time:" << GetVersionTimestamp() << std::endl;
-            return NORMAL_EXIT;
-        }
-        auto client = CreateClient("0.0.0.0", rpc_port);
-
-        switch (commandMap.at(command)) {
-            case STATUS: {
-                auto r = client.Status();
-                if (r) {
-                    std::cout << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING")
-                              << std::endl;
-                    std::cout << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case STOP: {
-                if (client.Stop()) {
-                    std::cout << "OK" << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case START_MINER: {
-                auto sync_completed = client.SyncCompleted();
-                if (!sync_completed) {
-                    throw UnconnectedException();
-                }
-
-                if (*sync_completed) {
-                EXECUTE_MINER:
-                    auto r = client.StartMiner();
-                    if (r) {
-                        std::cout << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
-                    } else {
-                        throw UnconnectedException();
-                    }
-                    break;
-                }
-
-                std::cout << "The initial synchronization is not completed.\nWould you like to force the miner to "
-                             "start? [Y/N] ";
-                while (true) {
-                    std::string yn;
-                    std::cin >> yn;
-
-                    if (yn == "Y" || yn == "y") {
-                        goto EXECUTE_MINER;
-                    } else if (yn == "N" || yn == "n") {
-                        break;
-                    }
-
-                    std::cout << "Would you like to force the miner to start? [Y/N] ";
-                }
-            }
-
-            case STOP_MINER: {
-                auto r = client.StopMiner();
-                if (r) {
-                    std::cout << *r << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case CREATE_FIRST_REG: {
-                std::string addr;
-                if (arg_value.empty()) {
-                    addr = *client.GenerateNewKey();
-                } else {
-                    addr = arg_value;
-                }
-
-                auto r = client.CreateFirstReg(addr);
-
-                if (r) {
-                    if (r->empty()) {
-                        std::cout << "Peer chain already exists. Would you like to start a new peer chain? [Y/N] ";
-
-                        while (true) {
-                            std::string yn;
-                            std::cin >> yn;
-
-                            if (yn == "Y" || yn == "y") {
-                                std::cout << "Address: (leave it empty if you would like to create a new key) ";
-
-                                std::string addr;
-                                std::cin.get();
-                                getline(std::cin, addr);
-
-                                if (addr.empty()) {
-                                    addr = *client.GenerateNewKey();
-                                }
-
-                                r = client.CreateFirstReg(addr, true);
-                                std::cout << *r << std::endl;
-                                break;
-
-                            } else if (yn == "N" || yn == "n") {
-                                break;
-                            }
-
-                            std::cout << "Wokld you like to start a new peer chain? [Y/N] ";
-                        }
-                    } else {
-                        std::cout << *r << std::endl;
-                    }
-                } else {
-                    throw UnconnectedException();
-                }
-
-                break;
-            }
-
-            case CREATE_RANDOM_TX: {
-                size_t size = 0;
-                if (!arg_value.empty()) {
-                    size = std::stoi(arg_value);
-                }
-                auto r = client.CreateRandomTx(size);
-                if (r) {
-                    std::cout << *r << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case GET_BALANCE: {
-                auto r = client.GetBalance();
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case GENERATE_NEWKEY: {
-                auto r = client.GenerateNewKey();
-                if (r) {
-                    std::cout << "Address = " << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            case CREATE_TX: {
-                std::vector<std::pair<uint64_t, std::string>> outputs;
-                uint64_t fee;
-
-                if (more_args.empty()) {
-                    std::cout << "please specify at least one output";
-                    return PARAMS_INIT_FAILURE;
-                }
-
-                if (more_args.size() % 2 == 0) {
-                    fee = std::stoi(arg_value);
-                    std::cout << "You have specified the transaction fee = " + arg_value << std::endl;
-                    for (int i = 0, j = i + 1; j < more_args.size(); i = i + 2, j = j + 2) {
-                        outputs.emplace_back(std::make_pair(std::stoi(more_args[i]), more_args[j]));
-                    }
-                } else {
-                    fee = 0;
-                    std::cout << "You didn't specify the transaction fee, will use default fee" << std::endl;
-                    for (int i = 1, j = i + 1; i <= more_args.size(); i = i + 2, j = j + 2) {
-                        if (i == 1) {
-                            outputs.emplace_back(std::make_pair(std::stoi(arg_value), more_args[0]));
-                        } else {
-                            outputs.emplace_back(std::make_pair(std::stoi(more_args[i]), more_args[j]));
-                        }
-                    }
-                }
-                auto r = client.CreateTx(outputs, fee);
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-            case CONNECTPEERS: {
-                std::vector<std::string> addresses;
-
-                if (arg_value.empty()) {
-                    std::cout << "please specify at least one address";
-                    return PARAMS_INIT_FAILURE;
-                }
-                addresses.push_back(arg_value);
-                for (auto addr : more_args) {
-                    addresses.emplace_back(addr);
-                }
-                auto r = client.ConnectPeers(addresses);
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-            case DISCONNECTALLPEERS: {
-                auto r = client.DisconnectAllPeers();
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-            case DISCONNECTPEER: {
-                auto r = client.DisconnectPeer(arg_value);
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-            case SET_PASSPHRASE: {
-                if (!arg_value.empty()) {
-                    return PARAMS_INIT_FAILURE;
-                }
-
-                auto passphrase = GetNewPassphrase();
-                if (!passphrase) {
-                    std::cout << "Your passphrases do not match" << std::endl;
-                    break;
-                }
-
-                if (auto r = client.SetPassphrase(*passphrase)) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                passphrase->clear();
-                break;
-            }
-
-            case CHANGE_PASSPHRASE: {
-                if (!arg_value.empty()) {
-                    return PARAMS_INIT_FAILURE;
-                }
-
-                std::string oldPassphrase;
-                std::cout << "Old Passphrase:";
-                SetStdinEcho(false);
-                std::cin >> oldPassphrase;
-                std::cout << std::endl;
-                auto newPassphrase = GetNewPassphrase();
-                if (!newPassphrase) {
-                    std::cout << "Your new passphrases do not match" << std::endl;
-                    break;
-                }
-                if (auto r = client.ChangePassphrase(oldPassphrase, *newPassphrase)) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                newPassphrase->clear();
-                break;
-            }
-
-            case LOGIN: {
-                if (!arg_value.empty()) {
-                    return PARAMS_INIT_FAILURE;
-                }
-
-                std::string passphrase;
-                std::cout << "Passphrase:";
-                SetStdinEcho(false);
-                std::cin >> passphrase;
-                SetStdinEcho(true);
-                std::cout << std::endl;
-                auto r = client.Login(passphrase);
-                passphrase.clear();
-                if (r) {
-                    std::cout << (*r) << std::endl;
-                } else {
-                    throw UnconnectedException();
-                }
-                break;
-            }
-
-            default: {
-                std::cout << options.help() << std::endl;
-                std::cerr << "please specify one of the commands" << std::endl;
-                exit(COMMANDLINE_INIT_FAILURE);
-            }
-        }
-
-    } catch (const std::out_of_range& e) {
-        std::cout << options.help() << std::endl;
-        std::cerr << "please specify one of the commands" << std::endl;
-        exit(COMMANDLINE_INIT_FAILURE);
-    } catch (const cxxopts::OptionException& e) {
-        std::cout << options.help() << std::endl;
-        std::cerr << "error parsing options: " << e.what() << std::endl;
-        exit(COMMANDLINE_INIT_FAILURE);
-    } catch (UnconnectedException& e) {
-        std::cout << "No epic is running on " << std::to_string(rpc_port) << " port" << std::endl;
+std::string EpicCli::InputPassphrase(std::ostream& out) {
+    std::string passphrase;
+    while (passphrase.empty()) {
+        std::getline(std::cin, passphrase);
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
-    return NORMAL_EXIT;
+    out << std::endl;
+    return passphrase;
+}
+
+
+std::string EpicCli::GetLine() {
+    std::string str;
+    session_->ToStandardMode();
+    std::getline(std::cin, str);
+    session_->ToManualMode();
+    return str;
+}
+
+std::optional<std::string> EpicCli::GetNewPassphrase(std::ostream& out) {
+    out << "New Passphrase:";
+    auto passphrase = InputPassphrase(out);
+    out << "Confirm Passphrase:";
+    auto confirm = InputPassphrase(out);
+    if (passphrase != confirm) {
+        out << "Your passphrases do not match" << std::endl;
+        return {};
+    }
+
+    confirm.clear();
+    return passphrase;
+}
+
+
+void EpicCli::Start() {
+    while (!exit_) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+std::unique_ptr<Menu> EpicCli::CreateRootMenu() {
+    auto root = std::make_unique<Menu>(name_);
+    root->Insert("open", [this](std::ostream& out, std::string host) { Open(out, host); }, "Connect to the rpc sever",
+                 {"ip:port"});
+    return root;
+}
+
+std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
+    auto sub = std::make_unique<Menu>(title);
+    sub->Insert(
+        "close", [this](std::ostream& out) { Close(out); }, "Disconnect the rpc host");
+    sub->Insert(
+        "status", [this](std::ostream& out) { Status(out); }, "Show the peer status");
+    sub->Insert(
+        "start-miner", [this](std::ostream& out) { StartMiner(out); }, "Start miner");
+    sub->Insert(
+        "stop-miner", [this](std::ostream& out) { StopMiner(out); }, "Stop miner");
+    sub->Insert(
+        "generate-new-key", [this](std::ostream& out) { GenerateNewKey(out); }, "Generate the new key");
+    sub->Insert("create-first-reg", [this](std::ostream& out, std::string address) { CreateFirstReg(out, address); },
+                "Create the first registration before mining", {"the encoded address to receive miner reward"});
+    sub->Insert(
+        "set-passphrase", [this](std::ostream& out) { SetPassphrase(out); }, "Set your new passphrase");
+    sub->Insert(
+        "change-passphrase", [this](std::ostream& out) { ChangePassphrase(out); }, "Change your passphrase");
+    sub->Insert(
+        "login", [this](std::ostream& out) { Login(out); }, "Login");
+    sub->Insert(
+        "get-balance", [this](std::ostream& out) { GetBalance(out); }, "Get the wallet balance");
+    sub->Insert("connect", [this](std::ostream& out, std::string peers) { Connect(out, peers); },
+                "Connect to the peers", {"ip:port,ip:port,..."});
+    sub->Insert("disconnect", [this](std::ostream& out, std::string peers) { Disconnect(out, peers); },
+                "Disconnect the peers sep", {"ip:port,ip:port,... or all"});
+    sub->Insert("create-randomtx", [this](std::ostream& out, uint32_t num) { CreateRandomTx(out, num); },
+                "Create random transactions for test", {"the num of transactions"});
+    sub->Insert("create-tx",
+                [this](std::ostream& out, uint64_t fee, std::string output_str) { CreateTx(out, fee, output_str); },
+                "Create the transaction", {"the transaction fee", "{value,address},{value,address},..."});
+    sub->Insert("show-peer", [this](std::ostream& out, std::string address) { ShowPeer(out, address); },
+                "Show the peer information", {"ip:port or all"});
+    return sub;
+}
+
+void EpicCli::Open(std::ostream& out, const std::string& host) {
+    auto rpc = std::make_unique<RPCClient>(grpc::CreateChannel(host, grpc::InsecureChannelCredentials()));
+    auto rsp = rpc->Status();
+    if (rsp) {
+        rpc_       = std::move(rpc);
+        host_menu_ = cli_->RootMenu()->Insert(CreateSubMenu(host));
+        cli_->RootMenu()->Exec({name_, host}, *session_);
+        cli_->RootMenu()->Disable();
+        out << "Succeed" << std::endl;
+    } else {
+        out << "Failed to connect the rpc host " << host << std::endl;
+    }
+}
+
+void EpicCli::Close(std::ostream& out) {
+    rpc_.reset();
+    cli_->RootMenu()->Enable();
+    cli_->RootMenu()->Exec({name_}, *session_);
+    host_menu_.Remove();
+}
+
+void EpicCli::Status(std::ostream& out) {
+    auto r = rpc_->Status();
+    if (r) {
+        out << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING") << std::endl;
+        out << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::TryToMine(std::ostream& out) {
+    auto r = rpc_->StartMiner();
+    if (r) {
+        out << ((*r) ? "OK" : "FAIL: Miner is already running") << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::StartMiner(std::ostream& out) {
+    auto sync_completed = rpc_->SyncCompleted();
+    if (!sync_completed) {
+        Close(out);
+    }
+
+    if (*sync_completed) {
+        TryToMine(out);
+        return;
+    }
+
+    out << "The initial synchronization is not completed.\nWould you like to force the miner to "
+           "start? [Y/N] ";
+    while (true) {
+        std::string yn = GetLine();
+
+        if (yn == "Y" || yn == "y") {
+            TryToMine(out);
+            break;
+        } else if (yn == "N" || yn == "n") {
+            break;
+        } else {
+            out << "Would you like to force the miner to start? [Y/N] ";
+        }
+    }
+}
+
+void EpicCli::StopMiner(std::ostream& out) {
+    auto r = rpc_->StopMiner();
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::GenerateNewKey(std::ostream& out) {
+    auto r = rpc_->GenerateNewKey();
+    if (r) {
+        out << "Address = " << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::CreateFirstReg(std::ostream& out, std::string& address) {
+    auto r = rpc_->CreateFirstReg(address);
+    if (r) {
+        if (r->empty()) {
+            out << "Peer chain already exists. Would you like to start a new peer chain? [Y/N] ";
+
+            while (true) {
+                std::string yn = GetLine();
+
+                if (yn == "Y" || yn == "y") {
+                    out << "Address: (leave it empty if you would like to create a new key) ";
+                    std::string addr = GetLine();
+
+                    if (addr.empty()) {
+                        auto rsp = rpc_->GenerateNewKey();
+                        if (rsp) {
+                            addr = *rsp;
+                        } else {
+                            Close(out);
+                            return;
+                        }
+                    }
+
+                    auto rsp = rpc_->CreateFirstReg(addr, true);
+                    if (rsp) {
+                        out << *rsp << std::endl;
+                    } else {
+                        Close(out);
+                    }
+
+                    break;
+
+                } else if (yn == "N" || yn == "n") {
+                    break;
+                }
+
+                out << "Wokld you like to start a new peer chain? [Y/N] ";
+            }
+        } else {
+            out << *r << std::endl;
+        }
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::SetPassphrase(std::ostream& out) {
+    auto passphrase = GetNewPassphrase(out);
+    if (!passphrase) {
+        return;
+    }
+
+    if (auto r = rpc_->SetPassphrase(*passphrase)) {
+        out << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+    passphrase->clear();
+}
+
+void EpicCli::ChangePassphrase(std::ostream& out) {
+    out << "Old Passphrase:";
+    auto oldPassphrase = InputPassphrase(out);
+    auto newPassphrase = GetNewPassphrase(out);
+    if (!newPassphrase) {
+        return;
+    }
+    if (auto r = rpc_->ChangePassphrase(oldPassphrase, *newPassphrase)) {
+        out << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+    newPassphrase->clear();
+}
+
+void EpicCli::Login(std::ostream& out) {
+    out << "Passphrase:";
+    auto passphrase = InputPassphrase(out);
+    auto r          = rpc_->Login(passphrase);
+    passphrase.clear();
+    if (r) {
+        out << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::GetBalance(std::ostream& out) {
+    auto r = rpc_->GetBalance();
+    if (r) {
+        out << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::Connect(std::ostream& out, std::string& peers) {
+    std::vector<std::string> addresses;
+
+    addresses = split(peers, ',');
+
+    auto r = rpc_->ConnectPeers(addresses);
+    if (r) {
+        out << (*r) << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::Disconnect(std::ostream& out, std::string& peers) {
+    std::transform(peers.begin(), peers.end(), peers.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (peers == "all") {
+        auto r = rpc_->DisconnectAllPeers();
+        if (r) {
+            out << (*r) << std::endl;
+        } else {
+            Close(out);
+        }
+    } else {
+        std::vector<std::string> addresses;
+        addresses = split(peers, ',');
+
+        auto r = rpc_->DisconnectPeers(addresses);
+        if (r) {
+            out << (*r) << std::endl;
+        } else {
+            Close(out);
+        }
+    }
+}
+
+void EpicCli::CreateRandomTx(std::ostream& out, uint32_t num) {
+    auto r = rpc_->CreateRandomTx(num);
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::CreateTx(std::ostream& out, uint64_t fee, std::string& output_str) {
+    try {
+        auto outputs = parse_pair<uint64_t, std::string>(output_str);
+
+        out << "Total outputs:" << outputs.size() << " and fee:" << fee << std::endl;
+        for (auto& output : outputs) {
+            out << "output address:" << output.second << " coin:" << output.first << std::endl;
+        }
+
+        auto r = rpc_->CreateTx(outputs, fee);
+        if (r) {
+            std::cout << (*r) << std::endl;
+        } else {
+            Close(out);
+        }
+
+    } catch (std::exception&) {
+        out << "Failed to parse the second argument" << std::endl;
+    }
+}
+
+void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
+    auto r = rpc_->ShowPeer(address);
+    if (r) {
+        if (r->peer_size() == 0) {
+            out << "No peer information" << std::endl;
+        } else {
+            out << "Total " << r->peer_size() << " peers" << std::endl;
+            for (int i = 0; i < r->peer_size(); i++) {
+                out << "=================" << i << "=================" << std::endl;
+                out << "id:" << r->peer(i).id() << std::endl;
+                out << "socket:" << r->peer(i).socket() << std::endl;
+                out << "valid:" << r->peer(i).valid() << std::endl;
+                out << "inbound:" << r->peer(i).inbound() << std::endl;
+                out << "isFullyConnected:" << r->peer(i).isfullyconnected() << std::endl;
+                out << "isSyncAvailable:" << r->peer(i).issyncavailable() << std::endl;
+                std::time_t t = r->peer(i).connected_time();
+                out << "connected time:" << std::put_time(std::localtime(&t), "%c %Z") << std::endl;
+                out << "block version:" << r->peer(i).block_version() << std::endl;
+                out << "local service:" << r->peer(i).local_service() << std::endl;
+                out << "app version:" << r->peer(i).app_version() << std::endl;
+            }
+        }
+    } else {
+        Close(out);
+    }
 }

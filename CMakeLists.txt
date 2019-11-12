@@ -214,6 +214,7 @@ add_executable(epic-cli ${SRC_CLIENT_MAIN}
         )
 target_link_libraries(epic-cli protobuf::libprotobuf)
 target_link_libraries(epic-cli gRPC::grpc++_reflection)
+target_include_directories(epic-cli PRIVATE src/cli)
 add_dependencies(epic-cli version)
 
 # test codes

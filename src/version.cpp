@@ -15,3 +15,7 @@ std::string GetVersionTimestamp() {
 std::string GetCommitHash() {
     return GIT_COMMIT;
 }
+
+std::string GetFormatVersion() {
+    return "Version:" + GetVersionNum() + " Commit:" + GetCommitHash() + " Build time:" + GetVersionTimestamp();
+}
