@@ -14,4 +14,4 @@ namespace SolverResult{
         UNKNOWN_ERROR
     };
 }
-#endif //EPIC_SOLVER_PROTOCOL_H
+#endif // EPIC_SOLVER_PROTOCOL_H

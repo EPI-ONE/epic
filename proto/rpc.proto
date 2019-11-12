@@ -39,6 +39,19 @@ message Block {
   repeated Transaction transactions = 9;
 }
 
+message Peer {
+  uint64 id = 1;
+  string socket = 2;
+  bool valid = 3;
+  bool inbound = 4;
+  bool isFullyConnected = 5;
+  bool isSyncAvailable = 6;
+  uint64 connected_time = 7;
+  uint32 block_version = 8;
+  uint64 local_service = 9;
+  string app_version = 10;
+}
+
 service BasicBlockExplorerRPC {
     rpc GetBlock (GetBlockRequest) returns (GetBlockResponse);
     rpc GetNewMilestoneSince (GetNewMilestoneSinceRequest) returns (GetNewMilestoneSinceResponse);
@@ -103,6 +116,7 @@ service CommanderRPC {
     rpc DisConnectAllPeers(DisConnectAllRequest) returns (DisConnectAllResponse);
     rpc ConnectPeer(ConnectRequest) returns (ConnectResponse);
     rpc SyncCompleted(SyncStatusRequest) returns (SyncStatusResponse);
+    rpc ShowPeer(ShowPeerRequest) returns (ShowPeerResponse);
 }
 
 message StopRequest {}
@@ -229,7 +243,7 @@ message DisConnectAllResponse{
 }
 
 message DisConnectPeerRequest{
-    string address =1;
+    repeated string address = 1;
 }
 
 message DisConnectPeerResponse{
@@ -248,4 +262,12 @@ message SyncStatusRequest {}
 
 message SyncStatusResponse {
     bool completed = 1;
+}
+
+message ShowPeerRequest {
+    string address = 1;
+}
+
+message ShowPeerResponse {
+    repeated Peer peer = 1;
 }

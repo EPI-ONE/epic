@@ -10,5 +10,6 @@
 std::string GetVersionNum();
 std::string GetVersionTimestamp();
 std::string GetCommitHash();
+std::string GetFormatVersion();
 
 #endif // EPIC_VERSION_H

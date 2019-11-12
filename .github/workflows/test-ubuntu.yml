@@ -77,6 +77,11 @@ jobs:
         ulimit -a
         cd ./bin
         ./epictest
+
+    - name : Core dump
+      if: failure()
+      run: |
+        cd ./bin
         ls
         COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
         echo $COREFILE

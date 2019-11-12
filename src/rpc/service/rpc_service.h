@@ -46,6 +46,8 @@ using rpc::LoginResponse;
 using rpc::Output;
 using rpc::SetPassphraseRequest;
 using rpc::SetPassphraseResponse;
+using rpc::ShowPeerRequest;
+using rpc::ShowPeerResponse;
 using rpc::StartMinerRequest;
 using rpc::StartMinerResponse;
 using rpc::StatusRequest;

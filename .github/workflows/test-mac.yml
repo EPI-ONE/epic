@@ -48,9 +48,15 @@ jobs:
       run: |
         ulimit -c unlimited -S
         ulimit -a
+        sudo chmod o+w /cores
         cd ./bin
         ./epictest
+
+    - name: Core dump
+      if: failure()
+      run: |
+        cd ./bin
         ls /cores
-        COREFILE=$(find /cores -maxdepth 1 -name "core*" | head -n 1)
+        COREFILE=$(find /cores -maxdepth 1 -name "core*" | tail -n 1)
         echo $COREFILE
         if [[ -f "$COREFILE" ]]; then lldb ./epictest -c $COREFILE --batch --one-line "bt"; fi

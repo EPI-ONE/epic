@@ -397,6 +397,27 @@ PeerPtr PeerManager::GetPeer(shared_connection_t& connection) {
     return it == peerMap_.end() ? nullptr : it->second;
 }
 
+PeerPtr PeerManager::GetPeer(const std::string& address) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    for (auto& peer : peerMap_) {
+        if (peer.second->address.ToString() == address) {
+            return peer.second;
+        }
+    }
+    return nullptr;
+}
+
+std::vector<PeerPtr> PeerManager::GetAllPeer() {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+    std::vector<PeerPtr> result;
+    result.reserve(peerMap_.size());
+    for (auto& peer : peerMap_) {
+        result.push_back(peer.second);
+    }
+
+    return result;
+}
+
 void PeerManager::AddPeer(shared_connection_t& connection, const std::shared_ptr<Peer>& peer) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.insert(std::make_pair(connection, peer));

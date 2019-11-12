@@ -6,7 +6,7 @@
 #include "config.h"
 #include "cpptoml.h"
 #include "net_address.h"
-#include "solver_protocol.h"
+#include "remote_solver/solver_protocol.h"
 
 inline void SetNonce(VStream& vs, uint32_t nonce) {
     memcpy(vs.data() + vs.size() - sizeof(uint32_t), &nonce, sizeof(uint32_t));
