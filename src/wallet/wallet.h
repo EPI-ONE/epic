@@ -51,8 +51,8 @@ public:
     CKeyID CreateNewKey(bool compressed);
     std::string CreateFirstRegistration(const CKeyID&);
     std::string CreateFirstRegWhenPossible(const CKeyID&);
-    ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const std::string&);
-    void CreateRedemption(const CKeyID&);
+    ConstTxPtr CreateRedemption(const CKeyID&, const CKeyID&, const Coin&, const std::string&);
+    std::string CreateRedemption(const CKeyID&, const Coin& = 0);
 
     /**
      * create a normal transaction
@@ -109,7 +109,9 @@ public:
         return !masterInfo_.IsNull();
     }
 
-    bool CanRedeem(const Coin& coins = 1);
+    bool Redeemable(const Coin& coins) const;
+    bool HasPendingRedemption() const;
+    bool CanRedeem(const Coin& coins = 1) const;
 
     bool GenerateMaster();
 

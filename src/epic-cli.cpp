@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "epic-cli.h"
+
 #include <ctime>
 #include <iomanip>
 #include <termios.h>
@@ -384,6 +385,26 @@ void EpicCli::Disconnect(std::ostream& out, std::string& peers) {
         } else {
             Close(out);
         }
+    }
+}
+
+void EpicCli::Redeem(std::ostream& out, std::string& scoins, std::string& addr) {
+    char* p;
+    uint64_t coins = std::strtoul(scoins.c_str(), &p, 10);
+
+    if (addr == "new") {
+        addr.clear();
+    }
+
+    std::cout << "Redeeming " << (coins ? coins + " coin(s). " : "as much as possible. ")
+              << "The next reg address: " << addr << std::endl;
+
+    auto r = client.Redeem(addr, coins);
+
+    if (r) {
+        std::cout << (*r) << std::endl;
+    } else {
+        throw UnconnectedException();
     }
 }
 

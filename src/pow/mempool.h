@@ -61,7 +61,7 @@ public:
 
     void PushRedemptionTx(ConstTxPtr redemption);
 
-    ConstTxPtr GetRedemptionTx(bool IsRegistration);
+    ConstTxPtr GetRedemptionTx(bool desireFirstReg);
 
     void ClearRedemptions();
 

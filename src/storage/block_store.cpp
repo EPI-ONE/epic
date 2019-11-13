@@ -382,6 +382,7 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
             // Write positions to db
             dbStore_.WriteVtxPos(vtx.cblock->GetHash(), height, blkOffset, vtxOffset);
         }
+
         blkFs.Flush();
         blkFs.Close();
         vtxFs.Flush();

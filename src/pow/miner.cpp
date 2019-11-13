@@ -102,15 +102,12 @@ void Miner::Run() {
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
-                auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
-                if (!firstRegTx) {
-                    spdlog::info("[Miner] Paused. Waiting for the first registration.");
-                    while (enabled_ && !firstRegTx) {
-                        std::this_thread::yield();
-                        firstRegTx = MEMPOOL->GetRedemptionTx(true);
-                    }
-                }
+                spdlog::info("[Miner] Paused. Waiting for the first registration...");
+                ConstTxPtr firstRegTx;
+                while (enabled_ && !(firstRegTx = MEMPOOL->GetRedemptionTx(true)))
+                    ;
                 spdlog::info("[Miner] Got the first registration. Start mining.");
+
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
@@ -167,8 +164,10 @@ void Miner::Run() {
                 if (b.HasTransaction()) {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
-                    if (txns[0]->IsRegistration()) {
-                        MEMPOOL->PushRedemptionTx(std::move(txns[0]));
+                    if (b.IsRegistration()) {
+                        if (b.IsFirstRegistration() || txns[0]->GetOutputs()[0].value) {
+                            MEMPOOL->PushRedemptionTx(std::move(txns[0]));
+                        }
                         startIndex = 1;
                     }
                     for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {

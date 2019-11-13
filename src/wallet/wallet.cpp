@@ -245,23 +245,31 @@ TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, c
     return TxInput{outpoint, pubkey, hashMsg, sig};
 }
 
-ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr, const CKeyID& nextAddr, const std::string& msg) {
+ConstTxPtr Wallet::CreateRedemption(const CKeyID& targetAddr,
+                                    const CKeyID& nextAddr,
+                                    const Coin& coins,
+                                    const std::string& msg) {
     Transaction redeem{};
-    auto minerInfo = GetMinerInfo();
     redeem.AddInput(CreateSignedVin(targetAddr, TxOutPoint{GetLastRedemHash(), UNCONNECTED, UNCONNECTED}, msg))
-        .AddOutput(minerInfo.second, nextAddr);
+        .AddOutput(coins, nextAddr);
     auto redemPtr = std::make_shared<const Transaction>(std::move(redeem));
     return redemPtr;
 }
 
-void Wallet::CreateRedemption(const CKeyID& key) {
+std::string Wallet::CreateRedemption(const CKeyID& key, const Coin& coins) {
     assert(!key.IsNull());
 
-    auto redem = CreateRedemption(GetLastRedemAddress(), key, "lalala");
+    if (coins > GetMinerInfo().second) {
+        return "";
+    }
+
+    auto redem = CreateRedemption(GetLastRedemAddress(), key, coins ? coins : GetMinerInfo().second, "lalala");
     pendingRedemption.insert({redem->GetHash(), redem});
     MEMPOOL->PushRedemptionTx(redem);
     spdlog::info("[Wallet] Created redemption of reward {} coins: {}", redem->GetOutputs()[0].value.GetValue(),
                  std::to_string(redem->GetHash()));
+
+    return EncodeAddress(GetLastRedemAddress());
 }
 
 std::string Wallet::CreateFirstRegistration(const CKeyID& addr) {
@@ -380,8 +388,16 @@ Coin Wallet::GetCurrentMinerReward() const {
     return GetMinerInfo().second;
 }
 
-bool Wallet::CanRedeem(const Coin& coins) {
-    return GetMinerInfo().second >= coins && pendingRedemption.empty();
+bool Wallet::Redeemable(const Coin& coins) const {
+    return GetMinerInfo().second >= coins;
+}
+
+bool Wallet::HasPendingRedemption() const {
+    return !pendingRedemption.empty();
+}
+
+bool Wallet::CanRedeem(const Coin& coins) const {
+    return Redeemable(coins) && !HasPendingRedemption();
 }
 
 void Wallet::CreateRandomTx(size_t sizeTx) {

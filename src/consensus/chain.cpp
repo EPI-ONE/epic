@@ -554,8 +554,7 @@ Chain::GetDataToSTORE(MilestonePtr ms) {
     for (const auto& key_created : result_txoc.GetCreated()) {
         result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
-
-    return {std::move(result_vtx), std::move(result_created), std::move(result_txoc.GetSpent())};
+    return {std::move(result_vtx), std::move(result_created), result_txoc.GetSpent()};
 }
 
 std::vector<uint256> Chain::GetPeerChainHead() const {

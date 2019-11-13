@@ -101,6 +101,10 @@ public:
         return value_ > another.value_;
     }
 
+    explicit operator bool() const {
+        return (bool) value_;
+    }
+
     friend inline Coin operator+(const Coin& a, uint64_t b) {
         return Coin(a.value_ + b);
     }
