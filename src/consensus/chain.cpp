@@ -38,7 +38,8 @@ Chain::Chain() : ismainchain_(true) {}
 
 Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
-      recentHistory_(chain.recentHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_) {
+      recentHistory_(chain.recentHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_),
+      prevRegsToModify_(chain.prevRegsToModify_) {
     if (states_.empty()) {
         return;
     }
@@ -55,12 +56,13 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
             recentHistory_.erase(h);
             ledger_.Rollback((*it)->GetTXOC());
 
-            // Rollback prevRedempHashMap_
-            for (const auto& h : (*it)->GetRegChange().GetCreated()) {
-                prevRedempHashMap_.erase(h.first);
+            // Rollback prevRedempHashMap_ and prevRedempBlockMap_
+            for (const auto& entry : (*it)->GetRegChange().GetCreated()) {
+                prevRedempHashMap_.erase(entry.first);
             }
-            for (const auto& h : (*it)->GetRegChange().GetRemoved()) {
-                prevRedempHashMap_.insert(h);
+            for (const auto& entry : (*it)->GetRegChange().GetRemoved()) {
+                prevRedempHashMap_.insert(entry);
+                prevRegsToModify_.erase(entry.second);
             }
         }
         states_.erase(std::next(it).base());
@@ -379,11 +381,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     spdlog::trace("[Validate] Validating redemption in block {}", blkHash.to_substr());
 
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
-    VertexPtr prevReg      = GetVertexCache(prevRedempHash);
-    if (!prevReg || prevReg->height <= STORE->GetHeadHeight()) {
-        // This is to make sure that the file will be modified
-        prevReg = STORE->GetVertex(prevRedempHash);
-    }
+    VertexPtr prevReg      = GetVertex(prevRedempHash);
     assert(prevReg);
 
     const auto& redem = vertex.cblock->GetTransactions().at(0);
@@ -391,13 +389,13 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     const auto& vout  = redem->GetOutputs().at(0); // only the first tx output will be regarded as valid
 
     if (vin.outpoint.bHash != prevRedempHash) {
-        spdlog::info("[Validation] Double redemption on the previous registration block: outpoint {} not matching the "
+        spdlog::info("[Validation] Invalid redemption on the previous registration block: outpoint {} not matching the "
                      "last valid redemption hash {} [{}]",
                      vin.outpoint.bHash.to_substr(), prevRedempHash.to_substr(), hashstr);
         return {};
     }
 
-    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED) {
+    if (prevReg->isRedeemed != Vertex::NOT_YET_REDEEMED || prevRegsToModify_.contains(prevRedempHash)) {
         spdlog::info("[Validation] Double redemption on the previous registration block: already redeemed {} [{}]",
                      prevRedempHash.to_substr(), hashstr);
         return {};
@@ -418,8 +416,8 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     }
 
     // update redemption status
-    prevReg->isRedeemed = Vertex::IS_REDEEMED;
-    vertex.isRedeemed   = Vertex::NOT_YET_REDEEMED;
+    prevRegsToModify_.emplace(prevRedempHash);
+    vertex.isRedeemed = Vertex::NOT_YET_REDEEMED;
     regChange.Remove(blkHash, prevRedempHash);
     regChange.Create(blkHash, blkHash);
     UpdateValue(prevRedempHashMap_, blkHash, blkHash);
@@ -545,8 +543,20 @@ VertexPtr Chain::GetMsVertexCache(const uint256& msHash) const {
 }
 
 void Chain::PopOldest(const std::vector<uint256>& vtxToRemove, const TXOC& txocToRemove) {
-    // remove vertices
     for (const auto& lvsh : vtxToRemove) {
+        // Modify redemption status for those prev regs in DB
+        const auto& vtx = GetVertexCache(lvsh);
+        assert(vtx);
+        if (!vtx->cblock->IsFirstRegistration() && vtx->cblock->IsRegistration() && vtx->validity[0] == Vertex::VALID) {
+            auto h = vtx->cblock->GetTransactions()[0]->GetInputs()[0].outpoint.bHash;
+            assert(prevRegsToModify_.contains(h));
+
+            if (STORE->DBExists(h)) {
+                STORE->GetVertex(h, false)->isRedeemed = Vertex::IS_REDEEMED;
+            }
+            prevRegsToModify_.erase(h);
+        }
+
         recentHistory_.erase(lvsh);
     }
 
@@ -566,7 +576,8 @@ Chain::GetDataToSTORE(MilestonePtr ms) {
     for (const auto& key_created : result_txoc.GetCreated()) {
         result_created.emplace(key_created, ledger_.FindFromLedger(key_created));
     }
-    return {result_vtx, result_created, result_txoc.GetSpent()};
+
+    return {std::move(result_vtx), std::move(result_created), std::move(result_txoc.GetSpent())};
 }
 
 bool Chain::IsMilestone(const uint256& blkHash) const {

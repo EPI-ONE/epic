@@ -90,24 +90,23 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
         std::vector<VertexPtr> lvs;
         lvs.reserve(size);
 
-        // Construct milestone
-        auto ms      = fac.CreateVertexPtr(1, 1, true);
-        auto prev_ms = levelsets.empty() ? *GENESIS_VERTEX : *levelsets.back()[0];
-        fac.CreateMilestonePtr(prev_ms.snapshot, ms);
-        ms->isMilestone = true;
-        ms->height      = i;
-
-        lvs.push_back(ms);
-        blocks.push_back(ms);
-
         // Construct blocks in the level set
-        for (int j = 0; j < size; ++j) {
+        for (int j = 1; j < size; ++j) {
             auto b         = fac.CreateVertexPtr(fac.GetRand() % 10, fac.GetRand() % 10, true);
             b->isMilestone = false;
-            b->height      = ms->height;
+            b->height      = i;
             lvs.push_back(b);
             blocks.emplace_back(b);
         }
+
+        // Construct milestone
+        auto ms      = fac.CreateVertexPtr(1, 1, true);
+        auto prev_ms = levelsets.empty() ? *GENESIS_VERTEX : *levelsets.back().back();
+        fac.CreateMilestonePtr(prev_ms.snapshot, ms);
+        ms->isMilestone = true;
+        ms->height      = i;
+        lvs.push_back(ms);
+        blocks.push_back(ms);
 
         ASSERT_TRUE(STORE->StoreLevelSet(lvs));
         levelsets.emplace_back(std::move(lvs));
@@ -133,21 +132,26 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     auto vs_blks = STORE->GetRawLevelSetBetween(1, nLvs);
     ASSERT_FALSE(vs_blks.empty());
 
-    for (auto& block : blocks) {
-        Block recovered_blk(vs_blks);
-        ASSERT_EQ(*block->cblock, recovered_blk);
-    }
-
     // Recover level sets in vtcs in batch
     auto vs_vtcs = STORE->GetRawLevelSetBetween(1, nLvs, file::FileType::VTX);
     ASSERT_FALSE(vs_vtcs.empty());
 
-    for (auto& block : blocks) {
-        Vertex recovered_rec(vs_vtcs);
-        ASSERT_EQ(*block, recovered_rec);
+    for (const auto& lvs : levelsets) {
+        // Reorder the level sets to make the ms the first element,
+        // in accordance with the stored raw level set order in files
+        std::vector<VertexPtr> reordered_lvs = {lvs.back()};
+        reordered_lvs.insert(reordered_lvs.end(), lvs.begin(), lvs.end() - 1);
+
+        for (const auto& vtx : reordered_lvs) {
+            Block recovered_blk(vs_blks);
+            ASSERT_EQ(*vtx->cblock, recovered_blk);
+
+            Vertex recovered_vtx(vs_vtcs);
+            ASSERT_EQ(*vtx, recovered_vtx);
+        }
     }
 
-    // Recover single level set
+    // Recover a single level set
     const auto& lvs = levelsets.back();
     auto height     = lvs.front()->height;
 
@@ -159,9 +163,9 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     ASSERT_EQ(recovered_vtcs_blks.size(), lvs.size());
     ASSERT_EQ(recovered_vtcs.size(), lvs.size());
 
-    ASSERT_TRUE(recovered_vtcs_blks[0]->snapshot);
-    ASSERT_FALSE(recovered_vtcs_blks[0]->snapshot->GetLevelSet().empty());
-    ASSERT_TRUE(recovered_vtcs_blks[0]->snapshot->GetLevelSet()[0].lock());
+    ASSERT_TRUE(recovered_vtcs_blks.back()->snapshot);
+    ASSERT_FALSE(recovered_vtcs_blks.back()->snapshot->GetLevelSet().empty());
+    ASSERT_TRUE(recovered_vtcs_blks.back()->snapshot->GetLevelSet()[0].lock());
 
     for (size_t i = 0; i < lvs.size(); ++i) {
         ASSERT_TRUE(recovered_vtcs_blks[i]->cblock);
@@ -169,16 +173,6 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
         ASSERT_EQ(*lvs[i], *recovered_vtcs_blks[i]);
         ASSERT_EQ(*lvs[i], *recovered_vtcs[i]);
     }
-
-    // update vertices
-    Vertex copyVtx;
-    {
-        auto vtx        = STORE->GetVertex(blocks[0]->cblock->GetHash());
-        vtx->isRedeemed = Vertex::IS_REDEEMED;
-        copyVtx         = *vtx;
-    }
-    auto newout = STORE->GetVertex(blocks[0]->cblock->GetHash());
-    ASSERT_EQ(copyVtx, *newout);
 }
 
 TEST_F(TestFileStorage, test_modifier) {
@@ -187,7 +181,7 @@ TEST_F(TestFileStorage, test_modifier) {
     // Construct a fake ms vertex
     auto vertex                = fac.CreateVertexPtr(1, 1, true);
     vertex->snapshot           = std::make_shared<Milestone>();
-    vertex->snapshot->height   = 1;
+    vertex->height             = 1;
     vertex->isRedeemed         = Vertex::NOT_YET_REDEEMED;
     std::vector<VertexPtr> lvs = {vertex};
 

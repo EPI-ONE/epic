@@ -70,19 +70,19 @@ size_t Vertex::GetOptimalStorageSize() {
         return optimalStorageSize_;
     }
 
-    optimalStorageSize_ += GetSizeOfVarInt(height)                                         // block height
-                           + GetSizeOfVarInt(cumulativeReward.GetValue())                  // reward
-                           + GetSizeOfVarInt(minerChainHeight)                             // miner chain height
-                           + ::GetSizeOfCompactSize(validity.size()) + validity.size() * 1 // validity
-                           + 1                                                             // RedemptionStatus
-                           + 1;                                                            // MilestoneStatus
+    optimalStorageSize_ += (1                                                               // RedemptionStatus
+                            + GetSizeOfVarInt(height)                                       // block height
+                            + GetSizeOfVarInt(cumulativeReward.GetValue())                  // reward
+                            + GetSizeOfVarInt(minerChainHeight)                             // miner chain height
+                            + ::GetSizeOfCompactSize(validity.size()) + validity.size() * 1 // validity
+                            + 1                                                             // MilestoneStatus
+    );
 
     // Milestone
     if (snapshot != nullptr) {
-        optimalStorageSize_ += (GetSizeOfVarInt(snapshot->height) // ms height
-                                + 4                               // hash rate
-                                + 4                               // ms target
-                                + 4                               // block target
+        optimalStorageSize_ += (4   // hash rate
+                                + 4 // ms target
+                                + 4 // block target
         );
     }
 

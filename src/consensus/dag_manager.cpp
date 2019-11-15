@@ -91,7 +91,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
                 auto startMs = GetState(start);
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
-                spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->snapshot->height);
+                spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->height);
                 hashes = TraverseMilestoneForward(startMs, Inv::kMaxInventorySize);
                 break;
             }
@@ -572,24 +572,21 @@ void DAGManager::FlushTrigger() {
 }
 
 void DAGManager::FlushToSTORE(MilestonePtr ms) {
-    // first store data to STORE
-    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
-    ms->stored                                   = true;
-
     spdlog::debug("[Verify Thread] Flushing {} at height {}", ms->GetMilestoneHash().to_substr(), ms->height);
 
+    // first store data to STORE
+    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains.best()->GetDataToSTORE(ms);
+
+    ms->stored = true;
     storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
                           utxoToRemove = std::move(utxoToRemove)]() mutable {
         std::vector<VertexPtr> blocksToListener;
         blocksToListener.reserve(vtxToStore.size());
 
-        std::swap(vtxToStore.front(), vtxToStore.back());
-        const auto& ms = *vtxToStore.front().lock();
-
+        const auto& ms = *vtxToStore.back().lock();
         STORE->StoreLevelSet(vtxToStore);
         STORE->UpdatePrevRedemHashes(ms.snapshot->GetRegChange());
 
-        std::swap(vtxToStore.front(), vtxToStore.back());
         for (auto& vtx : vtxToStore) {
             blocksToListener.emplace_back(vtx.lock());
             STORE->UnCache((*vtx.lock()).cblock->GetHash());
@@ -676,11 +673,9 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
     size_t leastHeightCached = bestChain.GetLeastHeightCached();
 
     if (height < leastHeightCached) {
-        auto vtcs = STORE->GetLevelSetBlksAt(height);
-        lvs.insert(lvs.end(), std::make_move_iterator(vtcs.begin()), std::make_move_iterator(vtcs.end()));
+        lvs = STORE->GetLevelSetBlksAt(height);
     } else {
         auto vtcs = bestChain.GetStates()[height - leastHeightCached]->GetLevelSet();
-        std::swap(vtcs.front(), vtcs.back());
 
         lvs.reserve(vtcs.size());
         for (auto& rwp : vtcs) {
@@ -701,8 +696,7 @@ std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool wi
 
     auto height = GetHeight(blockHash);
     if (height < leastHeightCached) {
-        auto vtcs = STORE->GetLevelSetVtcsAt(height, withBlock);
-        lvs.insert(lvs.end(), std::make_move_iterator(vtcs.begin()), std::make_move_iterator(vtcs.end()));
+        lvs = STORE->GetLevelSetVtcsAt(height, withBlock);
     } else {
         auto state = GetState(blockHash);
         if (state) {

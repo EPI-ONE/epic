@@ -38,6 +38,10 @@ public:
         c->ledger_.Update(txoc);
     }
 
+    auto& GetPrevRegHashes(Chain* c) {
+        return c->prevRegsToModify_;
+    }
+
     std::unique_ptr<Chain> make_chain(const ConcurrentQueue<MilestonePtr>& states,
                                       const std::vector<VertexPtr>& vtcs,
                                       bool ismain = false) {
@@ -96,6 +100,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     // Chain configuration
     constexpr size_t HEIGHT = 30;
     std::array<VertexPtr, HEIGHT> vtcs;
+    std::array<int, HEIGHT> lvsSizes;
     std::array<uint256, HEIGHT> hashes;
     std::array<bool, HEIGHT> isRedemption{};
     std::array<bool, HEIGHT> isMilestone{};
@@ -130,6 +135,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     b1.CalculateOptimalEncodingSize();
     m.Solve(b1);
     ASSERT_TRUE(b1.IsFirstRegistration());
+    ASSERT_TRUE(b1.IsRegistration());
     const auto b1hash = b1.GetHash();
 
     // Construct a chain with only redemption blocks and blocks without transaction
@@ -180,6 +186,15 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             prevMs = c.GetChainHead();
             ASSERT_EQ(c.GetPendingBlockCount(), 0);
             ASSERT_EQ(prevMs->GetMilestoneHash(), prevHash);
+
+            auto lvs = ms->snapshot->GetLevelSet();
+            STORE->StoreLevelSet(lvs);
+            std::vector<uint256> lvs_hashes;
+            std::transform(lvs.begin(), lvs.end(), std::back_inserter(lvs_hashes),
+                           [](const VertexWPtr& v) -> uint256 { return v.lock()->cblock->GetHash(); });
+            c.PopOldest(lvs_hashes, {});
+
+            lvsSizes[i] = lvs.size();
         }
     }
 
@@ -188,6 +203,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     ASSERT_EQ(firstRegVtx->minerChainHeight, 1);
     ASSERT_TRUE(firstRegVtx->cumulativeReward == 0);
     ASSERT_EQ(firstRegVtx->isRedeemed, Vertex::IS_REDEEMED);
+
     uint32_t lastMs = HEIGHT - 1;
     while (!isMilestone[lastMs]) {
         lastMs--;
@@ -196,6 +212,7 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     while (!isRedemption[lastRdm]) {
         lastRdm--;
     }
+
     for (size_t i = 0; i < lastMs; i++) {
         vtcs[i] = GetVertex(&c, hashes[i]);
         ASSERT_EQ(vtcs[i]->minerChainHeight, i + 2);
@@ -207,15 +224,15 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
             }
         } else {
             if (i > 0 && !isMilestone[i]) {
-                ASSERT_TRUE(vtcs[i]->cumulativeReward == vtcs[i - 1]->cumulativeReward + GetParams().reward);
+                ASSERT_EQ(vtcs[i]->cumulativeReward, vtcs[i - 1]->cumulativeReward + GetParams().reward);
             } else if (i == 0) {
-                ASSERT_TRUE(vtcs[i]->cumulativeReward == GetParams().reward);
+                ASSERT_EQ(vtcs[i]->cumulativeReward, GetParams().reward);
             } else {
-                ASSERT_TRUE(vtcs[i]->cumulativeReward ==
-                            vtcs[i - 1]->cumulativeReward +
-                                GetParams().reward * vtcs[i]->snapshot->GetLevelSet().size());
+                ASSERT_EQ(vtcs[i]->cumulativeReward.GetValue(),
+                          (vtcs[i - 1]->cumulativeReward + GetParams().reward * lvsSizes[i]).GetValue());
             }
         }
+
         if (isMilestone[i]) {
             ASSERT_TRUE(vtcs[i]->isMilestone);
         } else {
@@ -422,23 +439,23 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
 
 TEST_F(TestChainVerification, ChainForking) {
     // Construct the main chain and fork
-    ConcurrentQueue<MilestonePtr> dqcs{{GENESIS_VERTEX->snapshot}};
+    ConcurrentQueue<MilestonePtr> dqms{{GENESIS_VERTEX->snapshot}};
     std::vector<VertexPtr> vtcs{};
     ConstBlockPtr forkblk;
     MilestonePtr split;
     for (int i = 1; i < 10; i++) { // reach height 9
         vtcs.emplace_back(fac.CreateConsecutiveVertexPtr(fac.NextTime(), m));
-        dqcs.push_back(fac.CreateMilestonePtr(dqcs.back(), vtcs[i - 1]));
+        dqms.push_back(fac.CreateMilestonePtr(dqms.back(), vtcs[i - 1]));
         if (i == 5) {
             // create a forked chain state at height 5
             auto blk = fac.CreateBlock();
-            split    = dqcs.back();
+            split    = dqms.back();
             blk.SetMilestoneHash(split->GetMilestoneHash());
             m.Solve(blk);
             forkblk = std::make_shared<const Block>(blk);
         }
     }
-    auto chain = make_chain(dqcs, vtcs, true);
+    auto chain = make_chain(dqms, vtcs, true);
     Chain fork{*chain, forkblk};
 
     ASSERT_EQ(fork.GetChainHead()->height, 5);

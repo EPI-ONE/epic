@@ -91,7 +91,6 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(VARINT(height));
         READWRITE(hashRate);
         if (ser_action.ForRead()) {
             milestoneTarget.SetCompact(ser_readdata32(s));

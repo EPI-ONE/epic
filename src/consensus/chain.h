@@ -170,6 +170,12 @@ private:
     std::unordered_map<uint256, uint256> prevRedempHashMap_;
 
     /**
+     * Caches all the hashes of the previous registration blocks that
+     * is going to have their redemption status changed.
+     */
+    ConcurrentHashSet<uint256> prevRegsToModify_;
+
+    /**
      * Checks whether the block contains a valide tx
      * and update its NR info
      * Returns valid TXOC and invalid TXOC of the single block
