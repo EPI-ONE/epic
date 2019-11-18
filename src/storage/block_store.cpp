@@ -104,13 +104,13 @@ ConstBlockPtr BlockStore::FindBlock(const uint256& blkHash) const {
 }
 
 VertexPtr BlockStore::GetMilestoneAt(size_t height) const {
-    VertexPtr vtx(ConstructNRFromFile(dbStore_.GetMsPos(height)));
+    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetMsPos(height));
     vtx->snapshot->PushBlkToLvs(vtx);
     return vtx;
 }
 
 VertexPtr BlockStore::GetVertex(const uint256& blkHash, bool withBlock) const {
-    VertexPtr vtx(ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock));
+    VertexPtr vtx = ConstructNRFromFile(dbStore_.GetVertexPos(blkHash), withBlock);
     if (vtx && vtx->isMilestone) {
         vtx->snapshot->PushBlkToLvs(vtx);
     }
@@ -140,10 +140,9 @@ std::vector<VertexPtr> BlockStore::GetLevelSetVtcsAt(size_t height, bool withBlo
     return result;
 }
 
-StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value, bool withBlock) const {
+VertexPtr BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&& value, bool withBlock) const {
     if (!value) {
-        StoredVertex ret{nullptr, [](Vertex* ptr) {}};
-        return ret;
+        return nullptr;
     }
 
     auto [blkPos, vtxPos] = *value;
@@ -156,18 +155,7 @@ StoredVertex BlockStore::ConstructNRFromFile(std::optional<std::pair<FilePos, Fi
         blk = std::make_shared<Block>(std::move(b));
     }
 
-    StoredVertex vertex =
-        std::unique_ptr<Vertex, std::function<void(Vertex*)>>(new Vertex{std::move(blk)}, [pos = vtxPos](Vertex* ptr) {
-            if (pos == FilePos{}) {
-                return;
-            }
-            if (ptr->isRedeemed == Vertex::IS_REDEEMED) {
-                FileModifier vtxmod{file::VTX, pos};
-                vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
-            }
-            delete ptr;
-        });
-
+    VertexPtr vertex = std::make_shared<Vertex>(std::move(blk));
     FileReader vtxReader{file::VTX, vtxPos};
     vtxReader >> *vertex;
 
@@ -319,8 +307,21 @@ uint256 BlockStore::GetPrevRedemHash(const uint256& peerChainHeadHash) const {
 bool BlockStore::UpdatePrevRedemHashes(const RegChange& change) const {
     return dbStore_.UpdateReg(change);
 }
+
 bool BlockStore::RollBackPrevRedemHashes(const RegChange& change) const {
     return dbStore_.RollBackReg(change);
+}
+
+bool BlockStore::UpdateRedemptionStatus(const uint256& key) const {
+    auto pos = dbStore_.GetVertexPos(key);
+    if (!pos) {
+        return false;
+    }
+
+    FileModifier vtxmod{file::VTX, pos->second};
+    vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
+
+    return true;
 }
 
 std::unordered_map<uint256, uint256> BlockStore::GetAllReg() const {
@@ -386,6 +387,9 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         blkFs.Flush();
         blkFs.Close();
         vtxFs.Flush();
+        vtxFs.Close();
+
+        blkFs.Close();
         vtxFs.Close();
 
         // Write ms position at last to enable search for all blocks in the lvs

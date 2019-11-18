@@ -529,9 +529,7 @@ void Chain::PopOldest(const std::vector<uint256>& vtxToRemove, const TXOC& txocT
             auto h = vtx->cblock->GetTransactions()[0]->GetInputs()[0].outpoint.bHash;
             assert(prevRegsToModify_.contains(h));
 
-            if (STORE->DBExists(h)) {
-                STORE->GetVertex(h, false)->isRedeemed = Vertex::IS_REDEEMED;
-            }
+            STORE->UpdateRedemptionStatus(h);
             prevRegsToModify_.erase(h);
         }
 
