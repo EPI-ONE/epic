@@ -160,7 +160,7 @@ void Miner::Run() {
             // To prevent continuing with a block having a false nonce,
             // which may happen when Solve is aborted by calling
             // Miner::Stop or when abort_ = true
-            if (abort_.load() || !enabled_.load()) {
+            if (abort_.load() || !enabled_.load() || !b.Verify()) {
                 if (b.HasTransaction()) {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
@@ -182,7 +182,6 @@ void Miner::Run() {
                 continue;
             }
 
-            assert(b.CheckPOW());
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);

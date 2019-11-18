@@ -349,7 +349,7 @@ void Block::CalculateHash() {
     if (GetParams().cycleLen) {
         proofHash_ = HashBLAKE2<256>(proof_.data(), PROOFSIZE);
     } else {
-        proofHash_ = (uint256) HashBLAKE2<256>(s);
+        proofHash_ = HashBLAKE2<256>(s);
     }
 
     s << proof_;
