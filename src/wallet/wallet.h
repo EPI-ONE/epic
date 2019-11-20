@@ -115,6 +115,9 @@ public:
 
     bool GenerateMaster();
 
+    CKeyID GetLastRedemAddress() const;
+    uint256 GetLastRedemHash() const;
+    std::pair<uint256, Coin> GetMinerInfo() const;
 
 private:
     ConcurrentHashMap<UTXOKey, std::tuple<CKeyID, TxIndex, OutputIndex, uint64_t>> unspent, pending;
@@ -155,11 +158,7 @@ private:
 
     void SendPeriodicTasks(uint32_t);
 
-    std::pair<uint256, Coin> GetMinerInfo() const;
     void UpdateMinerInfo(uint256 blockHash, const Coin& value);
-
-    CKeyID GetLastRedemAddress() const;
-    uint256 GetLastRedemHash() const;
 
     void SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
 

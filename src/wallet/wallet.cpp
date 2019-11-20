@@ -74,6 +74,10 @@ void Wallet::Load() {
         lastRedemAddress_ = last_redem->second;
     }
 
+    if (auto miner_info = walletStore_.GetMinerInfo()) {
+        minerInfo_ = *miner_info;
+    }
+
     pendingTx = walletStore_.GetAllTx();
     unspent   = walletStore_.GetAllUnspent();
     pending   = walletStore_.GetAllPending();
@@ -453,6 +457,7 @@ void Wallet::UpdateMinerInfo(uint256 blockHash, const Coin& value) {
     WRITER_LOCK(lock_)
     minerInfo_.first  = blockHash;
     minerInfo_.second = value;
+    walletStore_.StoreMinerInfo(minerInfo_);
 }
 
 std::pair<uint256, Coin> Wallet::GetMinerInfo() const {

@@ -263,6 +263,10 @@ TEST_F(TestWallet, normal_workflow) {
     ASSERT_NE(balance.GetValue(), 0);
 
     DAG->Wait();
+
+    auto lastRedemInfo = std::make_pair(WALLET->GetLastRedemHash(), WALLET->GetLastRedemAddress());
+    auto minerInfo     = WALLET->GetMinerInfo();
+
     spdlog::info("[WalletTest-normal-workflow] Begin to restart wallet");
     // check wallet restart
     WALLET.reset(nullptr);
@@ -276,6 +280,8 @@ TEST_F(TestWallet, normal_workflow) {
 
     ASSERT_TRUE(WALLET->ExistMasterInfo());
     ASSERT_EQ(balance, WALLET->GetBalance());
+    ASSERT_EQ(lastRedemInfo, std::make_pair(WALLET->GetLastRedemHash(), WALLET->GetLastRedemAddress()));
+    ASSERT_EQ(minerInfo, WALLET->GetMinerInfo());
 
     auto tx = WALLET->CreateTx({{1, WALLET->GetRandomAddress()}}, MIN_FEE, 1);
     spdlog::info("[WalletTest-normal-workflow] Created the 4th transaction");

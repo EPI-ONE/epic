@@ -50,7 +50,7 @@ public:
 
     Vertex();
     Vertex(const Vertex&) = default;
-    explicit Vertex(const ConstBlockPtr&);
+    explicit Vertex(ConstBlockPtr);
     explicit Vertex(const Block&);
     explicit Vertex(Block&&);
     explicit Vertex(VStream&);
