@@ -104,7 +104,7 @@ void Miner::Run() {
             if (!selfChainHead_) {
                 spdlog::info("[Miner] Paused. Waiting for the first registration...");
                 ConstTxPtr firstRegTx;
-                while (enabled_ && !(firstRegTx = MEMPOOL->GetRedemptionTx(true)))
+                while (enabled_ && !(firstRegTx = MEMPOOL->GetFirstReg()))
                     ;
                 spdlog::info("[Miner] Got the first registration. Start mining.");
 
@@ -114,7 +114,7 @@ void Miner::Run() {
                 prevHash     = selfChainHead_->GetHash();
                 auto max_ntx = GetParams().blockCapacity;
 
-                auto tx = MEMPOOL->GetRedemptionTx(false);
+                auto tx = MEMPOOL->GetRedemptionTx();
 
                 if (tx) {
                     if (tx->IsFirstRegistration()) {
@@ -131,9 +131,9 @@ void Miner::Run() {
 
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
-                        spdlog::info("[Miner] Hashing power percentage {}",
-                                     distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
-                                         std::atomic_load(&chainHead_)->snapshot->hashRate);
+                        spdlog::debug("[Miner] Hashing power percentage {}",
+                                      distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
+                                          std::atomic_load(&chainHead_)->snapshot->hashRate);
                     }
 
                     auto allowed =
@@ -165,7 +165,7 @@ void Miner::Run() {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
                     if (b.IsRegistration()) {
-                        if (b.IsFirstRegistration() || txns[0]->GetOutputs()[0].value) {
+                        if (b.IsFirstRegistration() || txns[0]->GetOutputs()[0].value.GetValue()) {
                             MEMPOOL->PushRedemptionTx(std::move(txns[0]));
                         }
                         startIndex = 1;

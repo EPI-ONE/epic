@@ -152,7 +152,6 @@ void Block::UnCache() {
 }
 
 bool Block::Verify() const {
-    spdlog::trace("[Syntax] Syntactically checking block {}", hash_.to_substr());
     // check version
     if (header_.version != GetParams().version) {
         spdlog::info("[Syntax] Wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
@@ -230,7 +229,6 @@ bool Block::Verify() const {
         }
     }
 
-    spdlog::trace("[Syntax] End of syntactical checking on {}", hash_.to_substr());
     return true;
 }
 

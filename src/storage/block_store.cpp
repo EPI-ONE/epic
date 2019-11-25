@@ -389,9 +389,6 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         vtxFs.Flush();
         vtxFs.Close();
 
-        blkFs.Close();
-        vtxFs.Close();
-
         // Write ms position at last to enable search for all blocks in the lvs
         dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msVtxPos);
         STORE->SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));

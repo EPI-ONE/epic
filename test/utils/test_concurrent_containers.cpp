@@ -12,9 +12,6 @@ class TestConcurrentContainers : public testing::Test {
 protected:
     ThreadPool threadPool;
     int testSize;
-    ConcurrentHashMap<int, int> m;
-    ConcurrentHashSet<int> s;
-    BlockingQueue<int> q;
 
     void SetUp() {
         testSize = 10000;
@@ -26,44 +23,54 @@ protected:
 };
 
 TEST_F(TestConcurrentContainers, HashMap) {
+    ConcurrentHashMap<int, int> m;
     for (int i = 0; i < testSize; ++i) {
-        threadPool.Execute([i, this]() {
+        threadPool.Execute([i, &m]() {
             auto key    = i;
             auto result = m.insert_or_assign(key, std::move(key));
             ASSERT_TRUE(result.second);
         });
     }
 
+    while (!threadPool.IsIdle()) {
+        usleep(100000);
+    }
+
     for (int i = 0; i < testSize; ++i) {
-        threadPool.Execute([i, this]() { m.erase(i); });
+        threadPool.Execute([i, &m]() { m.erase(i); });
     }
 
     while (!threadPool.IsIdle()) {
-        std::this_thread::yield();
+        usleep(100000);
     }
 
     threadPool.Stop();
 
-    ASSERT_EQ(m.size(), 0);
+    ASSERT_TRUE(m.empty());
 }
 
 TEST_F(TestConcurrentContainers, HashSet) {
+    ConcurrentHashSet<int> s;
     for (int i = 0; i < testSize; ++i) {
-        threadPool.Execute([i, this]() {
+        threadPool.Execute([i, &s]() {
             auto result = s.insert(i);
             ASSERT_TRUE(result.second);
         });
     }
 
+    while (!threadPool.IsIdle()) {
+        usleep(100000);
+    }
+
     for (int i = 0; i < testSize; ++i) {
-        threadPool.Execute([i, this]() { s.erase(i); });
+        threadPool.Execute([i, &s]() { s.erase(i); });
     }
 
     while (!threadPool.IsIdle()) {
-        std::this_thread::yield();
+        usleep(100000);
     }
 
     threadPool.Stop();
 
-    ASSERT_EQ(s.size(), 0);
+    ASSERT_TRUE(s.empty());
 }

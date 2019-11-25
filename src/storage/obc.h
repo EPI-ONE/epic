@@ -81,7 +81,6 @@ private:
      * to its dependency struct
      */
     std::unordered_map<uint256, obc_dep_ptr> block_dep_map_;
-
 };
 
 #endif // EPIC_OBC_H

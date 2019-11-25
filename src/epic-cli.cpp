@@ -397,7 +397,8 @@ void EpicCli::Redeem(std::ostream& out, std::string& scoins, std::string& addr) 
     }
 
     std::cout << "Redeeming " << (coins ? coins + " coin(s). " : "as much as possible. ")
-              << "The next reg address: " << addr << std::endl;
+              << (addr.empty() ? "Creating a new address for the next reg." : "The next reg address: " + addr)
+              << std::endl;
 
     auto r = client.Redeem(addr, coins);
 

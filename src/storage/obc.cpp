@@ -72,14 +72,17 @@ void OrphanBlocksContainer::AddBlock(ConstBlockPtr&& block, uint8_t missing_mask
     obcBlockSize_++;
 
     if (missing_mask & M_MISSING) {
+        spdlog::trace("[OBC] Block {} is missing milestone link {}", bHash.to_substr(), msHash.to_substr());
         common_insert(msHash);
     }
 
     if (missing_mask & T_MISSING) {
+        spdlog::trace("[OBC] Block {} is missing tip link {}", bHash.to_substr(), tipHash.to_substr());
         common_insert(tipHash);
     }
 
     if (missing_mask & P_MISSING) {
+        spdlog::trace("[OBC] Block {} is missing prev link {}", bHash.to_substr(), prevHash.to_substr());
         common_insert(prevHash);
     }
 

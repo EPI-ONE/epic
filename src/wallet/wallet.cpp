@@ -267,7 +267,8 @@ std::string Wallet::CreateRedemption(const CKeyID& key, const Coin& coins) {
         return "";
     }
 
-    auto redem = CreateRedemption(GetLastRedemAddress(), key, coins ? coins : GetMinerInfo().second, "lalala");
+    auto redem =
+        CreateRedemption(GetLastRedemAddress(), key, coins.GetValue() ? coins : GetMinerInfo().second, "lalala");
     pendingRedemption.insert({redem->GetHash(), redem});
     MEMPOOL->PushRedemptionTx(redem);
     spdlog::info("[Wallet] Created redemption of reward {} coins: {}", redem->GetOutputs()[0].value.GetValue(),
@@ -393,7 +394,7 @@ Coin Wallet::GetCurrentMinerReward() const {
 }
 
 bool Wallet::Redeemable(const Coin& coins) const {
-    return GetMinerInfo().second >= coins;
+    return GetMinerInfo().second.GetValue() && GetMinerInfo().second >= coins;
 }
 
 bool Wallet::HasPendingRedemption() const {

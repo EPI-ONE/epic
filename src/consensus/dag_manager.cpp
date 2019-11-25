@@ -264,12 +264,12 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
     verifyThread_.Execute([=, blk = std::move(blk), peer = std::move(peer)]() mutable {
         spdlog::trace("[Verify Thread] Adding blocks to pending {}", blk->GetHash().to_substr());
         if (*blk == *GENESIS) {
-            spdlog::trace("Adding new block aborted: genesis");
+            spdlog::trace("[Syntax] Abort adding the genesis block.");
             return;
         }
 
         if (STORE->Exists(blk->GetHash())) {
-            spdlog::trace("Adding new block aborted: existed");
+            spdlog::trace("[Syntax] Abort adding existed block [{}].", std::to_string(blk->GetHash()));
             return;
         }
 
@@ -293,6 +293,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         // First, check if we already received its preceding blocks
         if (STORE->IsWeaklySolid(blk)) {
             if (STORE->AnyLinkIsOrphan(blk)) {
+                spdlog::info("[Syntax] Block is not solid with mask {} [{}]", mask(), std::to_string(blk->GetHash()));
                 STORE->AddBlockToOBC(std::move(blk), mask());
                 return;
             }
@@ -305,6 +306,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
                 return;
             }
             // Abort and send GetBlock requests.
+            spdlog::info("[Syntax] Block is not solid with mask {} [{}]", mask(), std::to_string(blk->GetHash()));
             STORE->AddBlockToOBC(std::move(blk), mask());
 
             if (peer) {
@@ -318,13 +320,13 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         VertexPtr ms = GetMsVertex(msHash, false);
         if (!ms) {
-            spdlog::info("Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
+            spdlog::info("[Syntax] Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
         }
 
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
-            spdlog::info("Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
+            spdlog::info("[Syntax] Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
                          blk->GetDifficultyTarget(), expectedTarget, std::to_string(blk->GetHash()));
             return;
         }
@@ -346,18 +348,18 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         AddBlockToPending(blk);
         STORE->ReleaseBlocks(blk->GetHash());
-        spdlog::trace("[Verify Thread] End of adding block to pending {}", blk->GetHash().to_substr());
     });
 }
 
 bool DAGManager::CheckPuntuality(const ConstBlockPtr& blk, const VertexPtr& ms) const {
-    assert(milestoneChains_.size() > 0);
+    assert(ms);
+    assert(!milestoneChains_.empty());
     assert(milestoneChains_.best());
 
     auto bestHeight = GetBestMilestoneHeight();
     if (bestHeight > ms->height && (bestHeight - ms->height) >= GetParams().punctualityThred) {
-        spdlog::info("Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height, bestHeight,
-                     std::to_string(blk->GetHash()));
+        spdlog::info("[Syntax] Block is too old: pointing to height {} vs. current head height {} [{}]", ms->height,
+                     bestHeight, std::to_string(blk->GetHash()));
         return false;
     }
 
@@ -397,18 +399,18 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (*msBlock->cblock == *GetMilestoneHead()->cblock) {
                 // new milestone on mainchain
-                spdlog::debug("[Verify Thread] Updating main chain MS block {} pre MS {}", block->GetHash().to_substr(),
-                              block->GetMilestoneHash().to_substr());
+                spdlog::debug("[Verify Thread] Updating main chain head {} pointing to the previous MS {}",
+                              block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
                 EnableOBC();
                 DeleteFork();
                 FlushTrigger();
             } else {
                 // new fork
-                spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre main chain MS {} --- "
-                              "total chains {}",
-                              block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
-                              milestoneChains_.size());
+                spdlog::debug(
+                    "[Verify Thread] A fork created with head {} pointing to the previous main chain MS {} --- "
+                    "total chains {}",
+                    block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(), milestoneChains_.size());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains_.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains_.emplace(std::move(new_fork));
@@ -436,8 +438,8 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         if (CheckMsPOW(block, ms)) {
             if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
                 // new milestone on fork
-                spdlog::debug("[Verify Thread] A fork grows MS block {} pre MS {}", block->GetHash().to_substr(),
-                              block->GetMilestoneHash().to_substr());
+                spdlog::debug("[Verify Thread] A fork grows with head {} pointing to the previous MS {}",
+                              block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
                 if (milestoneChains_.update_best(chainIt)) {
                     spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
@@ -446,7 +448,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 return;
             } else {
                 // new fork
-                spdlog::debug("[Verify Thread] A fork created which points to MS block {} pre forked chain MS {} --- "
+                spdlog::debug("[Verify Thread] A fork created with head {} pointing to the previous forking MS {} --- "
                               "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
                               milestoneChains_.size());
