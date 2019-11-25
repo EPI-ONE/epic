@@ -82,7 +82,9 @@ matrix:
         - cd $BUILD_LIB_MPATH
       after_failure:
         - ls /cores
-        - lldb "$EPIC_PATH/bin/epictest" -c /cores/core.$TEST_PID --batch --one-line "bt"
+        - COREFILE=$(find /cores -maxdepth 1 -name "core*" | head -n 1)
+        - echo $COREFILE
+        - if [[ -f "$COREFILE" ]]; then lldb ./epictest -c $COREFILE --batch --one-line "bt"; fi
 
 install:
   - clang -v
@@ -112,8 +114,7 @@ script:
   - if [ ${TRAVIS_OS_NAME} == 'osx' ]; then cmake -DUNITTEST_COVERAGE=ON -DADDRESS_DETECT=OFF -DCMAKE_BUILD_TYPE=Debug ..; else cmake -DUNITTEST_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..; fi
   - make -j2
   - cd ../bin
-  - ./epictest & TEST_PID=$!
-  - echo $TEST_PID
+  - ./epictest
 
 notifications:
   slack:
