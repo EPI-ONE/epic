@@ -202,6 +202,8 @@ std::unordered_map<uint256, std::unique_ptr<UTXO>> DBStore::GetAllUTXO() const {
         }
     }
     assert(iter->status().ok());
+    delete iter;
+
     return results;
 }
 
@@ -378,6 +380,8 @@ std::unordered_map<uint256, uint256> DBStore::GetAllReg() const {
         }
     }
     assert(iter->status().ok());
+    delete iter;
+
     return results;
 }
 

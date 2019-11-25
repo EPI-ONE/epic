@@ -262,6 +262,7 @@ TEST_F(TestWallet, normal_workflow) {
     auto balance = WALLET->GetBalance();
     ASSERT_NE(balance.GetValue(), 0);
 
+    DAG->Wait();
     spdlog::info("[WalletTest-normal-workflow] Begin to restart wallet");
     // check wallet restart
     WALLET.reset(nullptr);
