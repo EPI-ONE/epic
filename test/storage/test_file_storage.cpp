@@ -74,6 +74,79 @@ TEST_F(TestFileStorage, basic_read_write) {
     reader2.Close();
 }
 
+TEST_F(TestFileStorage, parallel_read_write) {
+    uint64_t total_size = 2ULL << 30;
+
+    // Prepare data to write
+    auto blk = fac.CreateBlock(10, 10);
+    Miner m{1};
+    m.Start();
+    m.Solve(blk);
+
+    uint64_t total_blks  = total_size / blk.GetOptimalEncodingSize();
+    uint64_t n_blks      = 1000000;
+    uint64_t n_threads   = total_blks / n_blks;
+    auto expct_file_size = n_blks * blk.GetOptimalEncodingSize() * n_threads;
+
+    std::cout << "Expected file size = " << static_cast<double>(expct_file_size) / 1024 / 1024 << " MB" << std::endl;
+    std::cout << "Number of threads = " << n_threads << std::endl;
+
+    // Calculate the starting offset for each thread
+    std::vector<FilePos> start_offsets;
+    for (size_t i = 0; i < n_threads; ++i) {
+        start_offsets.emplace_back(0, 0, n_blks * blk.GetOptimalEncodingSize() * i);
+    }
+
+    // Create an empty file
+    FileWriter writer{file::FileType::BLK, start_offsets[0]};
+    writer.Close();
+
+    const auto blk_stream = VStream{blk};
+    std::vector<std::thread> threads;
+
+    // Each thread writes n_blks blocks parallely to the same file
+    auto time_start = std::time(nullptr);
+    for (size_t i = 0; i < n_threads; ++i) {
+        threads.emplace_back(std::thread([&, start_offset = start_offsets[i]]() {
+            FileModifier modifier{file::FileType::BLK, start_offset};
+
+            for (size_t i = 0; i < n_blks; ++i) {
+                modifier << blk_stream;
+            }
+
+            modifier.Flush();
+            modifier.Close();
+        }));
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+    threads.clear();
+
+    std::cout << "Time used for writing the file = " << time(nullptr) - time_start << " seconds" << std::endl;
+
+    ASSERT_EQ(expct_file_size, FileReader(file::FileType::BLK, start_offsets[0]).Size());
+
+    // Each thread reads n_blks blocks and compare
+    // the content with the original block parallely
+    for (size_t i = 0; i < n_threads; ++i) {
+        threads.emplace_back([&, start_offset = start_offsets[i]]() {
+            FileReader reader(file::FileType::BLK, start_offset);
+            for (size_t j = 0; j < n_blks; ++j) {
+                VStream blk_read;
+                reader.read(blk.GetOptimalEncodingSize(), blk_read);
+                ASSERT_EQ(blk_stream, blk_read);
+            }
+            reader.Close();
+        });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+}
+
 TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
     EpicTestEnvironment::SetUpDAG(prefix);
     STORE->SetFileCapacities(8000, 2);

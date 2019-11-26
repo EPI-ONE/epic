@@ -333,8 +333,8 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         // Function to sum up storage sizes for blk and vtx in this lvs
         auto sumSize = [](const std::pair<uint32_t, uint32_t>& prevSum,
                           const VertexWPtr& vtx) -> std::pair<uint32_t, uint32_t> {
-            return std::make_pair(prevSum.first + (*vtx.lock()).cblock->GetOptimalEncodingSize(),
-                                  prevSum.second + (*vtx.lock()).GetOptimalStorageSize());
+            return std::make_pair(prevSum.first + vtx.lock()->cblock->GetOptimalEncodingSize(),
+                                  prevSum.second + vtx.lock()->GetOptimalStorageSize());
         };
 
         // pair of (total block size, total vertex size)

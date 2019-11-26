@@ -90,6 +90,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
             }
             if (IsMainChainMS(start)) {
                 auto startMs = GetMsVertex(start);
+                assert(startMs);
                 // This locator intersects with our database. We now have a starting point.
                 // Traverse the milestone chain forward from the starting point itself.
                 spdlog::debug("Constructing inv... Found a starting point of height {}", startMs->height);
@@ -597,7 +598,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
 
         for (auto& vtx : vtxToStore) {
             blocksToListener.emplace_back(vtx.lock());
-            STORE->UnCache((*vtx.lock()).cblock->GetHash());
+            STORE->UnCache(vtx.lock()->cblock->GetHash());
         }
 
         for (const auto& [utxoKey, utxoPtr] : utxoToStore) {
@@ -621,7 +622,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
         utxoCreated.reserve(utxoToStore.size());
 
         for (auto& vtx : vtxToStore) {
-            vtxHashes.emplace_back((*vtx.lock()).cblock->GetHash());
+            vtxHashes.emplace_back(vtx.lock()->cblock->GetHash());
         }
 
         for (const auto& [key, value] : utxoToStore) {
@@ -689,7 +690,7 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const
 
         lvs.reserve(vtcs.size());
         for (auto& rwp : vtcs) {
-            lvs.push_back((*rwp.lock()).cblock);
+            lvs.push_back(rwp.lock()->cblock);
         }
     }
 
@@ -738,7 +739,7 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
 
     VStream result;
     for (auto& rwp : vtcs) {
-        result << (*rwp.lock()).cblock;
+        result << rwp.lock()->cblock;
     }
 
     return result;

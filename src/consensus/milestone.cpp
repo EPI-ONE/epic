@@ -70,7 +70,7 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
     // Count the total number of valid transactions and blocks
     // in the period with exponential smoothing
     for (const auto& vtxPtr : lvs_) {
-        nTxnsCounter_ += (*vtxPtr.lock()).GetNumOfValidTxns();
+        nTxnsCounter_ += vtxPtr.lock()->GetNumOfValidTxns();
         nBlkCounter_ += lvs_.size();
     }
 
