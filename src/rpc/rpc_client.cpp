@@ -6,11 +6,13 @@
 
 #include <google/protobuf/util/json_util.h>
 
+#include "return_code.h"
+
 using namespace rpc;
 using google::protobuf::util::MessageToJsonString;
 using op_string = std::optional<std::string>;
 
-google::protobuf::util::JsonPrintOptions GetOption() {
+const google::protobuf::util::JsonPrintOptions& GetOption() {
     static google::protobuf::util::JsonPrintOptions option;
     option.add_whitespace                = true;
     option.always_print_primitive_fields = true;
@@ -184,13 +186,12 @@ op_string RPCClient::Status() {
 bool RPCClient::Stop() {
     EmptyRequest request;
     StopResponse response;
-    grpc::ClientContext context;
-    grpc::Status status = commander_stub_->Stop(&context, request, &response);
-    if (!status.ok()) {
-        std::cout << "No response from RPC server: " << status.error_message() << std::endl;
-        return false;
-    }
-    return true;
+
+    return ClientCallback(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
+            return commander_stub_->Stop(context, request, response);
+        },
+        request, &response);
 }
 
 std::optional<bool> RPCClient::StartMiner() {
@@ -216,7 +217,7 @@ op_string RPCClient::StopMiner() {
         return {};
     }
 
-    return response.result();
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::CreateFirstReg(std::string addr, bool force) {
@@ -231,7 +232,12 @@ op_string RPCClient::CreateFirstReg(std::string addr, bool force) {
         return {};
     }
 
-    return response.result();
+    auto result = response.result();
+    if (result != RPCReturn::kFirstRegSuc) {
+        return GetReturnStr(result);
+    } else {
+        return GetReturnStr(result) + " with address " + response.addr();
+    }
 }
 
 op_string RPCClient::CreateRandomTx(size_t size) {
@@ -245,7 +251,7 @@ op_string RPCClient::CreateRandomTx(size_t size) {
         return {};
     }
 
-    return response.result();
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee) {
@@ -265,7 +271,12 @@ op_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>
         return {};
     }
 
-    return response.txinfo();
+    auto result = response.result();
+    if (result == RPCReturn::kTxWrongAddr || result == RPCReturn::kTxCreatedSuc) {
+        return GetReturnStr(result) + ": " + response.txinfo();
+    } else {
+        return GetReturnStr(result);
+    }
 }
 
 op_string RPCClient::GetBalance() {
@@ -278,7 +289,12 @@ op_string RPCClient::GetBalance() {
         return {};
     }
 
-    return response.coin();
+    auto result = response.result();
+    if (result == RPCReturn::kGetBalanceSuc) {
+        return std::to_string(response.coin());
+    } else {
+        return GetReturnStr(result);
+    }
 }
 
 op_string RPCClient::GenerateNewKey() {
@@ -291,7 +307,12 @@ op_string RPCClient::GenerateNewKey() {
         return {};
     }
 
-    return response.address();
+    auto result = response.result();
+    if (result == RPCReturn::kGenerateKeySuc) {
+        return response.address();
+    } else {
+        return GetReturnStr(result);
+    }
 }
 
 op_string RPCClient::Redeem(const std::string& addr, uint64_t coins) {
@@ -306,7 +327,11 @@ op_string RPCClient::Redeem(const std::string& addr, uint64_t coins) {
         return {};
     }
 
-    return response.result();
+    auto result = response.result();
+    if (result == RPCReturn::kRedeemSuc) {
+        return GetReturnStr(result) + " to address " + response.addr();
+    }
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::SetPassphrase(const std::string& passphrase) {
@@ -320,7 +345,7 @@ op_string RPCClient::SetPassphrase(const std::string& passphrase) {
         return {};
     }
 
-    return response.responseinfo();
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase) {
@@ -335,7 +360,7 @@ op_string RPCClient::ChangePassphrase(const std::string& oldPassphrase, const st
         return {};
     }
 
-    return response.responseinfo();
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::Login(const std::string& passphrase) {
@@ -349,7 +374,7 @@ op_string RPCClient::Login(const std::string& passphrase) {
         return {};
     }
 
-    return response.responseinfo();
+    return GetReturnStr(response.result());
 }
 
 op_string RPCClient::ConnectPeers(const std::vector<std::string>& addresses) {

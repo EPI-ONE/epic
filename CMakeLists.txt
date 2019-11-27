@@ -242,6 +242,7 @@ add_dependencies(epic version)
 set(SRC_CLIENT_MAIN src/epic-cli.cpp)
 add_executable(epic-cli ${SRC_CLIENT_MAIN}
         ${RPC_DIR}/rpc_client.cpp
+        ${RPC_SERVICE_DIR}/return_code.cpp
         ${PROTO_SRCS}
         ${GRPC_SRCS}
         src/version.cpp

@@ -352,7 +352,7 @@ TEST_F(TestRPCServer, transaction_and_miner) {
         {AnswerCode::WALLET_NOT_START, "Wallet has not been started"},
         {AnswerCode::NOT_LOG_IN, "Please log in or set up a new passphrase"},
         {AnswerCode::NO_OUTPUT, "Please specify at least one output"},
-        {AnswerCode::WRONG_ADDR, "Wrong address: "},
+        {AnswerCode::WRONG_ADDR, "Invalid address: "},
         {AnswerCode::CREATE_TX_FAIL, "Failed to create tx. Please check if you have enough balance."},
         {AnswerCode::CREATE_TX, "Now wallet is creating tx"},
     };
@@ -393,7 +393,7 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(opAddr.has_value());
 
     // not enough balance
-    ASSERT_EQ(client->CreateTx({{1100, *opAddr}}, 1010), testCode[AnswerCode::CREATE_TX_FAIL]);
+    ASSERT_EQ(client->CreateTx({{1100, *opAddr}}, 1010).value(), testCode[AnswerCode::CREATE_TX_FAIL]);
     auto opBalance = client->GetBalance();
     ASSERT_TRUE(opBalance.has_value());
     ASSERT_TRUE(client->CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
