@@ -364,7 +364,6 @@ void PeerManager::InitialSync() {
 
         if (initial_sync_peer_) {
             // check initial sync peer timeout
-            next = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
             static uint64_t old_last_bundle_ms_time = 0;
             if (std::chrono::steady_clock::now() > next) {
                 next = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
