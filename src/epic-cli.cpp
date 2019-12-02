@@ -152,6 +152,10 @@ std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
         "generate-new-key", [this](std::ostream& out) { GenerateNewKey(out); }, "Generate the new key");
     sub->Insert("create-first-reg", [this](std::ostream& out, std::string address) { CreateFirstReg(out, address); },
                 "Create the first registration before mining", {"the encoded address to receive miner reward"});
+    sub->Insert("redeem", [this](std::ostream& out, std::string coins, std::string addr) { Redeem(out, coins, addr); },
+                "Redeem miner rewards",
+                {"the coin value to redeem (\"0\" or \"all\" to redeem the maximum value available)",
+                 "the new address for the next redemption (enter \"new\" to generate a new key automatically)"});
     sub->Insert(
         "set-passphrase", [this](std::ostream& out) { SetPassphrase(out); }, "Set your new passphrase");
     sub->Insert(
@@ -391,21 +395,24 @@ void EpicCli::Disconnect(std::ostream& out, std::string& peers) {
 void EpicCli::Redeem(std::ostream& out, std::string& scoins, std::string& addr) {
     char* p;
     uint64_t coins = std::strtoul(scoins.c_str(), &p, 10);
+    if (*p && scoins != "all") {
+        out << "Invalid argument for coin value." << std::endl;
+        return;
+    }
 
     if (addr == "new") {
         addr.clear();
     }
 
-    std::cout << "Redeeming " << (coins ? coins + " coin(s). " : "as much as possible. ")
-              << (addr.empty() ? "Creating a new address for the next reg." : "The next reg address: " + addr)
-              << std::endl;
+    out << "Redeeming " << (coins ? std::to_string(coins) + " coin(s). " : "as much as possible. ")
+        << (addr.empty() ? "Creating a new address for the next reg." : "The next reg address: " + addr) << std::endl;
 
-    auto r = client.Redeem(addr, coins);
+    auto r = rpc_->Redeem(addr, coins);
 
     if (r) {
-        std::cout << (*r) << std::endl;
+        out << *r << std::endl;
     } else {
-        throw UnconnectedException();
+        Close(out);
     }
 }
 
