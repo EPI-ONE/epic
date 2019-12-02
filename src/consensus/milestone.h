@@ -8,6 +8,11 @@
 #include "utxo.h"
 
 class Vertex;
+class Milestone;
+
+namespace std {
+string to_string(const Milestone&);
+} // namespace std
 
 class Milestone {
 public:
@@ -59,13 +64,6 @@ public:
     // returns the cumulative number of transactions starting from the previous difficulty transition milestone
     uint32_t GetTxnsCounter() const {
         return nTxnsCounter_;
-    }
-
-    uint32_t GetAverageTxnsPerBlock() const {
-        if (nBlkCounter_ != 0) {
-            return nTxnsCounter_ / nBlkCounter_;
-        }
-        return 0;
     }
 
     const std::vector<std::weak_ptr<Vertex>>& GetLevelSet() const {
@@ -123,6 +121,8 @@ public:
         return !(*this == another);
     }
 
+    friend std::string std::to_string(const Milestone& ms);
+
 private:
     // counters from last updated time
     uint32_t nTxnsCounter_;
@@ -150,9 +150,5 @@ MilestonePtr CreateNextMilestone(MilestonePtr previous,
                                  std::vector<std::weak_ptr<Vertex>>&& lvs,
                                  RegChange&& = RegChange{},
                                  TXOC&&      = TXOC{});
-
-namespace std {
-string to_string(const Milestone&);
-} // namespace std
 
 #endif // EPIC_MILESTONE_H

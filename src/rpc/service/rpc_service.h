@@ -11,9 +11,9 @@
 #include <rpc/proto-gen/rpc.grpc.pb.h>
 
 using rpc::BasicBlockExplorerRPC;
+using rpc::EmptyRequest;
 using rpc::GetBlockRequest;
 using rpc::GetBlockResponse;
-using rpc::EmptyRequest;
 using rpc::GetLatestMilestoneResponse;
 using rpc::GetLevelSetRequest;
 using rpc::GetLevelSetResponse;

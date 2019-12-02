@@ -6,8 +6,8 @@
 #define EPIC_EPIC_RPC_SERVER_H
 
 #include "basic_rpc_server.h"
-#include "net_address.h"
 
+class NetAddress;
 enum RPCServiceType { BLOCK_EXPLORER_SERVER, COMMAND_LINE_SERVER, MINER_SOLVER };
 
 class RPCServer {

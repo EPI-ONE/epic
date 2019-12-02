@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "vertex.h"
+
 #include <numeric>
 
 Vertex::Vertex() : minerChainHeight(0), optimalStorageSize_(0) {}

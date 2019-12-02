@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "milestone.h"
 #include "block_store.h"
 #include "dag_manager.h"
 #include "vertex.h"
@@ -156,7 +157,6 @@ MilestonePtr CreateNextMilestone(
     return pms;
 }
 
-
 std::string std::to_string(const Milestone& ms) {
     std::string s = "Milestone {\n";
     s += strprintf("   height:                %s \n", ms.height);
@@ -165,7 +165,9 @@ std::string std::to_string(const Milestone& ms) {
     s += strprintf("   ms target:             %s \n", ms.milestoneTarget.GetCompact());
     s += strprintf("   block target:          %s \n", ms.blockTarget.GetCompact());
     s += strprintf("   hash rate:             %s \n", ms.hashRate);
-    s += strprintf("   avg. # txns per block: %s \n", ms.GetAverageTxnsPerBlock());
+    if (ms.nBlkCounter_) {
+        s += strprintf("   avg. # txns per block: %s \n", ms.nTxnsCounter_ / ms.nBlkCounter_);
+    }
     s += "   }\n";
     return s;
 }

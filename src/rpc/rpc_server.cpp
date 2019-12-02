@@ -3,7 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpc_server.h"
-#include "milestone.h"
+#include "net_address.h"
 #include "service/basic_block_explorer.h"
 #include "service/command_line.h"
 
