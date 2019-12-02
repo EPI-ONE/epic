@@ -10,6 +10,14 @@ using namespace rpc;
 using google::protobuf::util::MessageToJsonString;
 using op_string = std::optional<std::string>;
 
+google::protobuf::util::JsonPrintOptions GetOption() {
+    static google::protobuf::util::JsonPrintOptions option;
+    option.add_whitespace = true;
+    option.always_print_primitive_fields = true;
+    option.preserve_proto_field_names = true;
+    return option;
+}
+
 template <typename OP, typename Request, typename Response>
 op_string ProcessResponse(OP op, const Request& request, Response* response) {
     grpc::ClientContext context;
@@ -20,7 +28,7 @@ op_string ProcessResponse(OP op, const Request& request, Response* response) {
         return {};
     }
     std::string result;
-    if (MessageToJsonString(*response, &result).ok()) {
+    if (MessageToJsonString(*response, &result, GetOption()).ok()) {
         return result;
     } else {
         return {};
@@ -379,16 +387,15 @@ std::optional<bool> RPCClient::SyncCompleted() {
     return response.completed();
 }
 
-std::optional<rpc::ShowPeerResponse> RPCClient::ShowPeer(std::string& address) {
+op_string RPCClient::ShowPeer(const std::string& address) {
     ShowPeerRequest request;
-    ShowPeerResponse response;
-    grpc::ClientContext context;
-
     request.set_address(address);
-    auto status = commander_stub_->ShowPeer(&context, request, &response);
-    if (!status.ok()) {
-        std::cout << "No response from RPC server: " << status.error_message() << std::endl;
-        return {};
-    }
-    return response;
+    ShowPeerResponse response;
+
+    return ProcessResponse(
+        [&](auto* context, auto request, auto* response) -> grpc::Status {
+            return commander_stub_->ShowPeer(context, request, response);
+        },
+        request, &response);
 }
+

@@ -47,7 +47,7 @@ public:
     std::optional<std::string> DisconnectAllPeers();
     std::optional<std::string> ConnectPeers(const std::vector<std::string>& addresses);
     std::optional<bool> SyncCompleted();
-    std::optional<rpc::ShowPeerResponse> ShowPeer(std::string&);
+    std::optional<std::string> ShowPeer(const std::string&);
 
 private:
     std::unique_ptr<rpc::BasicBlockExplorerRPC::Stub> be_stub_;
