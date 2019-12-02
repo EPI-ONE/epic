@@ -346,10 +346,12 @@ bool PeerManager::InitialSyncCompleted() const {
 }
 
 void PeerManager::InitialSync() {
+    std::chrono::time_point<std::chrono::steady_clock, std::chrono::nanoseconds> next{};
+
     while (!interrupt_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        auto now         = time(nullptr);
-        static auto next = std::chrono::steady_clock::now();
+        auto now = time(nullptr);
+        next     = std::chrono::steady_clock::now();
         if (DAG->GetMilestoneHead()->cblock->GetTime() >= now - kSyncTimeThreshold) {
             initial_sync_      = false;
             initial_sync_peer_ = nullptr;
