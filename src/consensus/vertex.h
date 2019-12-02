@@ -60,6 +60,9 @@ public:
     void UpdateReward(const Coin&);
     void UpdateMilestoneReward();
 
+    // returns the number of valid transactions
+    size_t GetNumOfValidTxns() const;
+
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {

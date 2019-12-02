@@ -8,6 +8,11 @@
 #include "utxo.h"
 
 class Vertex;
+class Milestone;
+
+namespace std {
+string to_string(const Milestone&);
+} // namespace std
 
 class Milestone {
 public:
@@ -19,17 +24,15 @@ public:
     uint32_t lastUpdateTime = 0;
     bool stored             = false;
 
-    // constructor of a chain state of genesis.
+    // constructor of a milestone of genesis.
     Milestone() = default;
-    // constructor of a chain state with all data fields
+    // constructor of a milestone with all data fields
     Milestone(const std::shared_ptr<Milestone>&,
               const ConstBlockPtr&,
               std::vector<std::weak_ptr<Vertex>>&&,
               RegChange&&,
               TXOC&&);
-    // constructor of a chain state by vstream
     Milestone(VStream&);
-    // copy constructor
     Milestone(const Milestone&) = default;
 
     /* simple constructor (now for test only) */
@@ -37,7 +40,7 @@ public:
               arith_uint256 chainwork,
               arith_uint256 milestoneTarget,
               arith_uint256 blockTarget,
-              uint64_t hashRate,
+              float hashRate,
               uint32_t lastUpdateTime,
               std::vector<std::weak_ptr<Vertex>>&& lvs,
               uint32_t nTxnsCounter = 0,
@@ -58,12 +61,9 @@ public:
         return (arith_uint256(GetParams().maxTarget) / (milestoneTarget + 1)).GetLow64();
     }
 
+    // returns the cumulative number of transactions starting from the previous difficulty transition milestone
     uint32_t GetTxnsCounter() const {
         return nTxnsCounter_;
-    }
-
-    uint32_t GetAverageTxnsPerBlock() const {
-        return nTxnsCounter_ / nBlkCounter_;
     }
 
     const std::vector<std::weak_ptr<Vertex>>& GetLevelSet() const {
@@ -87,6 +87,9 @@ public:
     const RegChange& GetRegChange() const {
         return regChange_;
     }
+
+    // returns the number of total transactions in this milestone
+    size_t GetNumOfValidTxns() const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -118,14 +121,18 @@ public:
         return !(*this == another);
     }
 
+    friend std::string std::to_string(const Milestone& ms);
+
 private:
+    // counters from last updated time
     uint32_t nTxnsCounter_;
     uint32_t nBlkCounter_;
 
-    // a vector consists of hashes of blocks in level set of this chain state
+    // a vector consists of hashes of blocks in level set of this milestone where the last element is vertex of
+    // milestone
     std::vector<std::weak_ptr<Vertex>> lvs_;
 
-    // TXOC: changes on transaction outputs from previous chain state
+    // TXOC: changes on transaction outputs from previous milestone
     TXOC txoc_;
 
     // Incremental change of the last registration block on each peer chain,
@@ -136,16 +143,12 @@ private:
     void UpdateDifficulty(uint32_t blockUpdateTime);
 };
 
-typedef std::shared_ptr<Milestone> MilestonePtr;
+using MilestonePtr = std::shared_ptr<Milestone>;
 
 MilestonePtr CreateNextMilestone(MilestonePtr previous,
                                  Vertex& vertex,
                                  std::vector<std::weak_ptr<Vertex>>&& lvs,
                                  RegChange&& = RegChange{},
                                  TXOC&&      = TXOC{});
-
-namespace std {
-string to_string(const Milestone&);
-} // namespace std
 
 #endif // EPIC_MILESTONE_H

@@ -8,28 +8,6 @@
 #include "mempool.h"
 #include "tasm.h"
 
-template <typename K, typename V>
-bool UpdateKey(std::unordered_map<K, V>& m, const K& oldKey, const K& newKey) {
-    auto entry = m.extract(oldKey);
-    if (entry) {
-        entry.key() = newKey;
-        return m.insert(std::move(entry)).inserted;
-    }
-
-    return false;
-}
-
-template <typename K, typename V>
-bool UpdateValue(std::unordered_map<K, V>& m, const K& key, const V& newValue) {
-    auto entry = m.extract(key);
-    if (entry) {
-        entry.mapped() = newValue;
-        return m.insert(std::move(entry)).inserted;
-    }
-
-    return false;
-}
-
 ////////////////////
 // Chain
 ////////////////////
@@ -37,10 +15,10 @@ bool UpdateValue(std::unordered_map<K, V>& m, const K& key, const V& newValue) {
 Chain::Chain() : ismainchain_(true) {}
 
 Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
-    : ismainchain_(false), states_(chain.states_), pendingBlocks_(chain.pendingBlocks_),
+    : ismainchain_(false), milestones_(chain.milestones_), pendingBlocks_(chain.pendingBlocks_),
       recentHistory_(chain.recentHistory_), ledger_(chain.ledger_), prevRedempHashMap_(chain.prevRedempHashMap_),
       prevRegsToModify_(chain.prevRegsToModify_) {
-    if (states_.empty()) {
+    if (milestones_.empty()) {
         return;
     }
 
@@ -48,7 +26,7 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
     assert(recentHistory_.find(target) != recentHistory_.end());
 
     // We don't do any verification here but only data copying and rolling back
-    for (auto it = states_.rbegin(); (*it)->GetMilestoneHash() != target && it != states_.rend(); it++) {
+    for (auto it = milestones_.rbegin(); (*it)->GetMilestoneHash() != target && it != milestones_.rend(); it++) {
         for (const auto& rwp : (*it)->GetLevelSet()) {
             const auto& rpt = *rwp.lock();
             const auto& h   = rpt.cblock->GetHash();
@@ -65,16 +43,16 @@ Chain::Chain(const Chain& chain, const ConstBlockPtr& pfork)
                 prevRegsToModify_.erase(entry.second);
             }
         }
-        states_.erase(std::next(it).base());
+        milestones_.erase(std::next(it).base());
     }
 }
 
 MilestonePtr Chain::GetChainHead() const {
-    if (states_.empty()) {
+    if (milestones_.empty()) {
         // Note: the lvs_ in the returned MilestonePtr contains a dummy weak_ptr that CANNOT be used
         return STORE->GetMilestoneAt(STORE->GetHeadHeight())->snapshot;
     }
-    return states_.back();
+    return milestones_.back();
 }
 
 void Chain::AddPendingBlock(ConstBlockPtr pblock) {
@@ -253,7 +231,7 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     for (auto& vtx : vtcs) {
         if (vtx->cblock->IsFirstRegistration()) {
             const auto& blkHash = vtx->cblock->GetHash();
-            prevRedempHashMap_.insert_or_assign(blkHash, blkHash);
+            prevRedempHashMap_.insert_or_assign(blkHash, const_cast<uint256&&>(blkHash));
             vtx->isRedeemed = Vertex::NOT_YET_REDEEMED;
             regChange.Create(blkHash, blkHash);
             vtx->minerChainHeight = 1;
@@ -306,7 +284,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
 
     // update the key of the prev redemption hashes
     uint256 oldRedempHash;
-    if (UpdateKey(prevRedempHashMap_, prevHash, blkHash)) {
+    if (prevRedempHashMap_.update_key(prevHash, blkHash)) {
         oldRedempHash = prevRedempHashMap_.find(blkHash)->second;
     } else {
         oldRedempHash = STORE->GetPrevRedemHash(prevHash);
@@ -342,7 +320,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
 
         // check partition
         // txns with invalid distance will have validity == INVALID, and others are left unchanged
-        VertexPtr prevMs = DAG->GetState(vertex.cblock->GetMilestoneHash());
+        VertexPtr prevMs = DAG->GetMsVertex(vertex.cblock->GetMilestoneHash());
         assert(prevMs);
         CheckTxPartition(vertex, prevMs->snapshot->hashRate);
 
@@ -420,7 +398,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
     vertex.isRedeemed = Vertex::NOT_YET_REDEEMED;
     regChange.Remove(blkHash, prevRedempHash);
     regChange.Create(blkHash, blkHash);
-    UpdateValue(prevRedempHashMap_, blkHash, blkHash);
+    prevRedempHashMap_.update_value(blkHash, blkHash);
 
     return TXOC{{ComputeUTXOKey(blkHash, 0, 0)}, {}};
 }
@@ -563,8 +541,8 @@ void Chain::PopOldest(const std::vector<uint256>& vtxToRemove, const TXOC& txocT
     // remove utxos
     ledger_.Remove(txocToRemove);
 
-    // remove states
-    states_.pop_front();
+    // remove milestone
+    milestones_.pop_front();
 }
 
 std::tuple<std::vector<VertexWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
@@ -578,6 +556,17 @@ Chain::GetDataToSTORE(MilestonePtr ms) {
     }
 
     return {std::move(result_vtx), std::move(result_created), std::move(result_txoc.GetSpent())};
+}
+
+std::vector<uint256> Chain::GetPeerChainHead() const {
+    std::vector<uint256> result;
+    result.reserve(prevRedempHashMap_.size());
+
+    const auto keySet = prevRedempHashMap_.key_set();
+    for (const auto& elem : keySet) {
+        result.emplace_back(elem);
+    }
+    return result;
 }
 
 bool Chain::IsMilestone(const uint256& blkHash) const {

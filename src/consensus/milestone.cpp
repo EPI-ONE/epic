@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "milestone.h"
 #include "block_store.h"
 #include "dag_manager.h"
 #include "vertex.h"
@@ -30,12 +31,6 @@ Milestone::Milestone(VStream& payload) {
 }
 
 void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
-    auto sumTxns = [](const VertexWPtr& vtxPtr) -> uint32_t {
-        const std::vector<uint8_t>& validity = (*vtxPtr.lock()).validity;
-        return std::accumulate(validity.begin(), validity.end(), 0,
-                               [](const size_t& sum, const uint8_t& v) { return sum + (v & Vertex::Validity::VALID); });
-    };
-
     if (!lastUpdateTime) {
         // Traverse back to the last difficulty update point to recover
         // necessary info for updating difficulty.
@@ -45,14 +40,14 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         nBlkCounter_  = 0;
 
         // Start from the previous ms
-        auto cursor = DAG->GetState(GetMilestone()->cblock->GetMilestoneHash());
+        auto cursor = DAG->GetMsVertex(GetMilestone()->cblock->GetMilestoneHash());
 
         while (!cursor->snapshot->IsDiffTransition()) {
             for (const auto& vtxPtr : DAG->GetLevelSet(cursor->cblock->GetHash(), false)) {
-                nTxnsCounter_ += sumTxns(vtxPtr);
+                nTxnsCounter_ += vtxPtr->GetNumOfValidTxns();
                 nBlkCounter_ += cursor->snapshot->lvs_.size();
             }
-            cursor = DAG->GetState(cursor->snapshot->GetMilestone()->cblock->GetMilestoneHash());
+            cursor = DAG->GetMsVertex(cursor->snapshot->GetMilestone()->cblock->GetMilestoneHash());
         }
 
         lastUpdateTime = cursor->snapshot->GetMilestone()->cblock->GetTime();
@@ -75,7 +70,7 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
     // Count the total number of valid transactions and blocks
     // in the period with exponential smoothing
     for (const auto& vtxPtr : lvs_) {
-        nTxnsCounter_ += sumTxns(vtxPtr);
+        nTxnsCounter_ += (*vtxPtr.lock()).GetNumOfValidTxns();
         nBlkCounter_ += lvs_.size();
     }
 
@@ -148,6 +143,12 @@ const uint256& Milestone::GetMilestoneHash() const {
     return (*lvs_.back().lock()).cblock->GetHash();
 }
 
+size_t Milestone::GetNumOfValidTxns() const {
+    return std::accumulate(lvs_.cbegin(), lvs_.cend(), 0, [](size_t sum, const auto& vertex) -> size_t {
+        return sum + (*vertex.lock()).GetNumOfValidTxns();
+    });
+}
+
 MilestonePtr CreateNextMilestone(
     MilestonePtr previous, Vertex& vertex, std::vector<VertexWPtr>&& lvs, RegChange&& regChange, TXOC&& txoc) {
     auto pms =
@@ -157,14 +158,16 @@ MilestonePtr CreateNextMilestone(
 }
 
 std::string std::to_string(const Milestone& ms) {
-    std::string s = "Chain State {\n";
+    std::string s = "Milestone {\n";
     s += strprintf("   height:                %s \n", ms.height);
     s += strprintf("   chainwork:             %s \n", ms.chainwork.GetCompact());
     s += strprintf("   last update time:      %s \n", ms.lastUpdateTime);
     s += strprintf("   ms target:             %s \n", ms.milestoneTarget.GetCompact());
     s += strprintf("   block target:          %s \n", ms.blockTarget.GetCompact());
     s += strprintf("   hash rate:             %s \n", ms.hashRate);
-    s += strprintf("   avg. # txns per block: %s \n", ms.GetAverageTxnsPerBlock());
+    if (ms.nBlkCounter_) {
+        s += strprintf("   avg. # txns per block: %s \n", ms.nTxnsCounter_ / ms.nBlkCounter_);
+    }
     s += "   }\n";
     return s;
 }

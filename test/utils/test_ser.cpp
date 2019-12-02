@@ -225,10 +225,10 @@ TEST_F(TestSer, SerializeEqDeserializeVertex) {
     block.minerChainHeight = 100;
     block.cumulativeReward = 10;
 
-    // Link the chain state
-    auto pstate = std::make_shared<Milestone>(100, arith_uint256(0), arith_uint256(0X3E8), arith_uint256(0X3E8), 100000,
-                                              fac.NextTime(), std::vector<VertexWPtr>{});
-    block.LinkMilestone(pstate);
+    // Link the milestone
+    auto pMs = std::make_shared<Milestone>(100, arith_uint256(0), arith_uint256(0X3E8), arith_uint256(0X3E8), 100000,
+                                           fac.NextTime(), std::vector<VertexWPtr>{});
+    block.LinkMilestone(pMs);
 
     // Make it a fake milestone
     block.isMilestone = false;

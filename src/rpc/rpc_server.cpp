@@ -3,19 +3,20 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpc_server.h"
+#include "net_address.h"
 #include "service/basic_block_explorer.h"
 #include "service/command_line.h"
 
 RPCServer::RPCServer(const NetAddress& address, const std::vector<RPCServiceType>& services)
-    : server(address.ToString()) {
+    : server_(address.ToString()) {
     for (auto& type : services) {
         switch (type) {
             case RPCServiceType::BLOCK_EXPLORER_SERVER: {
-                service_impls.emplace_back(std::make_unique<BasicBlockExplorerRPCServiceImpl>());
+                service_impls_.emplace_back(std::make_unique<BasicBlockExplorerRPCServiceImpl>());
                 break;
             }
             case RPCServiceType::COMMAND_LINE_SERVER: {
-                service_impls.emplace_back(std::make_unique<CommanderRPCServiceImpl>());
+                service_impls_.emplace_back(std::make_unique<CommanderRPCServiceImpl>());
                 break;
             }
             default:
@@ -25,19 +26,19 @@ RPCServer::RPCServer(const NetAddress& address, const std::vector<RPCServiceType
 }
 
 bool RPCServer::IsRunning() {
-    return server.IsRunning();
+    return server_.IsRunning();
 }
 
 void RPCServer::Start() {
     std::vector<grpc::Service*> services;
-    for (auto& s : service_impls) {
+    for (auto& s : service_impls_) {
         services.push_back(s.get());
     }
-    server.Start(services);
+    server_.Start(services);
 }
 
 void RPCServer::Shutdown() {
-    server.Shutdown();
+    server_.Shutdown();
 }
 
 RPCServer::~RPCServer() = default;

@@ -127,8 +127,8 @@ void RemoteGPUSolver::Abort() {
     }
 
     grpc::ClientContext context;
-    StopTaskRequest request;
-    StopTaskResponse response;
+    rpc::StopTaskRequest request;
+    rpc::StopTaskResponse response;
     request.set_task_id(current_task_id);
     client->AbortTask(&context, request, &response);
 }
@@ -137,8 +137,8 @@ bool RemoteGPUSolver::Solve(Block& b) {
     arith_uint256 target = b.GetTargetAsInteger();
     VStream vs(b.GetHeader());
     grpc::ClientContext context;
-    POWTask request;
-    POWResult reply;
+    rpc::POWTask request;
+    rpc::POWResult reply;
     request.set_task_id(GetTaskID());
     request.set_init_nonce(0);
     request.set_init_time(b.GetTime());

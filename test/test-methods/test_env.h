@@ -85,7 +85,7 @@ private:
 };
 
 inline void SetLogLevel(int level) {
-    spdlog::set_level((spdlog::level::level_enum) level);
+    spdlog::set_level(static_cast<spdlog::level::level_enum>(level));
 }
 
 inline void ResetLogLevel() {

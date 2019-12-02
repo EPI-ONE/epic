@@ -10,7 +10,17 @@
 #include "threadpool.h"
 
 class Peer;
-typedef std::shared_ptr<Peer> PeerPtr;
+using PeerPtr = std::shared_ptr<Peer>;
+class Vertex;
+class UTXO;
+
+struct StatData {
+    size_t nTxCnt;
+    size_t nBlkCnt;
+    uint32_t tStart;
+
+    StatData() : nTxCnt(0), nBlkCnt(0), tStart(0) {}
+};
 
 class DAGManager {
 public:
@@ -18,7 +28,7 @@ public:
     ~DAGManager() = default;
 
     /**
-     * Delete the genesis state in the chains if last head height >0, maybe reload some blocks as cache later
+     * Delete the genesis milestone in the chains if last head height >0, maybe reload some blocks as cache later
      */
     bool Init();
 
@@ -72,33 +82,36 @@ public:
     std::vector<uint256> TraverseMilestoneBackward(VertexPtr, size_t) const;
     std::vector<uint256> TraverseMilestoneForward(const VertexPtr, size_t) const;
 
-    // Checkout states either in different chain or in db
-    VertexPtr GetState(const uint256&, bool withBlock = true) const;
+    // Checkout a milestone either in different chain or in db
+    VertexPtr GetMsVertex(const uint256&, bool withBlock = true) const;
 
     Chain& GetBestChain() const;
     size_t GetBestMilestoneHeight() const;
     VertexPtr GetMilestoneHead() const;
 
     const Chains& GetChains() const {
-        return milestoneChains;
+        return milestoneChains_;
     }
 
     /////////////////////////////// Mics. /////////////////////////////////////
 
-    using OnLvsConfirmedCallback =
-        std::function<void(std::vector<VertexPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>)>;
+    using OnLvsConfirmedCallback = std::function<void(std::vector<std::shared_ptr<Vertex>>,
+                                                      std::unordered_map<uint256, std::shared_ptr<const UTXO>>,
+                                                      std::unordered_set<uint256>)>;
 
     /**
      * Actions to be performed by wallet when a level set is confirmed
      */
     void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
     bool IsDownloadingEmpty() {
-        return downloading.empty();
+        return downloading_.empty();
     }
 
     bool EraseDownloading(const uint256& h) {
-        return downloading.erase(h);
+        return downloading_.erase(h);
     }
+
+    StatData GetStatData() const;
 
     /**
      * Blocks the main thread from going forward
@@ -121,23 +134,31 @@ private:
      * A list of hashes we've sent out in GetData requests.
      * Should be thread-safe.
      */
-    ConcurrentHashSet<uint256> downloading;
+    ConcurrentHashSet<uint256> downloading_;
 
     /**
      * A list of milestone chains, with first element being
      * the main chain and others being forked chains.
      */
-    Chains milestoneChains;
+    Chains milestoneChains_;
 
     /**
      * Stores VertexPtr of all verified milestones on all branches as a cache
      */
-    ConcurrentHashMap<uint256, VertexPtr> globalStates_;
+    ConcurrentHashMap<uint256, VertexPtr> msVertices_;
 
     /**
      * Listener that triggers when a levelset is confirmed
      */
-    OnLvsConfirmedCallback onLvsConfirmedCallback = nullptr;
+    OnLvsConfirmedCallback onLvsConfirmedCallback_ = nullptr;
+
+    /**
+     * a simple data structure to store statistic data from when the node starts
+     */
+    StatData stat_;
+    mutable std::shared_mutex statLock_;
+
+    void UpdateStatOnLvsStored(const MilestonePtr& pms);
 
     std::vector<uint256> ConstructLocator(const uint256& fromHash, size_t length, const PeerPtr&);
 
@@ -176,12 +197,13 @@ private:
      */
 
     /**
-     * Returns the number of chain states that can be flushed into db
-     * zero if no chain states need to be flushed
+     * Returns the number of milestones that can be flushed into db
+     * zero if no milestones need to be flushed
      */
     void FlushTrigger();
 
-    void FlushToSTORE(MilestonePtr); // flush the oldest chain states
+    // flush the oldest milestone
+    void FlushToSTORE(MilestonePtr);
 
     void EnableOBC();
 };

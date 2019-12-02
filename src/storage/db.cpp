@@ -4,6 +4,7 @@
 
 #include "db.h"
 #include "circular_queue.h"
+#include "file_utils.h"
 
 using std::optional;
 using std::pair;

@@ -4,6 +4,8 @@
 
 #include "vertex.h"
 
+#include <numeric>
+
 Vertex::Vertex() : minerChainHeight(0), optimalStorageSize_(0) {}
 
 Vertex::Vertex(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
@@ -63,6 +65,11 @@ void Vertex::UpdateMilestoneReward() {
     }
 
     cumulativeReward += GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
+}
+
+size_t Vertex::GetNumOfValidTxns() const {
+    return std::accumulate(validity.cbegin(), validity.cend(), 0,
+                           [](const size_t& sum, const uint8_t& v) { return sum + (v == Vertex::Validity::VALID); });
 }
 
 size_t Vertex::GetOptimalStorageSize() {

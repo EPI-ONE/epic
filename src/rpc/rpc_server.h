@@ -6,10 +6,8 @@
 #define EPIC_EPIC_RPC_SERVER_H
 
 #include "basic_rpc_server.h"
-#include "net_address.h"
 
-#include <unordered_set>
-
+class NetAddress;
 enum RPCServiceType { BLOCK_EXPLORER_SERVER, COMMAND_LINE_SERVER, MINER_SOLVER };
 
 class RPCServer {
@@ -25,8 +23,8 @@ public:
     ~RPCServer();
 
 private:
-    BasicRPCServer server;
-    std::vector<std::unique_ptr<grpc::Service>> service_impls;
+    BasicRPCServer server_;
+    std::vector<std::unique_ptr<grpc::Service>> service_impls_;
 };
 
 extern std::unique_ptr<RPCServer> RPC;

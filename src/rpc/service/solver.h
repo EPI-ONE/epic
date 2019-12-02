@@ -5,17 +5,16 @@
 #ifndef EPIC_SERVICE_SOLVER_H
 #define EPIC_SERVICE_SOLVER_H
 
-#include "rpc.grpc.pb.h"
-#include "rpc.pb.h"
-#include "rpc_service.h"
 #include "solver_manager.h"
 
 #include <grpc++/grpc++.h>
+#include <rpc.grpc.pb.h>
+#include <rpc.pb.h>
 #include <utility>
 
-class SolverRPCServiceImpl final : public RemoteSolver::Service {
+class SolverRPCServiceImpl final : public rpc::RemoteSolver::Service {
 public:
-    grpc::Status SendPOWTask(grpc::ServerContext* context, const POWTask* task, POWResult* result) override {
+    grpc::Status SendPOWTask(grpc::ServerContext* context, const rpc::POWTask* task, rpc::POWResult* result) override {
         auto solverTask = CreateTask(task);
         if (!solverTask) {
             result->set_error_code(SolverResult::ErrorCode::INVALID_PARAM);
@@ -34,8 +33,8 @@ public:
     }
 
     grpc::Status StopTask(grpc::ServerContext* context,
-                          const StopTaskRequest* request,
-                          StopTaskResponse* reply) override {
+                          const rpc::StopTaskRequest* request,
+                          rpc::StopTaskResponse* reply) override {
         blockSolver_->AbortTask(request->task_id());
         return grpc::Status::OK;
     }
@@ -44,7 +43,7 @@ public:
 
 private:
     std::shared_ptr<SolverManager> blockSolver_;
-    bool checkParams(const POWTask* task) {
+    bool checkParams(const rpc::POWTask* task) {
         if (!task) {
             return false;
         }
@@ -63,7 +62,7 @@ private:
         return true;
     }
 
-    std::shared_ptr<SolverTask> CreateTask(const POWTask* task) {
+    std::shared_ptr<SolverTask> CreateTask(const rpc::POWTask* task) {
         if (!checkParams(task)) {
             return nullptr;
         }

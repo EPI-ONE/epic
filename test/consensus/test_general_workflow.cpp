@@ -218,7 +218,7 @@ TEST_F(TestConsensus, MilestoneDifficultyUpdate) {
         if (mses[i]->height > 5) {
             auto lvs          = mses[i]->snapshot->GetLevelSet();
             auto recovered_ms = CreateNextMilestone(mses[i - 1]->snapshot, *mses[i], std::move(lvs));
-            auto expected_cs  = DAG->GetState(mses[i]->cblock->GetHash())->snapshot;
+            auto expected_cs  = DAG->GetMsVertex(mses[i]->cblock->GetHash())->snapshot;
             ASSERT_EQ(*expected_cs, *recovered_ms);
 
             if (mses[i]->height > STORE->GetHeadHeight()) {
@@ -383,7 +383,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
 
     // here we set less or equal as $chain[1] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
-    ASSERT_EQ(DAG->GetBestChain().GetStates().size(), GetParams().punctualityThred);
+    ASSERT_EQ(DAG->GetBestChain().GetMilestones().size(), GetParams().punctualityThred);
 
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();

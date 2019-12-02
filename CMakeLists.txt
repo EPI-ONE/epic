@@ -73,6 +73,7 @@ include_directories(${Secp256k1_INCLUDE_DIR})
 find_package(Protobuf 3.10.0 REQUIRED)
 find_package(GRPC REQUIRED)
 set(RPC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/rpc)
+set(RPC_SERVICE_DIR ${RPC_DIR}/service)
 set(PROTOS proto/rpc.proto)
 set(PROTO_SRC_DIR ${RPC_DIR}/proto-gen)
 file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
@@ -111,7 +112,9 @@ set(MESSAGES_DIR src/messages)
 set(POW_DIR src/pow)
 set(STORAGE_DIR src/storage)
 set(REMOTE_SOLVER_DIR src/remote_solver)
+
 aux_source_directory(${RPC_DIR} RPC_SRCS)
+aux_source_directory(${RPC_SERVICE_DIR} RPC_SERVICE_SRCS)
 aux_source_directory(${NET_DIR} NET_SRCS)
 aux_source_directory(${PEER_DIR} PEER_SRCS)
 aux_source_directory(${UTIL_DIR} UTIL_SRCS)
@@ -134,6 +137,7 @@ list(REMOVE_ITEM ROOT_SRCS src/epic-cli.cpp)
 
 include_directories(src
         ${RPC_DIR}
+        ${RPC_SERVICE_DIR}
         ${PROTO_SRC_DIR}
         ${NET_DIR}
         ${PEER_DIR}
@@ -159,6 +163,7 @@ include_directories(src
 
 set(SRC_CODE
         ${RPC_SRCS}
+        ${RPC_SERVICE_SRCS}
         ${NET_SRCS}
         ${PEER_SRCS}
         ${UTIL_SRCS}

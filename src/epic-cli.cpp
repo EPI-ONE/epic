@@ -2,7 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-
 #include "epic-cli.h"
 #include <ctime>
 #include <iomanip>
@@ -102,7 +101,6 @@ std::string EpicCli::InputPassphrase(std::ostream& out) {
     return passphrase;
 }
 
-
 std::string EpicCli::GetLine() {
     std::string str;
     session_->ToStandardMode();
@@ -199,8 +197,7 @@ void EpicCli::Close(std::ostream& out) {
 void EpicCli::Status(std::ostream& out) {
     auto r = rpc_->Status();
     if (r) {
-        out << "Miner status: " << (r.value().isminerrunning() ? "RUNNING" : "NOT RUNNING") << std::endl;
-        out << "Latest milestone hash: " << r.value().latestmshash().hash() << std::endl;
+        out << *r << std::endl;
     } else {
         Close(out);
     }
@@ -289,7 +286,6 @@ void EpicCli::CreateFirstReg(std::ostream& out, std::string& address) {
                     } else {
                         Close(out);
                     }
-
                     break;
 
                 } else if (yn == "N" || yn == "n") {
@@ -411,7 +407,7 @@ void EpicCli::CreateTx(std::ostream& out, uint64_t fee, std::string& output_str)
 
         auto r = rpc_->CreateTx(outputs, fee);
         if (r) {
-            std::cout << (*r) << std::endl;
+            out << (*r) << std::endl;
         } else {
             Close(out);
         }
@@ -424,25 +420,7 @@ void EpicCli::CreateTx(std::ostream& out, uint64_t fee, std::string& output_str)
 void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
     auto r = rpc_->ShowPeer(address);
     if (r) {
-        if (r->peer_size() == 0) {
-            out << "No peer information" << std::endl;
-        } else {
-            out << "Total " << r->peer_size() << " peers" << std::endl;
-            for (int i = 0; i < r->peer_size(); i++) {
-                out << "=================" << i << "=================" << std::endl;
-                out << "id:" << r->peer(i).id() << std::endl;
-                out << "socket:" << r->peer(i).socket() << std::endl;
-                out << "valid:" << r->peer(i).valid() << std::endl;
-                out << "inbound:" << r->peer(i).inbound() << std::endl;
-                out << "isFullyConnected:" << r->peer(i).isfullyconnected() << std::endl;
-                out << "isSyncAvailable:" << r->peer(i).issyncavailable() << std::endl;
-                std::time_t t = r->peer(i).connected_time();
-                out << "connected time:" << std::put_time(std::localtime(&t), "%c %Z") << std::endl;
-                out << "block version:" << r->peer(i).block_version() << std::endl;
-                out << "local service:" << r->peer(i).local_service() << std::endl;
-                out << "app version:" << r->peer(i).app_version() << std::endl;
-            }
-        }
+        out << *r << std::endl;
     } else {
         Close(out);
     }

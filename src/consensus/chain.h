@@ -58,8 +58,8 @@ public:
     /**
      * Create a forked chain from $chain which has the new fork in $fork;
      * In other words, the last common milestone is the vertex of the previous milestone of $fork.
-     * Moreover, it does not contain the corresponding chain state of this $fork.
-     * We have to further verify it to update chain state.
+     * Moreover, it does not contain the corresponding milestone of this $fork.
+     * We have to further verify it to update the milestone.
      */
     Chain(const Chain&, const ConstBlockPtr& fork);
 
@@ -83,8 +83,8 @@ public:
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
 
     friend inline bool operator<(const Chain& a, const Chain& b) {
-        auto a_chainwork = a.GetStates().empty() ? 0 : a.GetChainHead()->chainwork;
-        auto b_chainwork = b.GetStates().empty() ? 0 : b.GetChainHead()->chainwork;
+        auto a_chainwork = a.GetMilestones().empty() ? 0 : a.GetChainHead()->chainwork;
+        auto b_chainwork = b.GetMilestones().empty() ? 0 : b.GetChainHead()->chainwork;
         return a_chainwork < b_chainwork;
     }
 
@@ -92,20 +92,22 @@ public:
         return ismainchain_;
     }
 
-    const ConcurrentQueue<MilestonePtr>& GetStates() const {
-        return states_;
+    const ConcurrentQueue<MilestonePtr>& GetMilestones() const {
+        return milestones_;
     }
 
     size_t GetLeastHeightCached() const {
-        if (states_.empty()) {
+        if (milestones_.empty()) {
             return UINT64_MAX;
         }
 
-        return states_.front()->height;
+        return milestones_.front()->height;
     }
 
-    void AddNewState(const Vertex& ms) {
-        states_.emplace_back(ms.snapshot);
+    std::vector<uint256> GetPeerChainHead() const;
+
+    void AddNewMilestone(const Vertex& ms) {
+        milestones_.emplace_back(ms.snapshot);
     }
 
     /**
@@ -116,7 +118,7 @@ public:
     VertexPtr Verify(const ConstBlockPtr&);
 
     /**
-     * Removes oldest chain state as well as corresponding data
+     * Removes oldest milestone as well as corresponding data
      */
     void PopOldest(const std::vector<uint256>&, const TXOC&);
     std::tuple<std::vector<VertexWPtr>, std::unordered_map<uint256, UTXOPtr>, std::unordered_set<uint256>>
@@ -134,7 +136,7 @@ private:
     /**
      * Stores a (probabily recent) list of milestones
      */
-    ConcurrentQueue<MilestonePtr> states_;
+    ConcurrentQueue<MilestonePtr> milestones_;
 
     /**
      * Stores data not yet verified in this chain
@@ -167,7 +169,7 @@ private:
      * Key: hash of the head of peer chain
      * Value: hash of the previous reg block of the corresponding key
      */
-    std::unordered_map<uint256, uint256> prevRedempHashMap_;
+    ConcurrentHashMap<uint256, uint256> prevRedempHashMap_;
 
     /**
      * Caches all the hashes of the previous registration blocks that
