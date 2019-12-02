@@ -5,53 +5,61 @@
 #ifndef EPIC_COMMAND_LINE_H
 #define EPIC_COMMAND_LINE_H
 
-#include "rpc_service.h"
+#include <grpc++/grpc++.h>
 #include <memory>
+#include <rpc.grpc.pb.h>
+#include <rpc.pb.h>
 
 class Peer;
 
-class CommanderRPCServiceImpl final : public CommanderRPC::Service {
-    grpc::Status Status(grpc::ServerContext* context, const EmptyRequest* request, StatusResponse* reply) override;
+class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
+    grpc::Status Status(grpc::ServerContext* context,
+                        const rpc::EmptyRequest* request,
+                        rpc::StatusResponse* reply) override;
 
-    grpc::Status Stop(grpc::ServerContext* context, const EmptyRequest* request, StopResponse* reply) override;
+    grpc::Status Stop(grpc::ServerContext* context,
+                      const rpc::EmptyRequest* request,
+                      rpc::StopResponse* reply) override;
 
     grpc::Status StartMiner(grpc::ServerContext* context,
-                            const EmptyRequest* request,
-                            StartMinerResponse* reply) override;
+                            const rpc::EmptyRequest* request,
+                            rpc::StartMinerResponse* reply) override;
 
     grpc::Status StopMiner(grpc::ServerContext* context,
-                           const EmptyRequest* request,
-                           StopMinerResponse* reply) override;
+                           const rpc::EmptyRequest* request,
+                           rpc::StopMinerResponse* reply) override;
 
     grpc::Status CreateFirstReg(grpc::ServerContext* context,
-                                const CreateFirstRegRequest* request,
-                                CreateFirstRegResponse* reply) override;
+                                const rpc::CreateFirstRegRequest* request,
+                                rpc::CreateFirstRegResponse* reply) override;
 
     grpc::Status CreateRandomTx(grpc::ServerContext* context,
-                                const CreateRandomTxRequest* request,
-                                CreateRandomTxResponse* reply) override;
+                                const rpc::CreateRandomTxRequest* request,
+                                rpc::CreateRandomTxResponse* reply) override;
 
     grpc::Status CreateTx(grpc::ServerContext* context,
-                          const CreateTxRequest* request,
-                          CreateTxResponse* reply) override;
+                          const rpc::CreateTxRequest* request,
+                          rpc::CreateTxResponse* reply) override;
 
     grpc::Status GenerateNewKey(grpc::ServerContext* context,
-                                const EmptyRequest* request,
-                                GenerateNewKeyResponse* reply) override;
+                                const rpc::EmptyRequest* request,
+                                rpc::GenerateNewKeyResponse* reply) override;
 
     grpc::Status GetBalance(grpc::ServerContext* context,
-                            const EmptyRequest* request,
-                            GetBalanceResponse* reply) override;
+                            const rpc::EmptyRequest* request,
+                            rpc::GetBalanceResponse* reply) override;
 
     grpc::Status SetPassphrase(grpc::ServerContext* context,
-                               const SetPassphraseRequest* request,
-                               SetPassphraseResponse* reply) override;
+                               const rpc::SetPassphraseRequest* request,
+                               rpc::SetPassphraseResponse* reply) override;
 
     grpc::Status ChangePassphrase(grpc::ServerContext* context,
-                                  const ChangePassphraseRequest* request,
-                                  ChangePassphraseResponse* reply) override;
+                                  const rpc::ChangePassphraseRequest* request,
+                                  rpc::ChangePassphraseResponse* reply) override;
 
-    grpc::Status Login(grpc::ServerContext* context, const LoginRequest* request, LoginResponse* reply) override;
+    grpc::Status Login(grpc::ServerContext* context,
+                       const rpc::LoginRequest* request,
+                       rpc::LoginResponse* reply) override;
 
     grpc::Status DisconnectPeer(grpc::ServerContext* context,
                                 const rpc::DisconnectPeerRequest* request,
@@ -70,11 +78,12 @@ class CommanderRPCServiceImpl final : public CommanderRPC::Service {
                                const rpc::EmptyRequest* request,
                                rpc::SyncStatusResponse* response) override;
 
-    void AddPeer(rpc::ShowPeerResponse* response, std::shared_ptr<Peer> peer);
-
     grpc::Status ShowPeer(grpc::ServerContext* context,
                           const rpc::ShowPeerRequest* request,
                           rpc::ShowPeerResponse* response) override;
+
+private:
+    void AddPeer(rpc::ShowPeerResponse* response, std::shared_ptr<Peer> peer);
 };
 
 #endif // EPIC_COMMAND_LINE_H

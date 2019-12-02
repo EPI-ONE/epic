@@ -7,10 +7,10 @@
 
 #include "block.h"
 #include "concurrent_container.h"
-#include "service/rpc_service.h"
+#include "service/solver.h"
 #include "threadpool.h"
 
-#include <grpcpp/support/status.h>
+#include <rpc.pb.h>
 
 class Solver {
 public:
@@ -62,16 +62,16 @@ public:
     explicit SolverRPCClient(const std::string& address)
         : stub(grpc::CreateChannel(address, grpc::InsecureChannelCredentials())) {}
 
-    grpc::Status SendTask(grpc::ClientContext* context, POWTask request, POWResult* reply) {
+    grpc::Status SendTask(grpc::ClientContext* context, rpc::POWTask request, rpc::POWResult* reply) {
         return stub.SendPOWTask(context, request, reply);
     }
 
-    grpc::Status AbortTask(grpc::ClientContext* context, StopTaskRequest request, StopTaskResponse* reply) {
+    grpc::Status AbortTask(grpc::ClientContext* context, rpc::StopTaskRequest request, rpc::StopTaskResponse* reply) {
         return stub.StopTask(context, request, reply);
     }
 
 private:
-    RemoteSolver::Stub stub;
+    rpc::RemoteSolver::Stub stub;
 };
 
 class RemoteGPUSolver : public Solver {

@@ -191,12 +191,12 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         const auto req_hash = std::to_string(hash);
 
         auto re_size = client->GetLevelSetSize(req_hash); // get level set size
-        GetLevelSetSizeResponse rpc_get_lvs_size;
+        rpc::GetLevelSetSizeResponse rpc_get_lvs_size;
         JsonStringToMessage(StringPiece(*re_size), &rpc_get_lvs_size);
         ASSERT_EQ(rpc_get_lvs_size.size(), chain[i].size());
 
         auto re_set = client->GetLevelSet(req_hash); // get level set
-        GetLevelSetResponse rpc_get_lvs;
+        rpc::GetLevelSetResponse rpc_get_lvs;
         JsonStringToMessage(StringPiece(*re_set), &rpc_get_lvs);
 
         for (size_t j = 0; j < chain[i].size(); j++) {
@@ -210,7 +210,7 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
     }
 
     auto re_latest = client->GetLatestMilestone(); // get lastest milestone
-    GetLatestMilestoneResponse rpc_latest;
+    rpc::GetLatestMilestoneResponse rpc_latest;
     JsonStringToMessage(StringPiece(*re_latest), &rpc_latest);
     ASSERT_TRUE(SameBlock(*latest_ms->cblock, rpc_latest.milestone()));
 
@@ -221,7 +221,7 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
     auto req_hash  = std::to_string(chain[HEIGHT_GET_FROM].back()->cblock->GetHash());
     auto re_new_ms = client->GetNewMilestoneSince(req_hash, HEIGHT_GET);
 
-    GetNewMilestoneSinceResponse rpc_new_ms;
+    rpc::GetNewMilestoneSinceResponse rpc_new_ms;
     JsonStringToMessage(StringPiece(*re_new_ms), &rpc_new_ms);
 
     auto iter = rpc_new_ms.blocks().cbegin();
@@ -239,22 +239,22 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         auto re_block  = client->GetBlock(pick_hash_str);  // get blocks
         auto re_vertex = client->GetVertex(pick_hash_str); // get vertices
 
-        GetBlockResponse rpc_get_blk;
+        rpc::GetBlockResponse rpc_get_blk;
         JsonStringToMessage(StringPiece(*re_block), &rpc_get_blk);
         ASSERT_TRUE(SameBlock(*(blk->cblock), rpc_get_blk.block()));
 
-        GetVertexResponse rpc_get_ver;
+        rpc::GetVertexResponse rpc_get_ver;
         JsonStringToMessage(StringPiece(*re_vertex), &rpc_get_ver);
         ASSERT_TRUE(SameVertex(*(DAG->GetMainChainVertex(pick_hash)), rpc_get_ver.vertex()));
     }
 
     auto re_forks = client->GetForks(); // get forks
-    GetForksResponse rpc_forks;
+    rpc::GetForksResponse rpc_forks;
     JsonStringToMessage(StringPiece(*re_forks), &rpc_forks);
     ASSERT_EQ(rpc_forks.chains().size(), 1);
 
     auto re_pc = client->GetPeerChains(); // get peer chains
-    GetPeerChainsResponse rpc_pc;
+    rpc::GetPeerChainsResponse rpc_pc;
     JsonStringToMessage(StringPiece(*re_pc), &rpc_pc);
     ASSERT_EQ(rpc_pc.peerchains().size(), 1);
 
@@ -263,12 +263,12 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         nBlkCached += chain[i].size();
     }
     auto re_recent_stat = client->GetRecentStat(); // get recent statistic data
-    GetRecentStatResponse rpc_recent_stat;
+    rpc::GetRecentStatResponse rpc_recent_stat;
     JsonStringToMessage(StringPiece(*re_recent_stat), &rpc_recent_stat);
     ASSERT_EQ(rpc_recent_stat.nblks(), nBlkCached);
 
     auto re_stat = client->Statistic(); // get total statistic data
-    StatisticResponse rpc_stat;
+    rpc::StatisticResponse rpc_stat;
     JsonStringToMessage(StringPiece(*re_stat), &rpc_stat);
     ASSERT_EQ(rpc_stat.height(), HEIGHT);
 

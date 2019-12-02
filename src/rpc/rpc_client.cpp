@@ -6,6 +6,7 @@
 
 #include <google/protobuf/util/json_util.h>
 
+using namespace rpc;
 using google::protobuf::util::MessageToJsonString;
 using op_string = std::optional<std::string>;
 

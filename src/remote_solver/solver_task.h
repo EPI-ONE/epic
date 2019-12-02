@@ -4,6 +4,7 @@
 
 #ifndef EPIC_SOLVER_TASK_H
 #define EPIC_SOLVER_TASK_H
+
 #include "arith_uint256.h"
 #include "cuckaroo.h"
 #include "solver_protocol.h"
@@ -32,4 +33,5 @@ struct SolverTask {
 };
 
 using TaskStatus = std::pair<std::unique_ptr<TaskResult>, SolverResult::ErrorCode>;
+
 #endif // EPIC_SOLVER_TASK_H

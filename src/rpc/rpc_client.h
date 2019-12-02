@@ -5,9 +5,10 @@
 #ifndef EPIC_RPC_CLIENT_H
 #define EPIC_RPC_CLIENT_H
 
-#include "rpc/service/rpc_service.h"
-
+#include <grpc++/grpc++.h>
 #include <optional>
+#include <rpc.grpc.pb.h>
+#include <rpc.pb.h>
 
 class RPCClient {
 public:
@@ -49,8 +50,8 @@ public:
     std::optional<rpc::ShowPeerResponse> ShowPeer(std::string&);
 
 private:
-    std::unique_ptr<BasicBlockExplorerRPC::Stub> be_stub_;
-    std::unique_ptr<CommanderRPC::Stub> commander_stub_;
-    };
+    std::unique_ptr<rpc::BasicBlockExplorerRPC::Stub> be_stub_;
+    std::unique_ptr<rpc::CommanderRPC::Stub> commander_stub_;
+};
 
 #endif // EPIC_RPC_CLIENT_H

@@ -8,6 +8,8 @@
 #include "rpc_tools.h"
 #include "wallet.h"
 
+using namespace rpc;
+
 grpc::Status CommanderRPCServiceImpl::Status(grpc::ServerContext* context,
                                              const EmptyRequest* request,
                                              StatusResponse* reply) {

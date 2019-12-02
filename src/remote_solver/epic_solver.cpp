@@ -4,11 +4,11 @@
 
 #include "basic_rpc_server.h"
 #include "cxxopts.h"
-#include "service/rpc_service.h"
 #include "service/solver.h"
 #include "solver_manager.h"
 
 #include <csignal>
+
 static std::atomic_bool shutdown = false;
 
 typedef void (*signal_handler_t)(int);

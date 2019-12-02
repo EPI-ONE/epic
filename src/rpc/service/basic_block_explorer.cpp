@@ -10,6 +10,8 @@
 
 #include <numeric>
 
+using namespace rpc;
+
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
                                                         const GetBlockRequest* request,
                                                         GetBlockResponse* reply) {
