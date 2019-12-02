@@ -11,7 +11,7 @@
 #include "miner.h"
 #include "peer_manager.h"
 #include "rpc_server.h"
-#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/daily_file_sink.h"
 #include "wallet.h"
 
 #include <csignal>
@@ -409,8 +409,8 @@ void UseFileLogger(const std::string& path, const std::string& filename) {
             }
         }
 
-        auto file_logger = spdlog::basic_logger_mt("basic_logger", path + filename);
-        spdlog::set_default_logger(file_logger);
+        auto daily_logger = spdlog::daily_logger_mt("daily_logger", path + filename, 0, 0);
+        spdlog::set_default_logger(daily_logger);
     } catch (const spdlog::spdlog_ex& ex) {
         std::cerr << "The file logger init failed: " << ex.what() << std::endl;
         std::cerr << "Please check your config setting" << std::endl;
