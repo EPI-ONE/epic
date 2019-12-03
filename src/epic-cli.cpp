@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
 }
 
 EpicCli::EpicCli(std::string name) : exit_(false), name_(std::move(name)) {
+    SetColor();
     cli_     = std::make_unique<Cli>(CreateRootMenu(), [&, this](auto& out) { exit_ = true; });
     session_ = std::make_unique<CliLocalTerminalSession>(*cli_, std::cout);
 }

@@ -53,7 +53,7 @@ enum AfterInput { afterInput };
 
 inline std::ostream& operator<<(std::ostream& os, BeforePrompt) {
     if (Color()) {
-        os << rang::control::forceColor << rang::fg::green << rang::style::bold;
+        os << rang::control::forceColor << rang::fg::red << rang::style::bold;
     }
     return os;
 }
