@@ -8,25 +8,25 @@ on:
 jobs:
 
   test-macOS:
-    runs-on: [macos-latest]
+    runs-on: macos-latest
     timeout-minutes: 60
     steps:
-    - name: install brew
+    - name: Install brew
       run: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-    
-    - name: install dependencies via brew
+
+    - name: Install dependencies via brew
       run: |
-        brew update && brew upgrade && brew cleanup
+        brew update && brew cleanup
         brew install autoconf automake libtool
         brew install openssl@1.1
-        brew install cmake 
-        brew install gmp 
-        brew install grpc 
-        brew install rocksdb 
+        brew install cmake
+        brew install gmp
+        brew install grpc
+        brew install rocksdb
         brew install protobuf
 
     - uses: actions/checkout@v1
-    
+
     - name: Install secp256k1 from source
       run: cd ci && ./install-secp256k1.sh
     - name: Install libevent from source
@@ -38,25 +38,25 @@ jobs:
 
     - name: cmake
       run: |
-        export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
-        mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
-   
+          export OPENSSL_ROOT_DIR="/usr/local/opt/openssl@1.1"
+          mkdir build && cd build && cmake -DCAMKE_BUILD_TYPE=Release ..
+
     - name: make
       run: cd build && make -j2
-    
+
     - name: Run epic test
       run: |
-        ulimit -c unlimited -S
-        ulimit -a
-        sudo chmod o+w /cores
-        cd ./bin
-        ./epictest
+          ulimit -c unlimited -S
+          ulimit -a
+          sudo chmod o+w /cores
+          cd ./bin
+          ./epictest
 
     - name: Core dump
       if: failure()
       run: |
-        cd ./bin
-        ls /cores
-        COREFILE=$(find /cores -maxdepth 1 -name "core*" | tail -n 1)
-        echo $COREFILE
-        if [[ -f "$COREFILE" ]]; then lldb ./epictest -c $COREFILE --batch --one-line "bt"; fi
+          cd ./bin
+          ls /cores
+          COREFILE=$(find /cores -maxdepth 1 -name "core*" | tail -n 1)
+          echo $COREFILE
+          if [[ -f "$COREFILE" ]]; then lldb ./epictest -c $COREFILE --batch --one-line "bt"; fi

@@ -102,22 +102,19 @@ void Miner::Run() {
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
-                auto firstRegTx = MEMPOOL->GetRedemptionTx(true);
-                if (!firstRegTx) {
-                    spdlog::info("[Miner] Paused. Waiting for the first registration.");
-                    while (enabled_ && !firstRegTx) {
-                        std::this_thread::yield();
-                        firstRegTx = MEMPOOL->GetRedemptionTx(true);
-                    }
-                }
+                spdlog::info("[Miner] Paused. Waiting for the first registration...");
+                ConstTxPtr firstRegTx;
+                while (enabled_ && !(firstRegTx = MEMPOOL->GetFirstReg()))
+                    ;
                 spdlog::info("[Miner] Got the first registration. Start mining.");
+
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
                 prevHash     = selfChainHead_->GetHash();
                 auto max_ntx = GetParams().blockCapacity;
 
-                auto tx = MEMPOOL->GetRedemptionTx(false);
+                auto tx = MEMPOOL->GetRedemptionTx();
 
                 if (tx) {
                     if (tx->IsFirstRegistration()) {
@@ -134,9 +131,9 @@ void Miner::Run() {
 
                 if (distanceCal_.Full()) {
                     if (counter % 10 == 0) {
-                        spdlog::info("[Miner] Hashing power percentage {}",
-                                     distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
-                                         std::atomic_load(&chainHead_)->snapshot->hashRate);
+                        spdlog::debug("[Miner] Hashing power percentage {}",
+                                      distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
+                                          std::atomic_load(&chainHead_)->snapshot->hashRate);
                     }
 
                     auto allowed =
@@ -163,12 +160,14 @@ void Miner::Run() {
             // To prevent continuing with a block having a false nonce,
             // which may happen when Solve is aborted by calling
             // Miner::Stop or when abort_ = true
-            if (abort_.load() || !enabled_.load()) {
+            if (abort_.load() || !enabled_.load() || !b.Verify()) {
                 if (b.HasTransaction()) {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
-                    if (txns[0]->IsRegistration()) {
-                        MEMPOOL->PushRedemptionTx(std::move(txns[0]));
+                    if (b.IsRegistration()) {
+                        if (b.IsFirstRegistration() || txns[0]->GetOutputs()[0].value.GetValue()) {
+                            MEMPOOL->PushRedemptionTx(std::move(txns[0]));
+                        }
                         startIndex = 1;
                     }
                     for (size_t i = startIndex; i < b.GetTransactionSize(); ++i) {
@@ -183,7 +182,6 @@ void Miner::Run() {
                 continue;
             }
 
-            assert(b.CheckPOW());
             b.source = Block::MINER;
 
             auto bPtr = std::make_shared<const Block>(b);

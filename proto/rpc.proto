@@ -186,6 +186,7 @@ service CommanderRPC {
     rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
     rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
+    rpc Redeem(RedeemRequest) returns (RedeemResponse);
 
     // Command for Peer
     rpc DisconnectPeer (DisconnectPeerRequest) returns (DisconnectPeerResponse);
@@ -267,6 +268,15 @@ message LoginRequest {
 
 message LoginResponse {
     string responseInfo = 1;
+}
+
+message RedeemRequest {
+    string address = 1;
+    uint64 coins = 2;
+}
+
+message RedeemResponse {
+    string result = 1;
 }
 
 service RemoteSolver {

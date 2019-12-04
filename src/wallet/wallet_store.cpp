@@ -26,6 +26,7 @@ const std::string kInfo       = "info";
 const std::string kMasterInfo = "master_info";
 const std::string kFirstReg   = "first_reg";
 const std::string kLastRedem  = "last_redem_addr";
+const std::string kMinerInfo  = "miner_info";
 
 const std::array<std::string, 3> utxoStr{kUnspentTXO, kPendingTXO, kSpentTXO};
 
@@ -55,13 +56,13 @@ inline bool put(DB* db, ColumnFamilyHandle* handle, const VStream& key, const VS
 
 WalletStore::WalletStore(std::string dbPath) : RocksDB(std::move(dbPath), COLUMN_NAMES) {}
 
-bool WalletStore::StoreTx(const Transaction& tx) {
+bool WalletStore::StoreTx(const Transaction& tx) const {
     VStream key{tx.GetHash()};
     VStream value{tx};
     return put(db_, handleMap_.at(kTx), key, value);
 }
 
-ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() {
+ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() const {
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kTx));
     ConcurrentHashMap<uint256, ConstTxPtr> result;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
@@ -83,7 +84,7 @@ ConcurrentHashMap<uint256, ConstTxPtr> WalletStore::GetAllTx() {
     return result;
 }
 
-bool WalletStore::StoreKeys(const CKeyID& addr, const CiphertextKey& encrypted, const CPubKey& pubkey) {
+bool WalletStore::StoreKeys(const CKeyID& addr, const CiphertextKey& encrypted, const CPubKey& pubkey) const {
     VStream key, value;
     key << EncodeAddress(addr);
     value << encrypted << pubkey;
@@ -91,13 +92,13 @@ bool WalletStore::StoreKeys(const CKeyID& addr, const CiphertextKey& encrypted, 
     return put(db_, handleMap_.at(kKeyBook), key, value);
 }
 
-bool WalletStore::IsExistKey(const CKeyID& addr) {
+bool WalletStore::IsExistKey(const CKeyID& addr) const {
     VStream key;
     key << EncodeAddress(addr);
     return !RocksDB::Get(kKeyBook, Slice{key.data(), key.size()}).empty();
 }
 
-std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKeyID& addr) {
+std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKeyID& addr) const {
     VStream key;
     key << EncodeAddress(addr);
     PinnableSlice valueSlice;
@@ -118,7 +119,7 @@ std::optional<std::tuple<CiphertextKey, CPubKey>> WalletStore::GetKey(const CKey
     return {};
 }
 
-ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> WalletStore::GetAllKey() {
+ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> WalletStore::GetAllKey() const {
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kKeyBook));
     ConcurrentHashMap<CKeyID, std::tuple<CiphertextKey, CPubKey>> result;
     CKeyID addr;
@@ -150,7 +151,7 @@ bool WalletStore::StoreUTXO(const uint256& utxokey,
                             uint32_t txIndex,
                             uint32_t outputIndex,
                             uint64_t coin,
-                            uint8_t category) {
+                            uint8_t category) const {
     VStream key{utxokey};
     VStream value;
     value << EncodeAddress(addr) << txIndex << outputIndex << coin;
@@ -158,7 +159,7 @@ bool WalletStore::StoreUTXO(const uint256& utxokey,
     return put(db_, handleMap_.at(utxoStr.at(category)), key, value);
 }
 
-utxo_map WalletStore::GetAllUTXO(uint8_t category) {
+utxo_map WalletStore::GetAllUTXO(uint8_t category) const {
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(utxoStr.at(category)));
     utxo_map result;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
@@ -188,36 +189,36 @@ utxo_map WalletStore::GetAllUTXO(uint8_t category) {
 }
 
 bool WalletStore::StoreUnspent(
-    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) const {
     return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, UNSPENT);
 }
 bool WalletStore::StorePending(
-    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) const {
     return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, PENDING);
 }
 bool WalletStore::StoreSpent(
-    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) {
+    const uint256& utxokey, const CKeyID& addr, uint32_t txIndex, uint32_t outputIndex, uint64_t coin) const {
     return StoreUTXO(utxokey, addr, txIndex, outputIndex, coin, SPENT);
 }
 
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllUnspent() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllUnspent() const {
     return GetAllUTXO(UNSPENT);
 }
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllPending() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllPending() const {
     return GetAllUTXO(PENDING);
 }
-ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllSpent() {
+ConcurrentHashMap<uint256, std::tuple<CKeyID, uint32_t, uint32_t, uint64_t>> WalletStore::GetAllSpent() const {
     return GetAllUTXO(SPENT);
 }
 
-bool WalletStore::StoreMasterInfo(const MasterInfo& info) {
+bool WalletStore::StoreMasterInfo(const MasterInfo& info) const {
     VStream key, value;
     key << kMasterInfo;
     value << info;
     return put(db_, handleMap_.at(kInfo), key, value);
 }
 
-std::optional<MasterInfo> WalletStore::GetMasterInfo() {
+std::optional<MasterInfo> WalletStore::GetMasterInfo() const {
     VStream key;
     key << kMasterInfo;
     PinnableSlice valueSlice;
@@ -234,14 +235,21 @@ std::optional<MasterInfo> WalletStore::GetMasterInfo() {
     return {};
 }
 
-bool WalletStore::StoreLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) {
+bool WalletStore::StoreLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress) const {
     VStream key, value;
     key << kLastRedem;
     value << lastRedemHash << lastRedemAddress;
     return put(db_, handleMap_.at(kInfo), key, value);
 }
 
-std::optional<std::pair<uint256, CKeyID>> WalletStore::GetLastRedem() {
+bool WalletStore::StoreMinerInfo(const std::pair<uint256, Coin>& minerInfo) const {
+    VStream key, value;
+    key << kMinerInfo;
+    value << minerInfo;
+    return put(db_, handleMap_.at(kInfo), key, value);
+}
+
+std::optional<std::pair<uint256, CKeyID>> WalletStore::GetLastRedem() const {
     VStream key;
     key << kLastRedem;
     PinnableSlice valueSlice;
@@ -259,18 +267,34 @@ std::optional<std::pair<uint256, CKeyID>> WalletStore::GetLastRedem() {
     return {};
 }
 
-bool WalletStore::StoreFirstRegInfo() {
+std::optional<std::pair<uint256, Coin>> WalletStore::GetMinerInfo() const {
+    VStream key{kMinerInfo};
+    PinnableSlice valueSlice;
+    if (db_->Get(ReadOptions(), handleMap_.at(kInfo), Slice{key.data(), key.size()}, &valueSlice).ok()) {
+        try {
+            VStream value(valueSlice.data(), valueSlice.data() + valueSlice.size());
+            std::pair<uint256, Coin> minerInfo{};
+            value >> minerInfo;
+            return minerInfo;
+        } catch (const std::exception& e) {
+            spdlog::info("Fail when reading the miner info from wallet store with error {}", e.what());
+        }
+    }
+    return {{uint256{}, 0}};
+}
+
+bool WalletStore::StoreFirstRegInfo() const {
     VStream key;
     return put(db_, handleMap_.at(kInfo), key, VStream{true});
 }
 
-bool WalletStore::GetFirstRegInfo() {
+bool WalletStore::GetFirstRegInfo() const {
     VStream key;
     return !RocksDB::Get(kInfo, Slice{key.data(), key.size()}).empty();
 }
 
 // get encoded pubkeys
-int WalletStore::KeysToFile(std::string filePath) {
+int WalletStore::KeysToFile(std::string filePath) const {
     // get all data
     Iterator* iter = db_->NewIterator(ReadOptions(), handleMap_.at(kKeyBook));
     std::vector<std::string> keyList;

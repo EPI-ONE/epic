@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-18.04
     timeout-minutes: 60
     steps:
-    
+
     - name: Install build tools (apt-get)
       run: |
         sudo apt-get install autoconf libtool pkg-config libgmp-dev
         sudo apt-get autoremove
-    
+
     - name: Install gcc8 (apt-get)
       run: |
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -25,7 +25,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 100
         gcc -v
         g++ -v
-    
+
     - name: Install clang-9 (apt-get)
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
@@ -36,7 +36,7 @@ jobs:
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-9 100
         clang -v
         clang++ -v
-    
+
     - name: Install cmake 3.15 (apt-get)
       run: |
         wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
@@ -48,24 +48,24 @@ jobs:
 
     - uses: actions/checkout@v1
 
-    - name: Install openssl from source 
+    - name: Install openssl from source
       run: cd ci && ./install-openssl.sh
-    - name: Install protobuf from source 
+    - name: Install protobuf from source
       run: cd ci && ./install-protobuf.sh
-    - name: Install grpc from source 
+    - name: Install grpc from source
       run: cd ci && ./install-grpc.sh
-    - name: Install rocksdb from source 
+    - name: Install rocksdb from source
       run: cd ci && ./install-rocksdb.sh
-    - name: Install secp256k1 from source 
+    - name: Install secp256k1 from source
       run: cd ci && ./install-secp256k1.sh
-    - name: Install libevent from source 
+    - name: Install libevent from source
       run: cd ci && ./install-libevent.sh
-    - name: Install googletest from source 
+    - name: Install googletest from source
       run: cd ci && ./install-googletest.sh
 
     - name: cmake
       run: |
-        mkdir build && cd build 
+        mkdir build && cd build
         /usr/bin/cmake -DCAMKE_BUILD_TYPE=Release ..
 
     - name: make
@@ -73,16 +73,16 @@ jobs:
 
     - name: Run epic test
       run: |
-        ulimit -c unlimited -S
-        ulimit -a
-        cd ./bin
-        ./epictest
+          ulimit -c unlimited -S
+          ulimit -a
+          cd ./bin
+          ./epictest
 
-    - name : Core dump
+    - name : core dump
       if: failure()
       run: |
-        cd ./bin
-        ls
-        COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
-        echo $COREFILE
-        if [[ -f "$COREFILE" ]]; then gdb ./epictest "$COREFILE" example -ex "bt" -ex "set pagination 0" -batch; fi
+          cd ./bin
+          ls
+          COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
+          echo $COREFILE
+          if [[ -f "$COREFILE" ]]; then gdb ./epictest "$COREFILE" example -ex "bt" -ex "set pagination 0" -batch; fi

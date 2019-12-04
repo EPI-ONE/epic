@@ -34,6 +34,7 @@ public:
     std::optional<std::string> StopMiner();
 
     std::optional<std::string> CreateFirstReg(std::string addr, bool force = false);
+    std::optional<std::string> Redeem(const std::string& addr, uint64_t coins);
     std::optional<std::string> CreateRandomTx(size_t size);
     std::optional<std::string> CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee);
     std::optional<std::string> GetBalance();

@@ -85,6 +85,39 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
     return grpc::Status::OK;
 }
 
+grpc::Status CommanderRPCServiceImpl::Redeem(grpc::ServerContext* context,
+                                             const rpc::RedeemRequest* request,
+                                             rpc::RedeemResponse* reply) {
+    if (!WALLET) {
+        reply->set_result("Wallet has not been started");
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result("Please log in or set up a new passphrase");
+    } else if (!WALLET->Redeemable(request->coins())) {
+        reply->set_result("Value exceeding the maximum that can be redeemed.");
+    } else if (WALLET->HasPendingRedemption()) {
+        reply->set_result("A previous redemption is pending. Abort the current one.");
+    } else {
+        CKeyID addr;
+        if (request->address().empty()) {
+            addr = WALLET->CreateNewKey(true);
+        } else {
+            if (auto decoded = DecodeAddress(request->address())) {
+                addr = *decoded;
+            } else {
+                reply->set_result("Invalid address: " + request->address());
+                return grpc::Status::OK;
+            }
+        }
+
+        auto last_redem = WALLET->CreateRedemption(addr, request->coins());
+
+        reply->set_result("Successfully redeemed " + (request->coins() ? std::to_string(request->coins()) : "maximum") +
+                          " coin(s) to address " + last_redem);
+    }
+
+    return grpc::Status::OK;
+}
+
 grpc::Status CommanderRPCServiceImpl::CreateRandomTx(grpc::ServerContext* context,
                                                      const CreateRandomTxRequest* request,
                                                      CreateRandomTxResponse* reply) {
@@ -130,7 +163,9 @@ grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
-grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* context, const EmptyRequest* request, GenerateNewKeyResponse* reply) {
+grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* context,
+                                                     const EmptyRequest* request,
+                                                     GenerateNewKeyResponse* reply) {
     if (!WALLET) {
         reply->set_address("Wallet has not been started");
     } else if (!WALLET->IsLoggedIn()) {
@@ -142,7 +177,9 @@ grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* contex
     return grpc::Status::OK;
 }
 
-grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context, const EmptyRequest* request, GetBalanceResponse* reply) {
+grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context,
+                                                 const EmptyRequest* request,
+                                                 GetBalanceResponse* reply) {
     if (!WALLET) {
         reply->set_coin("Wallet has not been started");
     } else if (!WALLET->IsLoggedIn()) {

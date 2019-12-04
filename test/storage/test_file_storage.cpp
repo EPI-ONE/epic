@@ -257,12 +257,11 @@ TEST_F(TestFileStorage, test_modifier) {
     auto vtx_from_file = STORE->GetVertex(vtx_hash);
     ASSERT_EQ(*vtx_from_file, *vertex);
 
-    // Modify the redemption status and destruct it
-    vtx_from_file->isRedeemed = Vertex::IS_REDEEMED;
-    vtx_from_file.reset();
+    ASSERT_TRUE(STORE->UpdateRedemptionStatus(vtx_hash));
+    ASSERT_FALSE(STORE->UpdateRedemptionStatus(uint256{}));
 
     // Retrive it again from file and make sure the redemption status
-    // in the file is also modified
+    // in the file is modified
     auto vtx_modified = STORE->GetVertex(vtx_hash);
     ASSERT_EQ(vtx_modified->isRedeemed, Vertex::IS_REDEEMED);
 

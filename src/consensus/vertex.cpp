@@ -8,7 +8,7 @@
 
 Vertex::Vertex() : minerChainHeight(0), optimalStorageSize_(0) {}
 
-Vertex::Vertex(const ConstBlockPtr& blk) : cblock(blk), minerChainHeight(0), optimalStorageSize_(0) {
+Vertex::Vertex(ConstBlockPtr blk) : cblock(std::move(blk)), minerChainHeight(0), optimalStorageSize_(0) {
     if (cblock) {
         auto n = cblock->GetTransactionSize();
         if (n > 0) {

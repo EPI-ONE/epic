@@ -66,8 +66,8 @@ TEST_F(TestTrimmer, GPU) {
     spdlog::info("{} with {}{}B @ {} bits x {}MHz", prop.name, (uint32_t) dbytes, " KMGT"[dunit], prop.memoryBusWidth,
                  prop.memoryClockRate / 1000);
 
-    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.", GetParams().cycleLen,
-                 EDGEBITS, header.str().c_str(), nonce, params.ntrims);
+    spdlog::info("Looking for {}-cycle on cuckaroo{}(\"{}\", {}) with 50\% edges, {} trims thread blocks.",
+                 GetParams().cycleLen, EDGEBITS, header.str().c_str(), nonce, params.ntrims);
 
     auto* ctx = CreateSolverCtx(params, GetParams().cycleLen);
 
@@ -106,7 +106,7 @@ TEST_F(TestTrimmer, GPU) {
         int pow_rc = VerifyProof(prf, ctx->trimmer.sipkeys, GetParams().cycleLen);
         if (pow_rc == POW_OK) {
             spdlog::trace("Verified with cyclehash ");
-            auto cyclehash = HashBLAKE2<256>((char*) prf, PROOFSIZE);
+            auto cyclehash = HashBLAKE2<256>((char*) prf, sizeof(word_t) * GetParams().cycleLen);
             spdlog::trace("{}", std::to_string(cyclehash));
         } else {
             spdlog::trace("FAILED due to {}", ErrStr[pow_rc]);

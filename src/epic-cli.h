@@ -30,6 +30,7 @@ public:
     void StopMiner(std::ostream&);
     void GenerateNewKey(std::ostream&);
     void CreateFirstReg(std::ostream&, std::string&);
+    void Redeem(std::ostream&, std::string&, std::string&);
     void SetPassphrase(std::ostream&);
     void ChangePassphrase(std::ostream&);
     void Login(std::ostream&);

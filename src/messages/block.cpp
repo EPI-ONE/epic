@@ -52,6 +52,9 @@ std::string BlockHeader::to_string() const {
     return s;
 }
 
+// size of the cuckaroo proof in bytes
+#define PROOFSIZE (proof_.size() * sizeof(word_t))
+
 Block::Block() : NetMessage(BLOCK) {
     SetNull();
 }
@@ -149,7 +152,6 @@ void Block::UnCache() {
 }
 
 bool Block::Verify() const {
-    spdlog::trace("[Syntax] Syntactically checking block {}", hash_.to_substr());
     // check version
     if (header_.version != GetParams().version) {
         spdlog::info("[Syntax] Wrong version {} v.s. expected {} [{}]", header_.version, GetParams().version,
@@ -227,7 +229,6 @@ bool Block::Verify() const {
         }
     }
 
-    spdlog::trace("[Syntax] End of syntactical checking on {}", hash_.to_substr());
     return true;
 }
 
@@ -344,9 +345,9 @@ void Block::CalculateHash() {
     VStream s(header_);
 
     if (GetParams().cycleLen) {
-        proofHash_ = HashBLAKE2<256>(proof_.data(), proof_.size() * sizeof(word_t));
+        proofHash_ = HashBLAKE2<256>(proof_.data(), PROOFSIZE);
     } else {
-        proofHash_ = (uint256) HashBLAKE2<256>(s);
+        proofHash_ = HashBLAKE2<256>(s);
     }
 
     s << proof_;
@@ -365,8 +366,7 @@ std::vector<uint256> Block::GetTxHashes() const {
 }
 
 size_t Block::CalculateOptimalEncodingSize() {
-    optimalEncodingSize_ =
-        HEADER_SIZE + (sizeof(word_t) * proof_.size()) + ::GetSizeOfCompactSize(transactions_.size());
+    optimalEncodingSize_ = HEADER_SIZE + PROOFSIZE + ::GetSizeOfCompactSize(transactions_.size());
 
     for (const auto& tx : transactions_) {
         optimalEncodingSize_ += ::GetSizeOfCompactSize(tx->GetInputs().size());
@@ -424,7 +424,8 @@ bool Block::CheckPOW() const {
     assert(!proofHash_.IsNull());
 
     if (proof_.size() != GetParams().cycleLen) {
-        spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), GetParams().cycleLen, std::to_string(hash_));
+        spdlog::info("[Syntax] Bad proof size {} vs. expected {} [{}]", proof_.size(), GetParams().cycleLen,
+                     std::to_string(hash_));
         return false;
     }
 

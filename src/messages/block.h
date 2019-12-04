@@ -19,8 +19,6 @@ static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 // exact number of size of a block without counting transaction
 static constexpr uint32_t HEADER_SIZE = 142;
-// size of the cuckaroo proof in bytes
-#define PROOFSIZE (GetParams().cycleLen * sizeof(word_t))
 
 namespace std {
 string to_string(const Block& b, bool showtx = true, std::vector<uint8_t> validity = {});

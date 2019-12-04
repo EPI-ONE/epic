@@ -127,17 +127,29 @@ void MemPool::PushRedemptionTx(ConstTxPtr redemption) {
     redemptionTxQueue_.Put(redemption);
 }
 
-ConstTxPtr MemPool::GetRedemptionTx(bool IsFirstReg) {
+ConstTxPtr MemPool::GetRedemptionTx() {
     READER_LOCK(mutex_)
+
     if (!redemptionTxQueue_.Empty()) {
         ConstTxPtr ptr;
         redemptionTxQueue_.Take(ptr);
-        if (IsFirstReg && !ptr->IsFirstRegistration()) {
-            return nullptr;
-        }
         return ptr;
     }
+
     return nullptr;
+}
+
+ConstTxPtr MemPool::GetFirstReg() {
+    READER_LOCK(mutex_)
+
+    ConstTxPtr ptr;
+    redemptionTxQueue_.Take(ptr);
+
+    if (!ptr->IsFirstRegistration()) {
+        ptr.reset();
+    }
+
+    return ptr;
 }
 
 void MemPool::ClearRedemptions() {

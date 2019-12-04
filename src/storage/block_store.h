@@ -18,12 +18,12 @@
 #include <numeric>
 #include <vector>
 
-typedef std::unique_ptr<Vertex, std::function<void(Vertex*)>> StoredVertex;
 struct FileCheckInfo {
     bool valid;
     uint32_t epoch;
     uint32_t name;
 };
+
 class BlockStore {
 public:
     BlockStore() = delete;
@@ -60,6 +60,8 @@ public:
     uint256 GetPrevRedemHash(const uint256&) const;
     bool UpdatePrevRedemHashes(const RegChange&) const;
     bool RollBackPrevRedemHashes(const RegChange&) const;
+
+    bool UpdateRedemptionStatus(const uint256&) const;
 
     /**
      * Flushes a level set to db.
@@ -158,7 +160,7 @@ private:
     void CarryOverFileName(std::pair<uint32_t, uint32_t>);
     void AddCurrentSize(std::pair<uint32_t, uint32_t>);
 
-    StoredVertex ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
+    VertexPtr ConstructNRFromFile(std::optional<std::pair<FilePos, FilePos>>&&, bool withBlock = true) const;
     FilePos& NextFile(FilePos&) const;
 
     FileCheckInfo CheckOneType(file::FileType type);

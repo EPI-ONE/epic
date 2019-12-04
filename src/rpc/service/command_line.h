@@ -33,6 +33,10 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                                 const rpc::CreateFirstRegRequest* request,
                                 rpc::CreateFirstRegResponse* reply) override;
 
+    grpc::Status Redeem(grpc::ServerContext* context,
+                        const rpc::RedeemRequest* request,
+                        rpc::RedeemResponse* reply) override;
+
     grpc::Status CreateRandomTx(grpc::ServerContext* context,
                                 const rpc::CreateRandomTxRequest* request,
                                 rpc::CreateRandomTxResponse* reply) override;
@@ -64,7 +68,6 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
     grpc::Status DisconnectPeer(grpc::ServerContext* context,
                                 const rpc::DisconnectPeerRequest* request,
                                 rpc::DisconnectPeerResponse* response) override;
-
 
     grpc::Status DisconnectAllPeers(grpc::ServerContext* context,
                                     const rpc::EmptyRequest* request,
