@@ -293,8 +293,6 @@ void PeerManager::OpenConnection() {
             if (now - lastTry < 180) {
                 continue;
             }
-            spdlog::trace("[Open Connection] Trying to connect {} selected from the address book.",
-                          try_to_connect->ToString());
             ConnectTo(*try_to_connect);
             addressManager_->SetLastTry(*try_to_connect, now);
             break;
@@ -539,7 +537,6 @@ void PeerManager::PrintConnectedPeers() {
     for (auto& connected_peer : peerMap_) {
         peerAddresses << connected_peer.second->address.ToString() << ", ";
     }
-    spdlog::info("Currently connected to {} peers: [{}]", peerMap_.size(), peerAddresses.str());
 }
 
 bool PeerManager::CheckPeerID(uint64_t id) {

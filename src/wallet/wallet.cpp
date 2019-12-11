@@ -411,7 +411,14 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
             if (stopFlag_) {
                 return;
             }
-            auto addr = CreateNewKey(true);
+
+            CKeyID addr;
+            if (keyBook.size() < 1000) {
+                addr = CreateNewKey(true);
+            } else {
+                addr = GetRandomAddress();
+            }
+
             if (!CreateFirstRegWhenPossible(addr).empty()) {
                 continue;
             }
