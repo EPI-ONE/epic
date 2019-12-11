@@ -265,7 +265,7 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
     const auto& ms = vtcs.back()->snapshot;
-    spdlog::debug("[Validate] New milestone {} has milestone difficulty target in compact form {} as difficulty {}",
+    spdlog::debug("[Validation] New milestone {} has milestone difficulty target in compact form {} as difficulty {}",
                   vtcs.back()->cblock->GetHash().to_substr(), ms->milestoneTarget.GetCompact(), ms->GetMsDifficulty());
     vtcs.back()->UpdateMilestoneReward();
 
@@ -280,7 +280,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
 
     // update miner chain height
     vertex.minerChainHeight = GetVertex(prevHash)->minerChainHeight + 1;
-    spdlog::trace("[Validate] Validating {} at its miner chain {}", blkHash.to_substr(), vertex.minerChainHeight);
+    spdlog::trace("[Validation] Validating {} at its miner chain {}", blkHash.to_substr(), vertex.minerChainHeight);
 
     // update the key of the prev redemption hashes
     uint256 oldRedempHash;
@@ -290,7 +290,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         oldRedempHash = STORE->GetPrevRedemHash(prevHash);
 
         if (oldRedempHash.IsNull()) {
-            spdlog::warn("[Validate] Peer chain forks here [{}]", std::to_string(blkHash));
+            spdlog::warn("[Validation] Peer chain forks here [{}]", std::to_string(blkHash));
             auto b = GetVertex(prevHash);
             while (!b->cblock->IsRegistration() || b->validity[0] != Vertex::VALID) {
                 b = GetVertex(b->cblock->GetPrevHash());
@@ -356,7 +356,7 @@ uint256 Chain::GetPrevRedempHash(const uint256& h) const {
 std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChange) {
     const auto& blkHash = vertex.cblock->GetHash();
     const auto hashstr  = std::to_string(blkHash);
-    spdlog::trace("[Validate] Validating redemption in block {}", blkHash.to_substr());
+    spdlog::trace("[Validation] Validating redemption in block {}", blkHash.to_substr());
 
     uint256 prevRedempHash = GetPrevRedempHash(blkHash);
     VertexPtr prevReg      = GetVertex(prevRedempHash);
@@ -405,7 +405,7 @@ std::optional<TXOC> Chain::ValidateRedemption(Vertex& vertex, RegChange& regChan
 
 bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& fee) {
     const auto& blkHash = tx.GetParentBlock()->GetHash();
-    spdlog::trace("[Validate] Validating Transactions in block {}", blkHash.to_substr());
+    spdlog::trace("[Validation] Validating tx {} in block {}", tx.GetHash().to_substr(), blkHash.to_substr());
 
     Coin valueIn{};
     Coin valueOut{};

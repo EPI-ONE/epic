@@ -14,7 +14,7 @@
 #include <ctime>
 
 // maximum allowed block size in optimal encoding format
-static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000;
+static constexpr uint32_t MAX_BLOCK_SIZE = 20 * 1000 * 1000;
 // maximum time in a block header allowed to be in advanced to the current time (sec)
 static constexpr uint32_t ALLOWED_TIME_DRIFT = 1;
 // exact number of size of a block without counting transaction

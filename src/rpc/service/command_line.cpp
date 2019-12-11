@@ -63,22 +63,27 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
     } else if (!WALLET->IsLoggedIn()) {
         reply->set_result("Please log in or set up a new passphrase");
     } else {
-        std::optional<CKeyID> addr{DecodeAddress(request->address())};
-
-        if (addr) {
-            std::string encoded_addr;
-            if (request->force()) {
-                encoded_addr = WALLET->CreateFirstRegistration(*addr);
-            } else {
-                encoded_addr = WALLET->CreateFirstRegWhenPossible(*addr);
-            }
-
-            if (!encoded_addr.empty()) {
-                reply->set_result("Successfully created the first registration with address " + encoded_addr);
-            }
-
+        CKeyID addr;
+        if (request->address().empty()) {
+            addr = WALLET->CreateNewKey(true);
         } else {
-            reply->set_result("Invalid address: " + request->address());
+            if (auto decoded = DecodeAddress(request->address())) {
+                addr = *decoded;
+            } else {
+                reply->set_result("Invalid address: " + request->address());
+                return grpc::Status::OK;
+            }
+        }
+
+        std::string encoded_addr;
+        if (request->force()) {
+            encoded_addr = WALLET->CreateFirstRegistration(addr);
+        } else {
+            encoded_addr = WALLET->CreateFirstRegWhenPossible(addr);
+        }
+
+        if (!encoded_addr.empty()) {
+            reply->set_result("Successfully created the first registration with address " + encoded_addr);
         }
     }
 

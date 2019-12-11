@@ -263,6 +263,10 @@ void EpicCli::GenerateNewKey(std::ostream& out) {
 }
 
 void EpicCli::CreateFirstReg(std::ostream& out, std::string& address) {
+    if (address == "new") {
+        address.clear();
+    }
+
     auto r = rpc_->CreateFirstReg(address);
     if (r) {
         if (r->empty()) {
@@ -272,20 +276,7 @@ void EpicCli::CreateFirstReg(std::ostream& out, std::string& address) {
                 std::string yn = GetLine();
 
                 if (yn == "Y" || yn == "y") {
-                    out << "Address: (leave it empty if you would like to create a new key) ";
-                    std::string addr = GetLine();
-
-                    if (addr.empty()) {
-                        auto rsp = rpc_->GenerateNewKey();
-                        if (rsp) {
-                            addr = *rsp;
-                        } else {
-                            Close(out);
-                            return;
-                        }
-                    }
-
-                    auto rsp = rpc_->CreateFirstReg(addr, true);
+                    auto rsp = rpc_->CreateFirstReg(address, true);
                     if (rsp) {
                         out << *rsp << std::endl;
                     } else {
@@ -322,7 +313,7 @@ void EpicCli::SetPassphrase(std::ostream& out) {
 }
 
 void EpicCli::ChangePassphrase(std::ostream& out) {
-    out << "Old Passphrase:";
+    out << "Old Passphrase: ";
     auto oldPassphrase = InputPassphrase(out);
     auto newPassphrase = GetNewPassphrase(out);
     if (!newPassphrase) {
@@ -337,7 +328,7 @@ void EpicCli::ChangePassphrase(std::ostream& out) {
 }
 
 void EpicCli::Login(std::ostream& out) {
-    out << "Passphrase:";
+    out << "Passphrase: ";
     auto passphrase = InputPassphrase(out);
     auto r          = rpc_->Login(passphrase);
     passphrase.clear();
