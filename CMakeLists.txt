@@ -21,6 +21,35 @@ endif ()
 set(CMAKE_CXX_FLAGS "-pthread -march=native $ENV{CXXFLAGS}")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+#include <nmmintrin.h>
+int main() {
+    _mm_crc32_u64(0,0);
+    _mm_crc32_u32(0,0);
+    _mm_crc32_u16(0,0);
+    _mm_crc32_u8(0,0);
+    return 0;
+}
+" HAVE_MM_CRC32)
+if(HAVE_MM_CRC32)
+    add_definitions(-DHAVE_MM_CRC32)
+endif()
+
+check_cxx_source_compiles("
+#include <immintrin.h>
+#include <wmmintrin.h>
+int main() {
+    uint64_t a = 0;
+    uint64_t b = 0;
+    _mm_clmulepi64_si128(_mm_loadu_si64(&a), _mm_loadu_si64(&b), 0x0);
+    return 0;
+}
+" HAVE_MM_CLMULEPI)
+if(HAVE_MM_CLMULEPI)
+    add_definitions(-DHAVE_MM_CLMULEPI)
+endif()
+
 # if the architecture in question supports the extensions
 # below it makes sense to uncomment the respective lines
 # as a speedup will be realized

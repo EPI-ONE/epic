@@ -4,7 +4,7 @@
 
 #include "crc32.h"
 
-#ifndef ENABLE_SSE42
+#ifndef HAVE_MM_CRC32
 // clang-format off
 alignas(64) constexpr uint32_t crc32c_lut[256] = {
         0x00000000L, 0xF26B8303L, 0xE13B70F7L, 0x1350F3F4L, 0xC79A971FL,
@@ -75,8 +75,6 @@ uint32_t crc32c_lut_hword(uint8_t* buf, std::size_t length, uint32_t crc = -1) {
 }
 
 #else
-#include <emmintrin.h>
-#include <immintrin.h>
 #include <nmmintrin.h>
 
 /* computation via the SSE42 crc32 instruction;
@@ -112,7 +110,9 @@ uint32_t crc32c_sse_qword(uint8_t* buf, std::size_t length, uint64_t crc = -1) {
     return crc;
 }
 
-#ifdef ENABLE_PCLMULQDQ
+#ifdef HAVE_MM_CLMULEPI
+#include <emmintrin.h>
+#include <wmmintrin.h>
 /* every entry with an odd index is the second part of
  * the 128 bit value starting with the entry before it */
 // clang-format off
@@ -247,8 +247,8 @@ uint32_t crc32c_pcl(uint8_t* buf, std::size_t length, uint64_t crc = -1) {
 /* combination of all methods to have an crc32 implementation that works on all
  * architectues and can process buffers of arbitrary length*/
 uint32_t crc32c(uint8_t* buf, std::size_t length) {
-#ifdef ENABLE_SSE42
-#ifdef ENABLE_PCLMULQDQ
+#ifdef HAVE_MM_CRC32
+#ifdef HAVE_MM_CLMULEPI
     uint32_t crc = crc32c_pcl(buf, length);
 #else
     uint32_t crc = crc32c_sse_qword(buf, length);

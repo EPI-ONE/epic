@@ -12,7 +12,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <immintrin.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
