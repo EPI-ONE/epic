@@ -4,6 +4,7 @@
 
 #include "test_factory.h"
 #include "miner.h"
+#include "random.h"
 #include "test_env.h"
 
 #include <cstring>
@@ -24,8 +25,7 @@ std::string TestFactory::GetRandomString(size_t len) {
 uint256 TestFactory::CreateRandomHash() {
     /* draw 64 bit */
     unsigned long long x;
-    while (!_rdrand64_step(&x))
-        ;
+    GetOpenSSLRand((unsigned char*) &x, sizeof(x));
 
     std::vector<unsigned char> vch(Hash::SIZE);
     for (std::size_t i = 0; i < 8; i++) {
