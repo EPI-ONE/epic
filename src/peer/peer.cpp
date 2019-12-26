@@ -123,11 +123,7 @@ void Peer::ProcessVersionMessage(VersionMessage& version) {
 
     // send version message if peer is inbound
     if (IsInbound()) {
-        std::stringstream ss;
-        ss << "commit hash = " << GetCommitHash() << ", ";
-        ss << "compile time = " << GetVersionTimestamp() << ", ";
-        ss << "version no = " << GetVersionNum();
-        SendVersion(DAG->GetBestMilestoneHeight(), ss.str());
+        SendVersion(DAG->GetBestMilestoneHeight(), GetFormatVersion());
     }
 
     // send version ack
@@ -301,18 +297,17 @@ void Peer::SendMessage(unique_message_t&& message) {
 }
 
 void Peer::SendVersion(uint64_t height, std::string versionInfo) {
-    auto addressMe = NetAddress(addressManager_->GetBestLocalAddress(), CONFIG->GetBindPort());
-    SendMessage(
-        std::make_unique<VersionMessage>(address, addressMe, height, myID_, versionInfo, GetParams().version, 0));
+    SendMessage(std::make_unique<VersionMessage>(address, addressManager_->GetBestLocalAddress(), height, myID_,
+                                                 versionInfo, GetParams().version, 0));
     spdlog::info("Sent version message to {}", address.ToString());
 }
 
 void Peer::SendLocalAddress() {
-    IPAddress localAddress = addressManager_->GetBestLocalAddress();
+    auto localAddress = addressManager_->GetBestLocalAddress();
     if (!localAddress.IsRoutable()) {
         return;
     }
-    std::vector<NetAddress> addresses{NetAddress(localAddress, CONFIG->GetBindPort())};
+    std::vector<NetAddress> addresses{localAddress};
     SendMessage(std::make_unique<AddressMessage>(std::move(addresses)));
     spdlog::info("Sent local address {} to {}", localAddress.ToString(), address.ToString());
 }

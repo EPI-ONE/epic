@@ -299,9 +299,10 @@ void LoadConfigFile() {
     // network config
     auto network_config = configContent->get_table("network");
     if (network_config) {
-        auto ip          = network_config->get_as<std::string>("ip");
-        auto port        = network_config->get_as<uint16_t>("port");
-        auto networkType = network_config->get_as<std::string>("type");
+        auto ip             = network_config->get_as<std::string>("ip");
+        auto port           = network_config->get_as<uint16_t>("port");
+        auto networkType    = network_config->get_as<std::string>("type");
+        auto extern_address = network_config->get_as<std::string>("extern_address");
         if (ip && CONFIG->GetBindAddress() == CONFIG->defaultIP) {
             CONFIG->SetBindAddress(*ip);
         } else {
@@ -314,6 +315,10 @@ void LoadConfigFile() {
             spdlog::info("bind port has been specified in the command line, discard the port in the config file");
         }
         CONFIG->SetNetworkType(*networkType);
+
+        if (extern_address) {
+            CONFIG->SetExternAddress(*extern_address);
+        }
     }
 
     // seeds

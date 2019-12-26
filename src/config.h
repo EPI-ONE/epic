@@ -125,6 +125,14 @@ public:
         networkType_ = networkType;
     }
 
+    void SetExternAddress(const std::string& address) {
+        extern_address_ = address;
+    }
+
+    const std::string& GetExternAddress() const {
+        return extern_address_;
+    }
+
     std::string GetDBPath() const {
         return GetRoot() + dbPath_;
     }
@@ -307,6 +315,7 @@ private:
     std::string networkType_ = "Testnet";
     bool amISeed_            = false;
     std::vector<NetAddress> seeds_;
+    std::string extern_address_;
 
     // db
     bool startWithNewDB = false;
