@@ -247,13 +247,18 @@ void AddressManager::LoadLocalAddresses() {
         freeifaddrs(ifAddrStruct);
 }
 
-const IPAddress AddressManager::GetBestLocalAddress() {
+const NetAddress AddressManager::GetBestLocalAddress() {
+    if (!CONFIG->GetExternAddress().empty()) {
+        if (auto addr = NetAddress::GetByIP(CONFIG->GetExternAddress()))
+            return *addr;
+    }
+
     assert(!localAddresses_.empty());
     auto best = localAddresses_.begin();
     for (auto it = localAddresses_.begin(); it != localAddresses_.end(); it++) {
         best = it->second > best->second ? it : best;
     }
-    return best->first;
+    return NetAddress(best->first, CONFIG->GetBindPort());
 }
 
 void AddressManager::SeenLocalAddress(IPAddress& ipAddress) {
