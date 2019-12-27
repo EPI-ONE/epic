@@ -19,13 +19,15 @@
 
 typedef struct {
     uint32_t magic;
-    uint32_t type;
+    uint8_t type;
+    uint8_t countDown;
+    uint16_t reserved;
     uint32_t length;
     uint32_t checksum;
 } message_header_t;
 
 inline bool VerifyChecksum(const message_header_t& header) {
-    return header.checksum == header.magic + header.type + header.length;
+    return header.checksum == header.magic + header.type + header.countDown + header.length;
 }
 
 #endif // EPIC_MESSAGE_HEADER_H

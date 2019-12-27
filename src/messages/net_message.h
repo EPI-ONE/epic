@@ -38,14 +38,22 @@ public:
         NONE,
     };
 
-    explicit NetMessage(NetMessage::Type type = NONE) : type_(type) {}
+    explicit NetMessage(NetMessage::Type type = NONE, uint8_t countDown = 255) : type_(type), countDown_(countDown) {}
 
     virtual ~NetMessage() {}
 
-    static unique_message_t MessageFactory(uint32_t type, VStream& s);
+    static unique_message_t MessageFactory(uint8_t type, uint8_t coundDown, VStream& s);
 
     NetMessage::Type GetType() const {
         return type_;
+    }
+
+    void SetCount(uint8_t c) {
+        countDown_ = c;
+    }
+
+    uint8_t GetCount() {
+        return countDown_;
     }
 
     virtual void NetSerialize(VStream& s) {}
@@ -53,6 +61,8 @@ public:
 
 protected:
     NetMessage::Type type_;
+    uint8_t countDown_;
 };
+
 
 #endif // EPIC_NET_MESSAGE_H

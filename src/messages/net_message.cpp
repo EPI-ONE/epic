@@ -9,41 +9,58 @@
 #include "sync_messages.h"
 #include "version_message.h"
 
-unique_message_t NetMessage::MessageFactory(uint32_t type, VStream& s) {
+unique_message_t NetMessage::MessageFactory(uint8_t type, uint8_t countDown, VStream& s) {
+    unique_message_t msg;
     try {
         switch (type) {
             case PING:
-                return std::make_unique<Ping>(s);
+                msg = std::make_unique<Ping>(s);
+                break;
             case PONG:
-                return std::make_unique<Pong>(s);
+                msg = std::make_unique<Pong>(s);
+                break;
             case VERSION_MSG:
-                return std::make_unique<VersionMessage>(s);
+                msg = std::make_unique<VersionMessage>(s);
+                break;
             case VERSION_ACK:
-                return std::make_unique<NetMessage>(VERSION_ACK);
+                msg = std::make_unique<NetMessage>(VERSION_ACK);
+                break;
             case GET_ADDR:
-                return std::make_unique<NetMessage>(GET_ADDR);
+                msg = std::make_unique<NetMessage>(GET_ADDR);
+                break;
             case ADDR:
-                return std::make_unique<AddressMessage>(s);
+                msg = std::make_unique<AddressMessage>(s);
+                break;
             case TX:
-                return std::make_unique<Transaction>(s);
+                msg = std::make_unique<Transaction>(s);
+                break;
             case BLOCK:
-                return std::make_unique<Block>(s);
+                msg = std::make_unique<Block>(s);
+                break;
             case BUNDLE:
-                return std::make_unique<Bundle>(s);
+                msg = std::make_unique<Bundle>(s);
+                break;
             case GET_INV:
-                return std::make_unique<GetInv>(s);
+                msg = std::make_unique<GetInv>(s);
+                break;
             case INV:
-                return std::make_unique<Inv>(s);
+                msg = std::make_unique<Inv>(s);
+                break;
             case GET_DATA:
-                return std::make_unique<GetData>(s);
+                msg = std::make_unique<GetData>(s);
+                break;
             case NOT_FOUND:
-                return std::make_unique<NotFound>(s);
+                msg = std::make_unique<NotFound>(s);
+                break;
             default:
+                msg = std::make_unique<NetMessage>(NONE);
                 break;
         }
     } catch (std::exception& e) {
         spdlog::warn("message {} deserialize error {}", type, e.what());
     }
 
-    return std::make_unique<NetMessage>(NONE);
+    msg->SetCount(countDown);
+
+    return msg;
 }
