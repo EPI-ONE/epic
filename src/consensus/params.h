@@ -66,6 +66,8 @@ public:
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     std::shared_ptr<Vertex> CreateGenesis() const;
 
+    uint32_t magic;
+
 protected:
     Params() = default;
 
@@ -101,7 +103,5 @@ protected:
 // instance of the parameters for usage throughout the project
 const Params& GetParams();
 void SelectParams(ParamsType type, bool withGenesis = true);
-
-#define CYCLELEN GetParams().cycleLen
 
 #endif // EPIC_PARAMS_H

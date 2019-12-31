@@ -5,6 +5,7 @@
 #include "connection_manager.h"
 #include "crc32.h"
 #include "message_header.h"
+#include "params.h"
 #include "spdlog.h"
 
 #include <arpa/inet.h>
@@ -241,7 +242,7 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         }
 
         message_header_t header;
-        header.magic    = GetMagicNumber();
+        header.magic    = GetParams().magic;
         header.type     = message->GetType();
         header.length   = s.size();
         header.checksum = header.magic + header.type + header.length;
@@ -277,7 +278,7 @@ void ConnectionManager::ReadMessages(bufferevent_t* bev, Connection* handle) {
 
 bool ConnectionManager::SeekMagicNumber_(evbuffer_t* buf) {
     size_t data_length    = evbuffer_get_length(buf);
-    uint32_t magic_number = GetMagicNumber();
+    uint32_t magic_number = GetParams().magic;
 
     if (data_length < MESSAGE_MAGIC_NUMBER_LENGTH) {
         return false;
