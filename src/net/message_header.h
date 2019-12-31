@@ -24,11 +24,6 @@ typedef struct {
     uint32_t checksum;
 } message_header_t;
 
-/* magic number defined by protocol */
-inline uint32_t GetMagicNumber() {
-    return 0x44535A5A;
-}
-
 inline bool VerifyChecksum(const message_header_t& header) {
     return header.checksum == header.magic + header.type + header.length;
 }

@@ -19,7 +19,6 @@ jobs:
         brew update && brew cleanup
         brew install autoconf automake libtool
         brew install openssl@1.1
-        brew install cmake
         brew install gmp
         brew install grpc
         brew install rocksdb

@@ -74,6 +74,7 @@ MainNetParams::MainNetParams() {
     sortitionThreshold   = SORTITION_THRESHOLD;
     deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
+    magic                = 0x44535A5A;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -108,6 +109,7 @@ TestNetSpadeParams::TestNetSpadeParams() {
     sortitionThreshold   = 100;
     deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
+    magic                = 0x524F434B;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -139,6 +141,7 @@ TestNetDiamondParams::TestNetDiamondParams() {
     sortitionThreshold   = 100;
     deleteForkThreshold  = punctualityThred;
     blockCapacity        = BLK_CAPACITY;
+    magic                = 0x524F4C4C;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
@@ -169,6 +172,7 @@ UnitTestParams::UnitTestParams() {
     sortitionThreshold   = 2;
     deleteForkThreshold  = 10;
     blockCapacity        = 10;
+    magic                = 0x54455354;
 
     keyPrefixes = {
         0,  // keyPrefixes[PUBKEY_ADDRESS]
