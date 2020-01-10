@@ -8,6 +8,6 @@
 #include <cstddef>
 #include <cstdint>
 
-uint32_t crc32c(uint8_t* buf, size_t length);
+uint32_t crc32c(uint8_t* buf, std::size_t length, uint32_t crc = -1);
 
 #endif // EPIC_CRC32_H

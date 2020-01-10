@@ -123,7 +123,7 @@ bool DeleteInvalidFile(const std::filesystem::directory_entry& file,
             std::filesystem::resize_file(file.path(), pos.nOffset);
             // update checksum after truncating it
             FilePos pos1(pos.nEpoch, name, 4);
-            file::UpdateChecksum(type, pos1);
+            file::CalculateChecksum(type, pos1);
             spdlog::debug("Truncate file {} and update its checksum", filepath);
         }
     }
@@ -180,7 +180,7 @@ bool file::DeleteInvalidFiles(FilePos& pos, file::FileType type) {
     return true;
 }
 
-void file::UpdateChecksum(file::FileType type, FilePos& pos) {
+void file::CalculateChecksum(file::FileType type, FilePos& pos) {
     pos.nOffset = file::checksum_size;
     FileModifier modifier(type, pos);
     VStream stream;
@@ -189,6 +189,26 @@ void file::UpdateChecksum(file::FileType type, FilePos& pos) {
         return;
     }
     auto checksum = crc32c((uint8_t*) stream.data(), stream.size());
+    modifier.SetOffsetP(0, std::ios_base::beg);
+    modifier << checksum;
+    modifier.Flush();
+    modifier.Close();
+}
+
+void file::UpdateChecksum(file::FileType type, FilePos& pos, size_t last_offset) {
+    pos.nOffset = 0;
+    FileModifier modifier(type, pos);
+    VStream stream;
+    modifier.read(file::checksum_size, stream);
+    uint32_t old_checksum =
+        (uint8_t) stream[0] | (uint8_t) stream[1] << 8 | (uint8_t) stream[2] << 16 | (uint8_t) stream[3] << 24;
+    stream.clear();
+    modifier.SetOffsetP(last_offset, std::ios_base::beg);
+    modifier.read(modifier.Size() - last_offset, stream);
+    if (stream.empty()) {
+        return;
+    }
+    auto checksum = crc32c((uint8_t*) stream.data(), stream.size(), ~old_checksum);
     modifier.SetOffsetP(0, std::ios_base::beg);
     modifier << checksum;
     modifier.Flush();

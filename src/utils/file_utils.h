@@ -7,7 +7,6 @@
 
 #include "stream.h"
 
-#include <unordered_set>
 #include <array>
 #include <cerrno>
 #include <climits>
@@ -18,6 +17,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unordered_set>
 
 // TODO(Bgmlover) later can try to use c++17 std::filesystem to implement this
 bool CheckDirExist(const std::string& dirPath);
@@ -50,7 +50,8 @@ static const std::array<std::string, 2> typestr{"BLK", "VTX"};
 std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
 std::string GetFilePath(FileType type, const FilePos pos);
-void UpdateChecksum(file::FileType type, FilePos& pos);
+void CalculateChecksum(file::FileType type, FilePos& pos);
+void UpdateChecksum(file::FileType type, FilePos& pos, size_t last_offset);
 bool ValidateChecksum(file::FileType type, FilePos pos);
 bool DeleteInvalidFiles(FilePos& pos, file::FileType type);
 

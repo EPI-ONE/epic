@@ -178,7 +178,7 @@ TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {
 TEST_F(TestFileStorage, test_checksum) {
     EpicTestEnvironment::SetUpDAG(prefix);
 
-    file::FileType type = file::BLK;
+    file::FileType type = file::VTX;
     FilePos pos(100, 100, 0);
 
     FileWriter writer(type, pos);
@@ -187,11 +187,18 @@ TEST_F(TestFileStorage, test_checksum) {
     writer << init_checksum;
     writer << content;
     writer.Flush();
-    writer.Close();
 
-    file::UpdateChecksum(type, pos);
+    file::CalculateChecksum(type, pos);
     EXPECT_TRUE(file::ValidateChecksum(type, pos));
-
+    for (int i = 0; i < 1000; i++) {
+        size_t current_offset = writer.Size();
+        int rand_num          = rand();
+        writer << rand_num;
+        writer.Flush();
+        file::UpdateChecksum(type, pos, current_offset);
+        ASSERT_TRUE(file::ValidateChecksum(type, pos));
+    }
+    writer.Close();
     pos.nOffset = 6;
     FileModifier modifier(type, pos);
     modifier << "error msg";
@@ -207,7 +214,7 @@ TEST_F(TestFileStorage, test_rebuild_consensus) {
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");
     WALLET->Start();
-    WALLET->CreateRandomTx(10);
+    WALLET->CreateRandomTx(1);
     MINER->Run();
     std::this_thread::sleep_for(std::chrono::seconds(3));
     WALLET->Stop();

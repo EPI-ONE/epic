@@ -246,10 +246,10 @@ uint32_t crc32c_pcl(uint8_t* buf, std::size_t length, uint64_t crc = -1) {
 
 /* combination of all methods to have an crc32 implementation that works on all
  * architectues and can process buffers of arbitrary length*/
-uint32_t crc32c(uint8_t* buf, std::size_t length) {
+uint32_t crc32c(uint8_t *buf, std::size_t length, uint32_t crc) {
 #ifdef HAVE_MM_CRC32
 #ifdef HAVE_MM_CLMULEPI
-    uint32_t crc = crc32c_pcl(buf, length);
+    crc = crc32c_pcl(buf, length,crc);
 #else
     uint32_t crc = crc32c_sse_qword(buf, length);
 #endif

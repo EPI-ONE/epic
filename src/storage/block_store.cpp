@@ -320,7 +320,6 @@ bool BlockStore::UpdateRedemptionStatus(const uint256& key) const {
 
     FileModifier vtxmod{file::VTX, pos->second};
     vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
-
     return true;
 }
 
@@ -347,19 +346,23 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         FilePos msVtxPos{loadCurrentVtxEpoch(), loadCurrentVtxName(), loadCurrentVtxSize()};
         FileWriter blkFs{file::BLK, msBlkPos};
         FileWriter vtxFs{file::VTX, msVtxPos};
+        size_t blkFs_size = blkFs.Size();
+        size_t vtxFs_size = vtxFs.Size();
 
         // reserve space for checksum
         uint32_t init_checksum = 0;
-        if (blkFs.Size() == 0) {
+        if (blkFs_size == 0) {
             currentBlkSize_.store(file::checksum_size);
             msBlkPos.nOffset = file::checksum_size;
             blkFs << init_checksum;
         }
-        if (vtxFs.Size() == 0) {
+        if (vtxFs_size == 0) {
             currentVtxSize_.store(file::checksum_size);
             msVtxPos.nOffset = file::checksum_size;
             vtxFs << init_checksum;
         }
+        size_t last_blk_offset = blkFs_size == 0 ? file::checksum_size : blkFs_size;
+        size_t last_vtx_offset = vtxFs_size == 0 ? file::checksum_size : vtxFs_size;
 
         const auto& ms  = (*lvs.back().lock());
         uint64_t height = ms.height;
@@ -368,7 +371,6 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         blkFs << *ms.cblock;
         vtxFs << ms;
         dbStore_.WriteVtxPos(ms.cblock->GetHash(), height, 0, 0);
-
         uint32_t blkOffset;
         uint32_t vtxOffset;
 
@@ -393,8 +395,8 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msVtxPos);
         STORE->SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
 
-        UpdateChecksum(file::BLK, msBlkPos);
-        UpdateChecksum(file::VTX, msVtxPos);
+        UpdateChecksum(file::BLK, msBlkPos, last_blk_offset);
+        UpdateChecksum(file::VTX, msVtxPos, last_vtx_offset);
 
         AddCurrentSize(totalSize);
 
