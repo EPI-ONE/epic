@@ -32,7 +32,8 @@ std::vector<std::shared_ptr<P>> DeserializeRawLvs(VStream&& vs) {
 template std::vector<ConstBlockPtr> DeserializeRawLvs(VStream&&);
 template std::vector<VertexPtr> DeserializeRawLvs(VStream&&);
 
-BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(false), dbStore_(dbPath) {
+BlockStore::BlockStore(const std::string& dbPath)
+    : obcThread_(1), obcEnabled_(false), checksumCalThread_(1), lastUpdateTaskTime_(time(nullptr)), dbStore_(dbPath) {
     obcThread_.Start();
     obcTimeout_.AddPeriodTask(300, [this]() {
         obcThread_.Execute([this]() {
@@ -43,6 +44,7 @@ BlockStore::BlockStore(const std::string& dbPath) : obcThread_(1), obcEnabled_(f
         });
     });
     scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));
+    checksumCalThread_.Start();
 }
 
 void BlockStore::AddBlockToOBC(ConstBlockPtr&& blk, const uint8_t& mask) {
@@ -317,10 +319,12 @@ bool BlockStore::UpdateRedemptionStatus(const uint256& key) const {
     if (!pos) {
         return false;
     }
-
     FileModifier vtxmod{file::VTX, pos->second};
     vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
+    vtxmod.Flush();
+    vtxmod.Close();
 
+    STORE->AddChecksumTask(pos->second);
     return true;
 }
 
@@ -368,7 +372,6 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         blkFs << *ms.cblock;
         vtxFs << ms;
         dbStore_.WriteVtxPos(ms.cblock->GetHash(), height, 0, 0);
-
         uint32_t blkOffset;
         uint32_t vtxOffset;
 
@@ -392,9 +395,6 @@ bool BlockStore::StoreLevelSet(const std::vector<VertexWPtr>& lvs) {
         // Write ms position at last to enable search for all blocks in the lvs
         dbStore_.WriteMsPos(height, ms.cblock->GetHash(), msBlkPos, msVtxPos);
         STORE->SaveBestChainWork(ArithToUint256(ms.snapshot->chainwork));
-
-        UpdateChecksum(file::BLK, msBlkPos);
-        UpdateChecksum(file::VTX, msVtxPos);
 
         AddCurrentSize(totalSize);
 
@@ -466,6 +466,14 @@ void BlockStore::Stop() {
     if (scheduler_.joinable()) {
         scheduler_.join();
     }
+    while (!checksumTasks_.empty()) {
+        spdlog::info("{} checksum tasks left, executing...", checksumTasks_.size());
+        ExecuteChecksumTask();
+    }
+    checksumCalThread_.Stop();
+    file::CalculateChecksum(file::BLK, FilePos{loadCurrentBlkEpoch(), loadCurrentBlkName(), 0});
+    file::CalculateChecksum(file::VTX, FilePos{loadCurrentVtxEpoch(), loadCurrentVtxName(), 0});
+    spdlog::info("Finish all checksum tasks");
 }
 
 void BlockStore::SetFileCapacities(uint32_t fileCapacity, uint16_t epochCapacity) {
@@ -499,6 +507,9 @@ uint32_t BlockStore::loadCurrentVtxSize() {
 
 void BlockStore::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     if (loadCurrentBlkSize() > 0 && loadCurrentBlkSize() + addon.first > fileCapacity_) {
+        // calculate the checksum of the last block file immediately
+        file::CalculateChecksum(file::BLK, FilePos{loadCurrentBlkEpoch(), loadCurrentBlkName(), 0});
+
         currentBlkName_.fetch_add(1, std::memory_order_seq_cst);
         currentBlkSize_.store(0, std::memory_order_seq_cst);
         if (loadCurrentBlkName() == epochCapacity_) {
@@ -508,6 +519,9 @@ void BlockStore::CarryOverFileName(std::pair<uint32_t, uint32_t> addon) {
     }
 
     if (loadCurrentVtxSize() > 0 && loadCurrentVtxSize() + addon.second > fileCapacity_) {
+        // calculate the checksum of the last file, send it to the task set
+        AddChecksumTask(FilePos{loadCurrentVtxEpoch(), loadCurrentVtxName(), 0});
+
         currentVtxName_.fetch_add(1, std::memory_order_seq_cst);
         currentVtxSize_.store(0, std::memory_order_seq_cst);
         if (loadCurrentVtxName() == epochCapacity_) {
@@ -909,4 +923,23 @@ void BlockStore::SetCurrentFilePos(file::FileType type, FilePos pos) {
             throw "invalid file type " + std::to_string(type);
         }
     }
+}
+
+void BlockStore::AddChecksumTask(FilePos pos) {
+    pos.nOffset = 0;
+    checksumTasks_.insert(pos);
+    if (checksumTasks_.size() > 10 || time(nullptr) - lastUpdateTaskTime_ > 5) {
+        ExecuteChecksumTask();
+        lastUpdateTaskTime_ = time(nullptr);
+    }
+}
+
+void BlockStore::ExecuteChecksumTask() {
+    auto it = checksumTasks_.begin();
+    if (it == checksumTasks_.end()) {
+        return;
+    }
+    FilePos task = *it;
+    checksumCalThread_.Execute([task]() { file::CalculateChecksum(file::VTX, task); });
+    checksumTasks_.erase(it);
 }
