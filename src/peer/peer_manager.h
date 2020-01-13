@@ -127,6 +127,8 @@ public:
 
     std::vector<std::string> GetConnectedPeers();
 
+    std::vector<PeerPtr> RandomlySelect(size_t);
+
 private:
     /*
      * create a peer after a new connection is setup
@@ -193,18 +195,28 @@ private:
 
     void PrintConnectedPeers();
 
+    void EraseMaxIndex();
+
+    void AddMaxIndex();
+
     /*
      * default network parameter based on the protocol
      */
 
     // possibility of relaying a block to a peer
-    constexpr static float kAlpha = 0.5;
+    constexpr static float kAlpha = 0.16;
+
+    // max times a block is relayed with probability 1
+    constexpr static uint8_t kMaxCountDown = 4;
+
+    // max number of peers to whom we broadcast blocks
+    constexpr static uint8_t kMaxPeerToBroadcast = 8;
 
     // max size of peers to relay address message
     const static uint32_t kMaxPeersToRelayAddr = 2;
 
     // max outbound size
-    const size_t kMax_outbound = 8;
+    const size_t kMaxOutbound = 8;
 
     // The default timeout between when a connection attempt begins and version
     // message exchange completes
@@ -252,6 +264,7 @@ private:
 
     // a map to save all peers
     std::unordered_map<shared_connection_t, PeerPtr> peerMap_;
+    std::set<size_t> peerMapIndices_;
 
     // address manager
     AddressManager* addressManager_;

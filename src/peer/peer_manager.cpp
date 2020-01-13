@@ -126,12 +126,14 @@ PeerPtr PeerManager::CreatePeer(shared_connection_t& connection, NetAddress& add
 void PeerManager::ClearPeers() {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.clear();
+    peerMapIndices_.clear();
 }
 
 void PeerManager::RemovePeer(shared_connection_t connection) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
     spdlog::info("Deleted peer {}", connection->GetRemote());
     peerMap_.erase(connection);
+    EraseMaxIndex();
     PrintConnectedPeers();
 }
 
@@ -262,7 +264,7 @@ void PeerManager::ProcessAddressMessage(AddressMessage& addressMessage, PeerPtr&
 void PeerManager::OpenConnection() {
     while (!interrupt_) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        if (connectionManager_->GetOutboundNum() > kMax_outbound) {
+        if (connectionManager_->GetOutboundNum() > kMaxOutbound) {
             continue;
         }
         auto seed = addressManager_->GetOneSeed();
@@ -309,6 +311,7 @@ void PeerManager::CheckTimeout() {
 
         if (!peer->IsVaild()) {
             peerMap_.erase(it++);
+            EraseMaxIndex();
             continue;
         }
 
@@ -318,10 +321,12 @@ void PeerManager::CheckTimeout() {
                 spdlog::info("[NET:disconnect]: Fully connected peer {}: ping timeout", peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
+                EraseMaxIndex();
             } else if (peer->IsSyncTimeout()) {
                 spdlog::info("[NET:disconnect]: Fully connected peer {}: sync timeout", peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
+                EraseMaxIndex();
             } else {
                 it++;
             }
@@ -332,6 +337,7 @@ void PeerManager::CheckTimeout() {
                              peer->address.ToString());
                 peer->Disconnect();
                 peerMap_.erase(it++);
+                EraseMaxIndex();
             } else {
                 it++;
             }
@@ -422,6 +428,7 @@ std::vector<PeerPtr> PeerManager::GetAllPeer() {
 void PeerManager::AddPeer(shared_connection_t& connection, const std::shared_ptr<Peer>& peer) {
     std::unique_lock<std::shared_mutex> lk(peerLock_);
     peerMap_.insert(std::make_pair(connection, peer));
+    AddMaxIndex();
     PrintConnectedPeers();
 }
 
@@ -442,9 +449,25 @@ void PeerManager::RelayBlock(const ConstBlockPtr& block, const PeerPtr& msg_from
         return;
     }
 
-    for (auto& it : peerMap_) {
-        if (it.second != msg_from) {
-            it.second->SendMessage(std::make_unique<Block>(*block));
+    if (block->GetCount() > kMaxCountDown) {
+        block->SetCount(kMaxCountDown);
+    }
+
+    auto peersToRelay = RandomlySelect(kMaxPeerToBroadcast);
+
+    if (block->GetCount()) {
+        block->SetCount(block->GetCount() - 1);
+        for (auto& p : peersToRelay) {
+            if (p != msg_from) {
+                p->SendMessage(std::make_unique<Block>(*block));
+            }
+        }
+    } else {
+        static std::uniform_real_distribution<float> dis(0, 1);
+        for (auto& p : peersToRelay) {
+            if (p != msg_from && dis(gen) < kAlpha) {
+                p->SendMessage(std::make_unique<Block>(*block));
+            }
         }
     }
 }
@@ -468,23 +491,37 @@ void PeerManager::RelayAddressMsg(AddressMessage& message, const PeerPtr& msg_fr
         return;
     }
 
-    auto size = peerMap_.size() - 1;
-    std::unordered_set<uint32_t> selectedOffset;
-    std::uniform_int_distribution<int> dis(0, size);
-
-    for (int i = 0; i < kMaxPeersToRelayAddr; i++) {
-        uint32_t offset = dis(gen);
-        if (selectedOffset.find(offset) == selectedOffset.end()) {
-            selectedOffset.insert(offset);
-        } else {
-            continue;
-        }
-        auto it = peerMap_.begin();
-        std::advance(it, offset);
-        if (it->second != msg_from) {
-            it->second->RelayAddrMsg(message.addressList);
+    for (auto& p : RandomlySelect(kMaxPeersToRelayAddr)) {
+        if (p != msg_from) {
+            p->RelayAddrMsg(message.addressList);
         }
     }
+}
+
+std::vector<PeerPtr> PeerManager::RandomlySelect(size_t size) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+
+    assert(peerMap_.size() == peerMapIndices_.size());
+    size = std::min(size, peerMapIndices_.size());
+
+    std::vector<PeerPtr> result;
+    auto indices = peerMapIndices_;
+
+    for (int i = 0; i < size; ++i) {
+        // Get a random index
+        std::uniform_int_distribution<int> dis(0, indices.size() - 1);
+        auto setIt = indices.begin();
+        std::advance(setIt, dis(gen));
+
+        // Locate random index in peerMap_
+        auto mapIt = peerMap_.begin();
+        std::advance(mapIt, *setIt);
+
+        result.emplace_back(mapIt->second);
+        indices.erase(setIt);
+    }
+
+    return result;
 }
 
 void PeerManager::InitScheduleTask() {
@@ -585,4 +622,14 @@ std::vector<std::string> PeerManager::GetConnectedPeers() {
     }
 
     return peerAddrs;
+}
+
+void PeerManager::EraseMaxIndex() {
+    auto it = peerMapIndices_.end();
+    it--;
+    peerMapIndices_.erase(it);
+}
+
+void PeerManager::AddMaxIndex() {
+    peerMapIndices_.insert(peerMapIndices_.size());
 }

@@ -54,5 +54,30 @@ TEST_F(TestPeerManager, CheckHaveConnectedSameIP) {
     usleep(50000);
     EXPECT_EQ(server.GetFullyConnectedPeerSize(), 2);
     EXPECT_EQ(same_ip_client.GetConnectedPeerSize(), 1);
+
+    ASSERT_EQ(server.RandomlySelect(2).size(), 2);
+
     same_ip_client.Stop();
+}
+
+TEST_F(TestPeerManager, RelayProtocol) {
+    ASSERT_TRUE(server.Bind("127.0.0.1"));
+    ASSERT_TRUE(server.Listen(43280));
+    usleep(50000);
+
+    TestFactory fac = EpicTestEnvironment::GetFactory();
+    auto block      = fac.CreateBlockPtr();
+    block->SetCount(1);
+
+    server.RelayBlock(block, nullptr);
+    ASSERT_EQ(block->GetCount(), 1);
+
+    ASSERT_TRUE(client.ConnectTo("127.0.0.1:43280"));
+    usleep(50000);
+
+    server.RelayBlock(block, nullptr);
+    ASSERT_EQ(block->GetCount(), 0);
+
+    server.RelayBlock(block, nullptr);
+    ASSERT_EQ(block->GetCount(), 0);
 }

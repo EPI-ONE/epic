@@ -103,6 +103,7 @@ public:
      * Actions to be performed by wallet when a level set is confirmed
      */
     void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
+
     bool IsDownloadingEmpty() {
         return downloading_.empty();
     }

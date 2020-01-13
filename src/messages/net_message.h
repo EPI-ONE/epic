@@ -48,11 +48,11 @@ public:
         return type_;
     }
 
-    void SetCount(uint8_t c) {
+    void SetCount(uint8_t c) const {
         countDown_ = c;
     }
 
-    uint8_t GetCount() {
+    uint8_t GetCount() const {
         return countDown_;
     }
 
@@ -61,8 +61,7 @@ public:
 
 protected:
     NetMessage::Type type_;
-    uint8_t countDown_;
+    mutable uint8_t countDown_;
 };
-
 
 #endif // EPIC_NET_MESSAGE_H
