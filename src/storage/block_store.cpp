@@ -317,9 +317,11 @@ bool BlockStore::UpdateRedemptionStatus(const uint256& key) const {
     if (!pos) {
         return false;
     }
-
     FileModifier vtxmod{file::VTX, pos->second};
     vtxmod << static_cast<uint8_t>(Vertex::RedemptionStatus::IS_REDEEMED);
+    vtxmod.Flush();
+    vtxmod.Close();
+    file::CalculateChecksum(file::VTX,pos->second);
     return true;
 }
 

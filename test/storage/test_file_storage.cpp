@@ -214,7 +214,7 @@ TEST_F(TestFileStorage, test_rebuild_consensus) {
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");
     WALLET->Start();
-    WALLET->CreateRandomTx(1);
+    WALLET->CreateRandomTx(10);
     MINER->Run();
     std::this_thread::sleep_for(std::chrono::seconds(3));
     WALLET->Stop();
