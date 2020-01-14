@@ -121,14 +121,21 @@ public:
 
     bool CheckFileSanity(bool prune);
 
-
     bool RebuildConsensus(uint64_t height);
+
+    void AddChecksumTask(FilePos pos);
+
+    void ExecuteChecksumTask();
 
 private:
     ThreadPool obcThread_;
     std::atomic<bool> obcEnabled_;
     OrphanBlocksContainer obc_;
     Scheduler obcTimeout_;
+
+    ThreadPool checksumCalThread_;
+    ConcurrentHashSet<FilePos> checksumTasks_;
+    uint64_t lastUpdateTaskTime_;
 
     std::atomic_bool interrupt{false};
     std::thread scheduler_;

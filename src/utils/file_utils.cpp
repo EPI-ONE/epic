@@ -180,7 +180,7 @@ bool file::DeleteInvalidFiles(FilePos& pos, file::FileType type) {
     return true;
 }
 
-void file::CalculateChecksum(file::FileType type, FilePos& pos) {
+void file::CalculateChecksum(file::FileType type, FilePos pos) {
     pos.nOffset = file::checksum_size;
     FileModifier modifier(type, pos);
     VStream stream;

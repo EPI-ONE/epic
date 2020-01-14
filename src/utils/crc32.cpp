@@ -251,10 +251,10 @@ uint32_t crc32c(uint8_t *buf, std::size_t length, uint32_t crc) {
 #ifdef HAVE_MM_CLMULEPI
     crc = crc32c_pcl(buf, length,crc);
 #else
-    uint32_t crc = crc32c_sse_qword(buf, length);
+    crc = crc32c_sse_qword(buf, length, crc);
 #endif
 #else
-    uint32_t crc = crc32c_lut_hword(buf, length);
+    crc = crc32c_lut_hword(buf, length, crc);
 #endif
 
     return ~crc;

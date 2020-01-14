@@ -214,11 +214,12 @@ TEST_F(TestFileStorage, test_rebuild_consensus) {
     WALLET->GenerateMaster();
     WALLET->SetPassphrase("");
     WALLET->Start();
-    WALLET->CreateRandomTx(10);
+    WALLET->CreateRandomTx(3);
     MINER->Run();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
     WALLET->Stop();
     MINER->Stop();
+    STORE->Stop();
     spdlog::info(DAG->GetBestChain().GetChainHead()->height);
     auto origin_chainwork = STORE->GetBestChainWork();
     ASSERT_TRUE(STORE->CheckFileSanity(false));

@@ -73,7 +73,6 @@ int Init(int argc, char* argv[]) {
      *  Setup and parse the command line
      */
     cxxopts::Options options("epic", "welcome to epic, enjoy your time!");
-
     try {
         SetupCommandline(options);
         ParseCommandLine(argc, argv, options);
@@ -148,7 +147,7 @@ int Init(int argc, char* argv[]) {
         std::vector<VertexPtr> genesisLvs = {GENESIS_VERTEX};
         STORE->StoreLevelSet(genesisLvs);
     }
-    if (!STORE->CheckFileSanity(CONFIG->IsPrune())) {
+    if (!CONFIG->IsStartWithNewDB() && !STORE->CheckFileSanity(CONFIG->IsPrune())) {
         spdlog::error("Failed to pass the file sanity check, quit");
         return STORAGE_INIT_FAILURE;
     }

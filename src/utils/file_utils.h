@@ -50,7 +50,7 @@ static const std::array<std::string, 2> typestr{"BLK", "VTX"};
 std::string GetEpochPath(FileType type, uint32_t epoch);
 std::string GetFileName(FileType type, uint32_t name);
 std::string GetFilePath(FileType type, const FilePos pos);
-void CalculateChecksum(file::FileType type, FilePos& pos);
+void CalculateChecksum(file::FileType type, FilePos pos);
 void UpdateChecksum(file::FileType type, FilePos& pos, size_t last_offset);
 bool ValidateChecksum(file::FileType type, FilePos pos);
 bool DeleteInvalidFiles(FilePos& pos, file::FileType type);
@@ -102,6 +102,15 @@ struct FilePos {
         READWRITE(VARINT(nOffset));
     }
 };
+
+namespace std {
+template <>
+struct hash<FilePos> {
+    size_t operator()(const FilePos& f) const {
+        return f.nEpoch << 16 | f.nName;
+    }
+};
+} // namespace std
 
 class FileBase {
 public:
