@@ -467,7 +467,7 @@ void BlockStore::Stop() {
         scheduler_.join();
     }
     while (!checksumTasks_.empty()) {
-        spdlog::info("{} checksum tasks left, executing ...", checksumTasks_.size());
+        spdlog::info("{} checksum tasks left, executing...", checksumTasks_.size());
         ExecuteChecksumTask();
     }
     checksumCalThread_.Stop();
@@ -928,10 +928,10 @@ void BlockStore::SetCurrentFilePos(file::FileType type, FilePos pos) {
 void BlockStore::AddChecksumTask(FilePos pos) {
     pos.nOffset = 0;
     checksumTasks_.insert(pos);
-    if (time(nullptr) - lastUpdateTaskTime_ > 5) {
+    if (checksumTasks_.size() > 10 || time(nullptr) - lastUpdateTaskTime_ > 5) {
         ExecuteChecksumTask();
+        lastUpdateTaskTime_ = time(nullptr);
     }
-    lastUpdateTaskTime_ = time(nullptr);
 }
 
 void BlockStore::ExecuteChecksumTask() {
@@ -940,8 +940,6 @@ void BlockStore::ExecuteChecksumTask() {
         return;
     }
     FilePos task = *it;
-    checksumCalThread_.Execute([task]() {
-        file::CalculateChecksum(file::VTX, task);
-    });
+    checksumCalThread_.Execute([task]() { file::CalculateChecksum(file::VTX, task); });
     checksumTasks_.erase(it);
 }
