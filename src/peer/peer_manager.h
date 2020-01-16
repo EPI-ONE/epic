@@ -127,7 +127,7 @@ public:
 
     std::vector<std::string> GetConnectedPeers();
 
-    std::vector<PeerPtr> RandomlySelect(size_t);
+    std::vector<PeerPtr> RandomlySelect(size_t, const PeerPtr& excluded = nullptr);
 
 private:
     /*
@@ -195,10 +195,6 @@ private:
 
     void PrintConnectedPeers();
 
-    void EraseMaxIndex();
-
-    void AddMaxIndex();
-
     /*
      * default network parameter based on the protocol
      */
@@ -264,7 +260,6 @@ private:
 
     // a map to save all peers
     std::unordered_map<shared_connection_t, PeerPtr> peerMap_;
-    std::set<size_t> peerMapIndices_;
 
     // address manager
     AddressManager* addressManager_;

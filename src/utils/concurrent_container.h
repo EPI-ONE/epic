@@ -14,6 +14,9 @@
 #define READER_LOCK(mu) std::shared_lock<std::shared_mutex> reader(mu);
 #define WRITER_LOCK(mu) std::unique_lock<std::shared_mutex> writer(mu);
 
+auto key_selector   = [](const auto& pair) { return pair.first; };
+auto value_selector = [](const auto& pair) { return pair.second; };
+
 template <typename Container>
 class ConcurrentContainer {
 public:
@@ -282,10 +285,6 @@ public:
         std::vector<std::pair<K, V>> result(base::c.begin(), base::c.end());
         return result;
     }
-
-private:
-    std::function<key_type(value_type)> key_selector      = [](auto pair) { return pair.first; };
-    std::function<mapped_type(value_type)> value_selector = [](auto pair) { return pair.second; };
 };
 
 template <typename K>
