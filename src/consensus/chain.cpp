@@ -229,6 +229,7 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
     // validate each block in order
     for (auto& vtx : vtcs) {
+        vtx->height = height;
         if (vtx->cblock->IsFirstRegistration()) {
             const auto& blkHash = vtx->cblock->GetHash();
             prevRedempHashMap_.insert_or_assign(blkHash, const_cast<uint256&&>(blkHash));
@@ -259,7 +260,6 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
             vtx->UpdateReward(GetPrevReward(*vtx));
         }
-        vtx->height = height;
         verifying_.insert({vtx->cblock->GetHash(), vtx});
     }
 

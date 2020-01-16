@@ -47,7 +47,7 @@ void Vertex::LinkMilestone(const MilestonePtr& pcs) {
 
 void Vertex::UpdateReward(const Coin& prevReward) {
     // cumulative reward without fee; default for blocks except first registration
-    cumulativeReward = prevReward + GetParams().reward;
+    cumulativeReward = prevReward + GetParams().GetReward(height);
 
     if (cblock->HasTransaction()) {
         if (cblock->IsRegistration()) {
@@ -64,7 +64,8 @@ void Vertex::UpdateMilestoneReward() {
         return;
     }
 
-    cumulativeReward += GetParams().reward * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
+    cumulativeReward +=
+        GetParams().GetReward(height) * ((snapshot->GetLevelSet().size() - 1) / GetParams().msRewardCoefficient);
 }
 
 size_t Vertex::GetNumOfValidTxns() const {

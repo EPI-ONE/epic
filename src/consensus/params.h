@@ -53,7 +53,8 @@ public:
     uint32_t deleteForkThreshold;
 
     Coin maxMoney;
-    Coin baseReward;
+    uint64_t baseReward;
+    uint32_t rewardAdjustInterval;
     uint32_t msRewardCoefficient;
 
     float sortitionCoefficient;

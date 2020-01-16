@@ -58,7 +58,14 @@ unsigned char Params::GetKeyPrefix(KeyPrefixType type) const {
     return keyPrefixes[type];
 }
 
-Coin Params::GetReward(size_t height) const {}
+Coin Params::GetReward(size_t height) const {
+    if (height == 0) {
+        return 0;
+    }
+
+    auto epoch = (height - 1) / rewardAdjustInterval;
+    return round(baseReward / (float) (epoch + 1));
+}
 
 MainNetParams::MainNetParams() {
     version              = GENESIS_BLOCK_VERSION;
@@ -69,7 +76,8 @@ MainNetParams::MainNetParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    baseReward           = 1;
+    baseReward           = 10000;
+    rewardAdjustInterval = 3000000;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 42;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -104,7 +112,8 @@ TestNetSpadeParams::TestNetSpadeParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    baseReward           = 10;
+    baseReward           = 10000000000;
+    rewardAdjustInterval = 3000000;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 4;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -136,7 +145,8 @@ TestNetDiamondParams::TestNetDiamondParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    baseReward           = 10;
+    baseReward           = 10000000000;
+    rewardAdjustInterval = 3000000;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 0;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -167,7 +177,8 @@ UnitTestParams::UnitTestParams() {
     punctualityThred     = 20;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    baseReward           = 10;
+    baseReward           = 100;
+    rewardAdjustInterval = 5;
     msRewardCoefficient  = 1;
     cycleLen             = 0;
     sortitionCoefficient = 1;

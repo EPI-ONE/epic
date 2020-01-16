@@ -32,7 +32,7 @@ void ThreadPool::WorkerThread(uint32_t id) {
         } while (run);
 
     } catch (std::exception& e) {
-        spdlog::error("{} thrown in thread pool", e.what());
+        spdlog::error("\"{}\" thrown in thread pool", e.what());
     }
 }
 
