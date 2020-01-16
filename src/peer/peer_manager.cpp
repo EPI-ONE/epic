@@ -487,29 +487,6 @@ void PeerManager::RelayAddressMsg(AddressMessage& message, const PeerPtr& msg_fr
     }
 }
 
-std::vector<PeerPtr> PeerManager::RandomlySelect(size_t size, const PeerPtr& excluded) {
-    std::shared_lock<std::shared_mutex> lk(peerLock_);
-
-    std::unordered_set<PeerPtr> peers;
-    std::transform(peerMap_.begin(), peerMap_.end(), std::inserter(peers, peers.end()), value_selector);
-    peers.erase(excluded);
-
-    size = std::min(size, peers.size());
-
-    std::vector<PeerPtr> result;
-    result.reserve(size);
-
-    for (int i = 0; i < size; ++i) {
-        std::uniform_int_distribution<int> dis(0, peers.size() - 1);
-        auto it = peers.begin();
-        std::advance(it, dis(gen));
-        result.emplace_back(*it);
-        peers.erase(it);
-    }
-
-    return result;
-}
-
 void PeerManager::InitScheduleTask() {
     scheduler_.AddPeriodTask(kCheckTimeoutInterval, std::bind(&PeerManager::CheckTimeout, this));
 
@@ -608,4 +585,28 @@ std::vector<std::string> PeerManager::GetConnectedPeers() {
     }
 
     return peerAddrs;
+}
+
+std::vector<PeerPtr> PeerManager::RandomlySelect(size_t size, const PeerPtr& excluded) {
+    std::shared_lock<std::shared_mutex> lk(peerLock_);
+
+    std::unordered_set<PeerPtr> peers;
+    std::transform(peerMap_.begin(), peerMap_.end(), std::inserter(peers, peers.end()),
+                   [](auto p) { return p.second; });
+    peers.erase(excluded);
+
+    size = std::min(size, peers.size());
+
+    std::vector<PeerPtr> result;
+    result.reserve(size);
+
+    for (int i = 0; i < size; ++i) {
+        std::uniform_int_distribution<int> dis(0, peers.size() - 1);
+        auto it = peers.begin();
+        std::advance(it, dis(gen));
+        result.emplace_back(*it);
+        peers.erase(it);
+    }
+
+    return result;
 }

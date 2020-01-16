@@ -42,7 +42,7 @@ public:
 
     virtual ~NetMessage() {}
 
-    static unique_message_t MessageFactory(uint8_t type, uint8_t coundDown, VStream& s);
+    static unique_message_t MessageFactory(uint8_t type, uint8_t countDown, VStream& s);
 
     NetMessage::Type GetType() const {
         return type_;
