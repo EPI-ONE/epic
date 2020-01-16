@@ -42,6 +42,7 @@ public:
     };
 
     // consensus parameter setting
+    uint32_t magic;
     uint16_t version;
     uint32_t targetTimespan;
     uint32_t timeInterval;
@@ -52,7 +53,7 @@ public:
     uint32_t deleteForkThreshold;
 
     Coin maxMoney;
-    Coin reward;
+    Coin baseReward;
     uint32_t msRewardCoefficient;
 
     float sortitionCoefficient;
@@ -66,7 +67,7 @@ public:
     unsigned char GetKeyPrefix(KeyPrefixType type) const;
     std::shared_ptr<Vertex> CreateGenesis() const;
 
-    uint32_t magic;
+    virtual Coin GetReward(size_t height) const;
 
 protected:
     Params() = default;

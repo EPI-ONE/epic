@@ -58,6 +58,8 @@ unsigned char Params::GetKeyPrefix(KeyPrefixType type) const {
     return keyPrefixes[type];
 }
 
+Coin Params::GetReward(size_t height) const {}
+
 MainNetParams::MainNetParams() {
     version              = GENESIS_BLOCK_VERSION;
     targetTimespan       = TARGET_TIMESPAN;
@@ -67,7 +69,7 @@ MainNetParams::MainNetParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 1;
+    baseReward           = 1;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 42;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -102,7 +104,7 @@ TestNetSpadeParams::TestNetSpadeParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 10;
+    baseReward           = 10;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 4;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -134,7 +136,7 @@ TestNetDiamondParams::TestNetDiamondParams() {
     punctualityThred     = PUNTUALITY_THRESHOLD;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 10;
+    baseReward           = 10;
     msRewardCoefficient  = REWARD_COEFFICIENT;
     cycleLen             = 0;
     sortitionCoefficient = SORTITION_COEFFICIENT;
@@ -165,7 +167,7 @@ UnitTestParams::UnitTestParams() {
     punctualityThred     = 20;
     maxTarget            = arith_uint256().SetCompact(EASIEST_COMP_DIFF_TARGET);
     maxMoney             = MAX_MONEY;
-    reward               = 10;
+    baseReward           = 10;
     msRewardCoefficient  = 1;
     cycleLen             = 0;
     sortitionCoefficient = 1;
