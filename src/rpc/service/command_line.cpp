@@ -5,6 +5,7 @@
 #include "command_line.h"
 #include "init.h"
 #include "miner.h"
+#include "return_code.h"
 #include "rpc_tools.h"
 #include "wallet.h"
 
@@ -46,11 +47,11 @@ grpc::Status CommanderRPCServiceImpl::StopMiner(grpc::ServerContext* context,
                                                 const EmptyRequest* request,
                                                 StopMinerResponse* reply) {
     if (!MINER->IsRunning()) {
-        reply->set_result("Miner is not running yet");
+        reply->set_result(RPCReturn::kMinerNotRunning);
     } else if (!MINER->Stop()) {
-        reply->set_result("Failed to stop miner");
+        reply->set_result(RPCReturn::kMinerStopFailed);
     } else {
-        reply->set_result("Miner is successfully stopped");
+        reply->set_result(RPCReturn::kMinerStop);
     }
     return grpc::Status::OK;
 }
@@ -59,9 +60,9 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
                                                      const CreateFirstRegRequest* request,
                                                      CreateFirstRegResponse* reply) {
     if (!WALLET) {
-        reply->set_result("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_result("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else {
         CKeyID addr;
         if (request->address().empty()) {
@@ -70,7 +71,7 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
             if (auto decoded = DecodeAddress(request->address())) {
                 addr = *decoded;
             } else {
-                reply->set_result("Invalid address: " + request->address());
+                reply->set_result(RPCReturn::kFirstRegInvalid);
                 return grpc::Status::OK;
             }
         }
@@ -83,7 +84,8 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
         }
 
         if (!encoded_addr.empty()) {
-            reply->set_result("Successfully created the first registration with address " + encoded_addr);
+            reply->set_result(RPCReturn::kFirstRegSuc);
+            reply->set_addr(encoded_addr);
         }
     }
 
@@ -94,13 +96,13 @@ grpc::Status CommanderRPCServiceImpl::Redeem(grpc::ServerContext* context,
                                              const rpc::RedeemRequest* request,
                                              rpc::RedeemResponse* reply) {
     if (!WALLET) {
-        reply->set_result("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_result("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else if (!WALLET->Redeemable(request->coins())) {
-        reply->set_result("Value exceeding the maximum that can be redeemed.");
+        reply->set_result(RPCReturn::kRedeemExceed);
     } else if (WALLET->HasPendingRedemption()) {
-        reply->set_result("A previous redemption is pending. Abort the current one.");
+        reply->set_result(RPCReturn::kRedeemPending);
     } else {
         CKeyID addr;
         if (request->address().empty()) {
@@ -109,15 +111,15 @@ grpc::Status CommanderRPCServiceImpl::Redeem(grpc::ServerContext* context,
             if (auto decoded = DecodeAddress(request->address())) {
                 addr = *decoded;
             } else {
-                reply->set_result("Invalid address: " + request->address());
+                reply->set_result(RPCReturn::kTxWrongAddr);
                 return grpc::Status::OK;
             }
         }
 
         auto last_redem = WALLET->CreateRedemption(addr, request->coins());
 
-        reply->set_result("Successfully redeemed " + (request->coins() ? std::to_string(request->coins()) : "maximum") +
-                          " coin(s) to address " + last_redem);
+        reply->set_result(RPCReturn::kRedeemSuc);
+        reply->set_addr(last_redem);
     }
 
     return grpc::Status::OK;
@@ -127,12 +129,12 @@ grpc::Status CommanderRPCServiceImpl::CreateRandomTx(grpc::ServerContext* contex
                                                      const CreateRandomTxRequest* request,
                                                      CreateRandomTxResponse* reply) {
     if (!WALLET) {
-        reply->set_result("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_result("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else {
         WALLET->CreateRandomTx(request->size());
-        reply->set_result("Now wallet is creating tx");
+        reply->set_result(RPCReturn::kTxCreatedSuc);
     }
     return grpc::Status::OK;
 }
@@ -142,17 +144,18 @@ grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
                                                CreateTxResponse* reply) {
     std::vector<std::pair<Coin, CKeyID>> outputs;
     if (!WALLET) {
-        reply->set_txinfo("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_txinfo("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else if (request->outputs().empty()) {
-        reply->set_txinfo("Please specify at least one output");
+        reply->set_result(RPCReturn::kTxNoOutput);
     } else {
         for (auto& output : request->outputs()) {
             Coin coin(output.money());
             auto address = DecodeAddress(output.listing());
             if (!address) {
-                reply->set_txinfo("Wrong address: " + output.listing());
+                reply->set_result(RPCReturn::kTxWrongAddr);
+                reply->set_txinfo(output.listing());
                 return grpc::Status::OK;
             } else {
                 outputs.emplace_back(std::make_pair(coin, *address));
@@ -160,8 +163,9 @@ grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
         }
         auto tx = WALLET->CreateTxAndSend(outputs, request->fee());
         if (!tx) {
-            reply->set_txinfo("Failed to create tx. Please check if you have enough balance.");
+            reply->set_result(RPCReturn::kTxCreateTxFailed);
         } else {
+            reply->set_result(RPCReturn::kTxCreatedSuc);
             reply->set_txinfo(std::to_string(*tx));
         }
     }
@@ -172,11 +176,12 @@ grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* contex
                                                      const EmptyRequest* request,
                                                      GenerateNewKeyResponse* reply) {
     if (!WALLET) {
-        reply->set_address("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_address("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else {
         auto key = WALLET->CreateNewKey(true);
+        reply->set_result(RPCReturn::kGenerateKeySuc);
         reply->set_address(EncodeAddress(key));
     }
     return grpc::Status::OK;
@@ -186,12 +191,13 @@ grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context,
                                                  const EmptyRequest* request,
                                                  GetBalanceResponse* reply) {
     if (!WALLET) {
-        reply->set_coin("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsLoggedIn()) {
-        reply->set_coin("Please log in or set up a new passphrase");
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else {
         auto balance = WALLET->GetBalance();
-        reply->set_coin(std::to_string(balance.GetValue()));
+        reply->set_result(RPCReturn::kGetBalanceSuc);
+        reply->set_coin(balance.GetValue());
     }
     return grpc::Status::OK;
 }
@@ -200,13 +206,13 @@ grpc::Status CommanderRPCServiceImpl::SetPassphrase(grpc::ServerContext* context
                                                     const SetPassphraseRequest* request,
                                                     SetPassphraseResponse* reply) {
     if (!WALLET) {
-        reply->set_responseinfo("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (WALLET->IsCrypted() || WALLET->ExistMasterInfo()) {
-        reply->set_responseinfo("Wallet has already be encrypted with a passphrase");
+        reply->set_result(RPCReturn::kWalletEncrypted);
     } else if (!WALLET->SetPassphrase(SecureString{request->passphrase()})) {
-        reply->set_responseinfo("Failed to set passphrase");
+        reply->set_result(RPCReturn::kWalletPhraseSetFailed);
     } else {
-        reply->set_responseinfo("Your passphrase has been successfully set!");
+        reply->set_result(RPCReturn::kWalletPhraseSet);
     }
     return grpc::Status::OK;
 }
@@ -215,14 +221,14 @@ grpc::Status CommanderRPCServiceImpl::ChangePassphrase(grpc::ServerContext* cont
                                                        const ChangePassphraseRequest* request,
                                                        ChangePassphraseResponse* reply) {
     if (!WALLET) {
-        reply->set_responseinfo("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->IsCrypted() && !WALLET->ExistMasterInfo()) {
-        reply->set_responseinfo("Wallet has no phrase set. Please set one first");
+        reply->set_result(RPCReturn::kWalletNoPhrase);
     } else if (!WALLET->ChangePassphrase(SecureString{request->oldpassphrase()},
                                          SecureString{request->newpassphrase()})) {
-        reply->set_responseinfo("Failed to change passphrase. Please check passphrase");
+        reply->set_result(RPCReturn::kWalletPhraseChangeFailed);
     } else {
-        reply->set_responseinfo("Your passphrase is successfully updated!");
+        reply->set_result(RPCReturn::kWalletPhraseUpdated);
     }
     return grpc::Status::OK;
 }
@@ -231,13 +237,13 @@ grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
                                             const LoginRequest* request,
                                             LoginResponse* reply) {
     if (!WALLET) {
-        reply->set_responseinfo("Wallet has not been started");
+        reply->set_result(RPCReturn::kWalletNotStarted);
     } else if (!WALLET->ExistMasterInfo() && !WALLET->IsCrypted()) {
-        reply->set_responseinfo("Wallet has no phrase set. Please set one first");
+        reply->set_result(RPCReturn::kWalletNoPhrase);
     } else if (!WALLET->CheckPassphrase(SecureString{request->passphrase()})) {
-        reply->set_responseinfo("Failed to login with the passphrase. Please check passphrase");
+        reply->set_result(RPCReturn::kWalletLoginFailed);
     } else {
-        reply->set_responseinfo("You are already logged in");
+        reply->set_result(RPCReturn::kWalletLoggedIn);
         WALLET->RPCLogin();
     }
     return grpc::Status::OK;
@@ -259,7 +265,6 @@ grpc::Status CommanderRPCServiceImpl::DisconnectPeer(grpc::ServerContext* contex
     }
     return grpc::Status::OK;
 }
-
 
 grpc::Status CommanderRPCServiceImpl::DisconnectAllPeers(grpc::ServerContext* context,
                                                          const rpc::EmptyRequest* request,

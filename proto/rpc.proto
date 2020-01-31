@@ -203,7 +203,7 @@ message StartMinerResponse {
 }
 
 message StopMinerResponse {
-    string result = 1;
+    uint32 result = 1;
 }
 
 message StatusResponse {
@@ -217,7 +217,8 @@ message CreateFirstRegRequest {
 }
 
 message CreateFirstRegResponse {
-    string result = 1;
+    uint32 result = 1;
+    string addr = 2;
 }
 
 message CreateRandomTxRequest {
@@ -225,15 +226,17 @@ message CreateRandomTxRequest {
 }
 
 message CreateRandomTxResponse {
-    string result = 1;
+    uint32 result = 1;
 }
 
 message GenerateNewKeyResponse {
-    string address = 1;
+    uint32 result = 1;
+    string address = 2;
 }
 
 message GetBalanceResponse {
-    string coin = 1;
+    uint32 result = 1;
+    uint64 coin = 2;
 }
 
 message CreateTxRequest {
@@ -242,7 +245,8 @@ message CreateTxRequest {
 }
 
 message CreateTxResponse {
-    string txInfo = 1;
+    uint32 result = 1;
+    string txInfo = 2;
 }
 
 message SetPassphraseRequest {
@@ -250,7 +254,7 @@ message SetPassphraseRequest {
 }
 
 message SetPassphraseResponse {
-    string responseInfo = 1;
+    uint32 result = 1;
 }
 
 message ChangePassphraseRequest {
@@ -259,7 +263,7 @@ message ChangePassphraseRequest {
 }
 
 message ChangePassphraseResponse {
-    string responseInfo = 1;
+    uint32 result = 1;
 }
 
 message LoginRequest {
@@ -267,7 +271,7 @@ message LoginRequest {
 }
 
 message LoginResponse {
-    string responseInfo = 1;
+    uint32 result = 1;
 }
 
 message RedeemRequest {
@@ -276,7 +280,8 @@ message RedeemRequest {
 }
 
 message RedeemResponse {
-    string result = 1;
+    uint32 result = 1;
+    string addr = 2;
 }
 
 service RemoteSolver {
