@@ -174,7 +174,9 @@ TEST_F(TestConnectionManager, SendAndReceive) {
     uint32_t nonce = 0x55555555;
     uint256 h      = uintS<256>(std::string(64, 'a'));
     std::vector<uint256> data(size, h);
-    test_connect_handle->SendMessage(std::make_unique<Inv>(data, nonce));
+    auto message = std::make_unique<Inv>(data, nonce);
+    message->SetCount(10);
+    test_connect_handle->SendMessage(std::move(message));
 
     usleep(50000);
     connection_message_t receive_message;
@@ -184,6 +186,7 @@ TEST_F(TestConnectionManager, SendAndReceive) {
 
     ASSERT_TRUE(msg != nullptr);
     ASSERT_EQ(msg->GetType(), NetMessage::INV);
+    ASSERT_EQ(msg->GetCount(), 10);
     ASSERT_EQ(msg->nonce, nonce);
     ASSERT_EQ(msg->hashes.size(), size);
     for (auto hash : msg->hashes) {

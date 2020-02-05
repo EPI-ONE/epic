@@ -242,10 +242,11 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         }
 
         message_header_t header;
-        header.magic    = GetParams().magic;
-        header.type     = message->GetType();
-        header.length   = s.size();
-        header.checksum = header.magic + header.type + header.length;
+        header.magic     = GetParams().magic;
+        header.type      = message->GetType();
+        header.countDown = message->GetCount();
+        header.length    = s.size();
+        header.checksum  = header.magic + header.type + header.countDown + header.length;
 
         if (header.length + MESSAGE_HEADER_LENGTH > MAX_MESSAGE_LENGTH) {
             spdlog::info("[net] Ignoring message with length {} exceeds max bytes {}",
@@ -371,7 +372,7 @@ bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, Connection* handle) 
                     if (header.length == 0 || crc32c((uint8_t*) payload->data(), payload->size()) == crc32) {
                         receive_bytes_ += header.length + MESSAGE_HEADER_LENGTH;
                         receive_packages_ += 1;
-                        unique_message_t message = NetMessage::MessageFactory(header.type, *payload);
+                        unique_message_t message = NetMessage::MessageFactory(header.type, header.countDown, *payload);
                         if (message->GetType() != NetMessage::NONE) {
                             receive_message_queue_.Put(std::make_pair(handle, std::move(message)));
                         }
