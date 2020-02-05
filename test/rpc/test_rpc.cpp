@@ -187,7 +187,7 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
     const auto STORED_HEIGHT = HEIGHT - GetParams().punctualityThred;
 
     for (size_t i = 0; i < STORED_HEIGHT; i++) {
-        const auto& hash = chain[i].back()->cblock->GetHash();
+        const auto& hash    = chain[i].back()->cblock->GetHash();
         const auto req_hash = std::to_string(hash);
 
         auto re_size = client->GetLevelSetSize(req_hash); // get level set size

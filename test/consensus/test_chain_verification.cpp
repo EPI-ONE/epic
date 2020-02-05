@@ -104,6 +104,8 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
     std::array<uint256, HEIGHT> hashes;
     std::array<bool, HEIGHT> isRedemption{};
     std::array<bool, HEIGHT> isMilestone{};
+    Coin baseRewardIssued{};
+    Coin baseRewardCalculated{};
     isRedemption.fill(false);
     isMilestone.fill(false);
 
@@ -224,13 +226,14 @@ TEST_F(TestChainVerification, verify_with_redemption_and_reward) {
                 ASSERT_EQ(vtcs[i]->isRedeemed, Vertex::NOT_YET_REDEEMED);
             }
         } else {
+            auto block_reward = GetParams().GetReward(vtcs[i]->height);
             if (i > 0 && !isMilestone[i]) {
-                ASSERT_EQ(vtcs[i]->cumulativeReward, vtcs[i - 1]->cumulativeReward + GetParams().reward);
+                ASSERT_EQ(vtcs[i]->cumulativeReward, vtcs[i - 1]->cumulativeReward + block_reward);
             } else if (i == 0) {
-                ASSERT_EQ(vtcs[i]->cumulativeReward, GetParams().reward);
+                ASSERT_EQ(vtcs[i]->cumulativeReward, block_reward);
             } else {
                 ASSERT_EQ(vtcs[i]->cumulativeReward.GetValue(),
-                          (vtcs[i - 1]->cumulativeReward + GetParams().reward * lvsSizes[i]).GetValue());
+                          (vtcs[i - 1]->cumulativeReward + block_reward * lvsSizes[i]).GetValue());
             }
         }
 
