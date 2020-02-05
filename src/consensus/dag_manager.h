@@ -114,6 +114,8 @@ public:
 
     StatData GetStatData() const;
 
+    const Cumulator* GetCumulator(const uint256&) const;
+
     /**
      * Blocks the main thread from going forward
      * until DAG completes all the tasks

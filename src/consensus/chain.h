@@ -13,6 +13,8 @@
 #include <optional>
 #include <vector>
 
+class Chain;
+
 class Cumulator;
 namespace std {
 string to_string(const Cumulator& b);
@@ -20,34 +22,47 @@ string to_string(const Cumulator& b);
 
 class Cumulator {
 public:
-    void Add(const ConstBlockPtr& block, bool ascending);
-    arith_uint256 Sum() const;
-    uint32_t TimeSpan() const;
+    static size_t GetCap() {
+        return cap_;
+    }
+
+    Cumulator() {
+        cap_ = GetParams().punctualityThred + GetParams().sortitionThreshold;
+    }
+
+    void Add(const Vertex& block, const Chain&, bool ascending);
+    double Percentage(size_t height) const;
     bool Full() const;
     bool Empty() const;
     void Clear();
 
     friend std::string std::to_string(const Cumulator&);
+    friend struct std::hash<Cumulator>;
 
 private:
-    // Elements in chainworks:
-    //      {chainwork, counter of consecutive chainworks that are equal}
-    // For example, the queue of chainworks
-    //      { 1, 1, 3, 2, 2, 2, 2, 2, 2, 2 }
-    // are stored as:
-    //      { {1, 2}, {3, 1}, {2, 7} }
-    std::deque<std::pair<uint32_t, uint16_t>> chainworks;
-    std::deque<uint32_t> timestamps;
-    arith_uint256 sum = 0;
+    static size_t cap_;
+
+    // <
+    //    level set height,
+    //    <
+    //      size of the level set,
+    //      size of the segment of the miner chain contained in the level set
+    //    >
+    // >
+    std::deque<std::pair<size_t, std::pair<size_t, size_t>>> sizes_;
+
+    // Caches the sums of the level set segments of length sortitionThreshold,
+    // so that each sum need only be calculated at most once at each height.
+    mutable std::unordered_map<size_t, std::pair<double, double>> sum_cache_;
 };
 
 /** Hasher for unordered_map */
-template <>
-struct std::hash<Cumulator> {
-    size_t operator()(const Cumulator& x) const {
-        return x.Sum().GetCompact() ^ x.TimeSpan();
-    }
-};
+// template <>
+// struct std::hash<Cumulator> {
+// size_t operator()(const Cumulator& x) const {
+// return (size_t) x.lvs_sum_ ^ (size_t) x.miner_sum_;
+//}
+//};
 
 class Chain {
 public:
@@ -78,6 +93,7 @@ public:
     VertexPtr GetVertexCache(const uint256&) const;
     VertexPtr GetVertex(const uint256&) const;
     VertexPtr GetMsVertexCache(const uint256&) const;
+    MilestonePtr GetMsVertex(size_t height) const;
 
     /** Gets a list of block to verify by the post-order DFS */
     std::vector<ConstBlockPtr> GetSortedSubgraph(const ConstBlockPtr& pblock);
@@ -109,6 +125,8 @@ public:
     void AddNewMilestone(const Vertex& ms) {
         milestones_.emplace_back(ms.snapshot);
     }
+
+    const Cumulator* GetCumulator(const uint256&) const;
 
     /**
      * Off-line verification (building ledger) on a level set
@@ -188,7 +206,7 @@ private:
     std::optional<TXOC> ValidateRedemption(Vertex&, RegChange&);
     bool ValidateTx(const Transaction&, uint32_t index, TXOC&, Coin& fee);
     TXOC ValidateTxns(Vertex&);
-    void CheckTxPartition(Vertex&, float);
+    void CheckTxPartition(Vertex&);
 
     Coin GetPrevReward(const Vertex& vtx) const {
         return GetVertex(vtx.cblock->GetPrevHash())->cumulativeReward;
@@ -202,9 +220,8 @@ private:
 
 typedef std::unique_ptr<Chain> ChainPtr;
 
-inline double CalculateAllowedDist(const Cumulator& cum, float msHashRate) {
-    return cum.Sum().GetDouble() / std::max(cum.TimeSpan(), (uint32_t) 1) / msHashRate *
-           (GetParams().sortitionCoefficient * GetParams().maxTarget.GetDouble());
+inline double CalculateAllowedDist(const Cumulator& cum, size_t msHeight) {
+    return cum.Percentage(msHeight) * (GetParams().sortitionCoefficient * GetParams().maxTarget.GetDouble());
 }
 
 #endif // EPIC_CHAIN_H

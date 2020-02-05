@@ -41,9 +41,9 @@ protected:
 
 private:
     Solver* solver;
-    ConstBlockPtr selfChainHead_ = nullptr;
-    VertexPtr chainHead_         = nullptr;
-    Cumulator distanceCal_;
+    ConstBlockPtr selfChainHead_  = nullptr;
+    VertexPtr chainHead_          = nullptr;
+    const Cumulator* distanceCal_ = nullptr;
     CircularQueue<uint256> selfChainHeads_;
 
     uint256 SelectTip();

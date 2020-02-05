@@ -138,8 +138,9 @@ std::vector<ConstBlockPtr> Chain::GetSortedSubgraph(const ConstBlockPtr& pblock)
     return result;
 }
 
-void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
-    if (b.minerChainHeight <= GetParams().sortitionThreshold) {
+void Chain::CheckTxPartition(Vertex& b) {
+    auto msLinkHeight = GetVertex(b.cblock->GetMilestoneHash())->height;
+    if (msLinkHeight <= GetParams().sortitionThreshold) {
         if (b.cblock->IsRegistration()) {
             if (b.cblock->GetTransactionSize() > 1) {
                 memset(&b.validity[1], Vertex::Validity::INVALID, b.validity.size() - 1);
@@ -162,17 +163,18 @@ void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
         // Construct a cumulator for the block if it is not cached
         Cumulator cum;
 
-        ConstBlockPtr cursor = b.cblock;
+        Vertex blk_cursor = b;
         VertexPtr previous;
-        while (!cum.Full()) {
-            previous = GetVertex(cursor->GetPrevHash());
+        while (previous->height > (previous->height - Cumulator::GetCap()) && previous->height > 0) {
+            previous = GetVertex(blk_cursor.cblock->GetPrevHash());
 
             if (!previous) {
                 // should not happen
-                throw std::logic_error("Cannot find " + std::to_string(cursor->GetPrevHash()) + " in cumulatorMap.");
+                throw std::logic_error("Cannot find " + std::to_string(blk_cursor.cblock->GetPrevHash()) +
+                                       " in cumulatorMap.");
             }
-            cum.Add(previous->cblock, false);
-            cursor = previous->cblock;
+            cum.Add(*previous, *this, false);
+            blk_cursor = *previous;
         }
 
         cumulatorMap_.emplace(b.cblock->GetPrevHash(), cum);
@@ -182,7 +184,7 @@ void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
     Cumulator& cum   = nodeHandler.mapped();
 
     // Allowed distance
-    auto allowed = CalculateAllowedDist(cum, ms_hashrate);
+    auto allowed = CalculateAllowedDist(cum, msLinkHeight);
 
     // Distances of the transaction hashes and previous block hash
     const auto& txns = b.cblock->GetTransactions();
@@ -201,9 +203,18 @@ void Chain::CheckTxPartition(Vertex& b, float ms_hashrate) {
     }
 
     // Update key for the cumulator
-    cum.Add(b.cblock, true);
+    cum.Add(b, *this, true);
     nodeHandler.key() = b.cblock->GetHash();
     cumulatorMap_.insert(std::move(nodeHandler));
+}
+
+const Cumulator* Chain::GetCumulator(const uint256& h) const {
+    auto it = cumulatorMap_.find(h);
+    if (it == cumulatorMap_.end()) {
+        return nullptr;
+    }
+
+    return &it->second;
 }
 
 VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
@@ -216,6 +227,7 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
     std::vector<VertexPtr> vtcs;
     std::vector<VertexWPtr> wvtcs;
+    std::unordered_set<Cumulator*> cumulators;
     RegChange regChange;
     TXOC txoc;
     vtcs.reserve(blocksToValidate.size());
@@ -230,8 +242,9 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
     // validate each block in order
     for (auto& vtx : vtcs) {
         vtx->height = height;
+
+        const auto& blkHash = vtx->cblock->GetHash();
         if (vtx->cblock->IsFirstRegistration()) {
-            const auto& blkHash = vtx->cblock->GetHash();
             prevRedempHashMap_.insert_or_assign(blkHash, const_cast<uint256&&>(blkHash));
             vtx->isRedeemed = Vertex::NOT_YET_REDEEMED;
             regChange.Create(blkHash, blkHash);
@@ -261,6 +274,11 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
             vtx->UpdateReward(GetPrevReward(*vtx));
         }
         verifying_.insert({vtx->cblock->GetHash(), vtx});
+
+        auto cum = cumulatorMap_.find(blkHash);
+        if (cum != cumulatorMap_.end()) {
+            cumulators.insert(&(cum->second));
+        }
     }
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
@@ -322,7 +340,7 @@ std::pair<TXOC, TXOC> Chain::Validate(Vertex& vertex, RegChange& regChange) {
         // txns with invalid distance will have validity == INVALID, and others are left unchanged
         VertexPtr prevMs = DAG->GetMsVertex(vertex.cblock->GetMilestoneHash());
         assert(prevMs);
-        CheckTxPartition(vertex, prevMs->snapshot->hashRate);
+        CheckTxPartition(vertex);
 
         // check utxo
         // txns with valid utxo will have validity == VALID, and others are left unchanged
@@ -520,6 +538,16 @@ VertexPtr Chain::GetMsVertexCache(const uint256& msHash) const {
     return nullptr;
 }
 
+MilestonePtr Chain::GetMsVertex(size_t height) const {
+    size_t leastHeightCached = GetLeastHeightCached();
+
+    if (height < leastHeightCached) {
+        return STORE->GetMilestoneAt(height)->snapshot;
+    } else {
+        return milestones_[height - leastHeightCached];
+    }
+}
+
 void Chain::PopOldest(const std::vector<uint256>& vtxToRemove, const TXOC& txocToRemove) {
     for (const auto& lvsh : vtxToRemove) {
         // Modify redemption status for those prev regs in DB
@@ -588,77 +616,89 @@ bool Chain::IsTxFitsLedger(const ConstTxPtr& tx) const {
 // Cumulator
 ////////////////////
 
-void Cumulator::Add(const ConstBlockPtr& block, bool ascending) {
-    const auto& chainwork   = block->GetChainWork();
-    uint32_t chainwork_comp = chainwork.GetCompact();
+void Cumulator::Add(const Vertex& block, const Chain& chain, bool ascending) {
+    auto msHeight = block.height;
+    assert(msHeight > 0);
 
-    if (timestamps.size() < GetParams().sortitionThreshold) {
-        sum += chainwork;
-    } else {
-        arith_uint256 subtrahend = arith_uint256().SetCompact(chainworks.front().first);
-        sum += (chainwork - subtrahend);
-
-        // Pop the first element if the counter is already 1,
-        // or decrease the counter of the first element by 1
-        if (chainworks.front().second == 1) {
-            chainworks.pop_front();
-        } else {
-            chainworks.front().second--;
-        }
-
-        timestamps.pop_front();
-    }
-
+    // Update queue
     if (ascending) {
-        if (!chainworks.empty() && chainworks.back().first == chainwork_comp) {
-            chainworks.back().second++;
-        } else {
-            chainworks.emplace_back(chainwork_comp, 1);
+        // Align the segmt_sizes_
+        auto back_height = sizes_.back().first;
+        while (back_height++ < msHeight) {
+            // This happens when there is level set contains
+            // no block from this miner chain.
+
+            if (Full()) {
+                sizes_.pop_front();
+            }
+
+            sizes_.emplace_back(back_height, std::make_pair(chain.GetMsVertex(back_height)->lvsSize, 0));
         }
-        timestamps.emplace_back(block->GetTime());
+
+        sizes_.back().second.second++;
+
     } else {
-        if (!chainworks.empty() && chainworks.front().first == chainwork_comp) {
-            chainworks.front().second++;
-        } else {
-            chainworks.emplace_front(chainwork_comp, 1);
+        auto front_height = sizes_.front().first;
+        while (front_height-- > msHeight) {
+            sizes_.emplace_front(front_height, std::make_pair(chain.GetMsVertex(front_height)->lvsSize, 0));
+
+            // We don't check whether the queue is full here.
+            // It's the caller's responsibility to make sure that
+            // the capacity is not exceeded when adding elements
+            // backwards.
         }
-        timestamps.emplace_front(block->GetTime());
+
+        sizes_.front().second.second++;
     }
 }
 
-arith_uint256 Cumulator::Sum() const {
-    return sum;
-}
+double Cumulator::Percentage(size_t height) const {
+    if (sum_cache_.size() > GetParams().punctualityThred) {
+        sum_cache_.erase(sizes_.back().first - GetParams().punctualityThred);
+    }
 
-uint32_t Cumulator::TimeSpan() const {
-    return timestamps.back() - timestamps.front();
+    auto sums_it = sum_cache_.find(height);
+    if (sums_it == sum_cache_.end()) {
+        auto cursor = sizes_.rbegin();
+        while (cursor->first != height) {
+            cursor++;
+        }
+
+        auto sums = cursor->second;
+        cursor++;
+        while (cursor->first > (height - GetParams().sortitionThreshold)) {
+            sums.first += cursor->second.first;
+            sums.second += cursor->second.second;
+
+            cursor++;
+        }
+
+        sum_cache_.emplace(height, sums);
+
+        return sums.second / sums.first;
+    }
+
+    return sums_it->second.first / sums_it->second.second;
 }
 
 bool Cumulator::Full() const {
-    return timestamps.size() == GetParams().sortitionThreshold;
+    return sizes_.size() == cap_;
 }
 
 bool Cumulator::Empty() const {
-    return timestamps.empty();
+    return sizes_.empty();
 }
 
 void Cumulator::Clear() {
-    chainworks.clear();
-    timestamps.clear();
-    sum = 0;
+    sizes_.clear();
 }
 
 std::string std::to_string(const Cumulator& cum) {
     std::string s;
     s += " Cumulator { \n";
-    s += "   chainworks { \n";
-    for (auto& e : cum.chainworks) {
-        s += strprintf("     { %s, %s }\n", arith_uint256().SetCompact(e.first).GetLow64(), e.second);
-    }
-    s += "   }\n";
-    s += "   timestamps { \n";
-    for (auto& t : cum.timestamps) {
-        s += strprintf("     %s\n", t);
+    s += "   sizes { \n";
+    for (auto& e : cum.sizes_) {
+        s += strprintf("     { %s, %s, %s}\n", e.first, e.second.first, e.second.second);
     }
     s += "   }\n";
     s += " }";

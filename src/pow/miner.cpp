@@ -64,15 +64,6 @@ void Miner::Run() {
         selfChainHeads_.pop_front();
     }
 
-    // Restore distanceCal_
-    if (selfChainHead_ && distanceCal_.Empty()) {
-        auto cursor = selfChainHead_;
-        do {
-            distanceCal_.Add(cursor, false);
-            cursor = STORE->FindBlock(cursor->GetPrevHash());
-        } while (*cursor != *GENESIS && !distanceCal_.Full());
-    }
-
     chainHead_ = DAG->GetMilestoneHead();
 
     inspector_ = std::thread([&]() {
@@ -111,6 +102,16 @@ void Miner::Run() {
                 prevHash = GENESIS->GetHash();
                 b.AddTransaction(std::move(firstRegTx));
             } else {
+                // Restore distanceCal_
+                if (!distanceCal_) {
+                    ConstBlockPtr cursor = selfChainHead_;
+
+                    while (!distanceCal_ && *cursor != *GENESIS) {
+                        distanceCal_ = DAG->GetCumulator(cursor->GetHash());
+                        cursor       = STORE->FindBlock(cursor->GetPrevHash());
+                    }
+                }
+
                 prevHash     = selfChainHead_->GetHash();
                 auto max_ntx = GetParams().blockCapacity;
 
@@ -122,22 +123,20 @@ void Miner::Run() {
                         selfChainHead_ = nullptr;
                         prevHash       = GENESIS->GetHash();
                         selfChainHeads_.clear();
-                        distanceCal_.Clear();
+                        distanceCal_ = nullptr;
                     } else {
                         b.AddTransaction(std::move(tx));
                         max_ntx--;
                     }
                 }
 
-                if (distanceCal_.Full()) {
+                if (distanceCal_) {
                     if (counter % 10 == 0) {
                         spdlog::debug("[Miner] Hashing power percentage {}",
-                                      distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
-                                          std::atomic_load(&chainHead_)->snapshot->hashRate);
+                                      distanceCal_->Percentage(std::atomic_load(&chainHead_)->height));
                     }
 
-                    auto allowed =
-                        CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
+                    auto allowed = CalculateAllowedDist(*distanceCal_, std::atomic_load(&chainHead_)->height);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, max_ntx));
                 }
             }
@@ -190,7 +189,6 @@ void Miner::Run() {
                 PEERMAN->RelayBlock(bPtr, nullptr);
             }
 
-            distanceCal_.Add(bPtr, true);
             selfChainHead_ = bPtr;
             selfChainHeads_.push(bPtr->GetHash());
             DAG->AddNewBlock(bPtr, nullptr);

@@ -58,8 +58,8 @@ public:
         return c->ValidateTxns(vertex);
     }
 
-    bool IsValidDistance(Chain* c, Vertex& vtx, uint64_t msHashRate) {
-        c->CheckTxPartition(vtx, msHashRate);
+    bool IsValidDistance(Chain* c, Vertex& vtx) {
+        c->CheckTxPartition(vtx);
         for (size_t i = 0; i < vtx.validity.size(); ++i) {
             if (vtx.validity[i] == Vertex::Validity::INVALID) {
                 return false;
@@ -486,7 +486,7 @@ TEST_F(TestChainVerification, CheckPartition) {
     reg_inv.CalculateOptimalEncodingSize();
     Vertex reg_inv_vtx{reg_inv};
     reg_inv_vtx.minerChainHeight = 1;
-    EXPECT_FALSE(IsValidDistance(&c, reg_inv_vtx, GENESIS_VERTEX->snapshot->hashRate));
+    EXPECT_FALSE(IsValidDistance(&c, reg_inv_vtx));
 
     // Valid registration block
     Block reg{GetParams().version,
@@ -503,7 +503,7 @@ TEST_F(TestChainVerification, CheckPartition) {
     Vertex reg_vtx{reg};
     reg_vtx.minerChainHeight = 1;
     AddToHistory(&c, std::make_shared<Vertex>(reg_vtx));
-    EXPECT_TRUE(IsValidDistance(&c, reg_vtx, GENESIS_VERTEX->snapshot->hashRate));
+    EXPECT_TRUE(IsValidDistance(&c, reg_vtx));
 
     // Malicious blocks
     // Block with transaction but minerChainHeight not reached sortitionThreshold
@@ -521,7 +521,7 @@ TEST_F(TestChainVerification, CheckPartition) {
     Vertex vtx1{b1};
     vtx1.minerChainHeight = 2;
     AddToHistory(&c, std::make_shared<Vertex>(vtx1));
-    EXPECT_FALSE(IsValidDistance(&c, vtx1, GENESIS_VERTEX->snapshot->hashRate));
+    EXPECT_FALSE(IsValidDistance(&c, vtx1));
 
     // Block with invalid distance
     Block b2{GetParams().version,
@@ -538,5 +538,5 @@ TEST_F(TestChainVerification, CheckPartition) {
     b2.CalculateOptimalEncodingSize();
     Vertex vtx2{b2};
     vtx2.minerChainHeight = 3;
-    EXPECT_FALSE(IsValidDistance(&c, vtx2, 1000000000));
+    EXPECT_FALSE(IsValidDistance(&c, vtx2));
 }

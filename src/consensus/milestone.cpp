@@ -16,9 +16,9 @@ Milestone::Milestone(const std::shared_ptr<Milestone>& previous,
                      RegChange&& regChange,
                      TXOC&& txoc)
     : height(previous->height + 1), milestoneTarget(previous->milestoneTarget), blockTarget(previous->blockTarget),
-      hashRate(previous->hashRate), lastUpdateTime(previous->lastUpdateTime), nTxnsCounter_(previous->nTxnsCounter_),
-      nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)), txoc_(std::move(txoc)),
-      regChange_(std::move(regChange)) {
+      hashRate(previous->hashRate), lvsSize(lvs.size()), lastUpdateTime(previous->lastUpdateTime),
+      nTxnsCounter_(previous->nTxnsCounter_), nBlkCounter_(previous->nBlkCounter_), lvs_(std::move(lvs)),
+      txoc_(std::move(txoc)), regChange_(std::move(regChange)) {
     if (previous->chainwork == 0) {
         previous->chainwork = UintToArith256(STORE->GetBestChainWork());
     }

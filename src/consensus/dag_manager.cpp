@@ -774,3 +774,7 @@ void DAGManager::UpdateStatOnLvsStored(const MilestonePtr& pms) {
         stat_.tStart = pms->GetLevelSet().front().lock()->cblock->GetTime();
     }
 }
+
+const Cumulator* DAGManager::GetCumulator(const uint256& h) const {
+    return GetBestChain().GetCumulator(h);
+}

@@ -21,6 +21,7 @@ public:
     arith_uint256 milestoneTarget;
     arith_uint256 blockTarget;
     float hashRate;
+    uint32_t lvsSize;
     uint32_t lastUpdateTime = 0;
     bool stored             = false;
 
@@ -94,7 +95,7 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(hashRate);
+        READWRITE(lvsSize);
         if (ser_action.ForRead()) {
             milestoneTarget.SetCompact(ser_readdata32(s));
             blockTarget.SetCompact(ser_readdata32(s));
@@ -110,6 +111,7 @@ public:
     bool operator==(const Milestone& rhs) const {
         // clang-format off
         return hashRate                     == rhs.hashRate &&
+               lvsSize                      == rhs.lvsSize &&
                milestoneTarget.GetCompact() == rhs.milestoneTarget.GetCompact() &&
                blockTarget.GetCompact()     == rhs.blockTarget.GetCompact() &&
                (chainwork == 0 || rhs.chainwork == 0) ? true : chainwork == rhs.chainwork &&
