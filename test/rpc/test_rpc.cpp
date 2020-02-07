@@ -6,10 +6,12 @@
 
 #include "rpc_client.h"
 #include "rpc_server.h"
+#include "subscription.h"
 #include "test_env.h"
 
 #include <chrono>
 #include <google/protobuf/util/json_util.h>
+#include <memory>
 #include <string>
 
 using google::protobuf::StringPiece;
@@ -400,4 +402,21 @@ TEST_F(TestRPCServer, transaction_and_miner) {
 
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
     ASSERT_TRUE(client->Stop());
+}
+
+TEST_F(TestRPCServer, Subscription) {
+    // basically subscibe and unsubscibe
+    PUBLISHER = std::make_unique<Publisher>();
+    client->Subscribe(addr, SubType::TX | SubType::BLOCK);
+    ASSERT_EQ(1, PUBLISHER->GetSubscriberCount());
+    client->DeleteSubscriber(addr);
+    ASSERT_EQ(0, PUBLISHER->GetSubscriberCount());
+
+    // subcribe but the server is not active
+    client->Subscribe(addr, SubType::TX | SubType::BLOCK);
+    auto tx = fac.CreateTx(1, 1);
+    PUBLISHER->PushMsg(&tx, SubType::TX);
+    ASSERT_EQ(0, PUBLISHER->GetSubscriberCount());
+
+    PUBLISHER.reset();
 }

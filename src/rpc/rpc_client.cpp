@@ -3,10 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpc_client.h"
+#include "return_code.h"
+#include "rpc.pb.h"
 
 #include <google/protobuf/util/json_util.h>
 
-#include "return_code.h"
 
 using namespace rpc;
 using google::protobuf::util::MessageToJsonString;
@@ -87,7 +88,7 @@ op_string RPCClient::GetLevelSetSize(std::string block_hash) {
 }
 
 op_string RPCClient::GetLatestMilestone() {
-    EmptyRequest request;
+    EmptyMessage request;
     GetLatestMilestoneResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -134,7 +135,7 @@ op_string RPCClient::GetMilestone(std::string block_hash) {
 }
 
 op_string RPCClient::GetForks() {
-    EmptyRequest request;
+    EmptyMessage request;
     GetForksResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -144,7 +145,7 @@ op_string RPCClient::GetForks() {
 }
 
 op_string RPCClient::GetPeerChains() {
-    EmptyRequest request;
+    EmptyMessage request;
     GetPeerChainsResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -154,7 +155,7 @@ op_string RPCClient::GetPeerChains() {
 }
 
 op_string RPCClient::GetRecentStat() {
-    EmptyRequest request;
+    EmptyMessage request;
     GetRecentStatResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -164,7 +165,7 @@ op_string RPCClient::GetRecentStat() {
 }
 
 op_string RPCClient::Statistic() {
-    EmptyRequest request;
+    EmptyMessage request;
     StatisticResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -174,7 +175,7 @@ op_string RPCClient::Statistic() {
 }
 
 op_string RPCClient::Status() {
-    EmptyRequest request;
+    EmptyMessage request;
     StatusResponse response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
@@ -184,7 +185,7 @@ op_string RPCClient::Status() {
 }
 
 bool RPCClient::Stop() {
-    EmptyRequest request;
+    EmptyMessage request;
     StopResponse response;
 
     return ClientCallback(
@@ -195,7 +196,7 @@ bool RPCClient::Stop() {
 }
 
 std::optional<bool> RPCClient::StartMiner() {
-    EmptyRequest request;
+    EmptyMessage request;
     StartMinerResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -208,7 +209,7 @@ std::optional<bool> RPCClient::StartMiner() {
 }
 
 op_string RPCClient::StopMiner() {
-    EmptyRequest request;
+    EmptyMessage request;
     StopMinerResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -280,7 +281,7 @@ op_string RPCClient::CreateTx(const std::vector<std::pair<uint64_t, std::string>
 }
 
 op_string RPCClient::GetBalance() {
-    EmptyRequest request;
+    EmptyMessage request;
     GetBalanceResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -298,7 +299,7 @@ op_string RPCClient::GetBalance() {
 }
 
 op_string RPCClient::GenerateNewKey() {
-    EmptyRequest request;
+    EmptyMessage request;
     GenerateNewKeyResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -416,7 +417,7 @@ op_string RPCClient::DisconnectPeers(const std::vector<std::string>& addresses) 
 }
 
 op_string RPCClient::DisconnectAllPeers() {
-    EmptyRequest request;
+    EmptyMessage request;
     DisconnectAllResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -429,7 +430,7 @@ op_string RPCClient::DisconnectAllPeers() {
 }
 
 std::optional<bool> RPCClient::SyncCompleted() {
-    EmptyRequest request;
+    EmptyMessage request;
     SyncStatusResponse response;
 
     if (!ClientCallback([&](auto* context, const auto& request, auto* response)
@@ -449,6 +450,31 @@ op_string RPCClient::ShowPeer(const std::string& address) {
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return commander_stub_->ShowPeer(context, request, response);
+        },
+        request, &response);
+}
+
+op_string RPCClient::Subscribe(const std::string &address, uint8_t sub_type){
+    SubscribeRequest request;
+    request.set_address(address);
+    request.set_sub_type(sub_type);
+    SubscribeResponse response;
+
+    return ProcessResponse(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+            return commander_stub_->Subscribe(context, request, response);
+        },
+        request, &response);
+}
+
+void RPCClient::DeleteSubscriber(const std::string &address){
+    DelSubscriberRequest request;
+    request.set_address(address);
+    EmptyMessage response;
+
+    ProcessResponse(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+            return commander_stub_->DelSubscriber(context, request, response);
         },
         request, &response);
 }

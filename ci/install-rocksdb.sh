@@ -7,12 +7,12 @@ if [[ ! -d ${EPIC_ROCKSDB_DIR} ]];then
     sudo rm -rf rocksdb*
     git clone -b v${EPIC_ROCKSDB_VERSION} --single-branch https://github.com/facebook/rocksdb.git ${EPIC_ROCKSDB_DIR}
     cd ${EPIC_ROCKSDB_DIR}
-    make shared_lib -j4
+    CFLAGS='-Wno-error' CXXFLAGS='-Wno-error' make shared_lib -j4
 else
     cd ${EPIC_ROCKSDB_DIR}
 fi
 
-sudo make install
+CFLAGS='-Wno-error' CXXFLAGS='-Wno-error' sudo make install
 cd ..
 
 

@@ -14,19 +14,19 @@ class Peer;
 
 class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
     grpc::Status Status(grpc::ServerContext* context,
-                        const rpc::EmptyRequest* request,
+                        const rpc::EmptyMessage* request,
                         rpc::StatusResponse* reply) override;
 
     grpc::Status Stop(grpc::ServerContext* context,
-                      const rpc::EmptyRequest* request,
+                      const rpc::EmptyMessage* request,
                       rpc::StopResponse* reply) override;
 
     grpc::Status StartMiner(grpc::ServerContext* context,
-                            const rpc::EmptyRequest* request,
+                            const rpc::EmptyMessage* request,
                             rpc::StartMinerResponse* reply) override;
 
     grpc::Status StopMiner(grpc::ServerContext* context,
-                           const rpc::EmptyRequest* request,
+                           const rpc::EmptyMessage* request,
                            rpc::StopMinerResponse* reply) override;
 
     grpc::Status CreateFirstReg(grpc::ServerContext* context,
@@ -46,11 +46,11 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                           rpc::CreateTxResponse* reply) override;
 
     grpc::Status GenerateNewKey(grpc::ServerContext* context,
-                                const rpc::EmptyRequest* request,
+                                const rpc::EmptyMessage* request,
                                 rpc::GenerateNewKeyResponse* reply) override;
 
     grpc::Status GetBalance(grpc::ServerContext* context,
-                            const rpc::EmptyRequest* request,
+                            const rpc::EmptyMessage* request,
                             rpc::GetBalanceResponse* reply) override;
 
     grpc::Status SetPassphrase(grpc::ServerContext* context,
@@ -70,7 +70,7 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                                 rpc::DisconnectPeerResponse* response) override;
 
     grpc::Status DisconnectAllPeers(grpc::ServerContext* context,
-                                    const rpc::EmptyRequest* request,
+                                    const rpc::EmptyMessage* request,
                                     rpc::DisconnectAllResponse* response) override;
 
     grpc::Status ConnectPeer(grpc::ServerContext* context,
@@ -78,13 +78,20 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                              rpc::ConnectResponse* response) override;
 
     grpc::Status SyncCompleted(grpc::ServerContext* context,
-                               const rpc::EmptyRequest* request,
+                               const rpc::EmptyMessage* request,
                                rpc::SyncStatusResponse* response) override;
 
     grpc::Status ShowPeer(grpc::ServerContext* context,
                           const rpc::ShowPeerRequest* request,
                           rpc::ShowPeerResponse* response) override;
 
+    grpc::Status Subscribe(grpc::ServerContext* context,
+                           const rpc::SubscribeRequest* request,
+                           rpc::SubscribeResponse* response) override;
+
+    grpc::Status DelSubscriber(grpc::ServerContext* context,
+                               const rpc::DelSubscriberRequest* request,
+                               rpc::EmptyMessage* response) override;
 private:
     void AddPeer(rpc::ShowPeerResponse* response, std::shared_ptr<Peer> peer);
 };

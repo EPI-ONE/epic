@@ -50,6 +50,9 @@ public:
     std::optional<bool> SyncCompleted();
     std::optional<std::string> ShowPeer(const std::string&);
 
+    std::optional<std::string> Subscribe(const std::string& address, uint8_t sub_type);
+    void DeleteSubscriber(const std::string& address);
+
 private:
     std::unique_ptr<rpc::BasicBlockExplorerRPC::Stub> be_stub_;
     std::unique_ptr<rpc::CommanderRPC::Stub> commander_stub_;

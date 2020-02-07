@@ -5,6 +5,7 @@
 #include "peer_manager.h"
 #include "dag_manager.h"
 #include "mempool.h"
+#include "subscription.h"
 
 PeerManager::PeerManager() {
     std::random_device rd;
@@ -227,6 +228,9 @@ void PeerManager::ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer) {
     }
     if (MEMPOOL->ReceiveTx(tx)) {
         RelayTransaction(tx, peer);
+        if (PUBLISHER) {
+            PUBLISHER->PushMsg((void*)tx.get(), SubType::TX);
+	    }
     }
 }
 
