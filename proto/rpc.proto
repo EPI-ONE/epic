@@ -81,19 +81,19 @@ service BasicBlockExplorerRPC {
     rpc GetBlock (GetBlockRequest) returns (GetBlockResponse);
     rpc GetVertex (GetVertexRequest) returns (GetVertexResponse);
     rpc GetNewMilestoneSince (GetNewMilestoneSinceRequest) returns (GetNewMilestoneSinceResponse);
-    rpc GetLatestMilestone (EmptyRequest) returns (GetLatestMilestoneResponse);
+    rpc GetLatestMilestone (EmptyMessage) returns (GetLatestMilestoneResponse);
     rpc GetMilestone (GetBlockRequest) returns (GetMilestoneResponse);
 
     rpc GetLevelSet (GetLevelSetRequest) returns (GetLevelSetResponse);
     rpc GetLevelSetSize (GetLevelSetSizeRequest) returns (GetLevelSetSizeResponse);
 
-    rpc GetForks (EmptyRequest) returns (GetForksResponse);
-    rpc GetPeerChains (EmptyRequest) returns (GetPeerChainsResponse);
-    rpc GetRecentStat (EmptyRequest) returns (GetRecentStatResponse);
-    rpc Statistic (EmptyRequest) returns (StatisticResponse);
+    rpc GetForks (EmptyMessage) returns (GetForksResponse);
+    rpc GetPeerChains (EmptyMessage) returns (GetPeerChainsResponse);
+    rpc GetRecentStat (EmptyMessage) returns (GetRecentStatResponse);
+    rpc Statistic (EmptyMessage) returns (StatisticResponse);
 }
 
-message EmptyRequest {}
+message EmptyMessage {}
 
 message GetBlockRequest {
     string hash = 1;
@@ -170,18 +170,18 @@ message StatisticResponse {
 
 service CommanderRPC {
     // Command for EPIC program
-    rpc Stop (EmptyRequest) returns (StopResponse);
+    rpc Stop (EmptyMessage) returns (StopResponse);
 
     // Command for Miner
-    rpc Status (EmptyRequest) returns (StatusResponse);
-    rpc StartMiner (EmptyRequest) returns (StartMinerResponse);
-    rpc StopMiner (EmptyRequest) returns (StopMinerResponse);
+    rpc Status (EmptyMessage) returns (StatusResponse);
+    rpc StartMiner (EmptyMessage) returns (StartMinerResponse);
+    rpc StopMiner (EmptyMessage) returns (StopMinerResponse);
 
     // Command for Wallet
     rpc CreateFirstReg (CreateFirstRegRequest) returns (CreateFirstRegResponse);
     rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
-    rpc GenerateNewKey(EmptyRequest) returns (GenerateNewKeyResponse);
-    rpc GetBalance(EmptyRequest) returns (GetBalanceResponse);
+    rpc GenerateNewKey(EmptyMessage) returns (GenerateNewKeyResponse);
+    rpc GetBalance(EmptyMessage) returns (GetBalanceResponse);
     rpc CreateTx(CreateTxRequest) returns (CreateTxResponse);
     rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
     rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
@@ -190,10 +190,27 @@ service CommanderRPC {
 
     // Command for Peer
     rpc DisconnectPeer (DisconnectPeerRequest) returns (DisconnectPeerResponse);
-    rpc DisconnectAllPeers (EmptyRequest) returns (DisconnectAllResponse);
+    rpc DisconnectAllPeers (EmptyMessage) returns (DisconnectAllResponse);
     rpc ConnectPeer (ConnectRequest) returns (ConnectResponse);
-    rpc SyncCompleted(EmptyRequest) returns (SyncStatusResponse);
+    rpc SyncCompleted(EmptyMessage) returns (SyncStatusResponse);
     rpc ShowPeer(ShowPeerRequest) returns (ShowPeerResponse);
+
+    // Command for Subscription
+    rpc Subscribe (SubscribeRequest) returns (SubscribeResponse);
+    rpc DelSubscriber (DelSubscriberRequest) returns (EmptyMessage);
+}
+
+message SubscribeRequest{
+    string address = 1;
+    uint32 sub_type = 2;
+}
+
+message SubscribeResponse{
+    string result = 1;
+}
+
+message DelSubscriberRequest{
+    string address = 1;
 }
 
 message StopResponse {}
@@ -349,4 +366,9 @@ message ShowPeerRequest {
 
 message ShowPeerResponse {
     repeated Peer peer = 1;
+}
+
+service Subscription{
+    rpc PushBlock (Vertex) returns (EmptyMessage);
+    rpc PushTx(Transaction) returns (EmptyMessage);
 }

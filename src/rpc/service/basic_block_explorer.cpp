@@ -67,7 +67,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::Server
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerContext* context,
-                                                                  const EmptyRequest* request,
+                                                                  const EmptyMessage* request,
                                                                   GetLatestMilestoneResponse* reply) {
     auto vertex   = DAG->GetMilestoneHead();
     rpc::Block* b = ToRPCBlock(*(vertex->cblock));
@@ -103,7 +103,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetVertex(grpc::ServerContext* co
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* context,
-                                                        const EmptyRequest* request,
+                                                        const EmptyMessage* request,
                                                         GetForksResponse* response) {
     const auto& chains = DAG->GetChains();
     auto rpc_chains    = response->mutable_chains();
@@ -116,7 +116,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* con
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext* context,
-                                                             const EmptyRequest* request,
+                                                             const EmptyMessage* request,
                                                              GetPeerChainsResponse* response) {
     const auto& bestChain = DAG->GetBestChain();
     const auto& heads     = bestChain.GetPeerChainHead();
@@ -131,7 +131,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext* context,
-                                                             const EmptyRequest* request,
+                                                             const EmptyMessage* request,
                                                              GetRecentStatResponse* response) {
     const auto chain = DAG->GetBestChain().GetMilestones();
 
@@ -152,7 +152,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::Statistic(grpc::ServerContext* context,
-                                                         const EmptyRequest* request,
+                                                         const EmptyMessage* request,
                                                          StatisticResponse* response) {
     if (STORE->GetHeadHeight() > 0) {
         response->set_height(DAG->GetBestChain().GetChainHead()->height);

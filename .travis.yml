@@ -54,7 +54,7 @@ matrix:
         - cd $EPIC_PATH
         - pip install --user cpp-coveralls
         - coveralls --help
-        - coveralls --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/cuckaroo/.*" -E ".*/src/main.*" -E ".*/src/rpc/proto-gen/.*" -E ".*/src/utils/(memory|spdlog|ar.*|big.*|cpptoml.*|cxx.*|merkle.*|port.*|seri.*|tiny.*|utilstr.*).*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
+        - coveralls --dump coveralls.json --build-root build/CMakeFiles -E ".*/test/.*" -E ".*/src/tools/.*" -E ".*/3.1.*" -E ".*/src/cuckaroo/.*" -E ".*/src/main.*" -E ".*/src/rpc/proto-gen/.*" -E ".*/src/utils/(memory|spdlog|ar.*|big.*|cpptoml.*|cxx.*|merkle.*|port.*|seri.*|tiny.*|utilstr.*).*" --gcov "/usr/bin/llvm-cov gcov" --gcov-options '\-lp'
       after_failure:
         - cd $EPIC_PATH/bin
         - ls

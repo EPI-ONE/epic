@@ -6,6 +6,7 @@
 #include "block_store.h"
 #include "functors.h"
 #include "mempool.h"
+#include "subscription.h"
 #include "tasm.h"
 
 ////////////////////
@@ -261,6 +262,9 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
             vtx->UpdateReward(GetPrevReward(*vtx));
         }
         verifying_.insert({vtx->cblock->GetHash(), vtx});
+        if (PUBLISHER) {
+            PUBLISHER->PushMsg(vtx.get(), SubType::BLOCK);
+        }
     }
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));

@@ -6,13 +6,15 @@
 #include "init.h"
 #include "miner.h"
 #include "return_code.h"
+#include "rpc.pb.h"
 #include "rpc_tools.h"
+#include "subscription.h"
 #include "wallet.h"
 
 using namespace rpc;
 
 grpc::Status CommanderRPCServiceImpl::Status(grpc::ServerContext* context,
-                                             const EmptyRequest* request,
+                                             const EmptyMessage* request,
                                              StatusResponse* reply) {
     const auto& latestMS = DAG->GetMilestoneHead();
     reply->set_latestmshash(std::to_string(latestMS->cblock->GetHash()));
@@ -22,14 +24,14 @@ grpc::Status CommanderRPCServiceImpl::Status(grpc::ServerContext* context,
 }
 
 grpc::Status CommanderRPCServiceImpl::Stop(grpc::ServerContext* context,
-                                           const EmptyRequest* request,
+                                           const EmptyMessage* request,
                                            StopResponse* reply) {
     b_shutdown = true;
     return grpc::Status::OK;
 }
 
 grpc::Status CommanderRPCServiceImpl::StartMiner(grpc::ServerContext* context,
-                                                 const EmptyRequest* request,
+                                                 const EmptyMessage* request,
                                                  StartMinerResponse* reply) {
     if (MINER->IsRunning()) {
         reply->set_success(false);
@@ -44,7 +46,7 @@ grpc::Status CommanderRPCServiceImpl::StartMiner(grpc::ServerContext* context,
 }
 
 grpc::Status CommanderRPCServiceImpl::StopMiner(grpc::ServerContext* context,
-                                                const EmptyRequest* request,
+                                                const EmptyMessage* request,
                                                 StopMinerResponse* reply) {
     if (!MINER->IsRunning()) {
         reply->set_result(RPCReturn::kMinerNotRunning);
@@ -173,7 +175,7 @@ grpc::Status CommanderRPCServiceImpl::CreateTx(grpc::ServerContext* context,
 }
 
 grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* context,
-                                                     const EmptyRequest* request,
+                                                     const EmptyMessage* request,
                                                      GenerateNewKeyResponse* reply) {
     if (!WALLET) {
         reply->set_result(RPCReturn::kWalletNotStarted);
@@ -188,7 +190,7 @@ grpc::Status CommanderRPCServiceImpl::GenerateNewKey(grpc::ServerContext* contex
 }
 
 grpc::Status CommanderRPCServiceImpl::GetBalance(grpc::ServerContext* context,
-                                                 const EmptyRequest* request,
+                                                 const EmptyMessage* request,
                                                  GetBalanceResponse* reply) {
     if (!WALLET) {
         reply->set_result(RPCReturn::kWalletNotStarted);
@@ -267,7 +269,7 @@ grpc::Status CommanderRPCServiceImpl::DisconnectPeer(grpc::ServerContext* contex
 }
 
 grpc::Status CommanderRPCServiceImpl::DisconnectAllPeers(grpc::ServerContext* context,
-                                                         const rpc::EmptyRequest* request,
+                                                         const rpc::EmptyMessage* request,
                                                          rpc::DisconnectAllResponse* response) {
     if (!PEERMAN) {
         response->set_result("PeerManager has not been start");
@@ -311,7 +313,7 @@ grpc::Status CommanderRPCServiceImpl::ConnectPeer(grpc::ServerContext* context,
 }
 
 grpc::Status CommanderRPCServiceImpl::SyncCompleted(grpc::ServerContext* context,
-                                                    const rpc::EmptyRequest* request,
+                                                    const rpc::EmptyMessage* request,
                                                     rpc::SyncStatusResponse* response) {
     if (PEERMAN) {
         response->set_completed(PEERMAN->InitialSyncCompleted());
@@ -352,6 +354,33 @@ grpc::Status CommanderRPCServiceImpl::ShowPeer(grpc::ServerContext* context,
         if (peer) {
             AddPeer(response, peer);
         }
+    }
+
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::Subscribe(grpc::ServerContext* context,
+                                                const rpc::SubscribeRequest* request,
+                                                rpc::SubscribeResponse* response) {
+    auto address = request->address();
+    uint8_t sub_type = (uint8_t)request->sub_type();
+    if (!PUBLISHER){
+        response->set_result("Publisher hasn't been started");
+    } else if(PUBLISHER->AddNewSubscriber(address, sub_type)) { 
+        response->set_result("Success");
+    } else{
+        response->set_result("Failed to subscribe");
+    }        
+
+    return grpc::Status::OK;    
+}
+
+grpc::Status CommanderRPCServiceImpl::DelSubscriber(grpc::ServerContext* context,
+                                                   const rpc::DelSubscriberRequest* request,
+                                                   rpc::EmptyMessage* response) {
+    auto address = request->address();
+    if(PUBLISHER) {
+        PUBLISHER->DeleteSubscriber(address);
     }
 
     return grpc::Status::OK;

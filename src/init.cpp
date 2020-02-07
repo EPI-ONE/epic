@@ -13,6 +13,7 @@
 #include "rpc_server.h"
 #include "spdlog/sinks/daily_file_sink.h"
 #include "wallet.h"
+#include "subscription.h"
 
 #include <csignal>
 #include <spawn.h>
@@ -27,6 +28,7 @@ std::unique_ptr<RPCServer> RPC;
 std::unique_ptr<Miner> MINER;
 std::unique_ptr<Wallet> WALLET;
 std::unique_ptr<MemPool> MEMPOOL;
+std::unique_ptr<Publisher> PUBLISHER;
 
 ECCVerifyHandle handle;
 
@@ -183,6 +185,8 @@ int Init(int argc, char* argv[]) {
         std::vector<RPCServiceType> types{RPCServiceType::BLOCK_EXPLORER_SERVER, RPCServiceType::COMMAND_LINE_SERVER};
         RPC = std::make_unique<RPCServer>(*rpcAddress, types);
     }
+
+    PUBLISHER = std::make_unique<Publisher>();
 
     std::cout << "Finish initializing...\n" << std::endl;
     return NORMAL_EXIT;

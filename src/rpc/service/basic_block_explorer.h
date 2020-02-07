@@ -20,7 +20,7 @@ public:
                                       rpc::GetNewMilestoneSinceResponse* reply) override;
     
     grpc::Status GetLatestMilestone(grpc::ServerContext* context,
-                                    const rpc::EmptyRequest* request,
+                                    const rpc::EmptyMessage* request,
                                     rpc::GetLatestMilestoneResponse* reply) override;
 
     grpc::Status GetLevelSet(grpc::ServerContext* context,
@@ -40,19 +40,19 @@ public:
                               rpc::GetMilestoneResponse* response) override;
 
     grpc::Status GetForks(grpc::ServerContext* context,
-                          const rpc::EmptyRequest* request,
+                          const rpc::EmptyMessage* request,
                           rpc::GetForksResponse* response) override;
 
     grpc::Status GetPeerChains(grpc::ServerContext* context,
-                               const rpc::EmptyRequest* request,
+                               const rpc::EmptyMessage* request,
                                rpc::GetPeerChainsResponse* response) override;
 
     grpc::Status GetRecentStat(grpc::ServerContext* context,
-                               const rpc::EmptyRequest* request,
+                               const rpc::EmptyMessage* request,
                                rpc::GetRecentStatResponse* response) override;
 
     grpc::Status Statistic(grpc::ServerContext* context,
-                           const rpc::EmptyRequest* request,
+                           const rpc::EmptyMessage* request,
                            rpc::StatisticResponse* response) override;
 
     ~BasicBlockExplorerRPCServiceImpl() = default;

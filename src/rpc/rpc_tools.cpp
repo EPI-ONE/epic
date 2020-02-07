@@ -32,6 +32,8 @@ rpc::Output* ToRPCOutput(const TxOutput& output) {
     return rpc_output;
 }
 
+////////////////// End of internal methods ////////////////////////
+
 rpc::Transaction* ToRPCTx(const Transaction& tx) {
     auto rpc_tx = new rpc::Transaction();
     auto rpc_input = rpc_tx->mutable_inputs();
@@ -46,8 +48,6 @@ rpc::Transaction* ToRPCTx(const Transaction& tx) {
 
     return rpc_tx;
 }
-
-////////////////// End of internal methods ////////////////////////
 
 rpc::Block* ToRPCBlock(const Block& b) {
     auto rpcb = new rpc::Block();
