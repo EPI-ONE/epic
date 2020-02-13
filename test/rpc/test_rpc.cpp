@@ -404,6 +404,26 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(client->Stop());
 }
 
+TEST_F(TestRPCServer, stateless_test) {
+    TestFactory fac{};
+    VStream indata{}, outdata{};
+
+    auto keypair        = fac.CreateKeyPair();
+    CKeyID addr         = keypair.second.GetID();
+    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
+
+    auto encodedAddr = EncodeAddress(addr);
+    outdata << encodedAddr;
+    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, std::move(outdata)}};
+
+    // construct transaction input
+    indata << keypair.second << sig << hashMsg;
+    Tasm::Listing inputListing{Tasm::Listing{indata}};
+
+    EXPECT_TRUE(client->ValidateAddr(encodedAddr).value());
+    EXPECT_TRUE(client->VerifyMessage(std::to_string(inputListing), std::to_string(outputListing)).value());
+}
+
 TEST_F(TestRPCServer, Subscription) {
     // basically subscibe and unsubscibe
     PUBLISHER = std::make_unique<Publisher>();

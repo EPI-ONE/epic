@@ -380,6 +380,41 @@ op_string RPCClient::Login(const std::string& passphrase) {
     return GetReturnStr(response.result());
 }
 
+op_string RPCClient::GetWalletAddrs() {
+    EmptyMessage request;
+    GetWalletAddrsResponse response;
+
+    return "";
+}
+
+op_string RPCClient::GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx) {
+    GetTxoutRequest request;
+    GetTxoutResponse response;
+
+    return "";
+}
+
+op_string RPCClient::GetAllTxout() {
+    EmptyMessage request;
+    GetAllTxoutResponse response;
+
+    return "";
+}
+
+std::optional<bool> RPCClient::ValidateAddr(std::string addr) {
+    ValidateAddrRequest request;
+    BooleanResponse response;
+
+    return false;
+}
+
+std::optional<bool> RPCClient::VerifyMessage(std::string input, std::string output) {
+    VerifyMessageRequest request;
+    BooleanResponse response;
+
+    return false;
+}
+
 op_string RPCClient::ConnectPeers(const std::vector<std::string>& addresses) {
     ConnectRequest request;
     ConnectResponse response;

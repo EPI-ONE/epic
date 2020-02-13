@@ -37,12 +37,18 @@ public:
     std::optional<std::string> Redeem(const std::string& addr, uint64_t coins);
     std::optional<std::string> CreateRandomTx(size_t size);
     std::optional<std::string> CreateTx(const std::vector<std::pair<uint64_t, std::string>>& outputs, uint64_t fee);
-    std::optional<std::string> GetBalance();
     std::optional<std::string> GenerateNewKey();
 
     std::optional<std::string> SetPassphrase(const std::string& passphrase);
     std::optional<std::string> ChangePassphrase(const std::string& oldPassphrase, const std::string& newPassphrase);
     std::optional<std::string> Login(const std::string& passphrase);
+
+    std::optional<std::string> GetBalance();
+    std::optional<std::string> GetWalletAddrs();
+    std::optional<std::string> GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx);
+    std::optional<std::string> GetAllTxout();
+    std::optional<bool> ValidateAddr(std::string addr);
+    std::optional<bool> VerifyMessage(std::string input, std::string output);
 
     std::optional<std::string> DisconnectPeers(const std::vector<std::string>& addresses);
     std::optional<std::string> DisconnectAllPeers();
