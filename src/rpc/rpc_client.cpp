@@ -405,14 +405,33 @@ std::optional<bool> RPCClient::ValidateAddr(std::string addr) {
     ValidateAddrRequest request;
     BooleanResponse response;
 
-    return false;
+    request.set_addr(addr);
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->ValidateAddr(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    return response.success();
 }
 
-std::optional<bool> RPCClient::VerifyMessage(std::string input, std::string output) {
+std::optional<bool> RPCClient::VerifyMessage(std::string input, std::string output, std::vector<uint8_t> opcode) {
     VerifyMessageRequest request;
     BooleanResponse response;
 
-    return false;
+    request.set_inputlisting(input);
+    request.set_outputlisting(output);
+    auto rpc_op = request.mutable_opcode();
+    rpc_op->Reserve(opcode.size());
+    rpc_op->Add(opcode.cbegin(), opcode.cend());
+
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->VerifyMessage(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    return response.success();
 }
 
 op_string RPCClient::ConnectPeers(const std::vector<std::string>& addresses) {

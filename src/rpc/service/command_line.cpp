@@ -5,6 +5,7 @@
 #include "command_line.h"
 #include "init.h"
 #include "miner.h"
+#include "pubkey.h"
 #include "return_code.h"
 #include "rpc.pb.h"
 #include "rpc_tools.h"
@@ -250,6 +251,37 @@ grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
         reply->set_result(RPCReturn::kWalletLoggedIn);
         WALLET->RPCLogin();
     }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::ValidateAddr(grpc::ServerContext* context,
+                          const rpc::ValidateAddrRequest* request,
+                          rpc::BooleanResponse* reply) {
+    auto addr = request->addr();
+    reply->set_success(DecodeAddress(addr).has_value());
+
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::VerifyMessage(grpc::ServerContext* context,
+        const rpc::VerifyMessageRequest* request,
+        rpc::BooleanResponse* reply) {
+    auto ops = request->opcode();
+    auto inData = request->inputlisting();
+    auto outData = request->outputlisting();
+
+    std::vector<uint8_t> prog{ops.begin(), ops.end()};
+
+    VStream vst{};
+    for (const auto& byte : ParseHex(inData)) {
+        vst << byte;
+    }
+
+    for (const auto& byte : ParseHex(outData)) {
+        vst << byte;
+    }
+
+    reply->set_success(Tasm().ExecListing(Tasm::Listing{prog, vst}));
     return grpc::Status::OK;
 }
 

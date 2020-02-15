@@ -404,6 +404,26 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(client->Stop());
 }
 
+std::string parseContent(Tasm::Listing& listing) {
+    auto lstr = std::to_string(listing);
+    auto n    = lstr.find("( ");
+    auto m    = lstr.find(" )");
+    return lstr.substr(n + 2, m - (n + 2));
+}
+
+std::vector<uint8_t> parseOp(Tasm::Listing& listing) {
+    auto lstr = std::to_string(listing);
+    auto n    = lstr.find("[ ");
+    auto m    = lstr.find(" ]");
+    auto ops  = lstr.substr(n + 2, m - (n + 2));
+
+    std::vector<uint8_t> v;
+    std::stringstream strm;
+    strm << ops;
+    std::copy(std::istream_iterator<int>(strm), std::istream_iterator<int>(), std::back_inserter(v));
+    return v;
+}
+
 TEST_F(TestRPCServer, stateless_test) {
     TestFactory fac{};
     VStream indata{}, outdata{};
@@ -421,7 +441,7 @@ TEST_F(TestRPCServer, stateless_test) {
     Tasm::Listing inputListing{Tasm::Listing{indata}};
 
     EXPECT_TRUE(client->ValidateAddr(encodedAddr).value());
-    EXPECT_TRUE(client->VerifyMessage(std::to_string(inputListing), std::to_string(outputListing)).value());
+    EXPECT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
 }
 
 TEST_F(TestRPCServer, Subscription) {

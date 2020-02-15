@@ -340,6 +340,7 @@ message ValidateAddrRequest {
 message VerifyMessageRequest {
     string inputListing = 1;
     string outputListing = 2;
+    repeated uint32 opcode = 3;
 }
 
 service RemoteSolver {

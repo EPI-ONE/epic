@@ -48,7 +48,7 @@ public:
     std::optional<std::string> GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx);
     std::optional<std::string> GetAllTxout();
     std::optional<bool> ValidateAddr(std::string addr);
-    std::optional<bool> VerifyMessage(std::string input, std::string output);
+    std::optional<bool> VerifyMessage(std::string input, std::string output, std::vector<uint8_t> ops);
 
     std::optional<std::string> DisconnectPeers(const std::vector<std::string>& addresses);
     std::optional<std::string> DisconnectAllPeers();

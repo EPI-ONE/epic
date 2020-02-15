@@ -65,6 +65,14 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                        const rpc::LoginRequest* request,
                        rpc::LoginResponse* reply) override;
 
+    grpc::Status ValidateAddr(grpc::ServerContext* context,
+                              const rpc::ValidateAddrRequest* request,
+                              rpc::BooleanResponse* reply) override;
+
+    grpc::Status VerifyMessage(grpc::ServerContext* context,
+                              const rpc::VerifyMessageRequest* request,
+                              rpc::BooleanResponse* reply) override;
+
     grpc::Status DisconnectPeer(grpc::ServerContext* context,
                                 const rpc::DisconnectPeerRequest* request,
                                 rpc::DisconnectPeerResponse* response) override;
