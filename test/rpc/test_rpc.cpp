@@ -402,6 +402,29 @@ TEST_F(TestRPCServer, transaction_and_miner) {
 
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
     ASSERT_TRUE(client->Stop());
+
+    // checkout GetWalletAddrs, GetTxOuts and GetAllTxout 
+    const auto allAddrs = WALLET->GetAllAddresses();
+    std::string allAddrsResult;
+    for (const auto& addr : allAddrs) {
+        allAddrsResult += EncodeAddress(addr) + "\n";
+    }
+    auto opAllAddrs = client->GetWalletAddrs();
+    EXPECT_TRUE(opAllAddrs.has_value());
+    EXPECT_EQ(allAddrsResult, opAllAddrs.value());
+
+
+    const auto unspent = WALLET->GetUnspent();
+    std::set<TxOutput> utxos;
+    for (const auto& keypair : unspent) {
+        const auto addr = std::get<0>(keypair.second);
+        VStream vst;
+        vst << EncodeAddress(addr);
+        Tasm::Listing listing(vst);
+        utxos.emplace(std::get<3>(keypair.second), listing);
+    }
+    const auto opAllTxout = client->GetAllTxout();
+    EXPECT_TRUE(opAllTxout.has_value());
 }
 
 std::string parseContent(Tasm::Listing& listing) {

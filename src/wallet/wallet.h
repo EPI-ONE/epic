@@ -47,6 +47,7 @@ public:
                         std::unordered_set<uint256> STXOs);
 
     CKeyID GetRandomAddress();
+    std::vector<CKeyID> GetAllAddresses();
 
     CKeyID CreateNewKey(bool compressed);
     std::string CreateFirstRegistration(const CKeyID&);
@@ -94,6 +95,8 @@ public:
     const auto& GetPendingTx() const {
         return pendingTx;
     }
+
+
 
     bool IsCrypted();
     bool SetPassphrase(const SecureString& phrase);

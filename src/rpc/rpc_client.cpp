@@ -384,7 +384,21 @@ op_string RPCClient::GetWalletAddrs() {
     EmptyMessage request;
     GetWalletAddrsResponse response;
 
-    return "";
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->GetWalletAddrs(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    if (response.result() == RPCReturn::kGetWalletAddrsSuc) {
+        std::string result;
+        for (const auto& addr : response.addr()) {
+            result += addr + "\n";
+        }
+        return result;
+    } else {
+        return GetReturnStr(response.result());
+    }
 }
 
 op_string RPCClient::GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx) {

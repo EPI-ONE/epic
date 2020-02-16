@@ -254,6 +254,22 @@ grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
+grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* context,
+                                                     const rpc::EmptyRequest* request,
+                                                     rpc::GetWalletAddrsResponse* reply) {
+    if (!WALLET) {
+        reply->set_result(RPCReturn::kWalletNotStarted);
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
+    } else {
+        reply->set_result(RPCReturn::kGetWalletAddrsSuc);
+        for (const auto addr : WALLET->GetAllAddresses()) {
+            reply->add_addr(EncodeAddress(addr));
+        }
+    }
+    return grpc::Status::OK;
+}
+
 grpc::Status CommanderRPCServiceImpl::ValidateAddr(grpc::ServerContext* context,
                           const rpc::ValidateAddrRequest* request,
                           rpc::BooleanResponse* reply) {
