@@ -234,10 +234,12 @@ op_string RPCClient::CreateFirstReg(std::string addr, bool force) {
     }
 
     auto result = response.result();
-    if (result != RPCReturn::kFirstRegSuc) {
-        return GetReturnStr(result);
-    } else {
+    if (result == RPCReturn::kFirstRegSuc) {
         return GetReturnStr(result) + " with address " + response.addr();
+    } else if (result == RPCReturn::kFirstRegExist) {
+        return "";
+    } else {
+        return GetReturnStr(result);
     }
 }
 

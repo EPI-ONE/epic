@@ -293,7 +293,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         // First, check if we already received its preceding blocks
         if (STORE->IsWeaklySolid(blk)) {
             if (STORE->AnyLinkIsOrphan(blk)) {
-                spdlog::info("[Syntax] Block is not solid with mask {} [{}]", mask(), std::to_string(blk->GetHash()));
+                spdlog::info("[Syntax] Block is not solid (link in obc) with mask {} [{}]", mask(),
+                             std::to_string(blk->GetHash()));
                 STORE->AddBlockToOBC(std::move(blk), mask());
                 return;
             }
@@ -306,7 +307,8 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
                 return;
             }
             // Abort and send GetBlock requests.
-            spdlog::info("[Syntax] Block is not solid with mask {} [{}]", mask(), std::to_string(blk->GetHash()));
+            spdlog::info("[Syntax] Block is not solid with mask {} [{}] prev {} tip {} ms {}", mask(),
+                         std::to_string(blk->GetHash()), prevHash.to_substr(), tipHash.to_substr(), msHash.to_substr());
             STORE->AddBlockToOBC(std::move(blk), mask());
 
             if (peer) {
@@ -734,11 +736,10 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     auto vtcs = bestChain.GetMilestones()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
-    std::swap(vtcs.front(), vtcs.back());
-
     VStream result;
-    for (auto& rwp : vtcs) {
-        result << (*rwp.lock()).cblock;
+    result << vtcs.back().lock()->cblock;
+    for (int i = 0; i < vtcs.size() - 1; i++) {
+        result << vtcs[i].lock()->cblock;
     }
 
     return result;

@@ -362,7 +362,10 @@ void PeerManager::InitialSync() {
 
         if (!initial_sync_peer_ || !initial_sync_peer_->IsVaild()) {
             initial_sync_peer_ = GetSyncPeer();
-            next               = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
+            if (initial_sync_peer_) {
+                spdlog::info("Get new initial sync peer {}", initial_sync_peer_->address.ToString());
+                next = std::chrono::steady_clock::now() + std::chrono::seconds(kCheckSyncInterval);
+            }
         }
 
         if (initial_sync_peer_) {
@@ -380,10 +383,8 @@ void PeerManager::InitialSync() {
             }
 
             if (DAG->IsDownloadingEmpty()) {
-                if (initial_sync_peer_->last_bundle_ms_time == old_last_bundle_ms_time) {
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
-                }
                 initial_sync_peer_->StartSync();
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
     }

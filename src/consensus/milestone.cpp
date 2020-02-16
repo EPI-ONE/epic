@@ -128,6 +128,10 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         if (blockTarget > GetParams().maxTarget) {
             blockTarget = GetParams().maxTarget;
         }
+
+        if (blockTarget < milestoneTarget) {
+            blockTarget = milestoneTarget;
+        }
     }
 
     spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.\n"
