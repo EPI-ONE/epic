@@ -249,18 +249,20 @@ void Peer::ProcessBundle(const std::shared_ptr<Bundle>& bundle) {
 
     while (getDataTasks.Front() && getDataTasks.Front()->bundle) {
         auto& front = getDataTasks.Front();
-        if (front->type == GetDataTask::LEVEL_SET) {
-            last_bundle_ms_time = front->bundle->blocks.front()->GetTime();
-            for (size_t i = 1; i < front->bundle->blocks.size(); ++i) {
-                DAG->AddNewBlock(front->bundle->blocks[i], weak_peer_.lock());
+        if (!front->bundle->blocks.empty()) {
+            if (front->type == GetDataTask::LEVEL_SET) {
+                last_bundle_ms_time = front->bundle->blocks.front()->GetTime();
+                for (size_t i = 1; i < front->bundle->blocks.size(); ++i) {
+                    DAG->AddNewBlock(front->bundle->blocks[i], weak_peer_.lock());
+                }
+                DAG->AddNewBlock(front->bundle->blocks[0], weak_peer_.lock());
+                spdlog::info("Received levelset ms {}", front->bundle->blocks.front()->GetHash().to_substr());
+            } else if (front->type == GetDataTask::PENDING_SET) {
+                for (auto& block : bundle->blocks) {
+                    DAG->AddNewBlock(block, nullptr);
+                }
+                spdlog::info("Received the pending set");
             }
-            DAG->AddNewBlock(front->bundle->blocks[0], weak_peer_.lock());
-            spdlog::info("Received levelset ms {}", front->bundle->blocks.back()->GetHash().to_substr());
-        } else if (front->type == GetDataTask::PENDING_SET) {
-            for (auto& block : bundle->blocks) {
-                DAG->AddNewBlock(block, nullptr);
-            }
-            spdlog::info("Received the pending set");
         }
 
         getDataTasks.Pop();

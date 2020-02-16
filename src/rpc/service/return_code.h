@@ -31,6 +31,7 @@ enum RPCReturn : unsigned int {
 
     kFirstRegInvalid,
     kFirstRegSuc,
+    kFirstRegExist,
 
     kMinerNotRunning,
     kMinerStopFailed,

@@ -35,6 +35,7 @@ std::string GetReturnStr(RPCReturn code) {
 
         {RPCReturn::kFirstRegInvalid, "Failed to create the first registration with invalid address"},
         {RPCReturn::kFirstRegSuc, "Successfully created the first registration"},
+        {RPCReturn::kFirstRegExist, "The first registration existed"},
         {RPCReturn::kGenerateKeySuc, "Successfully generated new key"},
         {RPCReturn::kGetBalanceSuc, "Successfully get balance"},
     };

@@ -88,6 +88,8 @@ grpc::Status CommanderRPCServiceImpl::CreateFirstReg(grpc::ServerContext* contex
         if (!encoded_addr.empty()) {
             reply->set_result(RPCReturn::kFirstRegSuc);
             reply->set_addr(encoded_addr);
+        } else {
+            reply->set_result(RPCReturn::kFirstRegExist);
         }
     }
 
