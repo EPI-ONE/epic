@@ -96,7 +96,7 @@ public:
         return pendingTx;
     }
 
-
+    std::vector<TxOutput> GetAllTxout();
 
     bool IsCrypted();
     bool SetPassphrase(const SecureString& phrase);

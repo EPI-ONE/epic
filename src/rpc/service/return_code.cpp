@@ -40,6 +40,7 @@ std::string GetReturnStr(RPCReturn code) {
         {RPCReturn::kGenerateKeySuc, "Successfully generated new key"},
         {RPCReturn::kGetBalanceSuc, "Successfully get balance"},
         {RPCReturn::kGetWalletAddrsSuc, "Successfully get all the wallet addresses"},
+        {RPCReturn::kGetTxOutNotFound, "Target tx out not found"},
         {RPCReturn::kGetTxOutSuc, "Successfully get the transaction output"},
         {RPCReturn::kGetAllTxOutSuc, "Successfully get all the transaction outputs"},
     };

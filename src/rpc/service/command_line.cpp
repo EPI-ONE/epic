@@ -270,12 +270,41 @@ grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* contex
     return grpc::Status::OK;
 }
 
+
+grpc::Status CommanderRPCServiceImpl::GetTxout(grpc::ServerContext* context,
+                                               const rpc::GetTxoutRequest* request,
+                                               rpc::GetTxoutResponse* reply) {
+    if (!WALLET) {
+        reply->set_result(RPCReturn::kWalletNotStarted);
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
+    } else {
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::GetAllTxout(grpc::ServerContext* context,
+                                                  const rpc::EmptyRequest* request,
+                                                  rpc::GetAllTxoutResponse* reply) {
+    if (!WALLET) {
+        reply->set_result(RPCReturn::kWalletNotStarted);
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
+    } else {
+        reply->set_result(RPCReturn::kGetAllTxOutSuc);
+        auto outputs = reply->mutable_outputs()->mutable_output();
+        for (const auto& output : WALLET->GetAllTxout()) {
+            outputs->AddAllocated(ToRPCOutput(output));
+        }
+    }
+    return grpc::Status::OK;
+}
+
 grpc::Status CommanderRPCServiceImpl::ValidateAddr(grpc::ServerContext* context,
                           const rpc::ValidateAddrRequest* request,
                           rpc::BooleanResponse* reply) {
     auto addr = request->addr();
     reply->set_success(DecodeAddress(addr).has_value());
-
     return grpc::Status::OK;
 }
 

@@ -405,6 +405,11 @@ op_string RPCClient::GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outI
     GetTxoutRequest request;
     GetTxoutResponse response;
 
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->GetTxout(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
     return "";
 }
 
@@ -412,7 +417,22 @@ op_string RPCClient::GetAllTxout() {
     EmptyMessage request;
     GetAllTxoutResponse response;
 
-    return "";
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->GetAllTxout(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    if (response.result() == RPCReturn::kGetAllTxOutSuc) {
+        std::string result, tmp;
+        if (MessageToJsonString(response.outputs(), &result, GetOption()).ok()) {
+            return result;
+        } else {
+            return "fail to convert message to Json format.";
+        }
+    } else {
+        return GetReturnStr(response.result());
+    }
 }
 
 std::optional<bool> RPCClient::ValidateAddr(std::string addr) {

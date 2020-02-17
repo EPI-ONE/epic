@@ -330,7 +330,11 @@ message GetTxoutResponse {
 
 message GetAllTxoutResponse {
     uint32 result = 1;
-    repeated Output output = 2;
+    RepeatedOutput outputs = 2;
+}
+
+message RepeatedOutput {
+    repeated Output output = 1;
 }
 
 message ValidateAddrRequest {

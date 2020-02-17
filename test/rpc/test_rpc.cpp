@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <gtest/gtest.h>
+//#include <gmock/gmock.h>
 
 #include "rpc_client.h"
 #include "rpc_server.h"
@@ -52,6 +53,17 @@ public:
                outpoint.outIndex == rpc_outpoint.outidx();
     }
 
+    bool SameOutput(const TxOutput& output, const rpc::Output rpcOutput) {
+        if (std::to_string(output.listingContent) != rpcOutput.listing()) {
+            return false;
+        }
+
+        if (output.value.GetValue() != rpcOutput.money()) {
+            return false;
+        }
+        return true;
+    }
+
     bool SameTx(const Transaction& tx, const rpc::Transaction& rpcTx) {
         const auto& input   = tx.GetInputs();
         const auto& output  = tx.GetOutputs();
@@ -63,7 +75,7 @@ public:
         }
 
         for (size_t i = 0; i < input.size(); i++) {
-            if (!(SameOutpoint(input[i].outpoint, rpc_in[i].outpoint()))) {
+            if (!SameOutpoint(input[i].outpoint, rpc_in[i].outpoint())) {
                 return false;
             }
 
@@ -73,11 +85,7 @@ public:
         }
 
         for (size_t i = 0; i < output.size(); i++) {
-            if (std::to_string(output[i].listingContent) != rpc_out[i].listing()) {
-                return false;
-            }
-
-            if (output[i].value.GetValue() != rpc_out[i].money()) {
+            if (!SameOutput(output[i], rpc_out[i])) {
                 return false;
             }
         }
@@ -400,8 +408,12 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(opBalance.has_value());
     ASSERT_TRUE(client->CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
 
+    while(WALLET->GetUnspent().size() != 1) {
+        std::this_thread::yield();
+    }
+    ASSERT_EQ(WALLET->GetUnspent().size() , 1);
+
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
-    ASSERT_TRUE(client->Stop());
 
     // checkout GetWalletAddrs, GetTxOuts and GetAllTxout 
     const auto allAddrs = WALLET->GetAllAddresses();
@@ -413,18 +425,27 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     EXPECT_TRUE(opAllAddrs.has_value());
     EXPECT_EQ(allAddrsResult, opAllAddrs.value());
 
-
     const auto unspent = WALLET->GetUnspent();
-    std::set<TxOutput> utxos;
+    std::vector<TxOutput> utxos;
     for (const auto& keypair : unspent) {
         const auto addr = std::get<0>(keypair.second);
         VStream vst;
         vst << EncodeAddress(addr);
         Tasm::Listing listing(vst);
-        utxos.emplace(std::get<3>(keypair.second), listing);
+        utxos.emplace_back(TxOutput{std::get<3>(keypair.second), listing});
     }
     const auto opAllTxout = client->GetAllTxout();
     EXPECT_TRUE(opAllTxout.has_value());
+
+    rpc::RepeatedOutput rpcOutputs;
+    JsonStringToMessage(StringPiece(*opAllTxout), &rpcOutputs);
+    auto rpcOutputsIter = rpcOutputs.output().cbegin();
+    for (const auto& utxo : utxos) {
+        EXPECT_TRUE(SameOutput(utxo, *rpcOutputsIter));
+        rpcOutputsIter++;
+    }
+
+    ASSERT_TRUE(client->Stop());
 }
 
 std::string parseContent(Tasm::Listing& listing) {

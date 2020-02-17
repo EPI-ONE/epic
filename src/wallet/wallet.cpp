@@ -239,6 +239,18 @@ std::vector<CKeyID> Wallet::GetAllAddresses() {
     return result;
 }
 
+std::vector<TxOutput> Wallet::GetAllTxout() {
+    std::vector<TxOutput> result;
+    for (const auto& keypair : unspent) {
+        const auto& addr = std::get<0>(keypair.second);
+        VStream vst;
+        vst << EncodeAddress(addr);
+        Tasm::Listing listing(vst);
+        result.emplace_back(std::get<3>(keypair.second), std::move(listing));
+    }
+    return result;
+}
+
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {
     auto hashMsg = HashSHA2<1>(msg.data(), msg.size());
     // get keys and sign
