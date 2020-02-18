@@ -292,10 +292,19 @@ grpc::Status CommanderRPCServiceImpl::GetAllTxout(grpc::ServerContext* context,
         reply->set_result(RPCReturn::kWalletNotLoggedIn);
     } else {
         reply->set_result(RPCReturn::kGetAllTxOutSuc);
-        auto outputs = reply->mutable_outputs()->mutable_output();
-        for (const auto& output : WALLET->GetAllTxout()) {
-            outputs->AddAllocated(ToRPCOutput(output));
+
+        auto repeatedOutputs = reply->mutable_outputs();
+        for (const auto& [addr, outputs] : WALLET->GetTxoutsWithAddr()) {
+            auto* value = new RepeatedOutput;
+            value->set_addr(addr);
+
+            auto rpcOutput = value->mutable_output();
+            for (const auto& output : outputs) {
+                rpcOutput->AddAllocated(ToRPCOutput(output));
+            }
+            repeatedOutputs->AddAllocated(value);
         }
+
     }
     return grpc::Status::OK;
 }

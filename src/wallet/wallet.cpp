@@ -239,16 +239,28 @@ std::vector<CKeyID> Wallet::GetAllAddresses() {
     return result;
 }
 
-std::vector<TxOutput> Wallet::GetAllTxout() {
-    std::vector<TxOutput> result;
-    for (const auto& keypair : unspent) {
-        const auto& addr = std::get<0>(keypair.second);
-        VStream vst;
-        vst << EncodeAddress(addr);
-        Tasm::Listing listing(vst);
-        result.emplace_back(std::get<3>(keypair.second), std::move(listing));
+std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr() {
+    std::unordered_map<std::string, std::vector<TxOutput>> mAddr2Outputs;
+
+    auto decodedAddrs = GetAllAddresses();
+    for (const auto& addr : decodedAddrs) {
+        mAddr2Outputs.emplace(EncodeAddress(addr), std::vector<TxOutput>{});
     }
-    return result;
+
+    for (const auto& keypair : unspent) {
+        const auto addr  = EncodeAddress(std::get<0>(keypair.second));
+        const auto entry = mAddr2Outputs.find(addr);
+        if (entry != mAddr2Outputs.end()) {
+            VStream vst;
+            vst << addr;
+            Tasm::Listing listing(vst);
+            entry->second.emplace_back(std::get<3>(keypair.second), std::move(listing));
+        } else {
+            spdlog::error("No matching address {}", addr);
+        }
+    }
+
+    return mAddr2Outputs;
 }
 
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {

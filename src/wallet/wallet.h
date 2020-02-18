@@ -96,7 +96,7 @@ public:
         return pendingTx;
     }
 
-    std::vector<TxOutput> GetAllTxout();
+    std::unordered_map<std::string, std::vector<TxOutput>> GetTxoutsWithAddr();
 
     bool IsCrypted();
     bool SetPassphrase(const SecureString& phrase);

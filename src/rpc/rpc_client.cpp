@@ -425,11 +425,13 @@ op_string RPCClient::GetAllTxout() {
 
     if (response.result() == RPCReturn::kGetAllTxOutSuc) {
         std::string result, tmp;
-        if (MessageToJsonString(response.outputs(), &result, GetOption()).ok()) {
-            return result;
-        } else {
-            return "fail to convert message to Json format.";
+        for (const auto& addrAndOutput : response.outputs()) {
+            if (MessageToJsonString(addrAndOutput, &tmp, GetOption()).ok()) {
+                result += tmp;
+                tmp.clear();
+            }
         }
+        return result;
     } else {
         return GetReturnStr(response.result());
     }
