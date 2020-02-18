@@ -187,9 +187,9 @@ service CommanderRPC {
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Redeem(RedeemRequest) returns (RedeemResponse);
 
-    rpc GetBalance(EmptyRequest) returns (GetBalanceResponse);
-    rpc GetWalletAddrs(EmptyRequest) returns (GetWalletAddrsResponse);
-    rpc GetAllTxout(EmptyRequest) returns (GetAllTxoutResponse);
+    rpc GetBalance(EmptyMessage) returns (GetBalanceResponse);
+    rpc GetWalletAddrs(EmptyMessage) returns (GetWalletAddrsResponse);
+    rpc GetAllTxout(EmptyMessage) returns (GetAllTxoutResponse);
 
     rpc ValidateAddr(ValidateAddrRequest) returns (BooleanResponse);
     rpc VerifyMessage(VerifyMessageRequest) returns (BooleanResponse);

@@ -66,11 +66,11 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
                        rpc::LoginResponse* reply) override;
 
     grpc::Status GetWalletAddrs(grpc::ServerContext* context,
-                            const rpc::EmptyRequest* request,
+                            const rpc::EmptyMessage* request,
                             rpc::GetWalletAddrsResponse* reply) override;
 
     grpc::Status GetAllTxout(grpc::ServerContext* context,
-                            const rpc::EmptyRequest* request,
+                            const rpc::EmptyMessage* request,
                             rpc::GetAllTxoutResponse* reply) override;
 
     grpc::Status ValidateAddr(grpc::ServerContext* context,

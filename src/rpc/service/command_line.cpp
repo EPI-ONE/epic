@@ -255,7 +255,7 @@ grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
 }
 
 grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* context,
-                                                     const rpc::EmptyRequest* request,
+                                                     const rpc::EmptyMessage* request,
                                                      rpc::GetWalletAddrsResponse* reply) {
     if (!WALLET) {
         reply->set_result(RPCReturn::kWalletNotStarted);
@@ -271,7 +271,7 @@ grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* contex
 }
 
 grpc::Status CommanderRPCServiceImpl::GetAllTxout(grpc::ServerContext* context,
-                                                  const rpc::EmptyRequest* request,
+                                                  const rpc::EmptyMessage* request,
                                                   rpc::GetAllTxoutResponse* reply) {
     if (!WALLET) {
         reply->set_result(RPCReturn::kWalletNotStarted);
