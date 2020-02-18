@@ -415,7 +415,7 @@ TEST_F(TestRPCServer, transaction_and_miner) {
 
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
 
-    // checkout GetWalletAddrs, GetTxOuts and GetAllTxout 
+    // checkout GetWalletAddrs and GetAllTxout
     const auto allAddrs = WALLET->GetAllAddresses();
     std::string allAddrsResult;
     for (const auto& addr : allAddrs) {

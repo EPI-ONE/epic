@@ -401,18 +401,6 @@ op_string RPCClient::GetWalletAddrs() {
     }
 }
 
-op_string RPCClient::GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx) {
-    GetTxoutRequest request;
-    GetTxoutResponse response;
-
-    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
-                            -> grpc::Status { return commander_stub_->GetTxout(context, request, response); },
-                        request, &response)) {
-        return {};
-    }
-    return "";
-}
-
 op_string RPCClient::GetAllTxout() {
     EmptyMessage request;
     GetAllTxoutResponse response;

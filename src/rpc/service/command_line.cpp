@@ -270,19 +270,6 @@ grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* contex
     return grpc::Status::OK;
 }
 
-
-grpc::Status CommanderRPCServiceImpl::GetTxout(grpc::ServerContext* context,
-                                               const rpc::GetTxoutRequest* request,
-                                               rpc::GetTxoutResponse* reply) {
-    if (!WALLET) {
-        reply->set_result(RPCReturn::kWalletNotStarted);
-    } else if (!WALLET->IsLoggedIn()) {
-        reply->set_result(RPCReturn::kWalletNotLoggedIn);
-    } else {
-    }
-    return grpc::Status::OK;
-}
-
 grpc::Status CommanderRPCServiceImpl::GetAllTxout(grpc::ServerContext* context,
                                                   const rpc::EmptyRequest* request,
                                                   rpc::GetAllTxoutResponse* reply) {

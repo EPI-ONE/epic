@@ -45,7 +45,6 @@ public:
 
     std::optional<std::string> GetBalance();
     std::optional<std::string> GetWalletAddrs();
-    std::optional<std::string> GetTxout(std::string blkHash, uint32_t txIdx, uint32_t outIdx);
     std::optional<std::string> GetAllTxout();
     std::optional<bool> ValidateAddr(std::string addr);
     std::optional<bool> VerifyMessage(std::string input, std::string output, std::vector<uint8_t> ops);
