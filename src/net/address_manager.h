@@ -133,7 +133,7 @@ public:
      * get the best local address by the score
      * @return
      */
-    const IPAddress GetBestLocalAddress();
+    const NetAddress GetBestLocalAddress();
 
     /*
      * add the score of the local address
