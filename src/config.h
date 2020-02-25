@@ -125,6 +125,14 @@ public:
         networkType_ = networkType;
     }
 
+    void SetExternAddress(const std::string& address) {
+        external_address_ = address;
+    }
+
+    const std::string& GetExternAddress() const {
+        return external_address_;
+    }
+
     std::string GetDBPath() const {
         return GetRoot() + dbPath_;
     }
@@ -202,6 +210,7 @@ public:
         ss << "interval of saving address = " << saveInterval_ << " seconds" << std::endl;
         ss << "bind ip = " << bindAddress_ << std::endl;
         ss << "bind port = " << bindPort_ << std::endl;
+        ss << "external address = " << external_address_ << std::endl;
         ss << "network type = " << networkType_ << std::endl;
         ss << "dbpath = " << GetDBPath() << std::endl;
         ss << "disable rpc = " << (disableRPC_ ? "yes" : "no") << std::endl;
@@ -307,6 +316,7 @@ private:
     std::string networkType_ = "Testnet";
     bool amISeed_            = false;
     std::vector<NetAddress> seeds_;
+    std::string external_address_;
 
     // db
     bool startWithNewDB = false;
