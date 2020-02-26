@@ -422,15 +422,15 @@ TEST_F(TestRPCServer, transaction_and_miner) {
         allAddrsResult += EncodeAddress(addr) + "\n";
     }
     auto opAllAddrs = client->GetWalletAddrs();
-    EXPECT_TRUE(opAllAddrs.has_value());
-    EXPECT_EQ(allAddrsResult, opAllAddrs.value());
+    ASSERT_TRUE(opAllAddrs.has_value());
+    ASSERT_EQ(allAddrsResult, opAllAddrs.value());
 
     const auto opAllTxout = client->GetAllTxout();
-    EXPECT_TRUE(opAllTxout.has_value());
+    ASSERT_TRUE(opAllTxout.has_value());
 
     std::istringstream inputstr{opAllAddrs.value()};
     for (std::string line; std::getline(inputstr, line);) {
-        EXPECT_NE(opAllAddrs->find(line), std::string::npos);
+        ASSERT_NE(opAllAddrs->find(line), std::string::npos);
     }
 
     ASSERT_TRUE(client->Stop());
@@ -472,8 +472,8 @@ TEST_F(TestRPCServer, stateless_test) {
     indata << keypair.second << sig << hashMsg;
     Tasm::Listing inputListing{Tasm::Listing{indata}};
 
-    EXPECT_TRUE(client->ValidateAddr(encodedAddr).value());
-    EXPECT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
+    ASSERT_TRUE(client->ValidateAddr(encodedAddr).value());
+    ASSERT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
 }
 
 TEST_F(TestRPCServer, Subscription) {

@@ -80,6 +80,14 @@ std::vector<std::pair<P1, P2>> parse_pair(std::string input) {
     return output;
 }
 
+std::vector<uint8_t> get_op_vector(std::string ops_str) {
+    std::vector<uint8_t> ops{};
+    for (const auto& op_str: split(ops_str, ' ')) {
+        ops.emplace_back(std::stoi(op_str));
+    }
+    return ops;
+}
+
 int main(int argc, char** argv) {
     PrintBanner();
     EpicCli cli("epic");
@@ -175,6 +183,20 @@ std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
                 "Create the transaction", {"the transaction fee", "{value,address},{value,address},..."});
     sub->Insert("show-peer", [this](std::ostream& out, std::string address) { ShowPeer(out, address); },
                 "Show the peer information", {"ip:port or all"});
+    sub->Insert(
+        "get-wallet-addr", [this](std::ostream& out) { GetWalletAddrs(out); }, "Get all addressed in wallet");
+    sub->Insert(
+        "get-txouts", [this](std::ostream& out) { GetAllTxout(out); },
+        "Get all unspent transaction outputs with corresponding address");
+    sub->Insert("validate-addr", [this](std::ostream& out, std::string addr) { ValidateAddr(out, addr); },
+                "check whether the input address is valid", {"examined address"});
+    sub->Insert("verify-message",
+                [this](std::ostream& out, std::string input, std::string output, std::string ops_str) {
+                    VerifyMessage(out, input, output, ops_str);
+                },
+                "verify whether the signed message matches with the signature ",
+                {"content of input listing, content of output listing, vector of operation code"});
+
     return sub;
 }
 
@@ -439,6 +461,42 @@ void EpicCli::CreateTx(std::ostream& out, uint64_t fee, std::string& output_str)
 
 void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
     auto r = rpc_->ShowPeer(address);
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+void EpicCli::GetWalletAddrs(std::ostream& out) {
+    auto r = rpc_->GetWalletAddrs();
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::GetAllTxout(std::ostream& out) {
+    auto r = rpc_->GetAllTxout();
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::ValidateAddr(std::ostream& out, std::string addr) {
+    auto r = rpc_->ValidateAddr(addr);
+    if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::VerifyMessage(std::ostream& out, std::string input, std::string output, std::string ops_str){
+    auto ops = get_op_vector(ops_str);
+    auto r = rpc_->VerifyMessage(input, output, ops);
     if (r) {
         out << *r << std::endl;
     } else {

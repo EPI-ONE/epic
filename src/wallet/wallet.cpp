@@ -242,11 +242,6 @@ std::vector<CKeyID> Wallet::GetAllAddresses() {
 std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr() {
     std::unordered_map<std::string, std::vector<TxOutput>> mAddr2Outputs;
 
-    auto decodedAddrs = GetAllAddresses();
-    for (const auto& addr : decodedAddrs) {
-        mAddr2Outputs.emplace(EncodeAddress(addr), std::vector<TxOutput>{});
-    }
-
     for (const auto& keypair : unspent) {
         const auto addr  = EncodeAddress(std::get<0>(keypair.second));
         const auto entry = mAddr2Outputs.find(addr);
@@ -256,7 +251,7 @@ std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr
             Tasm::Listing listing(vst);
             entry->second.emplace_back(std::get<3>(keypair.second), std::move(listing));
         } else {
-            spdlog::error("No matching address {}", addr);
+            mAddr2Outputs.emplace(addr, std::vector<TxOutput>{});
         }
     }
 
