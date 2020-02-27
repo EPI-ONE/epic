@@ -165,7 +165,7 @@ void Chain::CheckTxPartition(Vertex& b) {
 
         Vertex blk_cursor = b;
         VertexPtr previous;
-        while (previous->height > (previous->height - Cumulator::GetCap()) && previous->height > 0) {
+        while (previous->height > (previous->height - GetCumulatorCapacity()) && previous->height > 0) {
             previous = GetVertex(blk_cursor.cblock->GetPrevHash());
 
             if (!previous) {
@@ -616,6 +616,11 @@ bool Chain::IsTxFitsLedger(const ConstTxPtr& tx) const {
 // Cumulator
 ////////////////////
 
+size_t GetCumulatorCapacity() {
+    static size_t const cap = GetParams().punctualityThred + GetParams().sortitionThreshold;
+    return cap;
+}
+
 void Cumulator::Add(const Vertex& block, const Chain& chain, bool ascending) {
     auto msHeight = block.height;
     assert(msHeight > 0);
@@ -682,7 +687,7 @@ double Cumulator::Percentage(size_t height) const {
 }
 
 bool Cumulator::Full() const {
-    return sizes_.size() == cap_;
+    return sizes_.size() == GetCumulatorCapacity();
 }
 
 bool Cumulator::Empty() const {

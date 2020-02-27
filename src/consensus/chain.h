@@ -20,16 +20,10 @@ namespace std {
 string to_string(const Cumulator& b);
 } // namespace std
 
+size_t GetCumulatorCapacity();
+
 class Cumulator {
 public:
-    static size_t GetCap() {
-        return cap_;
-    }
-
-    Cumulator() {
-        cap_ = GetParams().punctualityThred + GetParams().sortitionThreshold;
-    }
-
     void Add(const Vertex& block, const Chain&, bool ascending);
     double Percentage(size_t height) const;
     bool Full() const;
@@ -40,8 +34,6 @@ public:
     friend struct std::hash<Cumulator>;
 
 private:
-    static size_t cap_;
-
     // <
     //    level set height,
     //    <
