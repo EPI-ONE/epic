@@ -137,10 +137,6 @@ private:
     ConcurrentHashSet<FilePos> checksumTasks_;
     uint64_t lastUpdateTaskTime_;
 
-    std::atomic_bool interrupt{false};
-    std::thread scheduler_;
-    void ScheduleTask();
-
     DBStore dbStore_;
     ConcurrentHashMap<uint256, ConstBlockPtr> blockPool_;
 

@@ -82,7 +82,7 @@ std::vector<std::pair<P1, P2>> parse_pair(std::string input) {
 
 std::vector<uint8_t> get_op_vector(std::string ops_str) {
     std::vector<uint8_t> ops{};
-    for (const auto& op_str: split(ops_str, ' ')) {
+    for (const auto& op_str : split(ops_str, ' ')) {
         ops.emplace_back(std::stoi(op_str));
     }
     return ops;
@@ -196,7 +196,10 @@ std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
                 },
                 "verify whether the signed message matches with the signature ",
                 {"content of input listing, content of output listing, vector of operation code"});
-
+    sub->Insert(
+        "netstat", [this](std::ostream& out) { NetStat(out); }, "Show the network statistics information");
+    sub->Insert(
+        "dagstat", [this](std::ostream& out) { DagStat(out); }, "Show the DAG statistics information");
     return sub;
 }
 
@@ -467,6 +470,7 @@ void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
         Close(out);
     }
 }
+
 void EpicCli::GetWalletAddrs(std::ostream& out) {
     auto r = rpc_->GetWalletAddrs();
     if (r) {
@@ -494,10 +498,26 @@ void EpicCli::ValidateAddr(std::ostream& out, std::string addr) {
     }
 }
 
-void EpicCli::VerifyMessage(std::ostream& out, std::string input, std::string output, std::string ops_str){
+void EpicCli::VerifyMessage(std::ostream& out, std::string input, std::string output, std::string ops_str) {
     auto ops = get_op_vector(ops_str);
-    auto r = rpc_->VerifyMessage(input, output, ops);
+    auto r   = rpc_->VerifyMessage(input, output, ops);
     if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::NetStat(std::ostream& out) {
+    if (auto r = rpc_->NetStat()) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::DagStat(std::ostream& out) {
+    if (auto r = rpc_->DagStat()) {
         out << *r << std::endl;
     } else {
         Close(out);

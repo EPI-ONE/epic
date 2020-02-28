@@ -6,6 +6,7 @@
 #define EPIC_CONNECTION_MANAGER_H
 
 #include "connection.h"
+#include "scheduler.h"
 #include "threadpool.h"
 
 typedef std::pair<shared_connection_t, unique_message_t> connection_message_t;
@@ -15,6 +16,21 @@ typedef struct event_base event_base_t;
 typedef struct evconnlistener evconnlistener_t;
 typedef struct evbuffer evbuffer_t;
 
+typedef struct {
+    std::atomic_uint64_t receive_bytes    = 0;
+    std::atomic_uint64_t receive_packages = 0;
+    std::atomic_uint64_t send_bytes       = 0;
+    std::atomic_uint64_t send_packages    = 0;
+
+    std::atomic_uint64_t header_error_packages = 0;
+    std::atomic_uint64_t crc_error_bytes       = 0;
+    std::atomic_uint64_t crc_error_packages    = 0;
+
+    std::atomic_uint32_t receive_rate = 0;
+    std::atomic_uint32_t receive_pps  = 0;
+    std::atomic_uint32_t send_rate    = 0;
+    std::atomic_uint32_t send_pps     = 0;
+} NetStat;
 
 class ConnectionManager {
 public:
@@ -112,6 +128,10 @@ public:
 
     void QuitQueue();
 
+    void Statistics();
+
+    NetStat netstat;
+
 private:
     event_base_t* base_                               = nullptr;
     evconnlistener_t* listener_                       = nullptr;
@@ -127,18 +147,11 @@ private:
 
     uint32_t bind_ip_ = INADDR_ANY;
 
-    std::atomic_size_t receive_bytes_    = 0;
-    std::atomic_size_t receive_packages_ = 0;
-    std::atomic_size_t send_bytes_       = 0;
-    std::atomic_size_t send_packages_    = 0;
-
-    std::atomic_size_t checksum_error_bytes_    = 0;
-    std::atomic_size_t checksum_error_packages_ = 0;
-
     ThreadPool serialize_pool_;
 
     ThreadPool deserialize_pool_;
 
+    Scheduler scheduler_;
 
     void WriteOneMessage_(shared_connection_t connection, unique_message_t& message);
 

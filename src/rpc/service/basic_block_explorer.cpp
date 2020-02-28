@@ -133,7 +133,8 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext* context,
                                                              const EmptyMessage* request,
                                                              GetRecentStatResponse* response) {
-    const auto chain = DAG->GetBestChain()->GetMilestones();
+    const auto chain = DAG->GetBestChain()->GetMilestones().value_set();
+    assert(!chain.empty());
 
     response->set_timefrom(chain.front()->GetLevelSet().front().lock()->cblock->GetTime());
     response->set_timeto(chain.back()->GetMilestone()->cblock->GetTime());
@@ -146,8 +147,13 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext
     response->set_nblks(totalblk);
     response->set_ntxs(totaltx);
 
-    auto tps = totaltx / static_cast<double>(response->timeto() - response->timefrom());
-    response->set_tps(tps);
+    if (response->timeto() > response->timefrom()) {
+        auto tps = totaltx / static_cast<double>(response->timeto() - response->timefrom());
+        response->set_tps(tps);
+    } else {
+        response->set_tps(0);
+    }
+
     return grpc::Status::OK;
 }
 

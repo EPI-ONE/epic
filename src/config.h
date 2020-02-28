@@ -16,7 +16,7 @@
 class Config {
 public:
     // default bind ip address
-    inline static const std::string defaultIP = "0.0.0.0";
+    const std::string defaultIP = "0.0.0.0";
 
     // default bind port
     static const uint16_t defaultPort = 7877;

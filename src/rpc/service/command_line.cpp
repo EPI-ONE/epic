@@ -437,26 +437,43 @@ grpc::Status CommanderRPCServiceImpl::ShowPeer(grpc::ServerContext* context,
 grpc::Status CommanderRPCServiceImpl::Subscribe(grpc::ServerContext* context,
                                                 const rpc::SubscribeRequest* request,
                                                 rpc::SubscribeResponse* response) {
-    auto address = request->address();
-    uint8_t sub_type = (uint8_t)request->sub_type();
-    if (!PUBLISHER){
+    auto address     = request->address();
+    uint8_t sub_type = (uint8_t) request->sub_type();
+    if (!PUBLISHER) {
         response->set_result("Publisher hasn't been started");
-    } else if(PUBLISHER->AddNewSubscriber(address, sub_type)) { 
+    } else if (PUBLISHER->AddNewSubscriber(address, sub_type)) {
         response->set_result("Success");
-    } else{
+    } else {
         response->set_result("Failed to subscribe");
-    }        
+    }
 
-    return grpc::Status::OK;    
+    return grpc::Status::OK;
 }
 
 grpc::Status CommanderRPCServiceImpl::DelSubscriber(grpc::ServerContext* context,
-                                                   const rpc::DelSubscriberRequest* request,
-                                                   rpc::EmptyMessage* response) {
+                                                    const rpc::DelSubscriberRequest* request,
+                                                    rpc::EmptyMessage* response) {
     auto address = request->address();
-    if(PUBLISHER) {
+    if (PUBLISHER) {
         PUBLISHER->DeleteSubscriber(address);
     }
 
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::NetStat(grpc::ServerContext* context,
+                                              const rpc::EmptyMessage* request,
+                                              rpc::NetStatResponse* response) {
+    response->set_receive_bytes(PEERMAN->GetNetStat().receive_bytes);
+    response->set_receive_pkgs(PEERMAN->GetNetStat().receive_packages);
+    response->set_send_bytes(PEERMAN->GetNetStat().send_bytes);
+    response->set_send_pkgs(PEERMAN->GetNetStat().send_packages);
+    response->set_crc_error_bytes(PEERMAN->GetNetStat().crc_error_bytes);
+    response->set_crc_error_pkgs(PEERMAN->GetNetStat().crc_error_packages);
+    response->set_header_error_pkgs(PEERMAN->GetNetStat().header_error_packages);
+    response->set_receive_rate(PEERMAN->GetNetStat().receive_rate);
+    response->set_receive_pps(PEERMAN->GetNetStat().receive_pps);
+    response->set_send_rate(PEERMAN->GetNetStat().send_rate);
+    response->set_send_pps(PEERMAN->GetNetStat().send_pps);
     return grpc::Status::OK;
 }

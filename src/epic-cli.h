@@ -44,6 +44,8 @@ public:
     void GetAllTxout(std::ostream&);
     void ValidateAddr(std::ostream&, std::string addr);
     void VerifyMessage(std::ostream&, std::string input, std::string output, std::string ops_str);
+    void NetStat(std::ostream&);
+    void DagStat(std::ostream&);
 
 private:
     void TryToMine(std::ostream& out);
