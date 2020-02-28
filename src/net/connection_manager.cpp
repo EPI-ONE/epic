@@ -265,8 +265,8 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         }
 
         bufferevent_write_buffer(connection->GetBev(), send_buffer);
-        send_bytes_ += header.length;
-        send_packages_ += 1;
+        send_bytes += header.length + MESSAGE_HEADER_LENGTH;
+        send_packages += 1;
 
         evbuffer_free(send_buffer);
     });
@@ -324,8 +324,7 @@ size_t ConnectionManager::SeekNextMessageLength_(evbuffer_t* buf) {
     message_header_t header;
     evbuffer_copyout(buf, &header, MESSAGE_HEADER_LENGTH);
     if (!VerifyChecksum(header)) {
-        checksum_error_bytes_ += header.length;
-        checksum_error_packages_ += 1;
+        header_error_packages += 1;
         return 0;
     }
 
@@ -370,15 +369,15 @@ bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, Connection* handle) 
             deserialize_pool_.Execute(
                 [header, payload = std::move(payload), crc32, handle = handle->GetHandlePtr(), this]() {
                     if (header.length == 0 || crc32c((uint8_t*) payload->data(), payload->size()) == crc32) {
-                        receive_bytes_ += header.length + MESSAGE_HEADER_LENGTH;
-                        receive_packages_ += 1;
+                        receive_bytes += header.length + MESSAGE_HEADER_LENGTH;
+                        receive_packages += 1;
                         unique_message_t message = NetMessage::MessageFactory(header.type, header.countDown, *payload);
                         if (message->GetType() != NetMessage::NONE) {
                             receive_message_queue_.Put(std::make_pair(handle, std::move(message)));
                         }
                     } else {
-                        checksum_error_bytes_ += header.length;
-                        checksum_error_packages_ += 1;
+                        crc_error_bytes += header.length + MESSAGE_HEADER_LENGTH;
+                        crc_error_packages += 1;
                     }
                 });
 
@@ -401,4 +400,13 @@ uint32_t ConnectionManager::GetOutboundNum() const {
 
 uint32_t ConnectionManager::GetConnectionNum() const {
     return inbound_num_ + outbound_num_;
+}
+
+void ConnectionManager::Statistics() {
+    auto now                         = std::chrono::steady_clock::now();
+    static auto last_statistics_time = now;
+    if (now > last_statistics_time) {
+
+        last_statistics_time = now;
+    }
 }

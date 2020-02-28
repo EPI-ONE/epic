@@ -112,6 +112,22 @@ public:
 
     void QuitQueue();
 
+    void Statistics();
+
+    std::atomic_uint64_t receive_bytes    = 0;
+    std::atomic_uint64_t receive_packages = 0;
+    std::atomic_uint64_t send_bytes       = 0;
+    std::atomic_uint64_t send_packages    = 0;
+
+    std::atomic_uint64_t header_error_packages = 0;
+    std::atomic_uint64_t crc_error_bytes       = 0;
+    std::atomic_uint64_t crc_error_packages    = 0;
+
+    std::atomic_uint32_t receive_rate = 0;
+    std::atomic_uint32_t receive_pps  = 0;
+    std::atomic_uint32_t send_rate    = 0;
+    std::atomic_uint32_t send_pps     = 0;
+
 private:
     event_base_t* base_                               = nullptr;
     evconnlistener_t* listener_                       = nullptr;
@@ -126,14 +142,6 @@ private:
     std::atomic_uint32_t outbound_num_ = 0;
 
     uint32_t bind_ip_ = INADDR_ANY;
-
-    std::atomic_size_t receive_bytes_    = 0;
-    std::atomic_size_t receive_packages_ = 0;
-    std::atomic_size_t send_bytes_       = 0;
-    std::atomic_size_t send_packages_    = 0;
-
-    std::atomic_size_t checksum_error_bytes_    = 0;
-    std::atomic_size_t checksum_error_packages_ = 0;
 
     ThreadPool serialize_pool_;
     uint32_t serialize_pool_size_ = 1;

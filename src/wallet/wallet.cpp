@@ -15,32 +15,26 @@
 #include <utility>
 
 Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession)
-    : threadPool_(2), verifyThread_(1), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
+    : threadPool_(2), verifyThread_(1), walletStore_(walletPath), backupPeriod_(backupPeriod), totalBalance_{0},
+      timer_(loginSession, [&]() {
           rpcLoggedin_ = false;
           spdlog::trace("[Wallet] wallet login session expired!");
       }) {
-    if (backupPeriod) {
-        scheduleFunc_ = [&, backupPeriod]() { SendPeriodicTasks(backupPeriod); };
-    }
     Load();
 }
 
 void Wallet::Start() {
-    stopFlag_ = false;
     verifyThread_.Start();
     threadPool_.Start();
-
-    if (scheduleFunc_) {
-        scheduleTask_ = std::thread(scheduleFunc_);
+    if (backupPeriod_) {
+        SendPeriodicTasks(backupPeriod_);
     }
 }
 
 void Wallet::Stop() {
     spdlog::info("Stopping wallet...");
     stopFlag_ = true;
-    if (scheduleTask_.joinable()) {
-        scheduleTask_.join();
-    }
+    scheduler_.Stop();
     verifyThread_.Stop();
     threadPool_.Stop();
     spdlog::info("Wallet stopped.");
@@ -110,10 +104,7 @@ void Wallet::SendPeriodicTasks(uint32_t storagePeriod) {
         });
     });
 
-    while (!stopFlag_) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        scheduler_.Loop();
-    }
+    scheduler_.Start();
 }
 
 void Wallet::RPCLogin() {

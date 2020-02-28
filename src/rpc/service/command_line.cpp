@@ -364,26 +364,32 @@ grpc::Status CommanderRPCServiceImpl::ShowPeer(grpc::ServerContext* context,
 grpc::Status CommanderRPCServiceImpl::Subscribe(grpc::ServerContext* context,
                                                 const rpc::SubscribeRequest* request,
                                                 rpc::SubscribeResponse* response) {
-    auto address = request->address();
-    uint8_t sub_type = (uint8_t)request->sub_type();
-    if (!PUBLISHER){
+    auto address     = request->address();
+    uint8_t sub_type = (uint8_t) request->sub_type();
+    if (!PUBLISHER) {
         response->set_result("Publisher hasn't been started");
-    } else if(PUBLISHER->AddNewSubscriber(address, sub_type)) { 
+    } else if (PUBLISHER->AddNewSubscriber(address, sub_type)) {
         response->set_result("Success");
-    } else{
+    } else {
         response->set_result("Failed to subscribe");
-    }        
+    }
 
-    return grpc::Status::OK;    
+    return grpc::Status::OK;
 }
 
 grpc::Status CommanderRPCServiceImpl::DelSubscriber(grpc::ServerContext* context,
-                                                   const rpc::DelSubscriberRequest* request,
-                                                   rpc::EmptyMessage* response) {
+                                                    const rpc::DelSubscriberRequest* request,
+                                                    rpc::EmptyMessage* response) {
     auto address = request->address();
-    if(PUBLISHER) {
+    if (PUBLISHER) {
         PUBLISHER->DeleteSubscriber(address);
     }
 
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::NetStat(grpc::ServerContext* context,
+                                              const rpc::EmptyMessage* request,
+                                              rpc::NetStatResponse* response) {
     return grpc::Status::OK;
 }

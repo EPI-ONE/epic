@@ -131,10 +131,9 @@ private:
 
     WalletStore walletStore_;
 
-    std::atomic_bool stopFlag_;
+    std::atomic_bool stopFlag_ = false;
     Scheduler scheduler_;
-    std::function<void(void)> scheduleFunc_ = nullptr;
-    std::thread scheduleTask_;
+    uint32_t backupPeriod_;
 
     mutable std::shared_mutex lock_;
     std::pair<uint256, Coin> minerInfo_{uint256{}, Coin(0)};

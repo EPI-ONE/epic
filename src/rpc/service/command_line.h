@@ -92,6 +92,11 @@ class CommanderRPCServiceImpl final : public rpc::CommanderRPC::Service {
     grpc::Status DelSubscriber(grpc::ServerContext* context,
                                const rpc::DelSubscriberRequest* request,
                                rpc::EmptyMessage* response) override;
+
+    grpc::Status NetStat(grpc::ServerContext* context,
+                         const rpc::EmptyMessage* request,
+                         rpc::NetStatResponse* response) override;
+
 private:
     void AddPeer(rpc::ShowPeerResponse* response, std::shared_ptr<Peer> peer);
 };

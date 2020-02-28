@@ -180,11 +180,6 @@ private:
      */
     void OpenConnection();
 
-    /**
-     * a while loop to check the behaviors of peers and disconnect bad peer
-     */
-    void ScheduleTask();
-
     void InitialSync();
 
     void CheckTimeout();
@@ -277,9 +272,6 @@ private:
 
     // continuously choose addresses and connect to them
     std::thread openConnectionTask_;
-
-    // do some periodical tasks
-    std::thread scheduleTask_;
 
     std::thread initialSyncTask_;
 

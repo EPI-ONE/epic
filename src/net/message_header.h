@@ -30,4 +30,9 @@ inline bool VerifyChecksum(const message_header_t& header) {
     return header.checksum == header.magic + header.type + header.countDown + header.length;
 }
 
+inline uint32_t CalcChecksum(const message_header_t* header) {
+    const uint32_t* p = (uint32_t*) header;
+    return p[0] + p[1] + p[2] + p[3];
+}
+
 #endif // EPIC_MESSAGE_HEADER_H

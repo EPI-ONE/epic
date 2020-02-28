@@ -35,7 +35,6 @@ void PeerManager::Start() {
     connectionManager_->Start();
 
     handleMessageTask_ = std::thread(std::bind(&PeerManager::HandleMessage, this));
-    scheduleTask_      = std::thread(std::bind(&PeerManager::ScheduleTask, this));
     if (connect_.empty()) {
         if (CONFIG->AmISeed()) {
             spdlog::info("I am a seed, so I'm not starting the openConnection thread.");
@@ -53,13 +52,10 @@ void PeerManager::Stop() {
     spdlog::info("Stopping the peer manager...");
     interrupt_ = true;
     connectionManager_->QuitQueue();
+    scheduler_.Stop();
 
     if (handleMessageTask_.joinable()) {
         handleMessageTask_.join();
-    }
-
-    if (scheduleTask_.joinable()) {
-        scheduleTask_.join();
     }
 
     if (openConnectionTask_.joinable()) {
@@ -229,8 +225,8 @@ void PeerManager::ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer) {
     if (MEMPOOL->ReceiveTx(tx)) {
         RelayTransaction(tx, peer);
         if (PUBLISHER) {
-            PUBLISHER->PushMsg((void*)tx.get(), SubType::TX);
-	    }
+            PUBLISHER->PushMsg((void*) tx.get(), SubType::TX);
+        }
     }
 }
 
@@ -390,13 +386,6 @@ void PeerManager::InitialSync() {
     }
 }
 
-void PeerManager::ScheduleTask() {
-    while (!interrupt_) {
-        scheduler_.Loop();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-}
-
 PeerPtr PeerManager::GetPeer(shared_connection_t& connection) {
     std::shared_lock<std::shared_mutex> lk(peerLock_);
     auto it = peerMap_.find(connection);
@@ -519,6 +508,8 @@ void PeerManager::InitScheduleTask() {
     scheduler_.AddPeriodTask(CONFIG->GetSaveInterval(), [this]() {
         addressManager_->SaveAddress(CONFIG->GetAddressPath() + '/', CONFIG->GetAddressFilename());
     });
+
+    scheduler_.Start();
 }
 
 PeerPtr PeerManager::GetSyncPeer() {

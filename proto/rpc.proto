@@ -168,6 +168,20 @@ message StatisticResponse {
     uint32 mempool = 5;
 }
 
+message NetStatResponse {
+    uint64 receive_pkgs = 1;
+    uint64 receive_bytes = 2;
+    uint32 receive_rate = 3;
+    uint32 receive_pps = 4;
+    uint64 send_pkgs = 5;
+    uint64 send_bytes = 6;
+    uint32 send_rate = 7;
+    uint32 send_pps = 8;
+    uint64 header_error_pkgs = 9;
+    uint64 crc_error_pkgs = 10;
+    uint64 crc_error_bytes = 11;
+}
+
 service CommanderRPC {
     // Command for EPIC program
     rpc Stop (EmptyMessage) returns (StopResponse);
@@ -198,6 +212,9 @@ service CommanderRPC {
     // Command for Subscription
     rpc Subscribe (SubscribeRequest) returns (SubscribeResponse);
     rpc DelSubscriber (DelSubscriberRequest) returns (EmptyMessage);
+
+    // Command for Network
+    rpc NetStat (EmptyMessage) returns (NetStatResponse);
 }
 
 message SubscribeRequest{

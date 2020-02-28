@@ -34,9 +34,14 @@ private:
 
 class Scheduler {
 public:
-    void Loop() {
-        for (auto& t : period_tasks_) {
-            t.Run();
+    void Start() {
+        thread = std::thread(std::bind(&Scheduler::Loop, this));
+    }
+
+    void Stop() {
+        interrupt_ = true;
+        if (thread.joinable()) {
+            thread.join();
         }
     }
 
@@ -45,7 +50,17 @@ public:
     }
 
 private:
+    void Loop() {
+        while (!interrupt_) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            for (auto& t : period_tasks_) {
+                t.Run();
+            }
+        }
+    }
     std::vector<PeriodTask> period_tasks_;
+    std::thread thread;
+    std::atomic_bool interrupt_ = false;
 };
 
 class Timer {
