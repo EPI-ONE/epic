@@ -291,12 +291,14 @@ void LoadConfigFile() {
     // address manager
     auto address_config = configContent->get_table("address");
     if (address_config) {
-        auto path     = address_config->get_as<std::string>("path").value_or("");
-        auto filename = address_config->get_as<std::string>("filename").value_or("address.toml");
-        auto interval = address_config->get_as<uint>("interval").value_or(15 * 60);
+        auto path              = address_config->get_as<std::string>("path").value_or("");
+        auto filename          = address_config->get_as<std::string>("filename").value_or("address.toml");
+        auto interval          = address_config->get_as<uint>("interval").value_or(15 * 60);
+        auto maxFailedAttempts = address_config->get_as<uint32_t>("maxFailedAttempts").value_or(5);
         CONFIG->SetAddressPath(path);
         CONFIG->SetAddressFilename(filename);
         CONFIG->SetSaveInterval(interval);
+        CONFIG->SetMaxFailedAttempts(maxFailedAttempts);
     }
 
     // network config

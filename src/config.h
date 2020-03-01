@@ -1,5 +1,3 @@
-#include <utility>
-
 // Copyright (c) 2019 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -293,6 +291,14 @@ public:
         return prune_;
     }
 
+    void SetMaxFailedAttempts(uint32_t attempts) {
+        maxFailedAttempts = attempts;
+    }
+
+    uint32_t GetMaxFailedAttempts() const {
+        return maxFailedAttempts;
+    }
+
 private:
     // config file
     std::string configFilePath_;
@@ -308,6 +314,7 @@ private:
     std::string addressPath_     = "";
     std::string addressFilename_ = "address.toml";
     std::uint32_t saveInterval_  = 15 * 60;
+    uint32_t maxFailedAttempts   = 5;
 
     // network config
     std::string bindAddress_ = defaultIP;

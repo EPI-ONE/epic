@@ -71,3 +71,18 @@ TEST_F(TestAddressManager, LocalAddr) {
     addressManager.LoadLocalAddresses();
     EXPECT_TRUE(addressManager.IsLocal(ip1));
 }
+
+TEST_F(TestAddressManager, DeleteInactiveAddr) {
+    CONFIG = std::make_unique<Config>();
+    addressManager.SaveAddress("./", addressFilePath);
+    for (int i = 0; i < CONFIG->GetMaxFailedAttempts() + 1; i++) {
+        addressManager.SetLastTry(ip4, time(nullptr));
+    }
+
+    addressManager.SaveAddress("./", addressFilePath);
+    addressManager.Clear();
+
+    addressManager.LoadAddress("./", addressFilePath);
+    std::remove(addressFilePath.c_str());
+    EXPECT_FALSE(addressManager.ContainAddress(ip4));
+}
