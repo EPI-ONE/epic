@@ -416,6 +416,15 @@ public:
         return n;
     }
 
+    std::vector<T> value_set() const {
+        READER_LOCK(base::mutex_)
+        if (base::c.empty()) {
+            return {};
+        }
+
+        return std::vector<T>(base::c.front(), base::c.back());
+    }
+
     // Hide invalid functions from base class
     template <class... Args>
     std::pair<iterator, bool> emplace(Args&&... args)       = delete;

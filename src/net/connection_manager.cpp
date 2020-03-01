@@ -199,6 +199,9 @@ void ConnectionManager::Start() {
     serialize_pool_.Start();
     deserialize_pool_.SetThreadSize(deserialize_pool_size_);
     deserialize_pool_.Start();
+
+    scheduler_.AddPeriodTask(1, std::bind(&ConnectionManager::Statistics, this));
+    scheduler_.Start();
     /* thread for listen accept event callback and receive message to the queue */
     thread_event_base_ = std::thread(event_base_loop, base_, EVLOOP_NO_EXIT_ON_EMPTY);
     spdlog::info("[net] Connection manager start");
@@ -225,6 +228,7 @@ void ConnectionManager::Stop() {
 
     serialize_pool_.Stop();
     deserialize_pool_.Stop();
+    scheduler_.Stop();
 
     spdlog::info("[net] Connection manager stopped.");
 }
@@ -265,8 +269,8 @@ void ConnectionManager::WriteOneMessage_(shared_connection_t connection, unique_
         }
 
         bufferevent_write_buffer(connection->GetBev(), send_buffer);
-        send_bytes += header.length + MESSAGE_HEADER_LENGTH;
-        send_packages += 1;
+        netstat.send_bytes += header.length + MESSAGE_HEADER_LENGTH;
+        netstat.send_packages += 1;
 
         evbuffer_free(send_buffer);
     });
@@ -324,7 +328,7 @@ size_t ConnectionManager::SeekNextMessageLength_(evbuffer_t* buf) {
     message_header_t header;
     evbuffer_copyout(buf, &header, MESSAGE_HEADER_LENGTH);
     if (!VerifyChecksum(header)) {
-        header_error_packages += 1;
+        netstat.header_error_packages += 1;
         return 0;
     }
 
@@ -369,15 +373,15 @@ bool ConnectionManager::ReadOneMessage_(bufferevent_t* bev, Connection* handle) 
             deserialize_pool_.Execute(
                 [header, payload = std::move(payload), crc32, handle = handle->GetHandlePtr(), this]() {
                     if (header.length == 0 || crc32c((uint8_t*) payload->data(), payload->size()) == crc32) {
-                        receive_bytes += header.length + MESSAGE_HEADER_LENGTH;
-                        receive_packages += 1;
+                        netstat.receive_bytes += header.length + MESSAGE_HEADER_LENGTH;
+                        netstat.receive_packages += 1;
                         unique_message_t message = NetMessage::MessageFactory(header.type, header.countDown, *payload);
                         if (message->GetType() != NetMessage::NONE) {
                             receive_message_queue_.Put(std::make_pair(handle, std::move(message)));
                         }
                     } else {
-                        crc_error_bytes += header.length + MESSAGE_HEADER_LENGTH;
-                        crc_error_packages += 1;
+                        netstat.crc_error_bytes += header.length + MESSAGE_HEADER_LENGTH;
+                        netstat.crc_error_packages += 1;
                     }
                 });
 
@@ -403,10 +407,18 @@ uint32_t ConnectionManager::GetConnectionNum() const {
 }
 
 void ConnectionManager::Statistics() {
-    auto now                         = std::chrono::steady_clock::now();
-    static auto last_statistics_time = now;
-    if (now > last_statistics_time) {
+    static uint64_t last_receive_bytes    = 0;
+    static uint64_t last_receive_packages = 0;
+    static uint64_t last_send_bytes       = 0;
+    static uint64_t last_send_packages    = 0;
 
-        last_statistics_time = now;
-    }
+    netstat.receive_rate = netstat.receive_bytes - last_receive_bytes;
+    netstat.receive_pps  = netstat.receive_packages - last_receive_packages;
+    netstat.send_rate    = netstat.send_bytes - last_send_bytes;
+    netstat.send_pps     = netstat.send_packages - last_send_packages;
+
+    last_receive_bytes    = netstat.receive_bytes;
+    last_receive_packages = netstat.receive_packages;
+    last_send_bytes       = netstat.send_bytes;
+    last_send_packages    = netstat.send_packages;
 }

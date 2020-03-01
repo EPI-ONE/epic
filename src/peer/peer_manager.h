@@ -129,6 +129,10 @@ public:
 
     std::vector<PeerPtr> RandomlySelect(size_t, const PeerPtr& excluded = nullptr);
 
+    NetStat& GetNetStat() {
+        return connectionManager_->netstat;
+    }
+
 private:
     /*
      * create a peer after a new connection is setup

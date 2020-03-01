@@ -456,26 +456,37 @@ op_string RPCClient::ShowPeer(const std::string& address) {
         request, &response);
 }
 
-op_string RPCClient::Subscribe(const std::string &address, uint8_t sub_type){
+std::optional<std::string> RPCClient::NetStat() {
+    EmptyMessage request;
+    NetStatResponse response;
+
+    return ProcessResponse(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
+            return commander_stub_->NetStat(context, request, response);
+        },
+        request, &response);
+}
+
+op_string RPCClient::Subscribe(const std::string& address, uint8_t sub_type) {
     SubscribeRequest request;
     request.set_address(address);
     request.set_sub_type(sub_type);
     SubscribeResponse response;
 
     return ProcessResponse(
-        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return commander_stub_->Subscribe(context, request, response);
         },
         request, &response);
 }
 
-void RPCClient::DeleteSubscriber(const std::string &address){
+void RPCClient::DeleteSubscriber(const std::string& address) {
     DelSubscriberRequest request;
     request.set_address(address);
     EmptyMessage response;
 
     ProcessResponse(
-        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return commander_stub_->DelSubscriber(context, request, response);
         },
         request, &response);

@@ -391,5 +391,16 @@ grpc::Status CommanderRPCServiceImpl::DelSubscriber(grpc::ServerContext* context
 grpc::Status CommanderRPCServiceImpl::NetStat(grpc::ServerContext* context,
                                               const rpc::EmptyMessage* request,
                                               rpc::NetStatResponse* response) {
+    response->set_receive_bytes(PEERMAN->GetNetStat().receive_bytes);
+    response->set_receive_pkgs(PEERMAN->GetNetStat().receive_packages);
+    response->set_send_bytes(PEERMAN->GetNetStat().send_bytes);
+    response->set_send_pkgs(PEERMAN->GetNetStat().send_packages);
+    response->set_crc_error_bytes(PEERMAN->GetNetStat().crc_error_bytes);
+    response->set_crc_error_pkgs(PEERMAN->GetNetStat().crc_error_packages);
+    response->set_header_error_pkgs(PEERMAN->GetNetStat().header_error_packages);
+    response->set_receive_rate(PEERMAN->GetNetStat().receive_rate);
+    response->set_receive_pps(PEERMAN->GetNetStat().receive_pps);
+    response->set_send_rate(PEERMAN->GetNetStat().send_rate);
+    response->set_send_pps(PEERMAN->GetNetStat().send_pps);
     return grpc::Status::OK;
 }

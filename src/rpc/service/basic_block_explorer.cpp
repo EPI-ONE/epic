@@ -76,8 +76,8 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerCo
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext* context,
-                          const GetBlockRequest* request,
-                          GetMilestoneResponse* response) {
+                                                            const GetBlockRequest* request,
+                                                            GetMilestoneResponse* response) {
     const auto& chain = DAG->GetBestChain();
     const auto msHash = uintS<256>(request->hash());
     if (!chain.IsMilestone(msHash)) {
@@ -133,16 +133,16 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext* context,
                                                              const EmptyMessage* request,
                                                              GetRecentStatResponse* response) {
-    const auto chain = DAG->GetBestChain().GetMilestones();
+    const auto chain = DAG->GetBestChain().GetMilestones().value_set();
 
     response->set_timefrom(chain.front()->GetLevelSet().front().lock()->cblock->GetTime());
     response->set_timeto(chain.back()->GetMilestone()->cblock->GetTime());
 
-    const auto [totalblk, totaltx] =
-        std::accumulate(chain.begin(), chain.end(), std::pair{0, 0},
-                        [](std::pair<uint32_t, uint32_t> sum, auto chain_elem) -> std::pair<uint32_t, uint32_t> {
-                            return {sum.first + chain_elem->GetLevelSet().size(), sum.second + chain_elem->GetNumOfValidTxns()};
-                        });
+    const auto [totalblk, totaltx] = std::accumulate(
+        chain.begin(), chain.end(), std::pair{0, 0},
+        [](std::pair<uint32_t, uint32_t> sum, auto chain_elem) -> std::pair<uint32_t, uint32_t> {
+            return {sum.first + chain_elem->GetLevelSet().size(), sum.second + chain_elem->GetNumOfValidTxns()};
+        });
     response->set_nblks(totalblk);
     response->set_ntxs(totaltx);
 

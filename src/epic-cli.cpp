@@ -175,6 +175,8 @@ std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
                 "Create the transaction", {"the transaction fee", "{value,address},{value,address},..."});
     sub->Insert("show-peer", [this](std::ostream& out, std::string address) { ShowPeer(out, address); },
                 "Show the peer information", {"ip:port or all"});
+    sub->Insert(
+        "netstat", [this](std::ostream& out) { NetStat(out); }, "Show the network statistics information");
     return sub;
 }
 
@@ -440,6 +442,14 @@ void EpicCli::CreateTx(std::ostream& out, uint64_t fee, std::string& output_str)
 void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
     auto r = rpc_->ShowPeer(address);
     if (r) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::NetStat(std::ostream& out) {
+    if (auto r = rpc_->NetStat()) {
         out << *r << std::endl;
     } else {
         Close(out);
