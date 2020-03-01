@@ -177,6 +177,8 @@ std::unique_ptr<Menu> EpicCli::CreateSubMenu(const std::string& title) {
                 "Show the peer information", {"ip:port or all"});
     sub->Insert(
         "netstat", [this](std::ostream& out) { NetStat(out); }, "Show the network statistics information");
+    sub->Insert(
+        "dagstat", [this](std::ostream& out) { DagStat(out); }, "Show the DAG statistics information");
     return sub;
 }
 
@@ -450,6 +452,14 @@ void EpicCli::ShowPeer(std::ostream& out, std::string& address) {
 
 void EpicCli::NetStat(std::ostream& out) {
     if (auto r = rpc_->NetStat()) {
+        out << *r << std::endl;
+    } else {
+        Close(out);
+    }
+}
+
+void EpicCli::DagStat(std::ostream& out) {
+    if (auto r = rpc_->DagStat()) {
         out << *r << std::endl;
     } else {
         Close(out);

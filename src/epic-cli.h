@@ -41,6 +41,7 @@ public:
     void CreateTx(std::ostream&, uint64_t, std::string&);
     void ShowPeer(std::ostream&, std::string&);
     void NetStat(std::ostream&);
+    void DagStat(std::ostream&);
 
 private:
     void TryToMine(std::ostream& out);

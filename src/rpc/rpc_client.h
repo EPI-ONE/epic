@@ -50,6 +50,7 @@ public:
     std::optional<bool> SyncCompleted();
     std::optional<std::string> ShowPeer(const std::string&);
     std::optional<std::string> NetStat();
+    std::optional<std::string> DagStat();
 
     std::optional<std::string> Subscribe(const std::string& address, uint8_t sub_type);
     void DeleteSubscriber(const std::string& address);

@@ -467,6 +467,17 @@ std::optional<std::string> RPCClient::NetStat() {
         request, &response);
 }
 
+std::optional<std::string> RPCClient::DagStat() {
+    EmptyMessage request;
+    GetRecentStatResponse response;
+
+    return ProcessResponse(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
+            return be_stub_->GetRecentStat(context, request, response);
+        },
+        request, &response);
+}
+
 op_string RPCClient::Subscribe(const std::string& address, uint8_t sub_type) {
     SubscribeRequest request;
     request.set_address(address);

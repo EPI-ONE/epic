@@ -418,11 +418,11 @@ public:
 
     std::vector<T> value_set() const {
         READER_LOCK(base::mutex_)
-        if (base::c.empty()) {
-            return {};
-        }
+        std::vector<T> values;
 
-        return std::vector<T>(base::c.front(), base::c.back());
+        values.reserve(base::c.size());
+        std::copy(base::c.begin(), base::c.end(), std::back_inserter(values));
+        return values;
     }
 
     // Hide invalid functions from base class
