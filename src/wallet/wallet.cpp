@@ -245,13 +245,14 @@ std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr
     for (const auto& keypair : unspent) {
         const auto addr  = EncodeAddress(std::get<0>(keypair.second));
         const auto entry = mAddr2Outputs.find(addr);
-        if (entry != mAddr2Outputs.end()) {
             VStream vst;
             vst << addr;
             Tasm::Listing listing(vst);
-            entry->second.emplace_back(std::get<3>(keypair.second), std::move(listing));
+            TxOutput output{std::get<3>(keypair.second), std::move(listing)};
+        if (entry != mAddr2Outputs.end()) {
+            entry->second.emplace_back(std::move(output));
         } else {
-            mAddr2Outputs.emplace(addr, std::vector<TxOutput>{});
+            mAddr2Outputs.emplace(addr, std::vector<TxOutput>{std::move(output)});
         }
     }
 
