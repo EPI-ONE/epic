@@ -95,6 +95,8 @@ void PeerManager::OnConnectionCreated(shared_connection_t& connection) {
                  connection->GetRemote(), GetConnectedPeerSize());
     auto peer = CreatePeer(connection, *net_address);
     AddPeer(connection, peer);
+    addressManager_->SetLastSuccess(*net_address, time(nullptr));
+
     // send version message
     if (!peer->IsInbound()) {
         std::stringstream ss;
@@ -229,8 +231,8 @@ void PeerManager::ProcessTransaction(const ConstTxPtr& tx, PeerPtr& peer) {
     if (MEMPOOL->ReceiveTx(tx)) {
         RelayTransaction(tx, peer);
         if (PUBLISHER) {
-            PUBLISHER->PushMsg((void*)tx.get(), SubType::TX);
-	    }
+            PUBLISHER->PushMsg((void*) tx.get(), SubType::TX);
+        }
     }
 }
 

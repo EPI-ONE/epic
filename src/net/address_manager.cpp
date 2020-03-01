@@ -62,6 +62,10 @@ void AddressManager::SetLastTry(const NetAddress& address, uint64_t time) {
     std::lock_guard<std::recursive_mutex> lk(lock_);
     info->numAttempts++;
     info->lastTry = time;
+    if (info->numAttempts >= CONFIG->GetMaxFailedAttempts()) {
+        newAddr_.erase(address);
+        oldAddr_.erase(address);
+    }
 }
 
 void AddressManager::SetLastSuccess(const NetAddress& address, uint64_t time) {
