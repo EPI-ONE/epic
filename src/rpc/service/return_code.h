@@ -39,6 +39,10 @@ enum RPCReturn : unsigned int {
 
     kGenerateKeySuc,
     kGetBalanceSuc,
+    kGetWalletAddrsSuc,
+    kGetTxOutNotFound,
+    kGetTxOutSuc,
+    kGetAllTxOutSuc,
 
     kCodeNum
 };

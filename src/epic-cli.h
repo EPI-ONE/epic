@@ -40,6 +40,10 @@ public:
     void CreateRandomTx(std::ostream&, uint32_t);
     void CreateTx(std::ostream&, uint64_t, std::string&);
     void ShowPeer(std::ostream&, std::string&);
+    void GetWalletAddrs(std::ostream&);
+    void GetAllTxout(std::ostream&);
+    void ValidateAddr(std::ostream&, std::string addr);
+    void VerifyMessage(std::ostream&, std::string input, std::string output, std::string ops_str);
 
 private:
     void TryToMine(std::ostream& out);

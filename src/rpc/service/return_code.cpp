@@ -6,6 +6,7 @@
 
 #include <map>
 
+// in the future, we can add multi language support here
 std::string GetReturnStr(RPCReturn code) {
     static const auto codeMap = std::map<RPCReturn, std::string>{
         {RPCReturn::kWalletNotStarted, "Wallet has not been started"},
@@ -38,6 +39,10 @@ std::string GetReturnStr(RPCReturn code) {
         {RPCReturn::kFirstRegExist, "The first registration existed"},
         {RPCReturn::kGenerateKeySuc, "Successfully generated new key"},
         {RPCReturn::kGetBalanceSuc, "Successfully get balance"},
+        {RPCReturn::kGetWalletAddrsSuc, "Successfully get all the wallet addresses"},
+        {RPCReturn::kGetTxOutNotFound, "Target tx out not found"},
+        {RPCReturn::kGetTxOutSuc, "Successfully get the transaction output"},
+        {RPCReturn::kGetAllTxOutSuc, "Successfully get all the transaction outputs"},
     };
 
     auto result = codeMap.find(code);

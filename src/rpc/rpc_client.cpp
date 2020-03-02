@@ -380,6 +380,84 @@ op_string RPCClient::Login(const std::string& passphrase) {
     return GetReturnStr(response.result());
 }
 
+op_string RPCClient::GetWalletAddrs() {
+    EmptyMessage request;
+    GetWalletAddrsResponse response;
+
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->GetWalletAddrs(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    if (response.result() == RPCReturn::kGetWalletAddrsSuc) {
+        std::string result;
+        for (const auto& addr : response.addr()) {
+            result += addr + "\n";
+        }
+        return result;
+    } else {
+        return GetReturnStr(response.result());
+    }
+}
+
+op_string RPCClient::GetAllTxout() {
+    EmptyMessage request;
+    GetAllTxoutResponse response;
+
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->GetAllTxout(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    if (response.result() == RPCReturn::kGetAllTxOutSuc) {
+        std::string result, tmp;
+        for (const auto& addrAndOutput : response.outputs()) {
+            if (MessageToJsonString(addrAndOutput, &tmp, GetOption()).ok()) {
+                result += tmp;
+                tmp.clear();
+            }
+        }
+        return result;
+    } else {
+        return GetReturnStr(response.result());
+    }
+}
+
+std::optional<bool> RPCClient::ValidateAddr(std::string addr) {
+    ValidateAddrRequest request;
+    BooleanResponse response;
+
+    request.set_addr(addr);
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->ValidateAddr(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    return response.success();
+}
+
+std::optional<bool> RPCClient::VerifyMessage(std::string input, std::string output, std::vector<uint8_t> opcode) {
+    VerifyMessageRequest request;
+    BooleanResponse response;
+
+    request.set_inputlisting(input);
+    request.set_outputlisting(output);
+    auto rpc_op = request.mutable_opcode();
+    rpc_op->Reserve(opcode.size());
+    rpc_op->Add(opcode.cbegin(), opcode.cend());
+
+    if (!ClientCallback([&](auto* context, const auto& request, auto* response)
+                            -> grpc::Status { return commander_stub_->VerifyMessage(context, request, response); },
+                        request, &response)) {
+        return {};
+    }
+
+    return response.success();
+}
+
 op_string RPCClient::ConnectPeers(const std::vector<std::string>& addresses) {
     ConnectRequest request;
     ConnectResponse response;

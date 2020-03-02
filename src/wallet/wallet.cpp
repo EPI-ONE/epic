@@ -13,6 +13,7 @@
 #include <thread>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 Wallet::Wallet(std::string walletPath, uint32_t backupPeriod, uint32_t loginSession)
     : threadPool_(2), verifyThread_(1), walletStore_(walletPath), totalBalance_{0}, timer_(loginSession, [&]() {
@@ -138,6 +139,7 @@ void Wallet::OnLvsConfirmed(std::vector<VertexPtr> vertices,
 }
 
 void Wallet::ProcessUTXO(const uint256& utxokey, const UTXOPtr& utxo) {
+    // keyId is a decoded address
     auto keyId = ParseAddrFromScript(utxo->GetOutput().listingContent);
     if (keyId) {
         if (keyBook.find(*keyId) != keyBook.end()) {
@@ -224,6 +226,37 @@ CKeyID Wallet::CreateNewKey(bool compressed) {
     walletStore_.StoreKeys(addr, ciphertext, pubkey);
     keyBook.emplace(addr, std::make_pair(ciphertext, pubkey));
     return addr;
+}
+
+std::vector<CKeyID> Wallet::GetAllAddresses() {
+    std::vector<CKeyID> result;
+    result.reserve(keyBook.size());
+
+    for (auto it = keyBook.begin(); it != keyBook.end(); it++) {
+        result.push_back(it->first);
+    }
+
+    return result;
+}
+
+std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr() {
+    std::unordered_map<std::string, std::vector<TxOutput>> mAddr2Outputs;
+
+    for (const auto& keypair : unspent) {
+        const auto addr  = EncodeAddress(std::get<0>(keypair.second));
+        const auto entry = mAddr2Outputs.find(addr);
+            VStream vst;
+            vst << addr;
+            Tasm::Listing listing(vst);
+            TxOutput output{std::get<3>(keypair.second), std::move(listing)};
+        if (entry != mAddr2Outputs.end()) {
+            entry->second.emplace_back(std::move(output));
+        } else {
+            mAddr2Outputs.emplace(addr, std::vector<TxOutput>{std::move(output)});
+        }
+    }
+
+    return mAddr2Outputs;
 }
 
 TxInput Wallet::CreateSignedVin(const CKeyID& targetAddr, TxOutPoint outpoint, const std::string& msg) {

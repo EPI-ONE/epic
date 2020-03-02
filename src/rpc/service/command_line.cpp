@@ -5,6 +5,7 @@
 #include "command_line.h"
 #include "init.h"
 #include "miner.h"
+#include "pubkey.h"
 #include "return_code.h"
 #include "rpc.pb.h"
 #include "rpc_tools.h"
@@ -250,6 +251,78 @@ grpc::Status CommanderRPCServiceImpl::Login(grpc::ServerContext* context,
         reply->set_result(RPCReturn::kWalletLoggedIn);
         WALLET->RPCLogin();
     }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::GetWalletAddrs(grpc::ServerContext* context,
+                                                     const rpc::EmptyMessage* request,
+                                                     rpc::GetWalletAddrsResponse* reply) {
+    if (!WALLET) {
+        reply->set_result(RPCReturn::kWalletNotStarted);
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
+    } else {
+        reply->set_result(RPCReturn::kGetWalletAddrsSuc);
+        for (const auto addr : WALLET->GetAllAddresses()) {
+            reply->add_addr(EncodeAddress(addr));
+        }
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::GetAllTxout(grpc::ServerContext* context,
+                                                  const rpc::EmptyMessage* request,
+                                                  rpc::GetAllTxoutResponse* reply) {
+    if (!WALLET) {
+        reply->set_result(RPCReturn::kWalletNotStarted);
+    } else if (!WALLET->IsLoggedIn()) {
+        reply->set_result(RPCReturn::kWalletNotLoggedIn);
+    } else {
+        reply->set_result(RPCReturn::kGetAllTxOutSuc);
+
+        auto repeatedOutputs = reply->mutable_outputs();
+        for (const auto& [addr, outputs] : WALLET->GetTxoutsWithAddr()) {
+            auto* value = new RepeatedOutput;
+            value->set_addr(addr);
+
+            auto rpcOutput = value->mutable_output();
+            for (const auto& output : outputs) {
+                rpcOutput->AddAllocated(ToRPCOutput(output));
+            }
+            repeatedOutputs->AddAllocated(value);
+        }
+
+    }
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::ValidateAddr(grpc::ServerContext* context,
+                          const rpc::ValidateAddrRequest* request,
+                          rpc::BooleanResponse* reply) {
+    auto addr = request->addr();
+    reply->set_success(DecodeAddress(addr).has_value());
+    return grpc::Status::OK;
+}
+
+grpc::Status CommanderRPCServiceImpl::VerifyMessage(grpc::ServerContext* context,
+        const rpc::VerifyMessageRequest* request,
+        rpc::BooleanResponse* reply) {
+    auto ops = request->opcode();
+    auto inData = request->inputlisting();
+    auto outData = request->outputlisting();
+
+    std::vector<uint8_t> prog{ops.begin(), ops.end()};
+
+    VStream vst{};
+    for (const auto& byte : ParseHex(inData)) {
+        vst << byte;
+    }
+
+    for (const auto& byte : ParseHex(outData)) {
+        vst << byte;
+    }
+
+    reply->set_success(Tasm().ExecListing(Tasm::Listing{prog, vst}));
     return grpc::Status::OK;
 }
 

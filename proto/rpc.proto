@@ -181,12 +181,18 @@ service CommanderRPC {
     rpc CreateFirstReg (CreateFirstRegRequest) returns (CreateFirstRegResponse);
     rpc CreateRandomTx (CreateRandomTxRequest) returns (CreateRandomTxResponse);
     rpc GenerateNewKey(EmptyMessage) returns (GenerateNewKeyResponse);
-    rpc GetBalance(EmptyMessage) returns (GetBalanceResponse);
     rpc CreateTx(CreateTxRequest) returns (CreateTxResponse);
     rpc SetPassphrase(SetPassphraseRequest) returns(SetPassphraseResponse);
     rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Redeem(RedeemRequest) returns (RedeemResponse);
+
+    rpc GetBalance(EmptyMessage) returns (GetBalanceResponse);
+    rpc GetWalletAddrs(EmptyMessage) returns (GetWalletAddrsResponse);
+    rpc GetAllTxout(EmptyMessage) returns (GetAllTxoutResponse);
+
+    rpc ValidateAddr(ValidateAddrRequest) returns (BooleanResponse);
+    rpc VerifyMessage(VerifyMessageRequest) returns (BooleanResponse);
 
     // Command for Peer
     rpc DisconnectPeer (DisconnectPeerRequest) returns (DisconnectPeerResponse);
@@ -214,6 +220,10 @@ message DelSubscriberRequest{
 }
 
 message StopResponse {}
+
+message BooleanResponse {
+    bool success = 1;
+}
 
 message StartMinerResponse {
     bool success = 1;
@@ -299,6 +309,31 @@ message RedeemRequest {
 message RedeemResponse {
     uint32 result = 1;
     string addr = 2;
+}
+
+message GetWalletAddrsResponse {
+    uint32 result = 1;
+    repeated string addr = 2;
+}
+
+message GetAllTxoutResponse {
+    uint32 result = 1;
+    repeated RepeatedOutput outputs = 2;
+}
+
+message RepeatedOutput {
+    string addr = 1;
+    repeated Output output = 2;
+}
+
+message ValidateAddrRequest {
+    string addr = 1;
+}
+
+message VerifyMessageRequest {
+    string inputListing = 1;
+    string outputListing = 2;
+    repeated uint32 opcode = 3;
 }
 
 service RemoteSolver {

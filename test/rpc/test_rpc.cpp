@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <gtest/gtest.h>
+//#include <gmock/gmock.h>
 
 #include "rpc_client.h"
 #include "rpc_server.h"
@@ -52,6 +53,17 @@ public:
                outpoint.outIndex == rpc_outpoint.outidx();
     }
 
+    bool SameOutput(const TxOutput& output, const rpc::Output rpcOutput) {
+        if (std::to_string(output.listingContent) != rpcOutput.listing()) {
+            return false;
+        }
+
+        if (output.value.GetValue() != rpcOutput.money()) {
+            return false;
+        }
+        return true;
+    }
+
     bool SameTx(const Transaction& tx, const rpc::Transaction& rpcTx) {
         const auto& input   = tx.GetInputs();
         const auto& output  = tx.GetOutputs();
@@ -63,7 +75,7 @@ public:
         }
 
         for (size_t i = 0; i < input.size(); i++) {
-            if (!(SameOutpoint(input[i].outpoint, rpc_in[i].outpoint()))) {
+            if (!SameOutpoint(input[i].outpoint, rpc_in[i].outpoint())) {
                 return false;
             }
 
@@ -73,11 +85,7 @@ public:
         }
 
         for (size_t i = 0; i < output.size(); i++) {
-            if (std::to_string(output[i].listingContent) != rpc_out[i].listing()) {
-                return false;
-            }
-
-            if (output[i].value.GetValue() != rpc_out[i].money()) {
+            if (!SameOutput(output[i], rpc_out[i])) {
                 return false;
             }
         }
@@ -400,8 +408,72 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(opBalance.has_value());
     ASSERT_TRUE(client->CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
 
+    while(WALLET->GetUnspent().size() != 1) {
+        std::this_thread::yield();
+    }
+    ASSERT_EQ(WALLET->GetUnspent().size() , 1);
+
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
+
+    // checkout GetWalletAddrs and GetAllTxout
+    const auto allAddrs = WALLET->GetAllAddresses();
+    std::string allAddrsResult;
+    for (const auto& addr : allAddrs) {
+        allAddrsResult += EncodeAddress(addr) + "\n";
+    }
+    auto opAllAddrs = client->GetWalletAddrs();
+    ASSERT_TRUE(opAllAddrs.has_value());
+    ASSERT_EQ(allAddrsResult, opAllAddrs.value());
+
+    const auto opAllTxout = client->GetAllTxout();
+    ASSERT_TRUE(opAllTxout.has_value());
+
+    std::istringstream inputstr{opAllAddrs.value()};
+    for (std::string line; std::getline(inputstr, line);) {
+        ASSERT_NE(opAllAddrs->find(line), std::string::npos);
+    }
+
     ASSERT_TRUE(client->Stop());
+}
+
+std::string parseContent(Tasm::Listing& listing) {
+    auto lstr = std::to_string(listing);
+    auto n    = lstr.find("( ");
+    auto m    = lstr.find(" )");
+    return lstr.substr(n + 2, m - (n + 2));
+}
+
+std::vector<uint8_t> parseOp(Tasm::Listing& listing) {
+    auto lstr = std::to_string(listing);
+    auto n    = lstr.find("[ ");
+    auto m    = lstr.find(" ]");
+    auto ops  = lstr.substr(n + 2, m - (n + 2));
+
+    std::vector<uint8_t> v;
+    std::stringstream strm;
+    strm << ops;
+    std::copy(std::istream_iterator<int>(strm), std::istream_iterator<int>(), std::back_inserter(v));
+    return v;
+}
+
+TEST_F(TestRPCServer, stateless_test) {
+    TestFactory fac{};
+    VStream indata{}, outdata{};
+
+    auto keypair        = fac.CreateKeyPair();
+    CKeyID addr         = keypair.second.GetID();
+    auto [hashMsg, sig] = fac.CreateSig(keypair.first);
+
+    auto encodedAddr = EncodeAddress(addr);
+    outdata << encodedAddr;
+    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, std::move(outdata)}};
+
+    // construct transaction input
+    indata << keypair.second << sig << hashMsg;
+    Tasm::Listing inputListing{Tasm::Listing{indata}};
+
+    ASSERT_TRUE(client->ValidateAddr(encodedAddr).value());
+    ASSERT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
 }
 
 TEST_F(TestRPCServer, Subscription) {

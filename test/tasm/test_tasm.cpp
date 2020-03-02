@@ -40,7 +40,6 @@ TEST_F(TestTasm, verify) {
 
 TEST_F(TestTasm, transaction_in_out_verify) {
     TestFactory fac{};
-    Tasm tasm;
     VStream indata{}, outdata{};
 
     auto keypair        = fac.CreateKeyPair();
