@@ -502,9 +502,9 @@ void DAGManager::DeleteFork() {
 }
 
 VertexPtr DAGManager::GetMsVertex(const uint256& msHash, bool withBlock) const {
-    auto search = msVertices_.find(msHash);
-    if (search != msVertices_.end()) {
-        return search->second;
+    VertexPtr vtx;
+    if (msVertices_.get_value(msHash, vtx)) {
+        return vtx;
     }
 
     auto pvtx = STORE->GetVertex(msHash, withBlock);

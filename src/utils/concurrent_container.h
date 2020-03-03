@@ -236,6 +236,17 @@ public:
         return false;
     }
 
+    bool get_value(const key_type& k, V& v) const {
+        READER_LOCK(base::mutex_)
+        auto entry = base::c.find(k);
+        if (entry != base::c.end()) {
+            v = entry->second;
+            return true;
+        }
+
+        return false;
+    }
+
     std::vector<key_type> key_set() const {
         READER_LOCK(base::mutex_)
         std::vector<key_type> keys;

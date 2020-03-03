@@ -269,8 +269,10 @@ VertexPtr Chain::Verify(const ConstBlockPtr& pblock) {
 
     CreateNextMilestone(GetChainHead(), *vtcs.back(), std::move(wvtcs), std::move(regChange), std::move(txoc));
     const auto& ms = vtcs.back()->snapshot;
-    spdlog::debug("[Validation] New milestone {} has milestone difficulty target in compact form {} as difficulty {}",
-                  vtcs.back()->cblock->GetHash().to_substr(), ms->milestoneTarget.GetCompact(), ms->GetMsDifficulty());
+    spdlog::debug("[Validation] New milestone {} has milestone difficulty target in compact form {} as difficulty {}, "
+                  "block difficulty target in compact form {} as difficulty {}",
+                  vtcs.back()->cblock->GetHash().to_substr(), ms->milestoneTarget.GetCompact(), ms->GetMsDifficulty(),
+                  ms->blockTarget.GetCompact(), ms->GetBlockDifficulty());
     vtcs.back()->UpdateMilestoneReward();
 
     recentHistory_.merge(std::move(verifying_));
