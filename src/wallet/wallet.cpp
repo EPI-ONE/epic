@@ -422,11 +422,11 @@ void Wallet::CreateRandomTx(size_t sizeTx) {
                     continue;
                 } else {
                     while (GetBalance() <= MIN_FEE && !CanRedeem(minInputs)) {
-                        // give up creating tx if we don't have enough balance nor can't redeem
-                        std::this_thread::yield();
                         if (stopFlag_) {
                             return;
                         }
+                        // give up creating tx if we don't have enough balance nor can't redeem
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     }
                     // try again to create redemption or normal transaction
                     i--;

@@ -322,13 +322,13 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         VertexPtr ms = GetMsVertex(msHash, false);
         if (!ms) {
-            spdlog::info("[Syntax] Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
+            spdlog::warn("[Syntax] Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
             return;
         }
 
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
-            spdlog::info("[Syntax] Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
+            spdlog::warn("[Syntax] Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
                          blk->GetDifficultyTarget(), expectedTarget, std::to_string(blk->GetHash()));
             return;
         }
