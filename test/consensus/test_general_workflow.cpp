@@ -92,8 +92,8 @@ TEST_F(TestConsensus, SyntaxChecking) {
     // Too big
     Block too_big = fac.CreateBlock();
     Transaction big_tx;
-    big_tx.AddInput(TxInput(fac.CreateRandomHash(), 0, 0, Tasm::Listing(std::vector<unsigned char>(MAX_BLOCK_SIZE))));
-    big_tx.AddOutput(TxOutput(0, Tasm::Listing(std::vector<unsigned char>(1))));
+    big_tx.AddInput(TxInput(fac.CreateRandomHash(), 0, 0, tasm::Listing(std::vector<unsigned char>(MAX_BLOCK_SIZE))));
+    big_tx.AddOutput(TxOutput(0, tasm::Listing(std::vector<unsigned char>(1))));
     big_tx.FinalizeHash();
     too_big.AddTransaction(std::move(big_tx));
     EXPECT_FALSE(SealAndCheck(too_big));
@@ -106,7 +106,7 @@ TEST_F(TestConsensus, SyntaxChecking) {
     // double spending
     Block double_spent = fac.CreateBlock();
     Transaction tx1    = fac.CreateTx(1, 1);
-    tx1.AddInput(TxInput(TxOutPoint(tx1.GetInputs()[0].outpoint), Tasm::Listing(std::vector<unsigned char>(1))));
+    tx1.AddInput(TxInput(TxOutPoint(tx1.GetInputs()[0].outpoint), tasm::Listing(std::vector<unsigned char>(1))));
     tx1.FinalizeHash();
     double_spent.AddTransaction(tx1);
     EXPECT_FALSE(SealAndCheck(double_spent));

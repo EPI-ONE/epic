@@ -6,12 +6,13 @@
 #define EPIC_TOML_SPECIFACATION_H
 
 #include "cpptoml.h"
+#include "pubkey.h"
 #include "vertex.h"
 
 #include <algorithm>
 #include <vector>
 
-std::string parseCKeyID(const Tasm::Listing& data) {
+std::string parseCKeyID(const tasm::Listing& data) {
     std::string addrString;
     VStream stream(data.data);
     stream >> addrString;

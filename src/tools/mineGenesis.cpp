@@ -50,10 +50,10 @@ int main(int argc, char* argv[]) {
     auto vs = VStream(ParseHex(hexStr));
 
     // Add input and output
-    tx.AddInput(TxInput(Tasm::Listing(vs)));
+    tx.AddInput(TxInput(tasm::Listing(vs)));
 
     std::optional<CKeyID> pubKeyID = DecodeAddress("14u6LvvWpReA4H2GwMMtm663P2KJGEkt77");
-    tx.AddOutput(TxOutput(66, Tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
+    tx.AddOutput(TxOutput(66, tasm::Listing(VStream(pubKeyID.value())))).FinalizeHash();
 
     Block genesisBlock{GetParams().version};
     genesisBlock.SetDifficultyTarget(targets[version]);

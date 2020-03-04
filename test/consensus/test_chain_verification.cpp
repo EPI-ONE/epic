@@ -6,6 +6,7 @@
 
 #include "block_store.h"
 #include "chain.h"
+#include "opcodes.h"
 #include "test_env.h"
 
 #include <algorithm>
@@ -351,7 +352,7 @@ TEST_F(TestChainVerification, verify_tx_and_utxo) {
     // Construct transaction output to add into the ledger
     auto encodedAddr = EncodeAddress(addr);
     VStream outdata(encodedAddr);
-    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, outdata}};
+    tasm::Listing outputListing{tasm::Listing{std::vector<uint8_t>{tasm::VERIFY}, outdata}};
     TxOutput output{valueIn, outputListing};
 
     Transaction tx1{};

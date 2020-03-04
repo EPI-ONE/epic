@@ -247,7 +247,7 @@ std::unordered_map<std::string, std::vector<TxOutput>> Wallet::GetTxoutsWithAddr
         const auto entry = mAddr2Outputs.find(addr);
             VStream vst;
             vst << addr;
-            Tasm::Listing listing(vst);
+            tasm::Listing listing(vst);
             TxOutput output{std::get<3>(keypair.second), std::move(listing)};
         if (entry != mAddr2Outputs.end()) {
             entry->second.emplace_back(std::move(output));
@@ -533,7 +533,7 @@ ConstTxPtr Wallet::CreateTxAndSend(const std::vector<std::pair<Coin, CKeyID>>& o
     return tx;
 }
 
-std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content) {
+std::optional<CKeyID> ParseAddrFromScript(const tasm::Listing& content) {
     std::string addrString;
     VStream stream(content.data);
     stream >> addrString;

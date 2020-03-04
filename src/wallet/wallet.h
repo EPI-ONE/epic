@@ -18,11 +18,9 @@
 #include <atomic>
 #include <utility>
 
-class Tasm;
-
 constexpr uint64_t MIN_FEE = 1;
 
-std::optional<CKeyID> ParseAddrFromScript(const Tasm::Listing& content);
+std::optional<CKeyID> ParseAddrFromScript(const tasm::Listing& content);
 
 class Wallet {
 private:

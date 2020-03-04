@@ -4,6 +4,7 @@
 
 #include "params.h"
 #include "vertex.h"
+#include "utilstrencodings.h"
 
 // 1 day per diffculty cycle on average
 static constexpr uint32_t TARGET_TIMESPAN = 24 * 60 * 60;

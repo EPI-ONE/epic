@@ -9,7 +9,7 @@
 
 #include <optional>
 
-typedef Tasm::Listing Listing;
+typedef tasm::Listing Listing;
 
 class TestSer : public testing::Test {
 public:

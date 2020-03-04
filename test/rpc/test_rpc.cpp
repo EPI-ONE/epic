@@ -5,9 +5,11 @@
 #include <gtest/gtest.h>
 //#include <gmock/gmock.h>
 
+#include "pubkey.h"
 #include "rpc_client.h"
 #include "rpc_server.h"
 #include "subscription.h"
+#include "opcodes.h"
 #include "test_env.h"
 
 #include <chrono>
@@ -436,14 +438,14 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(client->Stop());
 }
 
-std::string parseContent(Tasm::Listing& listing) {
+std::string parseContent(tasm::Listing& listing) {
     auto lstr = std::to_string(listing);
     auto n    = lstr.find("( ");
     auto m    = lstr.find(" )");
     return lstr.substr(n + 2, m - (n + 2));
 }
 
-std::vector<uint8_t> parseOp(Tasm::Listing& listing) {
+std::vector<uint8_t> parseOp(tasm::Listing& listing) {
     auto lstr = std::to_string(listing);
     auto n    = lstr.find("[ ");
     auto m    = lstr.find(" ]");
@@ -466,11 +468,11 @@ TEST_F(TestRPCServer, stateless_test) {
 
     auto encodedAddr = EncodeAddress(addr);
     outdata << encodedAddr;
-    Tasm::Listing outputListing{Tasm::Listing{std::vector<uint8_t>{VERIFY}, std::move(outdata)}};
+    tasm::Listing outputListing{tasm::Listing{std::vector<uint8_t>{tasm::VERIFY}, std::move(outdata)}};
 
     // construct transaction input
     indata << keypair.second << sig << hashMsg;
-    Tasm::Listing inputListing{Tasm::Listing{indata}};
+    tasm::Listing inputListing{tasm::Listing{indata}};
 
     ASSERT_TRUE(client->ValidateAddr(encodedAddr).value());
     ASSERT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
