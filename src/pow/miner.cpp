@@ -142,6 +142,8 @@ void Miner::Run() {
                 }
             }
 
+            auto head = std::atomic_load(&chainHead_);
+
             b.SetMerkle();
             b.SetMilestoneHash(std::atomic_load(&chainHead_)->cblock->GetHash());
             b.SetPrevHash(prevHash);
@@ -197,7 +199,11 @@ void Miner::Run() {
             STORE->SaveMinerChainHeads(selfChainHeads_);
 
             if (CheckMsPOW(bPtr, std::atomic_load(&chainHead_)->snapshot)) {
-                spdlog::info("🚀 Mined a milestone {}", bPtr->GetHash().to_substr());
+                spdlog::info("🚀 Mined a milestone {}, ms {} prev {} tip {} blockTarget {}", bPtr->GetHash().to_substr(),
+                             bPtr->GetMilestoneHash().to_substr(), bPtr->GetPrevHash().to_substr(),
+                             bPtr->GetTipHash().to_substr(), bPtr->GetDifficultyTarget());
+                spdlog::debug("head ms {} diffculty {}", head->cblock->GetHash().to_substr(),
+                              head->snapshot->blockTarget.GetCompact());
                 ms_cnt++;
                 // Block the thread until the verification is done
                 while (enabled_ && *DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {
