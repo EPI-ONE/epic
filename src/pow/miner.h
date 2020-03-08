@@ -33,20 +33,23 @@ public:
         return selfChainHead_;
     }
 
+    void OnDAGHeadUpdated(ConstBlockPtr, bool);
+
 protected:
     std::atomic_bool enabled_ = false;
-    std::atomic_bool abort_   = false;
     std::thread runner_;
-    std::thread inspector_;
 
 private:
+    uint256 SelectTip();
+    void WaitDAGHeadUpdate();
+
     Solver* solver;
     ConstBlockPtr selfChainHead_ = nullptr;
-    VertexPtr chainHead_         = nullptr;
     Cumulator distanceCal_;
     CircularQueue<uint256> selfChainHeads_;
-
-    uint256 SelectTip();
+    std::mutex mtx_;
+    std::condition_variable continue_;
+    std::atomic_bool dag_updated_;
 };
 
 extern std::unique_ptr<Miner> MINER;

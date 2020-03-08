@@ -22,6 +22,8 @@ Miner::~Miner() {
 bool Miner::Start() {
     if (solver->Start()) {
         enabled_ = true;
+        DAG->RegisterOnChainUpdatedCallback(
+            std::bind(&Miner::OnDAGHeadUpdated, this, std::placeholders::_1, std::placeholders::_2));
         spdlog::info("Miner started.");
         return true;
     }
@@ -33,14 +35,14 @@ bool Miner::Start() {
 bool Miner::Stop() {
     spdlog::info("Stopping miner...");
 
+    DAG->RegisterOnChainUpdatedCallback(nullptr);
     enabled_ = false;
+    continue_.notify_all();
 
     if (runner_.joinable()) {
         runner_.join();
     }
-    if (inspector_.joinable()) {
-        inspector_.join();
-    }
+
     if (solver->Stop()) {
         return true;
     }
@@ -73,32 +75,13 @@ void Miner::Run() {
         } while (*cursor != *GENESIS && !distanceCal_.Full());
     }
 
-    chainHead_ = DAG->GetMilestoneHead();
-
-    inspector_ = std::thread([&]() {
-        while (enabled_.load()) {
-            auto headInDAG = DAG->GetMilestoneHead()->cblock;
-            if (!abort_ && headInDAG->source == Block::NETWORK &&
-                *headInDAG != *std::atomic_load(&chainHead_)->cblock) {
-                abort_ = true;
-                solver->Abort();
-                spdlog::debug("[Miner] Milestone chain head changed {} => {}. Abort the current task.",
-                              std::atomic_load(&chainHead_)->cblock->GetHash().to_substr(),
-                              headInDAG->GetHash().to_substr());
-                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
-            } else {
-                usleep(10000);
-            }
-        }
-    });
-
     runner_ = std::thread([&]() {
         uint256 prevHash;
         uint32_t counter = 0;
         uint32_t ms_cnt  = 0;
 
         while (enabled_.load()) {
-            abort_ = false;
+            auto ms_head = DAG->GetMilestoneHead();
             Block b(GetParams().version);
 
             if (!selfChainHead_) {
@@ -133,36 +116,26 @@ void Miner::Run() {
                     if (counter % 10 == 0) {
                         spdlog::debug("[Miner] Hashing power percentage {}",
                                       distanceCal_.Sum().GetDouble() / std::max(distanceCal_.TimeSpan(), (uint32_t) 1) /
-                                          std::atomic_load(&chainHead_)->snapshot->hashRate);
+                                          ms_head->snapshot->hashRate);
                     }
 
-                    auto allowed =
-                        CalculateAllowedDist(distanceCal_, std::atomic_load(&chainHead_)->snapshot->hashRate);
+                    auto allowed = CalculateAllowedDist(distanceCal_, ms_head->snapshot->hashRate);
                     b.AddTransactions(MEMPOOL->ExtractTransactions(prevHash, allowed, max_ntx));
                 }
             }
 
-            auto head = std::atomic_load(&chainHead_);
-
             b.SetMerkle();
-            b.SetMilestoneHash(std::atomic_load(&chainHead_)->cblock->GetHash());
+            b.SetMilestoneHash(ms_head->cblock->GetHash());
             b.SetPrevHash(prevHash);
             b.SetTipHash(SelectTip());
-            b.SetDifficultyTarget(std::atomic_load(&chainHead_)->snapshot->blockTarget.GetCompact());
+            b.SetDifficultyTarget(ms_head->snapshot->blockTarget.GetCompact());
 
-            if (!Solve(b)) {
-                spdlog::warn("[Miner] Failed to solve the block. Stop the miner.");
-                enabled_ = false;
-                solver->Stop();
-                if (inspector_.joinable()) {
-                    inspector_.join();
-                }
-            }
+            int ret = Solve(b);
 
             // To prevent continuing with a block having a false nonce,
             // which may happen when Solve is aborted by calling
             // Miner::Stop or when abort_ = true
-            if (abort_.load() || !enabled_.load() || !b.Verify()) {
+            if (ret == SolverResult::ErrorCode::SERVER_ABORT || !b.Verify()) {
                 if (b.HasTransaction()) {
                     auto txns         = b.GetTransactions();
                     size_t startIndex = 0;
@@ -176,44 +149,39 @@ void Miner::Run() {
                         MEMPOOL->Insert(std::move(txns[i]));
                     }
                 }
-
-                if (!enabled_.load()) {
-                    return;
-                }
-
                 continue;
-            }
+            } else if (ret == SolverResult::ErrorCode::SUCCESS) {
+                b.source = Block::MINER;
 
-            b.source = Block::MINER;
+                auto bPtr = std::make_shared<const Block>(b);
 
-            auto bPtr = std::make_shared<const Block>(b);
-
-            if (PEERMAN) {
-                PEERMAN->RelayBlock(bPtr, nullptr);
-            }
-
-            distanceCal_.Add(bPtr, true);
-            selfChainHead_ = bPtr;
-            selfChainHeads_.push(bPtr->GetHash());
-            DAG->AddNewBlock(bPtr, nullptr);
-            STORE->SaveMinerChainHeads(selfChainHeads_);
-
-            if (CheckMsPOW(bPtr, std::atomic_load(&chainHead_)->snapshot)) {
-                spdlog::info("🚀 Mined a milestone {}, ms {} prev {} tip {} blockTarget {}", bPtr->GetHash().to_substr(),
-                             bPtr->GetMilestoneHash().to_substr(), bPtr->GetPrevHash().to_substr(),
-                             bPtr->GetTipHash().to_substr(), bPtr->GetDifficultyTarget());
-                spdlog::debug("head ms {} diffculty {}", head->cblock->GetHash().to_substr(),
-                              head->snapshot->blockTarget.GetCompact());
-                ms_cnt++;
-                // Block the thread until the verification is done
-                while (enabled_ && *DAG->GetMilestoneHead()->cblock == *std::atomic_load(&chainHead_)->cblock) {
-                    std::this_thread::yield();
+                if (PEERMAN) {
+                    PEERMAN->RelayBlock(bPtr, nullptr);
                 }
 
-                std::atomic_store(&chainHead_, DAG->GetMilestoneHead());
-            }
+                distanceCal_.Add(bPtr, true);
+                selfChainHead_ = bPtr;
+                selfChainHeads_.push(bPtr->GetHash());
+                dag_updated_ = false;
+                DAG->AddNewBlock(bPtr, nullptr);
+                STORE->SaveMinerChainHeads(selfChainHeads_);
 
-            counter++;
+                if (CheckMsPOW(bPtr, ms_head->snapshot)) {
+                    spdlog::info("🚀 Mined a milestone {}, ms {} prev {} tip {} blockTarget {}",
+                                 bPtr->GetHash().to_substr(), bPtr->GetMilestoneHash().to_substr(),
+                                 bPtr->GetPrevHash().to_substr(), bPtr->GetTipHash().to_substr(),
+                                 bPtr->GetDifficultyTarget());
+                    ms_cnt++;
+                    // Block the thread until the verification is done
+                    WaitDAGHeadUpdate();
+                }
+                counter++;
+
+            } else {
+                spdlog::warn("[Miner] Failed to solve the block. Stop the miner.");
+                enabled_ = false;
+                solver->Stop();
+            }
         }
     });
 }
@@ -235,4 +203,23 @@ uint256 Miner::SelectTip() {
     }
 
     return GENESIS->GetHash();
+}
+
+void Miner::WaitDAGHeadUpdate() {
+    std::unique_lock<std::mutex> lock(mtx_);
+    continue_.wait(lock, [this] { return dag_updated_ || !enabled_; });
+}
+
+void Miner::OnDAGHeadUpdated(ConstBlockPtr chain_ms_head, bool isMainchain) {
+    std::unique_lock<std::mutex> lock(mtx_);
+    if (isMainchain && chain_ms_head->source != Block::MINER) {
+        solver->Abort();
+        spdlog::debug("[Miner] Milestone chain head changed {}. Abort the current task.",
+                      chain_ms_head->GetHash().to_substr());
+    }
+
+    if (isMainchain || chain_ms_head->source == Block::MINER) {
+        dag_updated_ = true;
+        continue_.notify_all();
+    }
 }

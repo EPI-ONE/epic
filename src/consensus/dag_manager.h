@@ -99,10 +99,20 @@ public:
                                                       std::unordered_map<uint256, std::shared_ptr<const UTXO>>,
                                                       std::unordered_set<uint256>)>;
 
+    using OnChainUpdatedCallback = std::function<void(ConstBlockPtr, bool)>;
+
     /**
      * Actions to be performed by wallet when a level set is confirmed
      */
     void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
+
+    void RegisterOnChainUpdatedCallback(OnChainUpdatedCallback &&func);
+
+    void NotifyOnChainUpdated(ConstBlockPtr block, bool isMainchain) {
+        if (onChainUpdatedCallback_) {
+            onChainUpdatedCallback_(block, isMainchain);
+        }
+    }
 
     bool IsDownloadingEmpty() {
         return downloading_.empty();
@@ -152,6 +162,8 @@ private:
      * Listener that triggers when a levelset is confirmed
      */
     OnLvsConfirmedCallback onLvsConfirmedCallback_ = nullptr;
+
+    OnChainUpdatedCallback onChainUpdatedCallback_ = nullptr;
 
     /**
      * a simple data structure to store statistic data from when the node starts

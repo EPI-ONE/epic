@@ -406,6 +406,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] Updating main chain head {} pointing to the previous MS {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
+                NotifyOnChainUpdated(block, true);
                 EnableOBC();
                 DeleteFork();
                 FlushTrigger();
@@ -418,6 +419,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 auto new_fork = std::make_unique<Chain>(*milestoneChains_.best(), block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains_.emplace(std::move(new_fork));
+                NotifyOnChainUpdated(block, false);
             }
         }
         return;
@@ -446,6 +448,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
                 if (milestoneChains_.update_best(chainIt)) {
+                    NotifyOnChainUpdated(block, true);
                     spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
                                   milestoneChains_.best()->GetChainHead()->GetMilestoneHash().to_substr());
                 }
@@ -459,6 +462,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 auto new_fork = std::make_unique<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
                 milestoneChains_.emplace(std::move(new_fork));
+                NotifyOnChainUpdated(block, false);
                 return;
             }
         }
@@ -762,6 +766,10 @@ bool DAGManager::ExistsNode(const uint256& h) const {
 
 void DAGManager::RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func) {
     onLvsConfirmedCallback_ = callback_func;
+}
+
+void DAGManager::RegisterOnChainUpdatedCallback(OnChainUpdatedCallback&& func) {
+    onChainUpdatedCallback_ = std::move(func);
 }
 
 StatData DAGManager::GetStatData() const {

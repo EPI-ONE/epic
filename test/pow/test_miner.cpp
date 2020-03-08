@@ -10,13 +10,7 @@
 #include "utilstrencodings.h"
 
 class TestMiner : public testing::Test {
-    void SetUp() override {}
-    void TearDown() override {}
-
-public:
-    TestFactory fac = EpicTestEnvironment::GetFactory();
-
-    static void SetUpEnv() {
+    void SetUp() override {
         EpicTestEnvironment::SetUpDAG("test_miner/", true);
 
         CKey key;
@@ -24,10 +18,12 @@ public:
         auto tx = std::make_shared<Transaction>(key.GetPubKey().GetID());
         MEMPOOL->PushRedemptionTx(tx);
     }
-
-    static void TearDownEnv() {
+    void TearDown() override {
         EpicTestEnvironment::TearDownDAG("test_miner/");
     }
+
+public:
+    TestFactory fac = EpicTestEnvironment::GetFactory();
 };
 
 TEST_F(TestMiner, Solve) {
@@ -72,8 +68,6 @@ TEST_F(TestMiner, SolveCuckaroo) {
 #endif
 
 TEST_F(TestMiner, Run) {
-    SetUpEnv();
-
     Miner m(2);
     m.Run();
     usleep(500000);
@@ -84,13 +78,9 @@ TEST_F(TestMiner, Run) {
     ASSERT_TRUE(m.GetSelfChainHead());
     ASSERT_TRUE(DAG->GetBestChain().GetMilestones().size() > 1);
     ASSERT_TRUE(DAG->GetChains().size() == 1);
-
-    TearDownEnv();
 }
 
 TEST_F(TestMiner, Restart) {
-    SetUpEnv();
-
     Miner m(2);
     m.Run();
     usleep(100000);
@@ -117,6 +107,4 @@ TEST_F(TestMiner, Restart) {
     ASSERT_EQ(*cursor, *selfChainHead);
 
     selfChainHead = m.GetSelfChainHead();
-
-    TearDownEnv();
 }
