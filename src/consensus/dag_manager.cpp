@@ -294,7 +294,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         if (STORE->IsWeaklySolid(blk)) {
             if (STORE->AnyLinkIsOrphan(blk)) {
                 spdlog::info("[Syntax] Block is not solid (link in obc) with mask {} [{}]", mask(),
-                             std::to_string(blk->GetHash()));
+                             blk->GetHash().to_substr());
                 STORE->AddBlockToOBC(std::move(blk), mask());
                 return;
             }
