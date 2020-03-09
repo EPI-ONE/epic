@@ -268,7 +268,7 @@ TEST_F(TestWallet, normal_workflow) {
     auto minerInfo     = WALLET->GetMinerInfo();
 
     // wait wallet store complete
-    sleep(1);
+    sleep(2);
     spdlog::info("[WalletTest-normal-workflow] Begin to restart wallet");
     // check wallet restart
     WALLET.reset(nullptr);
