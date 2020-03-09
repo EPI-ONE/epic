@@ -43,14 +43,11 @@ bool Miner::Stop() {
         runner_.join();
     }
 
-    if (solver->Stop()) {
-        return true;
-    }
-
-    return false;
+    spdlog::info("Miner stopped");
+    return solver->Stop();
 }
 
-bool Miner::Solve(Block& b) {
+uint32_t Miner::Solve(Block& b) {
     return solver->Solve(b);
 }
 
@@ -130,7 +127,7 @@ void Miner::Run() {
             b.SetTipHash(SelectTip());
             b.SetDifficultyTarget(ms_head->snapshot->blockTarget.GetCompact());
 
-            int ret = Solve(b);
+            auto ret = Solve(b);
 
             // To prevent continuing with a block having a false nonce,
             // which may happen when Solve is aborted by calling

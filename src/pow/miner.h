@@ -22,7 +22,7 @@ public:
 
     bool Start();
     bool Stop();
-    bool Solve(Block&);
+    uint32_t Solve(Block&);
     void Run();
 
     bool IsRunning() const {
