@@ -33,7 +33,7 @@ public:
         return selfChainHead_;
     }
 
-    void OnDAGHeadUpdated(ConstBlockPtr, bool);
+    void OnChainUpdate(ConstBlockPtr chain_ms_head, bool isMainchain);
 
 protected:
     std::atomic_bool enabled_ = false;
@@ -41,7 +41,7 @@ protected:
 
 private:
     uint256 SelectTip();
-    void WaitDAGHeadUpdate();
+    void WaitChainUpdate();
 
     Solver* solver;
     ConstBlockPtr selfChainHead_ = nullptr;

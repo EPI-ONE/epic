@@ -68,10 +68,8 @@ int CPUSolver::Solve(Block& b) {
 
     // Block the main thread until a nonce is solved
     Solution last_result;
-    bool ret;
-    do {
-        ret = solutions.Take(last_result);
-        if (ret && last_result.first == task_id) {
+    while (solutions.Take(last_result)) {
+        if (last_result.first == task_id) {
             Abort();
             b.SetTime(std::get<0>(last_result.second));
             b.SetNonce(std::get<1>(last_result.second));
@@ -80,11 +78,11 @@ int CPUSolver::Solve(Block& b) {
 
             break;
         }
-    } while (ret);
+    }
 
     solverPool_.Abort();
 
-    if (ret) {
+    if (enabled) {
         return SolverResult::ErrorCode::SUCCESS;
     } else {
         return SolverResult::ErrorCode::SERVER_ABORT;

@@ -23,7 +23,7 @@ bool Miner::Start() {
     if (solver->Start()) {
         enabled_ = true;
         DAG->RegisterOnChainUpdatedCallback(
-            std::bind(&Miner::OnDAGHeadUpdated, this, std::placeholders::_1, std::placeholders::_2));
+            std::bind(&Miner::OnChainUpdate, this, std::placeholders::_1, std::placeholders::_2));
         spdlog::info("Miner started.");
         return true;
     }
@@ -173,7 +173,7 @@ void Miner::Run() {
                                  bPtr->GetDifficultyTarget());
                     ms_cnt++;
                     // Block the thread until the verification is done
-                    WaitDAGHeadUpdate();
+                    WaitChainUpdate();
                 }
                 counter++;
 
@@ -205,12 +205,12 @@ uint256 Miner::SelectTip() {
     return GENESIS->GetHash();
 }
 
-void Miner::WaitDAGHeadUpdate() {
+void Miner::WaitChainUpdate() {
     std::unique_lock<std::mutex> lock(mtx_);
     continue_.wait(lock, [this] { return dag_updated_ || !enabled_; });
 }
 
-void Miner::OnDAGHeadUpdated(ConstBlockPtr chain_ms_head, bool isMainchain) {
+void Miner::OnChainUpdate(ConstBlockPtr chain_ms_head, bool isMainchain) {
     std::unique_lock<std::mutex> lock(mtx_);
     if (isMainchain && chain_ms_head->source != Block::MINER) {
         solver->Abort();
