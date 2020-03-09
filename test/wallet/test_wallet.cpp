@@ -264,11 +264,12 @@ TEST_F(TestWallet, normal_workflow) {
 
     DAG->Wait();
 
+    // wait wallet store complete
+    sleep(2);
+
     auto lastRedemInfo = std::make_pair(WALLET->GetLastRedemHash(), WALLET->GetLastRedemAddress());
     auto minerInfo     = WALLET->GetMinerInfo();
 
-    // wait wallet store complete
-    sleep(2);
     spdlog::info("[WalletTest-normal-workflow] Begin to restart wallet");
     // check wallet restart
     WALLET.reset(nullptr);
