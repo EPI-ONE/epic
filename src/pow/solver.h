@@ -17,11 +17,11 @@ public:
     Solver()          = default;
     virtual ~Solver() = default;
 
-    virtual bool Start()      = 0;
-    virtual bool Stop()       = 0;
-    virtual void Abort()      = 0;
-    virtual void Enable()     = 0;
-    virtual int Solve(Block&) = 0;
+    virtual bool Start()           = 0;
+    virtual bool Stop()            = 0;
+    virtual void Abort()           = 0;
+    virtual void Enable()          = 0;
+    virtual uint32_t Solve(Block&) = 0;
 
     uint32_t GetTaskID() {
         current_task_id.fetch_add(1);
@@ -51,7 +51,7 @@ public:
     bool Stop() override;
     void Abort() override;
     void Enable() override;
-    int Solve(Block&) override;
+    uint32_t Solve(Block&) override;
 
 private:
     ThreadPool solverPool_;
@@ -82,7 +82,7 @@ public:
     bool Stop() override;
     void Abort() override;
     void Enable() override {}
-    int Solve(Block&) override;
+    uint32_t Solve(Block&) override;
 
 private:
     std::unique_ptr<SolverRPCClient> client;

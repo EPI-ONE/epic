@@ -37,7 +37,7 @@ void CPUSolver ::Enable() {
     solutions.Enable();
 }
 
-int CPUSolver::Solve(Block& b) {
+uint32_t CPUSolver::Solve(Block& b) {
     Enable();
 
     size_t nthreads = solverPool_.GetThreadSize();
@@ -68,8 +68,10 @@ int CPUSolver::Solve(Block& b) {
 
     // Block the main thread until a nonce is solved
     Solution last_result;
-    while (solutions.Take(last_result)) {
-        if (last_result.first == task_id) {
+    bool ret;
+    do {
+        ret = solutions.Take(last_result);
+        if (ret && last_result.first == task_id) {
             Abort();
             b.SetTime(std::get<0>(last_result.second));
             b.SetNonce(std::get<1>(last_result.second));
@@ -78,11 +80,11 @@ int CPUSolver::Solve(Block& b) {
 
             break;
         }
-    }
+    } while (ret);
 
     solverPool_.Abort();
 
-    if (enabled) {
+    if (ret) {
         return SolverResult::ErrorCode::SUCCESS;
     } else {
         return SolverResult::ErrorCode::SERVER_ABORT;
@@ -137,7 +139,7 @@ void RemoteGPUSolver::Abort() {
     client->AbortTask(&context, request, &response);
 }
 
-int RemoteGPUSolver::Solve(Block& b) {
+uint32_t RemoteGPUSolver::Solve(Block& b) {
     arith_uint256 target = b.GetTargetAsInteger();
     VStream vs(b.GetHeader());
     grpc::ClientContext context;
@@ -193,9 +195,9 @@ int RemoteGPUSolver::Solve(Block& b) {
                 break;
             }
         }
+        return reply.error_code();
     } else {
         spdlog::warn("RPC error. Task failed: id = {}, error message = {}", request.task_id(), status.error_message());
         return SolverResult::ErrorCode::REMOTE_DISCONNECT;
     }
-    return reply.error_code();
 }
