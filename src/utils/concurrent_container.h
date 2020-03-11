@@ -236,6 +236,17 @@ public:
         return false;
     }
 
+    bool get_value(const key_type& k, V& v) const {
+        READER_LOCK(base::mutex_)
+        auto entry = base::c.find(k);
+        if (entry != base::c.end()) {
+            v = entry->second;
+            return true;
+        }
+
+        return false;
+    }
+
     std::vector<key_type> key_set() const {
         READER_LOCK(base::mutex_)
         std::vector<key_type> keys;
@@ -414,6 +425,15 @@ public:
             base::c.pop_front();
         }
         return n;
+    }
+
+    std::vector<T> value_set() const {
+        READER_LOCK(base::mutex_)
+        std::vector<T> values;
+
+        values.reserve(base::c.size());
+        std::copy(base::c.begin(), base::c.end(), std::back_inserter(values));
+        return values;
     }
 
     // Hide invalid functions from base class

@@ -25,6 +25,7 @@ public:
 };
 
 TEST_F(TestFileStorage, basic_read_write) {
+    EpicTestEnvironment::SetUpDAG(prefix);
     Miner m{1};
     m.Start();
 
@@ -33,8 +34,8 @@ TEST_F(TestFileStorage, basic_read_write) {
     m.Solve(blk);
     Vertex vtx{blk};
     uint32_t blksize = blk.GetOptimalEncodingSize(), vtxsize = vtx.GetOptimalStorageSize();
-    FilePos fpos{0, 0, 0};
-    FilePos fpos1{0, 0, blksize};
+    FilePos fpos{0, 1, 0};
+    FilePos fpos1{0, 1, blksize};
 
     // writing
     FileWriter writer{file::FileType::BLK, fpos};
@@ -72,6 +73,7 @@ TEST_F(TestFileStorage, basic_read_write) {
     ASSERT_EQ(reader2.GetOffsetG(), blksize + vtxsize);
     ASSERT_EQ(vtx, vtx2);
     reader2.Close();
+    m.Stop();
 }
 
 TEST_F(TestFileStorage, cat_store_and_get_vertices_and_get_lvs) {

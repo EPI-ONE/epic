@@ -22,7 +22,7 @@ public:
 
     bool Start();
     bool Stop();
-    bool Solve(Block&);
+    uint32_t Solve(Block&);
     void Run();
 
     bool IsRunning() const {
@@ -33,20 +33,23 @@ public:
         return selfChainHead_;
     }
 
+    void OnChainUpdate(ConstBlockPtr chain_ms_head, bool isMainchain);
+
 protected:
     std::atomic_bool enabled_ = false;
-    std::atomic_bool abort_   = false;
     std::thread runner_;
-    std::thread inspector_;
 
 private:
+    uint256 SelectTip();
+    void WaitChainUpdate();
+
     Solver* solver;
     ConstBlockPtr selfChainHead_ = nullptr;
-    VertexPtr chainHead_         = nullptr;
     Cumulator distanceCal_;
     CircularQueue<uint256> selfChainHeads_;
-
-    uint256 SelectTip();
+    std::mutex mtx_;
+    std::condition_variable continue_;
+    std::atomic_bool dag_updated_;
 };
 
 extern std::unique_ptr<Miner> MINER;

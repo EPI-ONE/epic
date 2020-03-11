@@ -134,9 +134,10 @@ void Milestone::UpdateDifficulty(uint32_t blockUpdateTime) {
         }
     }
 
-    spdlog::info("Adjusted difficulty. Milestone: {} => {}, normal block: {} => {}.\n"
+    spdlog::info("Adjusted difficulty. Milestone: {} => {} compact {}, normal block: {} => {} compact {}.\n"
                  "   Stats: timespan = {}, nBlkCounter_ = {}, nTxnsCounter_ = {}",
-                 oldMsDiff, GetMsDifficulty(), oldBlkDiff, GetBlockDifficulty(), timespan, nBlkCounter_, nTxnsCounter_);
+                 oldMsDiff, GetMsDifficulty(), milestoneTarget.GetCompact(), oldBlkDiff, GetBlockDifficulty(),
+                 blockTarget.GetCompact(), timespan, nBlkCounter_, nTxnsCounter_);
 
     lastUpdateTime = blockUpdateTime;
     nTxnsCounter_  = 0;
