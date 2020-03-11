@@ -5,13 +5,14 @@
 #ifndef EPIC_SOLVER_PROTOCOL_H
 #define EPIC_SOLVER_PROTOCOL_H
 
-namespace SolverResult{
-    enum ErrorCode{
-        SUCCESS = 0,
-        TASK_CANCELED_BY_CLIENT,
-        INVALID_PARAM,
-        SERVER_ABORT,
-        UNKNOWN_ERROR
-    };
+namespace SolverResult {
+enum ErrorCode {
+    SUCCESS = 0,
+    TASK_CANCELED_BY_CLIENT,
+    INVALID_PARAM,
+    SERVER_ABORT,
+    UNKNOWN_ERROR,
+    REMOTE_DISCONNECT,
+};
 }
 #endif // EPIC_SOLVER_PROTOCOL_H

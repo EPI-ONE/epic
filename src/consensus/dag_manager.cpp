@@ -294,7 +294,7 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
         if (STORE->IsWeaklySolid(blk)) {
             if (STORE->AnyLinkIsOrphan(blk)) {
                 spdlog::info("[Syntax] Block is not solid (link in obc) with mask {} [{}]", mask(),
-                             std::to_string(blk->GetHash()));
+                             blk->GetHash().to_substr());
                 STORE->AddBlockToOBC(std::move(blk), mask());
                 return;
             }
@@ -322,14 +322,14 @@ void DAGManager::AddNewBlock(ConstBlockPtr blk, PeerPtr peer) {
 
         VertexPtr ms = GetMsVertex(msHash, false);
         if (!ms) {
-            spdlog::info("[Syntax] Block has missing or invalid milestone link [{}]", std::to_string(blk->GetHash()));
+            spdlog::warn("[Syntax] Block has missing or invalid milestone link [{}]", blk->GetHash().to_substr());
             return;
         }
 
         uint32_t expectedTarget = ms->snapshot->blockTarget.GetCompact();
         if (blk->GetDifficultyTarget() != expectedTarget) {
-            spdlog::info("[Syntax] Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
-                         blk->GetDifficultyTarget(), expectedTarget, std::to_string(blk->GetHash()));
+            spdlog::warn("[Syntax] Block has unexpected change in difficulty: current {} v.s. expected {} [{}]",
+                         blk->GetDifficultyTarget(), expectedTarget, blk->GetHash().to_substr());
             return;
         }
 
@@ -404,6 +404,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] Updating main chain head {} pointing to the previous MS {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(mainchain, block);
+                NotifyOnChainUpdated(block, true);
                 EnableOBC();
                 DeleteFork();
                 FlushTrigger();
@@ -415,7 +416,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                     block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(), milestoneChains_.size());
                 auto new_fork = std::make_unique<Chain>(*milestoneChains_.best(), block);
                 ProcessMilestone(new_fork, block);
-                milestoneChains_.emplace(std::move(new_fork));
+                NotifyOnChainUpdated(block, milestoneChains_.emplace(std::move(new_fork)));
             }
         }
         return;
@@ -443,7 +444,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                 spdlog::debug("[Verify Thread] A fork grows with head {} pointing to the previous MS {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
-                if (milestoneChains_.update_best(chainIt)) {
+                auto isMainchain = milestoneChains_.update_best(chainIt);
+                NotifyOnChainUpdated(block, isMainchain);
+                if (isMainchain) {
                     spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
                                   milestoneChains_.best()->GetChainHead()->GetMilestoneHash().to_substr());
                 }
@@ -456,7 +459,7 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                               milestoneChains_.size());
                 auto new_fork = std::make_unique<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
-                milestoneChains_.emplace(std::move(new_fork));
+                NotifyOnChainUpdated(block, milestoneChains_.emplace(std::move(new_fork)));
                 return;
             }
         }
@@ -502,9 +505,9 @@ void DAGManager::DeleteFork() {
 }
 
 VertexPtr DAGManager::GetMsVertex(const uint256& msHash, bool withBlock) const {
-    auto search = msVertices_.find(msHash);
-    if (search != msVertices_.end()) {
-        return search->second;
+    VertexPtr vtx;
+    if (msVertices_.get_value(msHash, vtx)) {
+        return vtx;
     }
 
     auto pvtx = STORE->GetVertex(msHash, withBlock);
@@ -760,6 +763,10 @@ bool DAGManager::ExistsNode(const uint256& h) const {
 
 void DAGManager::RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func) {
     onLvsConfirmedCallback_ = callback_func;
+}
+
+void DAGManager::RegisterOnChainUpdatedCallback(OnChainUpdatedCallback&& func) {
+    onChainUpdatedCallback_ = std::move(func);
 }
 
 StatData DAGManager::GetStatData() const {

@@ -22,8 +22,8 @@ public:
     }
 
     void TearDown() override {
-        EpicTestEnvironment::TearDownDAG(prefix);
         m.Stop();
+        EpicTestEnvironment::TearDownDAG(prefix);
     }
 
     void AddToHistory(Chain* c, VertexPtr pvtx) {

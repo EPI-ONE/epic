@@ -264,6 +264,9 @@ TEST_F(TestWallet, normal_workflow) {
 
     DAG->Wait();
 
+    // wait wallet store complete
+    sleep(2);
+
     auto lastRedemInfo = std::make_pair(WALLET->GetLastRedemHash(), WALLET->GetLastRedemAddress());
     auto minerInfo     = WALLET->GetMinerInfo();
 

@@ -47,17 +47,17 @@ public:
         return c[m];
     }
 
-    void push(value_type&& v) {
+    bool push(value_type&& v) {
         WRITER_LOCK(mutex_)
         c.push_back(std::move(v));
-        update_best(c.back(), c.size() - 1);
+        return update_best(c.back(), c.size() - 1);
     }
 
     template <typename... Args>
-    void emplace(Args&&... args) {
+    bool emplace(Args&&... args) {
         WRITER_LOCK(mutex_)
         c.emplace_back(std::forward<Args>(args)...);
-        update_best(c.back(), c.size() - 1);
+        return update_best(c.back(), c.size() - 1);
     }
 
     iterator erase(const_iterator pos) {
@@ -107,13 +107,7 @@ public:
 
     bool update_best(const_iterator pos) {
         WRITER_LOCK(mutex_)
-        if (comp(c[m], *pos)) {
-            c[m]->ismainchain_ = false;
-            m                  = std::distance(c.cbegin(), pos);
-            c[m]->ismainchain_ = true;
-            return true;
-        }
-        return false;
+        return update_best(*pos, std::distance(c.cbegin(), pos));
     }
 
 private:
