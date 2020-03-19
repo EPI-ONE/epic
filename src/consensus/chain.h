@@ -200,7 +200,7 @@ private:
     friend class TestChainVerification;
 };
 
-typedef std::unique_ptr<Chain> ChainPtr;
+typedef std::shared_ptr<Chain> ChainPtr;
 
 inline double CalculateAllowedDist(const Cumulator& cum, float msHashRate) {
     return cum.Sum().GetDouble() / std::max(cum.TimeSpan(), (uint32_t) 1) / msHashRate *

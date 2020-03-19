@@ -142,7 +142,7 @@ TEST_F(TestMemPool, receive_and_release) {
     b2.AddTransaction(redemption);
     b2.SetMerkle();
     MINER->Solve(b2);
-    while (UintToArith256(b2.GetHash()) > DAG->GetBestChain().GetChainHead()->milestoneTarget) {
+    while (UintToArith256(b2.GetHash()) > DAG->GetBestChain()->GetChainHead()->milestoneTarget) {
         b2.SetNonce(b2.GetNonce() + 1);
         MINER->Solve(b2);
     }

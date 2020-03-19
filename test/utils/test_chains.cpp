@@ -16,13 +16,13 @@ TEST_F(TestChains, BasicFunctions) {
     int testSize = 10000;
     uint64_t mcw = rand() + 100; // max chainwork
 
-    auto chainworkOf = [](ChainPtr& cp) -> arith_uint256& { return cp->GetChainHead()->chainwork; };
+    auto chainworkOf = [](ChainPtr cp) -> arith_uint256& { return cp->GetChainHead()->chainwork; };
 
     // Construct chains, each containing one milestone
     // with a random chainwork less than mcw
     std::vector<ChainPtr> random_chains;
     for (int i = 0; i < testSize; ++i) {
-        auto chain            = std::make_unique<Chain>();
+        auto chain            = std::make_shared<Chain>();
         VertexPtr randomBlock = fac.CreateVertexPtr(1, 1, true, 1);
         fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomBlock);
         chain->AddNewMilestone(*randomBlock);
@@ -31,12 +31,12 @@ TEST_F(TestChains, BasicFunctions) {
     }
 
     // Replace a random element in random_chains with mcw
-    auto best_chain       = std::make_unique<Chain>();
+    auto best_chain       = std::make_shared<Chain>();
     VertexPtr randomBlock = fac.CreateVertexPtr(1, 1, true, 1);
     fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomBlock);
     best_chain->AddNewMilestone(*randomBlock);
     chainworkOf(best_chain)          = mcw;
-    random_chains[rand() % testSize] = std::unique_ptr<Chain>(std::move(best_chain));
+    random_chains[rand() % testSize] = std::shared_ptr<Chain>(std::move(best_chain));
 
     // Push elements into Chains
     Chains q;
@@ -50,7 +50,7 @@ TEST_F(TestChains, BasicFunctions) {
 
     // Replace the first chain by a better chain
     uint64_t new_mcw         = mcw + 1;
-    auto new_best            = std::make_unique<Chain>();
+    auto new_best            = std::make_shared<Chain>();
     VertexPtr randomNewBlock = fac.CreateVertexPtr(1, 1, true, 1);
     fac.CreateMilestonePtr(GENESIS_VERTEX->snapshot, randomNewBlock);
     new_best->AddNewMilestone(*randomNewBlock);

@@ -37,12 +37,7 @@ public:
         return c.size();
     }
 
-    const_reference best() const {
-        READER_LOCK(mutex_)
-        return c[m];
-    }
-
-    reference best() {
+    value_type best() const {
         READER_LOCK(mutex_)
         return c[m];
     }

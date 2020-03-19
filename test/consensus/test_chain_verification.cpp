@@ -78,7 +78,7 @@ TEST_F(TestChainVerification, chain_with_genesis) {
     ASSERT_EQ(DAG->GetMilestoneHead()->height, 0);
     ASSERT_EQ(DAG->GetMilestoneHead()->snapshot->GetLevelSet().size(), 1);
     ASSERT_EQ(*DAG->GetMilestoneHead()->snapshot->GetLevelSet()[0].lock()->cblock, *GENESIS);
-    ASSERT_EQ(*DAG->GetBestChain().GetVertex(GENESIS->GetHash()), *GENESIS_VERTEX);
+    ASSERT_EQ(*DAG->GetBestChain()->GetVertex(GENESIS->GetHash()), *GENESIS_VERTEX);
 }
 
 TEST_F(TestChainVerification, UTXO) {
