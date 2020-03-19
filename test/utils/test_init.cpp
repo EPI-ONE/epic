@@ -28,7 +28,7 @@ TEST_F(TestInit, test_init_dag) {
     }
     usleep(500000);
     DAG->Wait();
-    ASSERT_EQ(DAG->GetBestChain().GetChainHead()->height, chain.size());
+    ASSERT_EQ(DAG->GetBestChain()->GetChainHead()->height, chain.size());
 
     // shutdown
     DAG->Stop();
@@ -41,7 +41,7 @@ TEST_F(TestInit, test_init_dag) {
     DAG   = std::make_unique<DAGManager>();
 
     ASSERT_TRUE(DAG->Init());
-    ASSERT_TRUE(DAG->GetBestChain().GetMilestones().empty());
+    ASSERT_TRUE(DAG->GetBestChain()->GetMilestones().empty());
     ASSERT_EQ(DAG->GetBestMilestoneHeight(), 0);
 
     EpicTestEnvironment::TearDownDAG(dir);

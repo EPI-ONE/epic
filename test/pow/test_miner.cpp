@@ -76,7 +76,7 @@ TEST_F(TestMiner, Run) {
     DAG->Stop();
 
     ASSERT_TRUE(m.GetSelfChainHead());
-    ASSERT_TRUE(DAG->GetBestChain().GetMilestones().size() > 1);
+    ASSERT_TRUE(DAG->GetBestChain()->GetMilestones().size() > 1);
     ASSERT_TRUE(DAG->GetChains().size() == 1);
 }
 

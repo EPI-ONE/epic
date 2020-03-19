@@ -186,10 +186,10 @@ void Miner::Run() {
 
 uint256 Miner::SelectTip() {
     ConstBlockPtr selected;
-    auto size = DAG->GetBestChain().GetPendingBlockCount();
+    auto bestchain = DAG->GetBestChain();
 
-    for (size_t i = 0; i < size; ++i) {
-        selected = DAG->GetBestChain().GetRandomTip();
+    for (size_t i = 0; i < bestchain->GetPendingBlockCount(); ++i) {
+        selected = bestchain->GetRandomTip();
 
         if (!selected) {
             break;

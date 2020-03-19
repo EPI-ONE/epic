@@ -222,7 +222,7 @@ TEST_F(TestFileStorage, test_rebuild_consensus) {
     WALLET->Stop();
     MINER->Stop();
     STORE->Stop();
-    spdlog::info(DAG->GetBestChain().GetChainHead()->height);
+    spdlog::info(DAG->GetBestChain()->GetChainHead()->height);
     auto origin_chainwork = STORE->GetBestChainWork();
     ASSERT_TRUE(STORE->CheckFileSanity(false));
 

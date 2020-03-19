@@ -85,7 +85,7 @@ public:
     // Checkout a milestone either in different chain or in db
     VertexPtr GetMsVertex(const uint256&, bool withBlock = true) const;
 
-    Chain& GetBestChain() const;
+    ChainPtr GetBestChain() const;
     size_t GetBestMilestoneHeight() const;
     VertexPtr GetMilestoneHead() const;
 
@@ -106,7 +106,7 @@ public:
      */
     void RegisterOnLvsConfirmedCallback(OnLvsConfirmedCallback&& callback_func);
 
-    void RegisterOnChainUpdatedCallback(OnChainUpdatedCallback &&func);
+    void RegisterOnChainUpdatedCallback(OnChainUpdatedCallback&& func);
 
     void NotifyOnChainUpdated(ConstBlockPtr block, bool isMainchain) {
         if (onChainUpdatedCallback_) {

@@ -383,7 +383,7 @@ TEST_F(TestConsensus, delete_fork_and_flush_multiple_chains) {
 
     // here we set less or equal as $chain[1] might be deleted with a small probability
     ASSERT_LE(DAG->GetChains().size(), 2);
-    ASSERT_EQ(DAG->GetBestChain().GetMilestones().size(), GetParams().punctualityThred);
+    ASSERT_EQ(DAG->GetBestChain()->GetMilestones().size(), GetParams().punctualityThred);
 
     auto chain_it = chains[0].cbegin();
     auto blk_it   = chain_it->begin();

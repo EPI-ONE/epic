@@ -137,7 +137,7 @@ void DAGManager::RespondRequestInv(std::vector<uint256>& locator, uint32_t nonce
 }
 
 void DAGManager::RespondRequestPending(uint32_t nonce, const PeerPtr& peer) const {
-    peer->SendMessage(std::make_unique<Bundle>(GetBestChain().GetPendingBlocks(), nonce));
+    peer->SendMessage(std::make_unique<Bundle>(GetBestChain()->GetPendingBlocks(), nonce));
 }
 
 void DAGManager::RespondRequestLVS(const std::vector<uint256>& hashes,
@@ -223,7 +223,7 @@ std::vector<uint256> DAGManager::TraverseMilestoneBackward(VertexPtr cursor, siz
 std::vector<uint256> DAGManager::TraverseMilestoneForward(const VertexPtr cursor, size_t length) const {
     std::vector<uint256> result;
     result.reserve(length);
-    const auto& bestChain = milestoneChains_.best();
+    const auto bestChain = GetBestChain();
     std::shared_lock<std::shared_mutex> reader(bestChain->GetMilestones().get_mutex());
 
     size_t cursorHeight = cursor->height + 1;
@@ -389,9 +389,9 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
     }
 
     // Check if it's a new ms from the main chain
-    auto& mainchain    = milestoneChains_.best();
-    const auto& msHash = block->GetMilestoneHash();
-    VertexPtr msBlock  = mainchain->GetMsVertexCache(msHash);
+    auto const mainchain = GetBestChain();
+    const auto& msHash   = block->GetMilestoneHash();
+    VertexPtr msBlock    = mainchain->GetMsVertexCache(msHash);
     if (!msBlock) {
         msBlock = STORE->GetVertex(msHash);
     }
@@ -414,9 +414,15 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
                     "[Verify Thread] A fork created with head {} pointing to the previous main chain MS {} --- "
                     "total chains {}",
                     block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(), milestoneChains_.size());
-                auto new_fork = std::make_unique<Chain>(*milestoneChains_.best(), block);
+                auto new_fork = std::make_shared<Chain>(*mainchain, block);
                 ProcessMilestone(new_fork, block);
-                NotifyOnChainUpdated(block, milestoneChains_.emplace(std::move(new_fork)));
+                bool isMainchain = milestoneChains_.emplace(std::move(new_fork));
+                NotifyOnChainUpdated(block, isMainchain);
+                if (isMainchain) {
+                    spdlog::debug("[Verify Thread] Switched to the best chain: head from {} to {}",
+                                  mainchain->GetChainHead()->GetMilestoneHash().to_substr(),
+                                  GetBestChain()->GetChainHead()->GetMilestoneHash().to_substr());
+                }
             }
         }
         return;
@@ -439,29 +445,31 @@ void DAGManager::AddBlockToPending(const ConstBlockPtr& block) {
         MilestonePtr ms = msBlock->snapshot;
 
         if (CheckMsPOW(block, ms)) {
+            bool isMainchain;
             if (msBlock->cblock->GetHash() == chain->GetChainHead()->GetMilestoneHash()) {
                 // new milestone on fork
                 spdlog::debug("[Verify Thread] A fork grows with head {} pointing to the previous MS {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr());
                 ProcessMilestone(*chainIt, block);
-                auto isMainchain = milestoneChains_.update_best(chainIt);
-                NotifyOnChainUpdated(block, isMainchain);
-                if (isMainchain) {
-                    spdlog::debug("[Verify Thread] Switched to the best chain: head = {}",
-                                  milestoneChains_.best()->GetChainHead()->GetMilestoneHash().to_substr());
-                }
-                return;
+                isMainchain = milestoneChains_.update_best(chainIt);
             } else {
                 // new fork
                 spdlog::debug("[Verify Thread] A fork created with head {} pointing to the previous forking MS {} --- "
                               "total chains {}",
                               block->GetHash().to_substr(), block->GetMilestoneHash().to_substr(),
                               milestoneChains_.size());
-                auto new_fork = std::make_unique<Chain>(*chain, block);
+                auto new_fork = std::make_shared<Chain>(*chain, block);
                 ProcessMilestone(new_fork, block);
-                NotifyOnChainUpdated(block, milestoneChains_.emplace(std::move(new_fork)));
-                return;
+                isMainchain = milestoneChains_.emplace(std::move(new_fork));
             }
+
+            NotifyOnChainUpdated(block, isMainchain);
+            if (isMainchain) {
+                spdlog::debug("[Verify Thread] Switched to the best chain: head from {} to {}",
+                              mainchain->GetChainHead()->GetMilestoneHash().to_substr(),
+                              GetBestChain()->GetChainHead()->GetMilestoneHash().to_substr());
+            }
+            return;
         }
     }
 }
@@ -477,20 +485,21 @@ void DAGManager::ProcessMilestone(const ChainPtr& chain, const ConstBlockPtr& bl
 }
 
 void DAGManager::DeleteFork() {
-    const auto& milestones = GetBestChain().GetMilestones();
+    auto bestchain         = GetBestChain();
+    const auto& milestones = bestchain->GetMilestones();
     if (milestones.size() <= GetParams().deleteForkThreshold) {
         return;
     }
     auto targetChainWork = (*(milestones.end() - GetParams().deleteForkThreshold))->chainwork;
     for (auto chain_it = milestoneChains_.begin(); chain_it != milestoneChains_.end();) {
-        if (*chain_it == milestoneChains_.best()) {
+        if ((*chain_it)->IsMainChain()) {
             chain_it++;
             continue;
         }
         // try delete
         if ((*chain_it)->GetChainHead()->chainwork < targetChainWork) {
             for (auto it = (*chain_it)->GetMilestones().rbegin(); it != (*chain_it)->GetMilestones().rend(); ++it) {
-                if (GetBestChain().GetMsVertexCache((*it)->GetMilestoneHash()) != nullptr) {
+                if (bestchain->GetMsVertexCache((*it)->GetMilestoneHash()) != nullptr) {
                     break;
                 }
                 msVertices_.erase((*it)->GetMilestoneHash());
@@ -517,13 +526,13 @@ VertexPtr DAGManager::GetMsVertex(const uint256& msHash, bool withBlock) const {
 
     // will happen only for finding ms of nonsolid block
     // may return nullptr when rpc is requesting some non-existing milestones
-    auto ms = GetBestChain().GetVertexCache(msHash);
+    auto ms = GetBestChain()->GetVertexCache(msHash);
     spdlog::trace("Milestone with hash {} is not found", msHash.to_substr());
     return nullptr;
 }
 
-Chain& DAGManager::GetBestChain() const {
-    return *milestoneChains_.best();
+ChainPtr DAGManager::GetBestChain() const {
+    return milestoneChains_.best();
 }
 
 void DAGManager::Stop() {
@@ -542,7 +551,7 @@ void DAGManager::Wait() {
 }
 
 void DAGManager::FlushTrigger() {
-    const auto& bestChain = milestoneChains_.best();
+    const auto bestChain = GetBestChain();
     if (bestChain->GetMilestones().size() <= GetParams().punctualityThred) {
         return;
     }
@@ -585,7 +594,7 @@ void DAGManager::FlushToSTORE(MilestonePtr ms) {
     UpdateStatOnLvsStored(ms);
 
     // first store data to STORE
-    auto [vtxToStore, utxoToStore, utxoToRemove] = milestoneChains_.best()->GetDataToSTORE(ms);
+    auto [vtxToStore, utxoToStore, utxoToRemove] = GetBestChain()->GetDataToSTORE(ms);
 
     ms->stored = true;
     storagePool_.Execute([=, vtxToStore = std::move(vtxToStore), utxoToStore = std::move(utxoToStore),
@@ -652,30 +661,32 @@ bool CheckMsPOW(const ConstBlockPtr& b, const MilestonePtr& m) {
 }
 
 VertexPtr DAGManager::GetMilestoneHead() const {
-    if (GetBestChain().GetMilestones().empty()) {
+    auto bestchain = GetBestChain();
+    if (bestchain->GetMilestones().empty()) {
         return STORE->GetMilestoneAt(STORE->GetHeadHeight());
     }
 
-    return GetBestChain().GetChainHead()->GetMilestone();
+    return bestchain->GetChainHead()->GetMilestone();
 }
 
 size_t DAGManager::GetBestMilestoneHeight() const {
-    if (GetBestChain().GetMilestones().empty()) {
+    auto bestchain = GetBestChain();
+    if (bestchain->GetMilestones().empty()) {
         return STORE->GetHeadHeight();
     }
-    return GetBestChain().GetChainHead()->height;
+    return bestchain->GetChainHead()->height;
 }
 
 bool DAGManager::IsMainChainMS(const uint256& blkHash) const {
-    return GetBestChain().IsMilestone(blkHash);
+    return GetBestChain()->IsMilestone(blkHash);
 }
 
 VertexPtr DAGManager::GetMainChainVertex(const uint256& blkHash) const {
-    return GetBestChain().GetVertex(blkHash);
+    return GetBestChain()->GetVertex(blkHash);
 }
 
 size_t DAGManager::GetHeight(const uint256& blockHash) const {
-    auto vtx = GetBestChain().GetVertexCache(blockHash);
+    auto vtx = GetBestChain()->GetVertexCache(blockHash);
     if (vtx) {
         return vtx->height;
     }
@@ -684,13 +695,13 @@ size_t DAGManager::GetHeight(const uint256& blockHash) const {
 
 std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(size_t height) const {
     std::vector<ConstBlockPtr> lvs;
-    const auto& bestChain    = GetBestChain();
-    size_t leastHeightCached = bestChain.GetLeastHeightCached();
+    const auto bestChain     = GetBestChain();
+    size_t leastHeightCached = bestChain->GetLeastHeightCached();
 
     if (height < leastHeightCached) {
         lvs = STORE->GetLevelSetBlksAt(height);
     } else {
-        auto vtcs = bestChain.GetMilestones()[height - leastHeightCached]->GetLevelSet();
+        auto vtcs = bestChain->GetMilestones()[height - leastHeightCached]->GetLevelSet();
 
         lvs.reserve(vtcs.size());
         for (auto& rwp : vtcs) {
@@ -707,7 +718,7 @@ std::vector<ConstBlockPtr> DAGManager::GetMainChainLevelSet(const uint256& block
 
 std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool withBlock) const {
     std::vector<VertexPtr> lvs;
-    size_t leastHeightCached = GetBestChain().GetLeastHeightCached();
+    size_t leastHeightCached = GetBestChain()->GetLeastHeightCached();
 
     auto height = GetHeight(blockHash);
     if (height < leastHeightCached) {
@@ -727,8 +738,8 @@ std::vector<VertexPtr> DAGManager::GetLevelSet(const uint256& blockHash, bool wi
 }
 
 VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
-    const auto& bestChain    = GetBestChain();
-    size_t leastHeightCached = bestChain.GetLeastHeightCached();
+    const auto bestChain     = GetBestChain();
+    size_t leastHeightCached = bestChain->GetLeastHeightCached();
 
     // Find in DB
     if (height < leastHeightCached) {
@@ -736,7 +747,7 @@ VStream DAGManager::GetMainChainRawLevelSet(size_t height) const {
     }
 
     // Find in cache
-    auto vtcs = bestChain.GetMilestones()[height - leastHeightCached]->GetLevelSet();
+    auto vtcs = bestChain->GetMilestones()[height - leastHeightCached]->GetLevelSet();
 
     // To make it have the same order as the lvs we get from file (ms goes the first)
     VStream result;

@@ -52,7 +52,7 @@ bool MemPool::ReceiveTx(const ConstTxPtr& tx) {
 
     // note that we allow transactions that have double spending with other tx in mempool
     // check the transaction is not from no spent TXOs
-    if (!DAG->GetBestChain().IsTxFitsLedger(tx)) {
+    if (!DAG->GetBestChain()->IsTxFitsLedger(tx)) {
         return false;
     }
 

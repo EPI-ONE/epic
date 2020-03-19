@@ -76,15 +76,15 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerCo
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext* context,
-                          const GetBlockRequest* request,
-                          GetMilestoneResponse* response) {
-    const auto& chain = DAG->GetBestChain();
+                                                            const GetBlockRequest* request,
+                                                            GetMilestoneResponse* response) {
+    const auto chain  = DAG->GetBestChain();
     const auto msHash = uintS<256>(request->hash());
-    if (!chain.IsMilestone(msHash)) {
+    if (!chain->IsMilestone(msHash)) {
         return grpc::Status::OK;
     }
 
-    response->set_allocated_milestone(ToRPCMilestone(*chain.GetVertex(msHash)));
+    response->set_allocated_milestone(ToRPCMilestone(*chain->GetVertex(msHash)));
 
     return grpc::Status::OK;
 }
@@ -110,7 +110,7 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* con
     rpc_chains->Reserve(chains.size());
 
     for (const auto& chain : chains) {
-        rpc_chains->AddAllocated(ToRPCMsChain(*chain->GetChainHead()->GetMilestone()));
+        rpc_chains->AddAllocated(ToRPCMsChain(*(chain->GetChainHead()->GetMilestone())));
     }
     return grpc::Status::OK;
 }
@@ -118,13 +118,13 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* con
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext* context,
                                                              const EmptyMessage* request,
                                                              GetPeerChainsResponse* response) {
-    const auto& bestChain = DAG->GetBestChain();
-    const auto& heads     = bestChain.GetPeerChainHead();
-    auto rpc_heads        = response->mutable_peerchains();
+    const auto bestChain = DAG->GetBestChain();
+    const auto& heads    = bestChain->GetPeerChainHead();
+    auto rpc_heads       = response->mutable_peerchains();
     rpc_heads->Reserve(heads.size());
 
     for (const auto& head : heads) {
-        rpc_heads->AddAllocated(ToRPCChain(*bestChain.GetVertex(head)));
+        rpc_heads->AddAllocated(ToRPCChain(*(bestChain->GetVertex(head))));
     }
 
     return grpc::Status::OK;
@@ -133,16 +133,16 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext* context,
                                                              const EmptyMessage* request,
                                                              GetRecentStatResponse* response) {
-    const auto chain = DAG->GetBestChain().GetMilestones();
+    const auto chain = DAG->GetBestChain()->GetMilestones();
 
     response->set_timefrom(chain.front()->GetLevelSet().front().lock()->cblock->GetTime());
     response->set_timeto(chain.back()->GetMilestone()->cblock->GetTime());
 
-    const auto [totalblk, totaltx] =
-        std::accumulate(chain.begin(), chain.end(), std::pair{0, 0},
-                        [](std::pair<uint32_t, uint32_t> sum, auto chain_elem) -> std::pair<uint32_t, uint32_t> {
-                            return {sum.first + chain_elem->GetLevelSet().size(), sum.second + chain_elem->GetNumOfValidTxns()};
-                        });
+    const auto [totalblk, totaltx] = std::accumulate(
+        chain.begin(), chain.end(), std::pair{0, 0},
+        [](std::pair<uint32_t, uint32_t> sum, auto chain_elem) -> std::pair<uint32_t, uint32_t> {
+            return {sum.first + chain_elem->GetLevelSet().size(), sum.second + chain_elem->GetNumOfValidTxns()};
+        });
     response->set_nblks(totalblk);
     response->set_ntxs(totaltx);
 
@@ -154,15 +154,15 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetRecentStat(grpc::ServerContext
 grpc::Status BasicBlockExplorerRPCServiceImpl::Statistic(grpc::ServerContext* context,
                                                          const EmptyMessage* request,
                                                          StatisticResponse* response) {
+    auto bestchain = DAG->GetBestChain();
     if (STORE->GetHeadHeight() > 0) {
-        response->set_height(DAG->GetBestChain().GetChainHead()->height);
+        response->set_height(bestchain->GetChainHead()->height);
         const auto stat = DAG->GetStatData();
         response->set_nblks(stat.nBlkCnt);
         response->set_ntxs(stat.nTxCnt);
 
-        const auto tEnd =
-            STORE->GetLevelSetBlksAt(DAG->GetBestChain().GetMilestones().front()->height - 1).front()->GetTime();
-        auto tps = response->ntxs() / static_cast<double>(tEnd - stat.tStart);
+        const auto tEnd = STORE->GetLevelSetBlksAt(bestchain->GetMilestones().front()->height - 1).front()->GetTime();
+        auto tps        = response->ntxs() / static_cast<double>(tEnd - stat.tStart);
         response->set_tps(tps);
 
         if (MEMPOOL) {
