@@ -28,7 +28,8 @@ struct CExtKey {
     bool Derive(CExtKey& out, unsigned int nChild) const;
     CExtPubKey Neuter() const;
     void SetSeed(const unsigned char* seed, unsigned int nSeedLen);
-    template <typename Stream>
+
+    /*template <typename Stream>
     void Serialize(Stream& s) const
     {
         unsigned int len = BIP32_EXTKEY_SIZE;
@@ -46,7 +47,7 @@ struct CExtKey {
             throw std::runtime_error("Invalid extended key size\n");
         s.read((char *)&code[0], len);
         Decode(code);
-    }
+    }*/
 };
 
 struct CExtPubKey {
@@ -69,7 +70,7 @@ struct CExtPubKey {
     void Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
     bool Derive(CExtPubKey& out, unsigned int nChild) const;
 
-    void Serialize(CSizeComputer& s) const
+    /*void Serialize(CSizeComputer& s) const
     {
         // Optimized implementation for ::GetSerializeSize that avoids copying.
         s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
@@ -92,7 +93,7 @@ struct CExtPubKey {
             throw std::runtime_error("Invalid extended key size\n");
         s.read((char *)&code[0], len);
         Decode(code);
-    }
+    }*/
 };
 
 CExtKey DecodeExtKey(const std::string& str);

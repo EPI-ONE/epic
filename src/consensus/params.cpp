@@ -88,10 +88,10 @@ MainNetParams::MainNetParams() {
     magic                = 0x44535A5A;
 
     keyPrefixes = {
-        0,                        // keyPrefixes[PUBKEY_ADDRESS]
-        128,                      // keyPrefixes[SECRET_KEY]
-        {0x04, 0x35, 0x87, 0xCF}, // keyPrefixes[EXT_PUBLIC_KEY]
-        {0x04, 0x35, 0x83, 0x94}  // keyPrefixes[EXT_SECRET_KEY]
+        0,    // keyPrefixes[PUBKEY_ADDRESS]
+        128,  // keyPrefixes[SECRET_KEY]
+        0xCF, // keyPrefixes[EXT_PUBLIC_KEY]
+        0x94, // keyPrefixes[EXT_SECRET_KEY]
     };
 
     genesisHexStr =
@@ -126,10 +126,10 @@ TestNetSpadeParams::TestNetSpadeParams() {
     magic                = 0x524F434B;
 
     keyPrefixes = {
-        0,                        // keyPrefixes[PUBKEY_ADDRESS]
-        128,                      // keyPrefixes[SECRET_KEY]
-        {0x04, 0x35, 0x87, 0xCF}, // keyPrefixes[EXT_PUBLIC_KEY]
-        {0x04, 0x35, 0x83, 0x94}  // keyPrefixes[EXT_SECRET_KEY]
+        0,    // keyPrefixes[PUBKEY_ADDRESS]
+        128,  // keyPrefixes[SECRET_KEY]
+        0xCF, // keyPrefixes[EXT_PUBLIC_KEY]
+        0x94, // keyPrefixes[EXT_SECRET_KEY]
     };
 
     genesisHexStr =
@@ -161,8 +161,10 @@ TestNetDiamondParams::TestNetDiamondParams() {
     magic                = 0x524F4C4C;
 
     keyPrefixes = {
-        0,  // keyPrefixes[PUBKEY_ADDRESS]
-        128 // keyPrefixes[SECRET_KEY]
+        0,    // keyPrefixes[PUBKEY_ADDRESS]
+        128,  // keyPrefixes[SECRET_KEY]
+        0xCF, // keyPrefixes[EXT_PUBLIC_KEY]
+        0x94, // keyPrefixes[EXT_SECRET_KEY]
     };
 
     genesisHexStr = "0b00e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb9"
@@ -193,10 +195,10 @@ UnitTestParams::UnitTestParams() {
     magic                = 0x54455354;
 
     keyPrefixes = {
-        0,                        // keyPrefixes[PUBKEY_ADDRESS]
-        128,                      // keyPrefixes[SECRET_KEY]
-        {0x04, 0x35, 0x87, 0xCF}, // keyPrefixes[EXT_PUBLIC_KEY]
-        {0x04, 0x35, 0x83, 0x94}  // keyPrefixes[EXT_SECRET_KEY]
+        0,    // keyPrefixes[PUBKEY_ADDRESS]
+        128,  // keyPrefixes[SECRET_KEY]
+        0xCF, // keyPrefixes[EXT_PUBLIC_KEY]
+        0x94, // keyPrefixes[EXT_SECRET_KEY]
     };
 
     genesisHexStr = "6400e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb9"

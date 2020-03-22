@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "extended_key.h"
-#include "streams.h"
+#include "stream.h"
 #include "utilstrencodings.h"
 
 #include <string>
@@ -103,41 +103,25 @@ TEST_F(TestKeyDerivation, derivation_workflow_test) {
             pubkey.Encode(data);
 
             // Test private key
-            EXPECT_EQ(EncodeExtKey(key) == derive.prv);
-            EXPECT_EQ(DecodeExtKey(derive.prv) == key); //ensure a base58 decoded key also matches
+            EXPECT_EQ(EncodeExtKey(key), derive.prv);
+            EXPECT_EQ(DecodeExtKey(derive.prv), key); //ensure a base58 decoded key also matches
 
             // Test public key
-            EXPECT_EQ(EncodeExtPubKey(pubkey) == derive.pub);
-            EXPECT_EQ(DecodeExtPubKey(derive.pub) == pubkey); //ensure a base58 decoded pubkey also matches
+            EXPECT_EQ(EncodeExtPubKey(pubkey), derive.pub);
+            EXPECT_EQ(DecodeExtPubKey(derive.pub), pubkey); //ensure a base58 decoded pubkey also matches
 
             // Derive new keys
             CExtKey keyNew;
-            EXPECT_EQ(key.Derive(keyNew, derive.nChild));
+            EXPECT_TRUE(key.Derive(keyNew, derive.nChild));
             CExtPubKey pubkeyNew = keyNew.Neuter();
             if (!(derive.nChild & 0x80000000)) {
                 // Compare with public derivation
                 CExtPubKey pubkeyNew2;
-                EXPECT_EQ(pubkey.Derive(pubkeyNew2, derive.nChild));
-                EXPECT_EQ(pubkeyNew == pubkeyNew2);
+                EXPECT_TRUE(pubkey.Derive(pubkeyNew2, derive.nChild));
+                EXPECT_EQ(pubkeyNew ,pubkeyNew2);
             }
             key = keyNew;
             pubkey = pubkeyNew;
-
-            VStream ssPub; //(SER_DISK, CLIENT_VERSION);
-            ssPub << pubkeyNew;
-            EXPECT_EQ(ssPub.size() == 75);
-
-            VStream ssPriv; //(SER_DISK, CLIENT_VERSION);
-            ssPriv << keyNew;
-            EXPECT_EQ(ssPriv.size() == 75);
-
-            CExtPubKey pubCheck;
-            CExtKey privCheck;
-            ssPub >> pubCheck;
-            ssPriv >> privCheck;
-
-            EXPECT_EQ(pubCheck == pubkeyNew);
-            EXPECT_EQ(privCheck == keyNew);
         }
     }
 }

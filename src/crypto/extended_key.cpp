@@ -1,5 +1,7 @@
 #include "extended_key.h"
 
+#include "base58.h"
+
 bool CExtKey::Derive(CExtKey& out, unsigned int _nChild) const {
     out.nDepth = nDepth + 1;
     CKeyID id  = key.GetPubKey().GetID();
@@ -9,9 +11,9 @@ bool CExtKey::Derive(CExtKey& out, unsigned int _nChild) const {
 }
 
 void CExtKey::SetSeed(const unsigned char* seed, unsigned int nSeedLen) {
-    static const unsigned char hashkey[] = {'B', 'i', 't', 'c', 'o', 'i', 'n', ' ', 's', 'e', 'e', 'd'};
+    static const unsigned char hashkey[] = {'e', 'p', 'i', 'c', ' ', 's', 'e', 'e', 'd'};
     std::vector<unsigned char, secure_allocator<unsigned char>> vout(64);
-    // CHMAC_SHA512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());
+    // use block2b instead of chmac_sha512
     BLAKE2B{vout.size(), hashkey, sizeof(hashkey)}.Write(seed, nSeedLen).Finalize(vout.data());
     key.Set(vout.data(), vout.data() + 32, true);
     memcpy(chaincode.begin(), vout.data() + 32, 32);
@@ -51,51 +53,6 @@ void CExtKey::Decode(const unsigned char code[BIP32_EXTKEY_SIZE]) {
     key.Set(code + 42, code + BIP32_EXTKEY_SIZE, true);
 }
 
-
-std::string EncodeExtPubKey(const CExtPubKey& key) {
-    std::vector<unsigned char> data = GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_PUBLIC_KEY);
-    size_t size                     = data.size();
-    data.resize(size + BIP32_EXTKEY_SIZE);
-    key.Encode(data.data() + size);
-    std::string ret = EncodeBase58Check(data);
-    return ret;
-}
-
-CExtKey DecodeExtKey(const std::string& str) {
-    CExtKey key;
-    std::vector<unsigned char> data;
-    if (DecodeBase58Check(str, data)) {
-        const std::vector<unsigned char>& prefix = GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_SECRET_KEY);
-        if (data.size() == BIP32_EXTKEY_SIZE + prefix.size() &&
-            std::equal(prefix.begin(), prefix.end(), data.begin())) {
-            key.Decode(data.data() + prefix.size());
-        }
-    }
-    return key;
-}
-
-std::string EncodeExtPubKey(const CExtPubKey& key) {
-    std::vector<unsigned char> data = GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_PUBLIC_KEY);
-    size_t size                     = data.size();
-    data.resize(size + BIP32_EXTKEY_SIZE);
-    key.Encode(data.data() + size);
-    std::string ret = EncodeBase58Check(data);
-    return ret;
-}
-
-CExtKey DecodeExtKey(const std::string& str) {
-    CExtKey key;
-    std::vector<unsigned char> data;
-    if (DecodeBase58Check(str, data)) {
-        const std::vector<unsigned char>& prefix = GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_SECRET_KEY);
-        if (data.size() == BIP32_EXTKEY_SIZE + prefix.size() &&
-            std::equal(prefix.begin(), prefix.end(), data.begin())) {
-            key.Decode(data.data() + prefix.size());
-        }
-    }
-    return key;
-}
-
 bool CExtPubKey::Derive(CExtPubKey& out, unsigned int _nChild) const {
     out.nDepth = nDepth + 1;
     CKeyID id  = pubkey.GetID();
@@ -124,3 +81,47 @@ void CExtPubKey::Decode(const unsigned char code[BIP32_EXTKEY_SIZE]) {
     pubkey.Set(code + 41, code + BIP32_EXTKEY_SIZE);
 }
 
+std::string EncodeExtKey(const CExtKey& key) {
+    std::vector<unsigned char> data{GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_SECRET_KEY)};
+    size_t size = data.size();
+    data.resize(size + BIP32_EXTKEY_SIZE);
+    key.Encode(data.data() + size);
+    std::string ret = EncodeBase58Check(data);
+    memory_cleanse(data.data(), data.size());
+    return ret;
+}
+
+CExtKey DecodeExtKey(const std::string& str) {
+    CExtKey key;
+    std::vector<unsigned char> data;
+    if (DecodeBase58Check(str, data)) {
+        const std::vector<unsigned char>& prefix{GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_SECRET_KEY)};
+        if (data.size() == BIP32_EXTKEY_SIZE + prefix.size() &&
+            std::equal(prefix.begin(), prefix.end(), data.begin())) {
+            key.Decode(data.data() + prefix.size());
+        }
+    }
+    return key;
+}
+
+std::string EncodeExtPubKey(const CExtPubKey& key) {
+    std::vector<unsigned char> data{GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_PUBLIC_KEY)};
+    size_t size = data.size();
+    data.resize(size + BIP32_EXTKEY_SIZE);
+    key.Encode(data.data() + size);
+    std::string ret = EncodeBase58Check(data);
+    return ret;
+}
+
+CExtPubKey DecodeExtPubKey(const std::string& str) {
+    CExtPubKey key;
+    std::vector<unsigned char> data;
+    if (DecodeBase58Check(str, data)) {
+        const std::vector<unsigned char>& prefix{GetParams().GetKeyPrefix(Params::KeyPrefixType::EXT_PUBLIC_KEY)};
+        if (data.size() == BIP32_EXTKEY_SIZE + prefix.size() &&
+            std::equal(prefix.begin(), prefix.end(), data.begin())) {
+            key.Decode(data.data() + prefix.size());
+        }
+    }
+    return key;
+}
