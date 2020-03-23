@@ -2,14 +2,6 @@
 
 #include "base58.h"
 
-bool CExtKey::Derive(CExtKey& out, unsigned int _nChild) const {
-    out.nDepth = nDepth + 1;
-    CKeyID id  = key.GetPubKey().GetID();
-    memcpy(&out.vchFingerprint[0], &id, 4);
-    out.nChild = _nChild;
-    return key.Derive(out.key, out.chaincode, _nChild, chaincode);
-}
-
 void CExtKey::SetSeed(const unsigned char* seed, unsigned int nSeedLen) {
     static const unsigned char hashkey[] = {'e', 'p', 'i', 'c', ' ', 's', 'e', 'e', 'd'};
     std::vector<unsigned char, secure_allocator<unsigned char>> vout(64);
@@ -20,6 +12,14 @@ void CExtKey::SetSeed(const unsigned char* seed, unsigned int nSeedLen) {
     nDepth = 0;
     nChild = 0;
     memset(vchFingerprint, 0, sizeof(vchFingerprint));
+}
+
+bool CExtKey::Derive(CExtKey& out, unsigned int _nChild) const {
+    out.nDepth = nDepth + 1;
+    CKeyID id  = key.GetPubKey().GetID();
+    memcpy(&out.vchFingerprint[0], &id, 4);
+    out.nChild = _nChild;
+    return key.Derive(out.key, out.chaincode, _nChild, chaincode);
 }
 
 CExtPubKey CExtKey::Neuter() const {
@@ -91,7 +91,7 @@ std::string EncodeExtKey(const CExtKey& key) {
     return ret;
 }
 
-CExtKey DecodeExtKey(const std::string& str) {
+std::optional<CExtKey> DecodeExtKey(const std::string& str) {
     CExtKey key;
     std::vector<unsigned char> data;
     if (DecodeBase58Check(str, data)) {
@@ -100,8 +100,9 @@ CExtKey DecodeExtKey(const std::string& str) {
             std::equal(prefix.begin(), prefix.end(), data.begin())) {
             key.Decode(data.data() + prefix.size());
         }
+        return key;
     }
-    return key;
+    return {};
 }
 
 std::string EncodeExtPubKey(const CExtPubKey& key) {
@@ -113,7 +114,7 @@ std::string EncodeExtPubKey(const CExtPubKey& key) {
     return ret;
 }
 
-CExtPubKey DecodeExtPubKey(const std::string& str) {
+std::optional<CExtPubKey> DecodeExtPubKey(const std::string& str) {
     CExtPubKey key;
     std::vector<unsigned char> data;
     if (DecodeBase58Check(str, data)) {
@@ -122,6 +123,7 @@ CExtPubKey DecodeExtPubKey(const std::string& str) {
             std::equal(prefix.begin(), prefix.end(), data.begin())) {
             key.Decode(data.data() + prefix.size());
         }
+        return key;
     }
-    return key;
+    return {};
 }
