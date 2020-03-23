@@ -11,8 +11,7 @@
 
 class TestThreadPool : public testing::Test {
 public:
-    ThreadPool threadPool;
-    size_t threadsize = 3;
+    ThreadPool threadPool = ThreadPool(3);
 
     void f0() {
         spdlog::info("f0 is executed");
@@ -45,7 +44,6 @@ public:
     };
 
     void SetUp() {
-        threadPool.SetThreadSize(threadsize);
         threadPool.Start();
     }
 
