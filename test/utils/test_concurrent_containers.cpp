@@ -10,12 +10,11 @@
 
 class TestConcurrentContainers : public testing::Test {
 protected:
-    ThreadPool threadPool;
+    ThreadPool threadPool = ThreadPool(4);
     int testSize;
 
     void SetUp() {
         testSize = 10000;
-        threadPool.SetThreadSize(4);
         threadPool.Start();
     }
 
