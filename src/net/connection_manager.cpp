@@ -125,7 +125,7 @@ static void AcceptCallback(evconnlistener_t* listener, evutil_socket_t fd, socka
     bufferevent_enable(bev, EV_READ);
 }
 
-ConnectionManager::ConnectionManager() {
+ConnectionManager::ConnectionManager() : serialize_pool_(1), deserialize_pool_(1) {
     evthread_use_pthreads();
     base_ = event_base_new();
 }
@@ -195,9 +195,7 @@ bool ConnectionManager::Connect(uint32_t ip, uint16_t port) {
 }
 
 void ConnectionManager::Start() {
-    serialize_pool_.SetThreadSize(serialize_pool_size_);
     serialize_pool_.Start();
-    deserialize_pool_.SetThreadSize(deserialize_pool_size_);
     deserialize_pool_.Start();
     /* thread for listen accept event callback and receive message to the queue */
     thread_event_base_ = std::thread(event_base_loop, base_, EVLOOP_NO_EXIT_ON_EMPTY);

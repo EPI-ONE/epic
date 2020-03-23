@@ -51,10 +51,8 @@ class ThreadPool {
 public:
     explicit ThreadPool(size_t worker_size);
 
-    void SetThreadSize(size_t size);
-
-    ThreadPool() = default;
-    ~ThreadPool();
+    ThreadPool()  = delete;
+    ~ThreadPool() = default;
 
     void Start();
 
@@ -107,7 +105,7 @@ private:
     size_t size_;
     BlockingQueue<CallableWrapper> task_queue_;
     std::vector<std::thread> workers_;
-    std::vector<std::atomic_bool>* working_states{};
+    std::vector<std::atomic_bool> working_states;
     std::atomic_bool task_queue_enabled_ = true;
 
     void WorkerThread(uint32_t id);

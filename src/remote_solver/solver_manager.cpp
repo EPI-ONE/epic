@@ -14,17 +14,9 @@ inline void SetTimestamp(VStream& vs, uint32_t t) {
     memcpy(vs.data() + vs.size() - 3 * sizeof(uint32_t), &t, sizeof(uint32_t));
 }
 
-SolverManager::SolverManager(size_t nThreads) {
+SolverManager::SolverManager(size_t nThreads) : solverPool_(nThreads) {
     FillDefaultGPUParams(solverParams_);
-    int nGPUDevices{};
-    gpuAssert(cudaGetDeviceCount(&nGPUDevices), (char*) __FILE__, __LINE__);
-    spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
-
-    nThreads = std::max(nThreads, (size_t) 1);
-    nThreads = std::min(nThreads, (size_t) nGPUDevices);
-    solverPool_.SetThreadSize(nThreads);
 }
-
 
 bool SolverManager::Start() {
     bool flag = false;

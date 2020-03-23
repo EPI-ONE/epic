@@ -37,9 +37,12 @@ int main(int argc, char* argv[]) {
     cxxopts::Options options("solver server");
     std::string address{};
     uint32_t thread_size{0};
-    options.add_options()("h,help", "print help message", cxxopts::value<bool>())(
-        "addr", "ip address with port", cxxopts::value<std::string>())("size", "max size of threads",
-                                                                       cxxopts::value<uint32_t>());
+    // clang-format off
+    options.add_options()
+    ("h,help", "print help message", cxxopts::value<bool>())
+    ("addr", "ip address with port", cxxopts::value<std::string>())
+    ("size", "max size of threads", cxxopts::value<uint32_t>());
+    // clang-format on
 
     auto parsed_options = options.parse(argc, argv);
     if (parsed_options["help"].as<bool>()) {
@@ -61,6 +64,11 @@ int main(int argc, char* argv[]) {
     spdlog::info("Creating RPC server. IP address = {}", address);
     auto server = std::make_unique<BasicRPCServer>(address);
 
+    int nGPUDevices{};
+    gpuAssert(cudaGetDeviceCount(&nGPUDevices), (char*) __FILE__, __LINE__);
+    spdlog::info("Miner using GPU. Found {} GPU devices.", nGPUDevices);
+
+    thread_size = thread_size < nGPUDevices ? thread_size : nGPUDevices;
     spdlog::info("Creating solver. Thread size = {}", thread_size);
     auto solver = std::make_shared<SolverManager>(thread_size);
 

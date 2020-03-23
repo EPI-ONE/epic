@@ -14,31 +14,29 @@ void CallableWrapper::operator()() {
     impl->Call();
 }
 
-ThreadPool::ThreadPool(size_t worker_size) {
-    SetThreadSize(worker_size);
+ThreadPool::ThreadPool(size_t worker_size) : size_(worker_size), working_states(worker_size) {
+    workers_.reserve(size_);
 }
 
 void ThreadPool::WorkerThread(uint32_t id) {
+#ifdef NDEBUG
     try {
+#endif
         bool run;
         do {
             CallableWrapper task;
             run = task_queue_.Take(task);
             if (task_queue_enabled_.load() && run) {
-                working_states->at(id) = true;
+                working_states.at(id) = true;
                 task();
-                working_states->at(id) = false;
+                working_states.at(id) = false;
             }
         } while (run);
-
+#ifdef NDEBUG
     } catch (std::exception& e) {
         spdlog::error("\"{}\" thrown in thread pool", e.what());
     }
-}
-
-void ThreadPool::SetThreadSize(size_t size) {
-    size_ = size;
-    workers_.reserve(size_);
+#endif
 }
 
 void ThreadPool::Start() {
@@ -46,9 +44,9 @@ void ThreadPool::Start() {
     task_queue_.Enable();
 
     for (size_t i = 0; i < size_; i++) {
+        working_states.at(i) = false;
         workers_.emplace_back(&ThreadPool::WorkerThread, this, i);
     }
-    working_states = new std::vector<std::atomic_bool>(workers_.size());
 }
 
 void ThreadPool::Stop() {
@@ -60,11 +58,6 @@ void ThreadPool::Stop() {
         }
     }
     workers_.clear();
-
-    if (working_states) {
-        delete working_states;
-        working_states = nullptr;
-    }
     spdlog::debug("ThreadPool stopped.");
 }
 
@@ -81,11 +74,9 @@ bool ThreadPool::IsIdle() const {
         return false;
     }
 
-    if (working_states) {
-        for (const auto& s : *working_states) {
-            if (s.load()) {
-                return false;
-            }
+    for (const auto& s : working_states) {
+        if (s.load()) {
+            return false;
         }
     }
 
@@ -106,8 +97,4 @@ void ThreadPool::Abort() {
         std::this_thread::yield();
     }
     task_queue_enabled_ = true;
-}
-
-ThreadPool::~ThreadPool() {
-    delete working_states;
 }

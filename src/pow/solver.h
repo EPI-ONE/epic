@@ -39,9 +39,7 @@ protected:
 
 class CPUSolver : public Solver {
 public:
-    CPUSolver(size_t nThreads) : Solver() {
-        solverPool_.SetThreadSize(nThreads);
-    }
+    CPUSolver(size_t nThreads) : Solver(), solverPool_(nThreads) {}
 
     ~CPUSolver() override {
         solverPool_.Stop();
