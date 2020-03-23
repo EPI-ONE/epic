@@ -127,3 +127,77 @@ TEST_F(TestKeyDerivation, derivation_workflow_test) {
         }
     }
 }
+
+TEST_F(TestKeyDerivation, parse_hdkey) {
+    std::vector<uint32_t> keypath;
+
+    ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("///////////////////////////", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1'/1", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("//////////////////////////'/", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("1///////////////////////////", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1'/", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("1/'//////////////////////////", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("", keypath));
+    ASSERT_TRUE(!ParseHDKeypath(" ", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("0", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("O", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("0000'/0000'/0000'", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("0000,/0000,/0000,", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("01234", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("0x1234", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("1", keypath));
+    ASSERT_TRUE(!ParseHDKeypath(" 1", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("42", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m42", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(!ParseHDKeypath("4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+
+    ASSERT_TRUE(ParseHDKeypath("m", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("n", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("n/", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("n/0", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0'", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/0''", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0'/0'", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/'0/0'", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0/0", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("n/0/0", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0/0/00", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/0/0/f00", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0/0/000000000000000000000000000000000000000000000000000000000000000000000000000000000000", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/1/1/111111111111111111111111111111111111111111111111111111111111111111111111111111111111", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0/00/0", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/0'/00/'0", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/1/", keypath));
+    ASSERT_TRUE(!ParseHDKeypath("m/1//", keypath));
+
+    ASSERT_TRUE(ParseHDKeypath("m/0/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(!ParseHDKeypath("m/0/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+
+    ASSERT_TRUE(ParseHDKeypath("m/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(!ParseHDKeypath("m/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+
+}
