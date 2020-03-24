@@ -5,6 +5,7 @@
 #ifndef EPIC_WALLET_MNEMONICS_H
 #define EPIC_WALLET_MNEMONICS_H
 
+#include "extended_key.h"
 #include "secure.h"
 
 #include <array>
@@ -38,6 +39,7 @@ public:
     std::array<std::string, 12> GetMnemonics();
     void PrintToFile(std::string pathstr);
     std::pair<SecureByte, uint256> GetMasterKeyAndSeed();
+    CExtKey GetHDMaster();
 
 private:
     const size_t LENGTH    = 12;

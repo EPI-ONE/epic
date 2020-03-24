@@ -6,17 +6,28 @@
 #define EPIC_HD_CHAIN_H
 
 #include "big_uint.h"
+#include "extended_key.h"
+
+#include <memory>
 
 class HDChain {
 public:
-    void SetSeed();
-    void SetNull();
-    bool IsNull();
-    void DeriveFirstChildKey(); // hardened
-    void DeriveNewChildKey();
+    void SetSeed(CExtKey&& master) {
+        master_ = std::make_unique<CExtKey>(std::move(master));
+    }
+
+    void SetNull() {
+        master_.reset(nullptr);
+    }
+    bool IsNull() {
+        return master_.get() == nullptr;
+    }
+
+    CExtKey GetKeyByPath(const std::vector<uint32_t>& keypath);
+    CExtPubKey GetPubKeyByPath(const std::vector<uint32_t>& keypath);
 
 private:
-    uint256 chaincode_;
+    std::unique_ptr<CExtKey> master_;
 };
 
 #endif // EPIC_HD_CHAIN_H

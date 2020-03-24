@@ -9,7 +9,7 @@
 #include "hash.h"
 #include "key.h"
 #include "random.h"
-#include "spdlog/spdlog.h"
+#include "spdlog.h"
 #include "utilstrencodings.h"
 #include "wordlist.h"
 
@@ -158,7 +158,8 @@ bool Mnemonics::WordsToBits() {
 std::pair<SecureByte, uint256> Mnemonics::GetMasterKeyAndSeed() {
     SecureByte out;
     out.resize(64);
-    int ret = PKCS5_PBKDF2_HMAC_SHA1((char*) (entropy_.data()), entropy_.size(), NULL, 0, 1, 64, out.data());
+    static const unsigned char salt[] = {'e', 'p', 'i', 'c', 's', 'e', 'c', 'u', 'r', 'e'};
+    int ret = PKCS5_PBKDF2_HMAC_SHA1((char*) (entropy_.data()), entropy_.size(), salt, sizeof(salt), 1, 64, out.data());
     if (!ret) {
         return {SecureByte{}, uint256{}};
     }
@@ -169,4 +170,10 @@ std::pair<SecureByte, uint256> Mnemonics::GetMasterKeyAndSeed() {
 
     uint256 chaincode{out2.data(), out2.size()};
     return {out1, chaincode};
+}
+
+CExtKey Mnemonics::GetHDMaster() {
+    CExtKey master;
+    master.SetSeed(entropy_.data(), entropy_.size());
+    return master;
 }

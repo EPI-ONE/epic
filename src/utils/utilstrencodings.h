@@ -193,7 +193,7 @@ bool ConvertBits(const O& outfn, I it, I end) {
     return true;
 }
 
-/** Parse an HD keypaths like "m/7/0'/2000". */
+/** Parse an HD keypaths like "m/7/0'/2000" and append the result to keypath */
 bool ParseHDKeypath(const std::string& keypath_str, std::vector<uint32_t>& keypath);
 
 /** Write HD keypaths as strings */

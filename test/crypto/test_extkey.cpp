@@ -36,21 +36,27 @@ public:
     std::array<TestVector, 3> testData = {
         // clang-format off
         TestVector{"000102030405060708090a0b0c0d0e0f"}
+            // m
             ("NCApQUytpwKpJVDJn5e3TdE4aPjWM3McPQ3zkbLwUkiLxVurSupvieBgC2R8QeJL76FvyhTPhGssHmpGp8AftHwcus7gRcJ33YrhrBRZBR75",
              "WeBCq8PkVFTKM99atVPm5wD9yQQdYfh8egorRD7G2Yv2L9XQ9rBmgyBMuDHHGAPjprYQwn7xbspXtVXFgVoxz8nUk8djdamAz5VnxuoZGbY2",
              0x80000000)
+            // m/0'
             ("NCE9caJrGTSdiCk29Rogt6zePVdCqdtLMNV6mPBBzxch5b7gkDQB3WrPNZwZ2H87aZkBRu4xBQoiyqVbwDfuWPR6eBRj2Gq2vVTggr1wY33R",
              "WeEY3Dihvma8krgJFqZQWQyjnWJL3GDrcfExRzwWYkpNTEjET9m21qr55kpGyXStkM5cTHw5MrgzQafB2iMRrwyXr3326DA3uBU7ZA2wqMxg",
              1)
+            // m/0'/1
             ("NCEqzgN1arinzCJeYpbCAMHGvbBtrbds7eRFxTgS5AHM5jUmadtgA9geE1vq5Vfgvx1AgNq44Ct8DkiFbHL5z1kQUxyDyXJjBXVduKD4hfNV",
              "WeFERKmsFArJ2rEvfELunfGNKbs24DyPNwB7d5SkcxV2TP6KHaFX8UgKwCoXQVwyXsfNLDHJijVKu1nr5whiGHhpftv2t2MxBQwTohAjk2eJ",
              0x80000002)
+            // m/0'/1/2'
             ("NCGzyrCzkPfdtz1d3kwSB8NUUnBHzEC57e7f9afJR94h4ahuzhPck1BFa7vgKn1tWAJ9cBuwvozhgo4tJrWFHjBwvyL2yXxYKStXwUaFTLEB",
              "WeHPQVcrQho8wdwuAAh9oSMZsnrRBrXbNvsWpCRcxwGNSEKThdkTiLAwHJnk9bxG1JrzCvqWCynbciHrAvfs1mP6D5W7rL3SXbbgSfb4hgad",
              2)
+            // m/0'/1/2'/2
             ("NCJoHiyr7h46BkJCxmanUfwkZK3gJ5VyQ5t6eSxtDHXzZmTKjjVZkkskVpcsHhQKDCQhM4Cvc6dtG2UC4scdCeqHmnkMoFMydcmPqucnefmR",
              "WeKBiNPhn1BbEQEV5BLW6yvqxKioVhqVfNdxK4jCm5jfwR4sSfrQj5sSD1WVWzZZPxJ4viH7xAPWaBF39RW5NuLt8oQnQbhFLYUCMXqE5mck",
              1000000000)
+            // m/0'/1/2'/2/1000000000
             ("NCLdXrtDXniynFpedsXxmwbzKBXB2v2QQ3PsH5Z1MeGE4byDJbw2uGwsSN8YanfWK2zdVGFdCzXKRg6uambApVS7a1keRgTBxGaYgcDpsooj",
              "WeM1xWJ5C6rUpukvkHHgQFb5iCCJEYMvfL9iwhKKuSTuSFam1YHssbwZ9Z1RZEebS5NcJCDLw5UiQkTxJqMXixKcakhGB2LiPgEr7pohTvca",
              0),
@@ -116,8 +122,8 @@ TEST_F(TestKeyDerivation, derivation_workflow_test) {
             CExtKey keyNew;
             EXPECT_TRUE(key.Derive(keyNew, derive.nChild));
             CExtPubKey pubkeyNew = keyNew.Neuter();
+            // for non-hardened keys, check master public key property
             if (!(derive.nChild & 0x80000000)) {
-                // Compare with public derivation
                 CExtPubKey pubkeyNew2;
                 EXPECT_TRUE(pubkey.Derive(pubkeyNew2, derive.nChild));
                 EXPECT_EQ(pubkeyNew ,pubkeyNew2);
@@ -132,72 +138,76 @@ TEST_F(TestKeyDerivation, parse_hdkey) {
     std::vector<uint32_t> keypath;
 
     ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("///////////////////////////", keypath));
+    ASSERT_FALSE(ParseHDKeypath("///////////////////////////", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1'/1", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("//////////////////////////'/", keypath));
+    ASSERT_FALSE(ParseHDKeypath("//////////////////////////'/", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("1///////////////////////////", keypath));
+    ASSERT_FALSE(ParseHDKeypath("1///////////////////////////", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1/1'/", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("1/'//////////////////////////", keypath));
+    ASSERT_FALSE(ParseHDKeypath("1/'//////////////////////////", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("", keypath));
-    ASSERT_TRUE(!ParseHDKeypath(" ", keypath));
+    ASSERT_FALSE(ParseHDKeypath(" ", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("0", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("O", keypath));
+    ASSERT_FALSE(ParseHDKeypath("O", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("0000'/0000'/0000'", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("0000,/0000,/0000,", keypath));
+    ASSERT_FALSE(ParseHDKeypath("0000,/0000,/0000,", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("01234", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("0x1234", keypath));
+    ASSERT_FALSE(ParseHDKeypath("0x1234", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("1", keypath));
-    ASSERT_TRUE(!ParseHDKeypath(" 1", keypath));
+    ASSERT_FALSE(ParseHDKeypath(" 1", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("42", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m42", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m42", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
-    ASSERT_TRUE(!ParseHDKeypath("4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+    ASSERT_FALSE(ParseHDKeypath("4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
 
     ASSERT_TRUE(ParseHDKeypath("m", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("n", keypath));
+    ASSERT_FALSE(ParseHDKeypath("n", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("n/", keypath));
+    ASSERT_FALSE(ParseHDKeypath("n/", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("n/0", keypath));
+    ASSERT_FALSE(ParseHDKeypath("n/0", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0'", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/0''", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/0''", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0'/0'", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/'0/0'", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/'0/0'", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/0", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("n/0/0", keypath));
+    ASSERT_FALSE(ParseHDKeypath("n/0/0", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/0/00", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/0/0/f00", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/0/0/f00", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/0/000000000000000000000000000000000000000000000000000000000000000000000000000000000000", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/1/1/111111111111111111111111111111111111111111111111111111111111111111111111111111111111", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/1/1/111111111111111111111111111111111111111111111111111111111111111111111111111111111111", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/00/0", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/0'/00/'0", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/0'/00/'0", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/1/", keypath));
-    ASSERT_TRUE(!ParseHDKeypath("m/1//", keypath));
+    ASSERT_FALSE(ParseHDKeypath("m/1//", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
-    ASSERT_TRUE(!ParseHDKeypath("m/0/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+    ASSERT_FALSE(ParseHDKeypath("m/0/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
 
     ASSERT_TRUE(ParseHDKeypath("m/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
-    ASSERT_TRUE(!ParseHDKeypath("m/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
+    ASSERT_FALSE(ParseHDKeypath("m/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
 
+    keypath.clear();
+    ParseHDKeypath("m/0'/1/2'/2/1000000000", keypath);
+    for (const auto& k : keypath) std::cout << k << " ";
+    std::cout << std::endl;
 }
