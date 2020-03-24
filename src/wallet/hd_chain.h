@@ -23,8 +23,8 @@ public:
         return master_.get() == nullptr;
     }
 
-    CExtKey GetKeyByPath(const std::vector<uint32_t>& keypath);
-    CExtPubKey GetPubKeyByPath(const std::vector<uint32_t>& keypath);
+    CExtKey GetKey(const std::vector<uint32_t>& keypath);
+    CExtPubKey GetPubKey(const std::vector<uint32_t>& keypath);
 
 private:
     std::unique_ptr<CExtKey> master_;

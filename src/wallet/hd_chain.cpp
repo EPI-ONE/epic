@@ -4,7 +4,7 @@
 
 #include "hd_chain.h"
 
-CExtKey HDChain::GetKeyByPath(const std::vector<uint32_t>& keypath) {
+CExtKey HDChain::GetKey(const std::vector<uint32_t>& keypath) {
     CExtKey key = *master_;
 
     for (const auto& nChild: keypath) {
@@ -14,7 +14,7 @@ CExtKey HDChain::GetKeyByPath(const std::vector<uint32_t>& keypath) {
     return CExtKey();
 }
 
-CExtPubKey HDChain::GetPubKeyByPath(const std::vector<uint32_t>& keypath) {
+CExtPubKey HDChain::GetPubKey(const std::vector<uint32_t>& keypath) {
     uint32_t lastHarden = 0;
     for (size_t i = keypath.size() - 1; i >= 0; i--) {
         if (keypath[i] & 0x80000000) {

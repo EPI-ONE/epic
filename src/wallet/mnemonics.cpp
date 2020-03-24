@@ -88,13 +88,15 @@ std::array<std::string, 12> Mnemonics::GetMnemonics() {
 }
 
 void Mnemonics::PrintToFile(std::string pathstr) {
-    auto mne = GetMnemonics();
-    std::ofstream writer{pathstr + "mnemonics.txt", std::ios::out | std::ios::trunc};
+    auto mne      = GetMnemonics();
+    auto filePath = pathstr + "mnemonics.txt";
+    std::ofstream writer{filePath, std::ios::out | std::ios::trunc};
     for (auto& word : mne) {
         writer << word << " ";
     }
     writer << std::endl;
     writer.close();
+    spdlog::info("save mnemonics to {}", filePath);
 }
 
 void Mnemonics::BitsToWords() {
@@ -158,7 +160,7 @@ bool Mnemonics::WordsToBits() {
 std::pair<SecureByte, uint256> Mnemonics::GetMasterKeyAndSeed() {
     SecureByte out;
     out.resize(64);
-    static const unsigned char salt[] = {'e', 'p', 'i', 'c', 's', 'e', 'c', 'u', 'r', 'e'};
+    static const unsigned char salt[] = {'e', 'p', 'i', 'c', 'i', 's', 's', 'e', 'c', 'u', 'r', 'e'};
     int ret = PKCS5_PBKDF2_HMAC_SHA1((char*) (entropy_.data()), entropy_.size(), salt, sizeof(salt), 1, 64, out.data());
     if (!ret) {
         return {SecureByte{}, uint256{}};

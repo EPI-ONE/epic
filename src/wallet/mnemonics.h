@@ -12,7 +12,6 @@
 #include <optional>
 #include <vector>
 
-class CKey;
 class uint256;
 
 class WordReader {
