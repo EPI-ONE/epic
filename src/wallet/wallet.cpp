@@ -3,7 +3,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "wallet.h"
-#include "config.h"
 #include "mempool.h"
 #include "random.h"
 #include "tasm.h"
@@ -671,7 +670,6 @@ bool Wallet::GenerateMaster() {
         return false;
     }
 
-    mne.PrintToFile(CONFIG->GetWalletPath());
     std::tie(master_, std::ignore) = mne.GetMasterKeyAndSeed();
     return true;
 }

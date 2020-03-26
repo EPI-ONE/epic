@@ -7,11 +7,12 @@
 CExtKey HDChain::GetKey(const std::vector<uint32_t>& keypath) {
     CExtKey key = *master_;
 
-    for (const auto& nChild: keypath) {
+    for (const auto& nChild : keypath) {
         CExtKey newkey;
         key.Derive(newkey, nChild);
+        key = newkey;
     }
-    return CExtKey();
+    return key;
 }
 
 CExtPubKey HDChain::GetPubKey(const std::vector<uint32_t>& keypath) {
@@ -27,15 +28,16 @@ CExtPubKey HDChain::GetPubKey(const std::vector<uint32_t>& keypath) {
     for (size_t i = 0; i <= lastHarden; i++) {
         CExtKey newkey;
         key.Derive(newkey, keypath[i]);
+        key = newkey;
     }
-    
+
     CExtPubKey pubkey = key.Neuter();
     if (lastHarden == keypath.size() - 1) {
         return pubkey;
-    } 
+    }
 
     // use direct pubkey derivation to reduce exposure of prvkey
-    for (size_t i=lastHarden+1; i<keypath.size(); i++){
+    for (size_t i = lastHarden + 1; i < keypath.size(); i++) {
         CExtPubKey newpubkey;
         pubkey.Derive(newpubkey, keypath[i]);
         pubkey = newpubkey;

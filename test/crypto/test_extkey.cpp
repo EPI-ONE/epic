@@ -1,10 +1,11 @@
-// Copyright (c) 2013-2019 The Bitcoin Core developers
+// Copyright (c) 2013-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <gtest/gtest.h>
 
 #include "extended_key.h"
+#include "hd_chain.h"
 #include "stream.h"
 #include "utilstrencodings.h"
 
@@ -103,19 +104,17 @@ TEST_F(TestKeyDerivation, derivation_workflow_test) {
         CExtPubKey pubkey;
         key.SetSeed(seed.data(), seed.size());
         pubkey = key.Neuter();
-        for (const TestDerivation &derive : test.vDerive) {
+        for (const TestDerivation& derive : test.vDerive) {
             // Test private key
             auto encKey = EncodeExtKey(key);
             EXPECT_EQ(encKey, derive.prv);
             auto oDecKey = DecodeExtKey(derive.prv);
-            ASSERT_TRUE(oDecKey.has_value());
-            EXPECT_EQ(oDecKey.value(), key); 
+            EXPECT_EQ(oDecKey.value(), key);
 
             // Test public key
             auto encPub = EncodeExtPubKey(pubkey);
             ASSERT_EQ(encPub, derive.pub);
             auto oDecPub = DecodeExtPubKey(derive.pub);
-            ASSERT_TRUE(oDecPub.has_value());
             ASSERT_EQ(oDecPub.value(), pubkey);
 
             // Derive new keys
@@ -126,12 +125,28 @@ TEST_F(TestKeyDerivation, derivation_workflow_test) {
             if (!(derive.nChild & 0x80000000)) {
                 CExtPubKey pubkeyNew2;
                 EXPECT_TRUE(pubkey.Derive(pubkeyNew2, derive.nChild));
-                EXPECT_EQ(pubkeyNew ,pubkeyNew2);
+                EXPECT_EQ(pubkeyNew, pubkeyNew2);
             }
-            key = keyNew;
+            key    = keyNew;
             pubkey = pubkeyNew;
         }
     }
+
+    auto seed = ParseHex("000102030405060708090a0b0c0d0e0f");
+    CExtKey master;
+    master.SetSeed(seed.data(), seed.size());
+
+    EXPECT_EQ(testData[0].vDerive[0].prv, EncodeExtKey(master));
+
+    HDChain chain;
+    chain.SetMaster(std::move(master));
+
+    std::string strpath = "m/0'/1/2'/2/1000000000";
+    std::vector<uint32_t> hdpath;
+    ParseHDKeypath(strpath, hdpath);
+    auto key = chain.GetKey(hdpath);
+    EXPECT_EQ(testData[0].vDerive[5].prv, EncodeExtKey(chain.GetKey(hdpath)));
+    EXPECT_EQ(testData[0].vDerive[5].pub, EncodeExtPubKey(chain.GetPubKey(hdpath)));
 }
 
 TEST_F(TestKeyDerivation, parse_hdkey) {
@@ -167,7 +182,7 @@ TEST_F(TestKeyDerivation, parse_hdkey) {
     ASSERT_TRUE(ParseHDKeypath("42", keypath));
     ASSERT_FALSE(ParseHDKeypath("m42", keypath));
 
-    ASSERT_TRUE(ParseHDKeypath("4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(ParseHDKeypath("4294967295", keypath));  // 4294967295 == 0xFFFFFFFF (uint32_t max)
     ASSERT_FALSE(ParseHDKeypath("4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
 
     ASSERT_TRUE(ParseHDKeypath("m", keypath));
@@ -191,8 +206,10 @@ TEST_F(TestKeyDerivation, parse_hdkey) {
     ASSERT_TRUE(ParseHDKeypath("m/0/0/00", keypath));
     ASSERT_FALSE(ParseHDKeypath("m/0/0/f00", keypath));
 
-    ASSERT_TRUE(ParseHDKeypath("m/0/0/000000000000000000000000000000000000000000000000000000000000000000000000000000000000", keypath));
-    ASSERT_FALSE(ParseHDKeypath("m/1/1/111111111111111111111111111111111111111111111111111111111111111111111111111111111111", keypath));
+    ASSERT_TRUE(ParseHDKeypath(
+        "m/0/0/000000000000000000000000000000000000000000000000000000000000000000000000000000000000", keypath));
+    ASSERT_FALSE(ParseHDKeypath(
+        "m/1/1/111111111111111111111111111111111111111111111111111111111111111111111111111111111111", keypath));
 
     ASSERT_TRUE(ParseHDKeypath("m/0/00/0", keypath));
     ASSERT_FALSE(ParseHDKeypath("m/0'/00/'0", keypath));
@@ -200,14 +217,9 @@ TEST_F(TestKeyDerivation, parse_hdkey) {
     ASSERT_TRUE(ParseHDKeypath("m/1/", keypath));
     ASSERT_FALSE(ParseHDKeypath("m/1//", keypath));
 
-    ASSERT_TRUE(ParseHDKeypath("m/0/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(ParseHDKeypath("m/0/4294967295", keypath));  // 4294967295 == 0xFFFFFFFF (uint32_t max)
     ASSERT_FALSE(ParseHDKeypath("m/0/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
 
-    ASSERT_TRUE(ParseHDKeypath("m/4294967295", keypath)); // 4294967295 == 0xFFFFFFFF (uint32_t max)
+    ASSERT_TRUE(ParseHDKeypath("m/4294967295", keypath));  // 4294967295 == 0xFFFFFFFF (uint32_t max)
     ASSERT_FALSE(ParseHDKeypath("m/4294967296", keypath)); // 4294967296 == 0xFFFFFFFF (uint32_t max) + 1
-
-    keypath.clear();
-    ParseHDKeypath("m/0'/1/2'/2/1000000000", keypath);
-    for (const auto& k : keypath) std::cout << k << " ";
-    std::cout << std::endl;
 }

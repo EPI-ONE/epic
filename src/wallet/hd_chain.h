@@ -12,7 +12,7 @@
 
 class HDChain {
 public:
-    void SetSeed(CExtKey&& master) {
+    void SetMaster(CExtKey&& master) {
         master_ = std::make_unique<CExtKey>(std::move(master));
     }
 
