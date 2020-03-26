@@ -413,7 +413,7 @@ bool Chain::ValidateTx(const Transaction& tx, uint32_t index, TXOC& txoc, Coin& 
 
     Coin valueIn{};
     Coin valueOut{};
-    std::vector<Tasm::Listing> prevOutListing{};
+    std::vector<tasm::Listing> prevOutListing{};
     prevOutListing.reserve(tx.GetInputs().size());
 
     // check previous vouts that are used in this transaction and compute total value in along the way

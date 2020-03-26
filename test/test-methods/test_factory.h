@@ -103,7 +103,7 @@ public:
     }
 
 private:
-    using Listing = Tasm::Listing;
+    using Listing = tasm::Listing;
 
     TimeGenerator timeGenerator;
     NumberGenerator numGenerator;

@@ -7,6 +7,7 @@
 
 #include "cuckaroo.h"
 #include "net_message.h"
+#include "params.h"
 #include "spdlog.h"
 #include "transaction.h"
 

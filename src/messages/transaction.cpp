@@ -4,12 +4,14 @@
 
 #include "transaction.h"
 #include "block.h"
+#include "opcodes.h"
+#include "pubkey.h"
 #include "spdlog.h"
 
 #include <string>
 #include <unordered_set>
 
-using Listing = Tasm::Listing;
+using Listing = tasm::Listing;
 
 uint256 ComputeUTXOKey(const uint256& hash, uint32_t txIndex, uint32_t outIndex) {
     return ArithToUint256(UintToArith256(hash) ^ (arith_uint256(txIndex) << 224) ^ (arith_uint256(outIndex) << 192));
@@ -18,6 +20,13 @@ uint256 ComputeUTXOKey(const uint256& hash, uint32_t txIndex, uint32_t outIndex)
 /*
  * TxInput class START
  */
+
+TxInput::TxInput(const TxOutPoint& outpoint,
+                 const CPubKey& pubkey,
+                 const uint256& hashMsg,
+                 const std::vector<unsigned char>& sig)
+    : TxInput(outpoint, Listing{VStream(pubkey, sig, hashMsg)}) {}
+
 bool TxInput::IsRegistration() const {
     return outpoint.txIndex == UNCONNECTED && outpoint.outIndex == UNCONNECTED;
 }
@@ -43,12 +52,12 @@ TxOutput::TxOutput() {
     value = IMPOSSIBLE_COIN;
 }
 
-TxOutput::TxOutput(const Coin& coinValue, const Tasm::Listing& listingData) {
+TxOutput::TxOutput(const Coin& coinValue, const Listing& listingData) {
     value          = coinValue;
     listingContent = listingData;
 }
 
-TxOutput::TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData) {
+TxOutput::TxOutput(const uint64_t& coinValue, const Listing& listingData) {
     value          = coinValue;
     listingContent = listingData;
 }
@@ -117,7 +126,7 @@ Transaction& Transaction::AddOutput(uint64_t value, const CKeyID& addr) {
 
 Transaction& Transaction::AddOutput(const Coin& coin, const CKeyID& addr) {
     VStream vstream{EncodeAddress(addr)};
-    return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{VERIFY}, std::move(vstream)}});
+    return AddOutput(TxOutput{coin, Listing{std::vector<uint8_t>{tasm::VERIFY}, std::move(vstream)}});
 }
 
 void Transaction::FinalizeHash() {
@@ -201,8 +210,8 @@ uint64_t Transaction::HashCode() const {
     return hash_.GetCheapHash();
 }
 
-bool VerifyInOut(const TxInput& input, const Tasm::Listing& outputListing) {
-    return Tasm().ExecListing(Listing(input.listingContent + outputListing));
+bool VerifyInOut(const TxInput& input, const Listing& outputListing) {
+    return tasm::Tasm().Exec(Listing(input.listingContent + outputListing));
 }
 
 /*

@@ -5,6 +5,8 @@
 #ifndef EPIC_TRANSACTION_H
 #define EPIC_TRANSACTION_H
 
+#include "coin.h"
+#include "hash.h"
 #include "net_message.h"
 #include "tasm.h"
 #include "tinyformat.h"
@@ -13,6 +15,8 @@
 
 static const uint32_t UNCONNECTED = UINT_LEAST32_MAX;
 
+class CPubKey;
+class CKeyID;
 class Block;
 class Transaction;
 
@@ -63,21 +67,20 @@ struct std::hash<TxOutPoint> {
 class TxInput {
 public:
     TxOutPoint outpoint;
-    Tasm::Listing listingContent;
+    tasm::Listing listingContent;
 
     TxInput() = default;
-    TxInput(const TxOutPoint& outpointToprev, Tasm::Listing listing)
+    TxInput(const TxOutPoint& outpointToprev, tasm::Listing listing)
         : outpoint(outpointToprev), listingContent(std::move(listing)) {}
-    TxInput(const uint256& fromBlock, uint32_t txIdx, uint32_t outIdx, Tasm::Listing listing)
+    TxInput(const uint256& fromBlock, uint32_t txIdx, uint32_t outIdx, tasm::Listing listing)
         : outpoint(fromBlock, txIdx, outIdx), listingContent(std::move(listing)) {}
 
     TxInput(const TxOutPoint& outpoint,
             const CPubKey& pubkey,
             const uint256& hashMsg,
-            const std::vector<unsigned char>& sig)
-        : TxInput(outpoint, Tasm::Listing{VStream(pubkey, sig, hashMsg)}) {}
+            const std::vector<unsigned char>& sig);
 
-    explicit TxInput(Tasm::Listing listing) : outpoint(), listingContent(std::move(listing)) {}
+    explicit TxInput(tasm::Listing listing) : outpoint(), listingContent(std::move(listing)) {}
 
     bool IsRegistration() const;
 
@@ -105,13 +108,13 @@ private:
 class TxOutput {
 public:
     Coin value;
-    Tasm::Listing listingContent;
+    tasm::Listing listingContent;
 
     TxOutput();
 
-    TxOutput(const Coin& value, const Tasm::Listing& ListingData);
+    TxOutput(const Coin& value, const tasm::Listing& ListingData);
 
-    TxOutput(const uint64_t& coinValue, const Tasm::Listing& listingData);
+    TxOutput(const uint64_t& coinValue, const tasm::Listing& listingData);
 
     void SetParent(const Transaction* const tx) const;
 
@@ -226,7 +229,7 @@ struct std::hash<Transaction> {
     }
 };
 
-bool VerifyInOut(const TxInput&, const Tasm::Listing&);
+bool VerifyInOut(const TxInput&, const tasm::Listing&);
 
 namespace std {
 string to_string(const TxOutPoint& outpoint);

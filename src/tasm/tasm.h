@@ -1,120 +1,81 @@
-// Copyright (c) 2019 EPI-ONE Core Developers
+// Copyright (c) 2020 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef EPIC_TASM_H
 #define EPIC_TASM_H
 
-#include "functors.h"
-#include "opcodes.h"
 #include "stream.h"
-#include "utilstrencodings.h"
 
 #include <array>
 #include <functional>
 #include <vector>
 
-class Tasm {
+namespace tasm {
+
+using instruction = std::function<size_t(VStream& data, std::size_t ip)>;
+
+class Listing {
 public:
-    class Listing {
-    public:
-        std::vector<uint8_t> program;
-        byte_vector data;
+    std::vector<uint8_t> program;
+    byte_vector data;
 
-        Listing() = default;
+    Listing() = default;
 
-        Listing(const std::vector<uint8_t>& p, const std::vector<uint8_t>& d)
-            : program(p), data(d.cbegin(), d.cend()) {}
-        Listing(std::vector<uint8_t>&& p, const std::vector<uint8_t>& d) : program(p), data(d.cbegin(), d.cend()) {}
+    Listing(std::vector<uint8_t> program, const std::vector<uint8_t>& data_)
+        : program(std::move(program)), data(data_.cbegin(), data_.cend()) {}
 
-        Listing(const std::vector<uint8_t>& p, const VStream& d) : program(p) {
-            data.resize(d.size());
-            memcpy(&data[0], d.data(), d.size());
-        }
+    Listing(const std::vector<uint8_t>& program, const VStream& data_) : program(program) {
+        data.resize(data_.size());
+        memcpy(&data[0], data_.data(), data_.size());
+    }
 
-        Listing(const std::vector<uint8_t>& p, VStream&& d) : program(p) {
-            d.MoveTo(data);
-        }
+    Listing(const std::vector<uint8_t>& program, VStream&& data_) : program(program) {
+        data_.MoveTo(data);
+    }
 
-        Listing(const VStream& d) : Listing(std::vector<uint8_t>(), d) {}
-        Listing(VStream&& d) : Listing(std::vector<uint8_t>(), d) {}
+    explicit Listing(VStream data_) : Listing(std::vector<uint8_t>{}, std::move(data_)) {}
 
-        ADD_SERIALIZE_METHODS
-        template <typename Stream, typename Operation>
-        inline void SerializationOp(Stream& s, Operation ser_action) {
-            READWRITE(program);
-            READWRITE(data);
-        }
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(program);
+        READWRITE(data);
+    }
 
-        friend bool operator==(const Listing& a, const Listing& b) {
-            return a.program == b.program && a.data == b.data;
-        }
+    friend bool operator==(const Listing& a, const Listing& b) {
+        return a.program == b.program && a.data == b.data;
+    }
 
-        friend Listing operator+(const Listing& a, const Listing& b) {
-            Listing listing{a.program, a.data};
-            listing.data.insert(listing.data.end(), b.data.begin(), b.data.end());
-            if (!b.program.empty()) {
-                for (const auto& prog : b.program) {
-                    listing.program.emplace_back(prog);
-                }
+    friend Listing operator+(const Listing& a, const Listing& b) {
+        Listing listing{a.program, a.data};
+        listing.data.insert(listing.data.end(), b.data.begin(), b.data.end());
+        if (!b.program.empty()) {
+            for (const auto& prog : b.program) {
+                listing.program.emplace_back(prog);
             }
-            return listing;
         }
-    };
-
-    Tasm() : is_(functors) {}
-
-    explicit Tasm(std::array<instruction, 256> is) {
-        is_ = is;
-    };
-
-    instruction YieldInstruction(const std::vector<uint8_t>& program) {
-        return YieldInstructionNChannel(Preprocessor(program));
-    }
-
-    static std::vector<uint8_t> Preprocessor(const std::vector<uint8_t>& program_) {
-        std::vector<uint8_t> program = program_;
-        if (program.back() != SUCCESS) {
-            program.push_back(FAIL);
-            program.push_back(SUCCESS);
-        }
-
-        return program;
-    }
-
-    bool ExecListing(Listing&& l) {
-        VStream vs(std::move(l.data));
-        return bool(YieldInstruction(std::move(l.program))(vs, 0));
-    }
-
-    void SetOp(uint8_t ip, instruction i) {
-        is_[ip] = i;
-    }
-
-    void CompileSetOp(uint8_t ip, std::vector<uint8_t> op) {
-        is_[ip] = YieldInstruction(op);
-    }
-
-private:
-    std::array<instruction, 256> is_;
-
-    instruction YieldInstructionNChannel(std::vector<uint8_t>&& program) {
-        return [program = std::move(program), this](VStream& vdata, std::size_t ip) {
-            std::size_t ip_p = ip;
-            uint8_t op;
-
-            do {
-                op   = program[ip_p];
-                ip_p = is_[op](vdata, ip_p);
-            } while (op != FAIL && op != SUCCESS);
-
-            return op;
-        };
+        return listing;
     }
 };
 
+class Tasm {
+public:
+    bool Exec(Listing&& l);
+
+private:
+    instruction YieldInstructionNChannel(std::vector<uint8_t>&& program);
+    std::vector<uint8_t> Preprocess(const std::vector<uint8_t>& program_);
+
+    instruction YieldInstruction(const std::vector<uint8_t>& program) {
+        return YieldInstructionNChannel(Preprocess(program));
+    }
+};
+
+} // namespace tasm
+
 namespace std {
-string to_string(const Tasm::Listing& listing);
+string to_string(const tasm::Listing& listing);
 }
 
 #endif // EPIC_TASM_H

@@ -322,7 +322,7 @@ grpc::Status CommanderRPCServiceImpl::VerifyMessage(grpc::ServerContext* context
         vst << byte;
     }
 
-    reply->set_success(Tasm().ExecListing(Tasm::Listing{prog, vst}));
+    reply->set_success(tasm::Tasm().Exec(tasm::Listing{prog, vst}));
     return grpc::Status::OK;
 }
 
