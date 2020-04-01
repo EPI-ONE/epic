@@ -43,7 +43,7 @@ BlockStore::BlockStore(const std::string& dbPath)
             }
         });
     });
-    scheduler_ = std::thread(std::bind(&BlockStore::ScheduleTask, this));
+    obcTimeout_.Start();
     checksumCalThread_.Start();
 }
 
@@ -462,10 +462,7 @@ void BlockStore::Stop() {
     spdlog::info("Stopping store...");
     obcThread_.Abort();
     obcThread_.Stop();
-    interrupt = true;
-    if (scheduler_.joinable()) {
-        scheduler_.join();
-    }
+    obcTimeout_.Stop();
     while (!checksumTasks_.empty()) {
         spdlog::info("{} checksum tasks left, executing...", checksumTasks_.size());
         ExecuteChecksumTask();
@@ -545,13 +542,6 @@ FilePos& BlockStore::NextFile(FilePos& pos) const {
     }
     pos.nOffset = file::checksum_size;
     return pos;
-}
-
-void BlockStore::ScheduleTask() {
-    while (!interrupt) {
-        obcTimeout_.Loop();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
 }
 
 bool BlockStore::CheckOneFile(file::FileType type, uint32_t epoch, uint32_t name) {
