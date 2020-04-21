@@ -52,10 +52,10 @@ RPCClient::RPCClient(std::shared_ptr<grpc::Channel> channel)
     : be_stub_(BasicBlockExplorerRPC::NewStub(channel)), commander_stub_(CommanderRPC::NewStub(channel)) {}
 
 op_string RPCClient::GetBlock(std::string block_hash) {
-    GetBlockRequest request;
+    rpc::Hash request;
     request.set_hash(block_hash);
 
-    GetBlockResponse response;
+    rpc::Block response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetBlock(context, request, response);
@@ -64,10 +64,10 @@ op_string RPCClient::GetBlock(std::string block_hash) {
 }
 
 op_string RPCClient::GetLevelSet(std::string block_hash) {
-    GetLevelSetRequest request;
+    HashOrHeight request;
     request.set_hash(block_hash);
 
-    GetLevelSetResponse response;
+    BlockList response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetLevelSet(context, request, response);
@@ -76,10 +76,10 @@ op_string RPCClient::GetLevelSet(std::string block_hash) {
 }
 
 op_string RPCClient::GetLevelSetSize(std::string block_hash) {
-    GetLevelSetSizeRequest request;
+    HashOrHeight request;
     request.set_hash(block_hash);
 
-    GetLevelSetSizeResponse response;
+    UintMessage response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetLevelSetSize(context, request, response);
@@ -89,7 +89,7 @@ op_string RPCClient::GetLevelSetSize(std::string block_hash) {
 
 op_string RPCClient::GetLatestMilestone() {
     EmptyMessage request;
-    GetLatestMilestoneResponse response;
+    Milestone response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetLatestMilestone(context, request, response);
@@ -97,24 +97,11 @@ op_string RPCClient::GetLatestMilestone() {
         request, &response);
 }
 
-op_string RPCClient::GetNewMilestoneSince(std::string block_hash, size_t numberOfMilestone) {
-    GetNewMilestoneSinceRequest request;
-    request.set_hash(block_hash);
-    request.set_number(numberOfMilestone);
-
-    GetNewMilestoneSinceResponse response;
-    return ProcessResponse(
-        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
-            return be_stub_->GetNewMilestoneSince(context, request, response);
-        },
-        request, &response);
-}
-
 op_string RPCClient::GetVertex(std::string block_hash) {
-    GetVertexRequest request;
+    Hash request;
     request.set_hash(block_hash);
 
-    GetVertexResponse response;
+    Vertex response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetVertex(context, request, response);
@@ -123,10 +110,10 @@ op_string RPCClient::GetVertex(std::string block_hash) {
 }
 
 op_string RPCClient::GetMilestone(std::string block_hash) {
-    GetBlockRequest request;
+    HashOrHeight request;
     request.set_hash(block_hash);
 
-    GetMilestoneResponse response;
+    rpc::Milestone response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetMilestone(context, request, response);
@@ -136,7 +123,7 @@ op_string RPCClient::GetMilestone(std::string block_hash) {
 
 op_string RPCClient::GetForks() {
     EmptyMessage request;
-    GetForksResponse response;
+    rpc::MsChainList response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetForks(context, request, response);
@@ -146,7 +133,7 @@ op_string RPCClient::GetForks() {
 
 op_string RPCClient::GetPeerChains() {
     EmptyMessage request;
-    GetPeerChainsResponse response;
+    rpc::ChainList response;
     return ProcessResponse(
         [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return be_stub_->GetPeerChains(context, request, response);

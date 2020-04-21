@@ -13,98 +13,105 @@
 using namespace rpc;
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetBlock(grpc::ServerContext* context,
-                                                        const GetBlockRequest* request,
-                                                        GetBlockResponse* reply) {
+                                                        const rpc::Hash* request,
+                                                        rpc::Block* reply) {
     auto vertex = DAG->GetMainChainVertex(uintS<256>(request->hash()));
     if (!vertex) {
         return grpc::Status::OK;
     }
-    reply->set_allocated_block(ToRPCBlock(*(vertex->cblock)));
+
+    ToRPCBlock(*(vertex->cblock), reply);
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSet(grpc::ServerContext* context,
-                                                           const GetLevelSetRequest* request,
-                                                           GetLevelSetResponse* reply) {
-    auto ls = DAG->GetMainChainLevelSet(uintS<256>(request->hash()));
-    if (ls.empty()) {
+                                                           const rpc::HashOrHeight* request,
+                                                           rpc::BlockList* reply) {
+    std::vector<ConstBlockPtr> result;
+    if (request->key_case() == request->kHash) {
+        result = DAG->GetMainChainLevelSet(uintS<256>(request->hash()));
+    } else if (request->key_case() == request->kHeight) {
+        result = DAG->GetMainChainLevelSet(request->height());
+    }
+
+    if (result.empty()) {
         return grpc::Status::OK;
     }
 
     auto blocks = reply->mutable_blocks();
-    blocks->Reserve(ls.size());
-    for (const auto& localBlock : ls) {
-        blocks->AddAllocated(ToRPCBlock(*localBlock));
+    blocks->Reserve(result.size());
+    for (const auto& localBlock : result) {
+        blocks->AddAllocated(ToRPCBlock(*localBlock, nullptr));
     }
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLevelSetSize(grpc::ServerContext* context,
-                                                               const GetLevelSetSizeRequest* request,
-                                                               GetLevelSetSizeResponse* reply) {
-    auto ls = DAG->GetMainChainLevelSet(uintS<256>(request->hash()));
-    reply->set_size(ls.size());
-    return grpc::Status::OK;
-}
+                                                               const rpc::HashOrHeight* request,
+                                                               rpc::UintMessage* reply) {
+    std::vector<ConstBlockPtr> result;
+    if (request->key_case() == request->kHash) {
+        result = DAG->GetMainChainLevelSet(uintS<256>(request->hash()));
+    } else if (request->key_case() == request->kHeight) {
+        result = DAG->GetMainChainLevelSet(request->height());
+    }
 
-grpc::Status BasicBlockExplorerRPCServiceImpl::GetNewMilestoneSince(grpc::ServerContext* context,
-                                                                    const GetNewMilestoneSinceRequest* request,
-                                                                    GetNewMilestoneSinceResponse* reply) {
-    auto vertex = DAG->GetMsVertex(uintS<256>(request->hash()));
-    if (!vertex) {
+    if (result.empty()) {
         return grpc::Status::OK;
     }
-
-    auto ms_hashes = DAG->TraverseMilestoneForward(vertex, request->number());
-    auto blocks    = reply->mutable_blocks();
-    blocks->Reserve(ms_hashes.size());
-
-    for (const auto& ms_hash : ms_hashes) {
-        auto vtx = DAG->GetMsVertex(ms_hash);
-        blocks->AddAllocated(ToRPCBlock(*(vtx->cblock)));
-    }
+    reply->set_value(result.size());
     return grpc::Status::OK;
 }
+
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerContext* context,
                                                                   const EmptyMessage* request,
-                                                                  GetLatestMilestoneResponse* reply) {
-    auto vertex   = DAG->GetMilestoneHead();
-    rpc::Block* b = ToRPCBlock(*(vertex->cblock));
-    reply->set_allocated_milestone(b);
+                                                                  rpc::Milestone* reply) {
+    auto vertex = DAG->GetMilestoneHead();
+    ToRPCMilestone(*vertex, reply);
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext* context,
-                                                            const GetBlockRequest* request,
-                                                            GetMilestoneResponse* response) {
+                                                            const rpc::HashOrHeight* request,
+                                                            rpc::Milestone* response) {
     const auto chain  = DAG->GetBestChain();
     const auto msHash = uintS<256>(request->hash());
     if (!chain->IsMilestone(msHash)) {
         return grpc::Status::OK;
     }
 
-    response->set_allocated_milestone(ToRPCMilestone(*chain->GetVertex(msHash)));
+    ToRPCMilestone(*chain->GetVertex(msHash), response);
+    return grpc::Status::OK;
+}
+
+grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestonesFromHead(grpc::ServerContext* context,
+                                                                     const rpc::MsLocator* request,
+                                                                     rpc::MilestoneList* response) {
+    auto head_height = DAG->GetBestMilestoneHeight();
+    if (request->offset_from_head() + request->size() > head_height) {
+        return grpc::Status::OK;
+    }
+
 
     return grpc::Status::OK;
 }
 
-
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetVertex(grpc::ServerContext* context,
-                                                         const GetVertexRequest* request,
-                                                         GetVertexResponse* response) {
+                                                         const rpc::Hash* request,
+                                                         rpc::Vertex* response) {
     auto vertex = DAG->GetMsVertex(uintS<256>(request->hash()));
     if (!vertex) {
         return grpc::Status::OK;
     }
 
-    response->set_allocated_vertex(ToRPCVertex(*vertex));
+    ToRPCVertex(*vertex, response);
     return grpc::Status::OK;
 }
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* context,
                                                         const EmptyMessage* request,
-                                                        GetForksResponse* response) {
+                                                        rpc::MsChainList* response) {
     const auto& chains = DAG->GetChains();
     auto rpc_chains    = response->mutable_chains();
     rpc_chains->Reserve(chains.size());
@@ -117,10 +124,10 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetForks(grpc::ServerContext* con
 
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetPeerChains(grpc::ServerContext* context,
                                                              const EmptyMessage* request,
-                                                             GetPeerChainsResponse* response) {
+                                                             rpc::ChainList* response) {
     const auto bestChain = DAG->GetBestChain();
     const auto& heads    = bestChain->GetPeerChainHead();
-    auto rpc_heads       = response->mutable_peerchains();
+    auto rpc_heads       = response->mutable_chains();
     rpc_heads->Reserve(heads.size());
 
     for (const auto& head : heads) {

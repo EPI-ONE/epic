@@ -2,10 +2,14 @@ syntax = "proto3";
 
 package rpc;
 
+message Hash {
+    string hash  = 1;
+}
+
 message Outpoint {
-    string fromblock = 1;
-    uint32 txidx = 2;
-    uint32 outidx = 3;
+    string from_block = 1;
+    uint32 tx_idx = 2;
+    uint32 out_idx = 3;
 }
 
 message Input {
@@ -36,6 +40,10 @@ message Block {
   repeated Transaction transactions = 10;
 }
 
+message BlockList {
+    repeated Block blocks = 1;
+}
+
 message Vertex {
     Block block = 1;
     uint64 height = 2;
@@ -51,6 +59,17 @@ message Milestone {
     uint64 blkDiff = 3;
     uint64 msDiff = 4;
     uint64 hashRate = 5;
+    string hash = 6;
+    uint64 time = 7;
+}
+
+message MilestoneWithBlock {
+    Milestone milestone = 1;
+    Block block = 2;
+}
+
+message MilestoneList {
+    repeated Milestone milestones = 1;
 }
 
 message Chain {
@@ -59,9 +78,17 @@ message Chain {
     uint32 time = 4;
 }
 
+message ChainList {
+    repeated Chain chains = 1;
+}
+
 message MsChain {
     Chain chain = 1;
     Milestone milestone = 2;
+}
+
+message MsChainList {
+    repeated MsChain chains = 1;
 }
 
 message Peer {
@@ -78,78 +105,38 @@ message Peer {
 }
 
 service BasicBlockExplorerRPC {
-    rpc GetBlock (GetBlockRequest) returns (GetBlockResponse);
-    rpc GetVertex (GetVertexRequest) returns (GetVertexResponse);
-    rpc GetNewMilestoneSince (GetNewMilestoneSinceRequest) returns (GetNewMilestoneSinceResponse);
-    rpc GetLatestMilestone (EmptyMessage) returns (GetLatestMilestoneResponse);
-    rpc GetMilestone (GetBlockRequest) returns (GetMilestoneResponse);
+    rpc GetBlock (Hash) returns (Block);
+    rpc GetVertex (Hash) returns (Vertex);
 
-    rpc GetLevelSet (GetLevelSetRequest) returns (GetLevelSetResponse);
-    rpc GetLevelSetSize (GetLevelSetSizeRequest) returns (GetLevelSetSizeResponse);
+    rpc GetLatestMilestone (EmptyMessage) returns (Milestone);
+    rpc GetMilestone (HashOrHeight) returns (Milestone);
+    rpc GetMilestonesFromHead(MsLocator) returns (MilestoneList);
 
-    rpc GetForks (EmptyMessage) returns (GetForksResponse);
-    rpc GetPeerChains (EmptyMessage) returns (GetPeerChainsResponse);
+    rpc GetLevelSet (HashOrHeight) returns (BlockList);
+    rpc GetLevelSetSize (HashOrHeight) returns (UintMessage);
+
+    rpc GetForks (EmptyMessage) returns (MsChainList);
+    rpc GetPeerChains (EmptyMessage) returns (ChainList);
     rpc GetRecentStat (EmptyMessage) returns (GetRecentStatResponse);
     rpc Statistic (EmptyMessage) returns (StatisticResponse);
 }
 
 message EmptyMessage {}
 
-message GetBlockRequest {
-    string hash = 1;
+message UintMessage {
+    uint64 value = 1;
 }
 
-message GetBlockResponse {
-    Block block = 1;
+message HashOrHeight {
+    oneof key {
+        string hash = 1;
+        int64 height = 2;
+    }
 }
 
-message GetNewMilestoneSinceRequest {
-    string hash = 1;
-    int64 number = 2;
-}
-
-message GetNewMilestoneSinceResponse {
-    repeated Block blocks = 1;
-}
-
-message GetLatestMilestoneResponse {
-    Block milestone = 1;
-}
-
-message GetLevelSetRequest {
-    string hash = 1;
-}
-
-message GetLevelSetResponse {
-    repeated Block blocks = 1;
-}
-
-message GetLevelSetSizeRequest {
-    string hash = 1;
-}
-
-message GetLevelSetSizeResponse {
-    uint64 size = 1;
-}
-
-message GetVertexRequest {
-    string hash = 1;
-}
-
-message GetVertexResponse {
-    Vertex vertex = 1;
-}
-
-message GetMilestoneResponse {
-    Milestone milestone = 1;
-}
-
-message GetForksResponse {
-    repeated MsChain chains = 1;
-}
-
-message GetPeerChainsResponse {
-    repeated Chain peerChains = 1;
+message MsLocator {
+    uint64 offset_from_head = 1;
+    uint64 size = 2;
 }
 
 message GetRecentStatResponse {

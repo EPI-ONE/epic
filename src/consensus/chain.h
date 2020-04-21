@@ -18,6 +18,7 @@ namespace std {
 string to_string(const Cumulator& b);
 } // namespace std
 
+
 class Cumulator {
 public:
     void Add(const ConstBlockPtr& block, bool ascending);

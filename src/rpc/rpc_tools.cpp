@@ -12,9 +12,9 @@
 
 rpc::Outpoint* ToRPCOutPoint(const TxOutPoint& outpoint) {
     auto rpc_outpoint = new rpc::Outpoint();
-    rpc_outpoint->set_fromblock(std::to_string(outpoint.bHash));
-    rpc_outpoint->set_txidx(outpoint.txIndex);
-    rpc_outpoint->set_outidx(outpoint.outIndex);
+    rpc_outpoint->set_from_block(std::to_string(outpoint.bHash));
+    rpc_outpoint->set_tx_idx(outpoint.txIndex);
+    rpc_outpoint->set_out_idx(outpoint.outIndex);
     return rpc_outpoint;
 }
 
@@ -35,7 +35,7 @@ rpc::Output* ToRPCOutput(const TxOutput& output) {
 ////////////////// End of internal methods ////////////////////////
 
 rpc::Transaction* ToRPCTx(const Transaction& tx) {
-    auto rpc_tx = new rpc::Transaction();
+    auto rpc_tx    = new rpc::Transaction();
     auto rpc_input = rpc_tx->mutable_inputs();
     for (const auto& in : tx.GetInputs()) {
         rpc_input->AddAllocated(ToRPCInput(in));
@@ -49,8 +49,13 @@ rpc::Transaction* ToRPCTx(const Transaction& tx) {
     return rpc_tx;
 }
 
-rpc::Block* ToRPCBlock(const Block& b) {
-    auto rpcb = new rpc::Block();
+rpc::Block* ToRPCBlock(const Block& b, rpc::Block* res) {
+    rpc::Block* rpcb = nullptr;
+    if (res) {
+        rpcb = res;
+    } else {
+        rpcb = new rpc::Block();
+    }
 
     rpcb->set_hash(std::to_string(b.GetHash()));
     rpcb->set_version(b.GetVersion());
@@ -79,9 +84,14 @@ rpc::Block* ToRPCBlock(const Block& b) {
     return rpcb;
 }
 
-rpc::Vertex* ToRPCVertex(const Vertex& vertex) {
-    auto rpc_vertex   = new rpc::Vertex();
-    auto* rpc_block_p = ToRPCBlock(*(vertex.cblock));
+rpc::Vertex* ToRPCVertex(const Vertex& vertex, rpc::Vertex* res) {
+    rpc::Vertex* rpc_vertex;
+    if (res) {
+        rpc_vertex = res;
+    } else {
+        rpc_vertex = new rpc::Vertex();
+    }
+    auto* rpc_block_p = ToRPCBlock(*(vertex.cblock), nullptr);
 
     rpc_vertex->set_allocated_block(rpc_block_p);
     rpc_vertex->set_height(vertex.height);
@@ -109,8 +119,13 @@ rpc::Chain* ToRPCChain(const Vertex& vertex) {
     return rpc_chain;
 }
 
-rpc::Milestone* ToRPCMilestone(const Vertex& msVer) {
-    auto rpc_milestone = new rpc::Milestone();
+rpc::Milestone* ToRPCMilestone(const Vertex& msVer, rpc::Milestone* res) {
+    rpc::Milestone* rpc_milestone;
+    if (res) {
+        rpc_milestone = res;
+    } else {
+        rpc_milestone = new rpc::Milestone();
+    }
 
     const auto ms = msVer.snapshot;
     rpc_milestone->set_height(msVer.height);
@@ -118,6 +133,8 @@ rpc::Milestone* ToRPCMilestone(const Vertex& msVer) {
     rpc_milestone->set_blkdiff(ms->GetBlockDifficulty());
     rpc_milestone->set_msdiff(ms->GetMsDifficulty());
     rpc_milestone->set_hashrate(static_cast<uint64_t>(ms->hashRate));
+    rpc_milestone->set_hash(std::to_string(msVer.cblock->GetHash()));
+    rpc_milestone->set_time(msVer.cblock->GetTime());
 
     return rpc_milestone;
 }

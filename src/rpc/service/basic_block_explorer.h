@@ -12,40 +12,36 @@
 class BasicBlockExplorerRPCServiceImpl final : public rpc::BasicBlockExplorerRPC::Service {
 public:
     grpc::Status GetBlock(grpc::ServerContext* context,
-                          const rpc::GetBlockRequest* request,
-                          rpc::GetBlockResponse* reply) override;
+                          const rpc::Hash* request,
+                          rpc::Block* reply) override;
 
-    grpc::Status GetNewMilestoneSince(grpc::ServerContext* context,
-                                      const rpc::GetNewMilestoneSinceRequest* request,
-                                      rpc::GetNewMilestoneSinceResponse* reply) override;
-    
     grpc::Status GetLatestMilestone(grpc::ServerContext* context,
                                     const rpc::EmptyMessage* request,
-                                    rpc::GetLatestMilestoneResponse* reply) override;
+                                    rpc::Milestone* reply) override;
 
     grpc::Status GetLevelSet(grpc::ServerContext* context,
-                             const rpc::GetLevelSetRequest* request,
-                             rpc::GetLevelSetResponse* reply) override;
+                             const rpc::HashOrHeight* request,
+                             rpc::BlockList* reply) override;
 
     grpc::Status GetLevelSetSize(grpc::ServerContext* context,
-                                 const rpc::GetLevelSetSizeRequest* request,
-                                 rpc::GetLevelSetSizeResponse* reply) override;
+                                 const rpc::HashOrHeight* request,
+                                 rpc::UintMessage* reply) override;
 
     grpc::Status GetVertex(grpc::ServerContext* context,
-                           const rpc::GetVertexRequest* request,
-                           rpc::GetVertexResponse* response) override;
+                           const rpc::Hash* request,
+                           rpc::Vertex* response) override;
 
     grpc::Status GetMilestone(grpc::ServerContext* context,
-                              const rpc::GetBlockRequest* request,
-                              rpc::GetMilestoneResponse* response) override;
+                              const rpc::HashOrHeight* request,
+                              rpc::Milestone* response) override;
 
     grpc::Status GetForks(grpc::ServerContext* context,
                           const rpc::EmptyMessage* request,
-                          rpc::GetForksResponse* response) override;
+                          rpc::MsChainList* response) override;
 
     grpc::Status GetPeerChains(grpc::ServerContext* context,
                                const rpc::EmptyMessage* request,
-                               rpc::GetPeerChainsResponse* response) override;
+                               rpc::ChainList* response) override;
 
     grpc::Status GetRecentStat(grpc::ServerContext* context,
                                const rpc::EmptyMessage* request,
@@ -54,6 +50,10 @@ public:
     grpc::Status Statistic(grpc::ServerContext* context,
                            const rpc::EmptyMessage* request,
                            rpc::StatisticResponse* response) override;
+
+    grpc::Status GetMilestonesFromHead(grpc::ServerContext* context,
+                                       const rpc::MsLocator* request,
+                                       rpc::MilestoneList* response) override;
 
     ~BasicBlockExplorerRPCServiceImpl() = default;
 };

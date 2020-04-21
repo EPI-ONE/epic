@@ -16,11 +16,11 @@ class Vertex;
 
 // functions below will pass the ownvership of the allocated object to rpc to handle its lifetime
 rpc::Output* ToRPCOutput(const TxOutput& output);
-rpc::Transaction* ToRPCTx(const Transaction& tx); 
-rpc::Block* ToRPCBlock(const Block&);
-rpc::Vertex* ToRPCVertex(const Vertex&);
+rpc::Transaction* ToRPCTx(const Transaction& tx);
+rpc::Block* ToRPCBlock(const Block&, rpc::Block* res = nullptr);
+rpc::Vertex* ToRPCVertex(const Vertex&, rpc::Vertex* res = nullptr);
 rpc::Chain* ToRPCChain(const Vertex&);
-rpc::Milestone* ToRPCMilestone(const Vertex&);
+rpc::Milestone* ToRPCMilestone(const Vertex&, rpc::Milestone* res = nullptr);
 rpc::MsChain* ToRPCMsChain(const Vertex&);
 
 #endif // EPIC_RPC_TOOLS_H

@@ -18,7 +18,6 @@ public:
     std::optional<std::string> GetLevelSet(std::string);
     std::optional<std::string> GetLevelSetSize(std::string);
     std::optional<std::string> GetLatestMilestone();
-    std::optional<std::string> GetNewMilestoneSince(std::string, size_t);
     std::optional<std::string> GetVertex(std::string);
     std::optional<std::string> GetMilestone(std::string);
     std::optional<std::string> GetForks();

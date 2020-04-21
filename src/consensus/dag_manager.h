@@ -68,6 +68,8 @@ public:
     // The following two methods searches on main chain ONLY.
     VertexPtr GetMainChainVertex(const uint256&) const;
     std::vector<ConstBlockPtr> GetMainChainLevelSet(const uint256&) const;
+    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
+
 
     /**
      * Returns the level set of the milestone with the given hash.
@@ -197,8 +199,6 @@ private:
     bool IsMainChainMS(const uint256&) const;
 
     size_t GetHeight(const uint256&) const;
-
-    std::vector<ConstBlockPtr> GetMainChainLevelSet(size_t height) const;
 
     VStream GetMainChainRawLevelSet(size_t height) const;
     VStream GetMainChainRawLevelSet(const uint256&) const;

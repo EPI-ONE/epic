@@ -51,8 +51,8 @@ public:
     }
 
     bool SameOutpoint(const TxOutPoint& outpoint, const rpc::Outpoint& rpc_outpoint) {
-        return SameHash(outpoint.bHash, rpc_outpoint.fromblock()) && outpoint.txIndex == rpc_outpoint.txidx() &&
-               outpoint.outIndex == rpc_outpoint.outidx();
+        return SameHash(outpoint.bHash, rpc_outpoint.from_block()) && outpoint.txIndex == rpc_outpoint.tx_idx() &&
+               outpoint.outIndex == rpc_outpoint.out_idx();
     }
 
     bool SameOutput(const TxOutput& output, const rpc::Output rpcOutput) {
@@ -203,12 +203,12 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         const auto req_hash = std::to_string(hash);
 
         auto re_size = client->GetLevelSetSize(req_hash); // get level set size
-        rpc::GetLevelSetSizeResponse rpc_get_lvs_size;
+        rpc::UintMessage rpc_get_lvs_size;
         JsonStringToMessage(StringPiece(*re_size), &rpc_get_lvs_size);
-        ASSERT_EQ(rpc_get_lvs_size.size(), chain[i].size());
+        ASSERT_EQ(rpc_get_lvs_size.value(), chain[i].size());
 
         auto re_set = client->GetLevelSet(req_hash); // get level set
-        rpc::GetLevelSetResponse rpc_get_lvs;
+        rpc::BlockList rpc_get_lvs;
         JsonStringToMessage(StringPiece(*re_set), &rpc_get_lvs);
 
         for (size_t j = 0; j < chain[i].size(); j++) {
@@ -216,33 +216,15 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         }
 
         auto re_ms = client->GetMilestone(req_hash); // get milestone
-        rpc::GetMilestoneResponse rpc_get_ms;
+        rpc::Milestone rpc_get_ms;
         JsonStringToMessage(StringPiece(*re_ms), &rpc_get_ms);
-        ASSERT_TRUE(SameMilstone(*(DAG->GetMsVertex(hash)->snapshot), rpc_get_ms.milestone()));
+        ASSERT_TRUE(SameMilstone(*(DAG->GetMsVertex(hash)->snapshot), rpc_get_ms));
     }
 
     auto re_latest = client->GetLatestMilestone(); // get lastest milestone
-    rpc::GetLatestMilestoneResponse rpc_latest;
+    rpc::Milestone rpc_latest;
     JsonStringToMessage(StringPiece(*re_latest), &rpc_latest);
-    ASSERT_TRUE(SameBlock(*latest_ms->cblock, rpc_latest.milestone()));
-
-    // get milestone from block xxx to next yyy milestone
-    constexpr size_t HEIGHT_GET      = 100;
-    constexpr size_t HEIGHT_GET_FROM = 200;
-
-    auto req_hash  = std::to_string(chain[HEIGHT_GET_FROM].back()->cblock->GetHash());
-    auto re_new_ms = client->GetNewMilestoneSince(req_hash, HEIGHT_GET);
-
-    rpc::GetNewMilestoneSinceResponse rpc_new_ms;
-    JsonStringToMessage(StringPiece(*re_new_ms), &rpc_new_ms);
-
-    auto iter = rpc_new_ms.blocks().cbegin();
-    for (size_t i = HEIGHT_GET_FROM; i < HEIGHT_GET; i++) {
-        for (size_t j = 0; j < chain[i + 1].size(); j++) {
-            ASSERT_TRUE(SameBlock(*(chain[i + 1][j]->cblock), *iter));
-            iter++;
-        }
-    }
+    ASSERT_TRUE(SameMilstone(*latest_ms->snapshot, rpc_latest));
 
     for (const auto& blk : blocks) {
         const auto& pick_hash    = blk->cblock->GetHash();
@@ -251,24 +233,24 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
         auto re_block  = client->GetBlock(pick_hash_str);  // get blocks
         auto re_vertex = client->GetVertex(pick_hash_str); // get vertices
 
-        rpc::GetBlockResponse rpc_get_blk;
+        rpc::Block rpc_get_blk;
         JsonStringToMessage(StringPiece(*re_block), &rpc_get_blk);
-        ASSERT_TRUE(SameBlock(*(blk->cblock), rpc_get_blk.block()));
+        ASSERT_TRUE(SameBlock(*(blk->cblock), rpc_get_blk));
 
-        rpc::GetVertexResponse rpc_get_ver;
+        rpc::Vertex rpc_get_ver;
         JsonStringToMessage(StringPiece(*re_vertex), &rpc_get_ver);
-        ASSERT_TRUE(SameVertex(*(DAG->GetMainChainVertex(pick_hash)), rpc_get_ver.vertex()));
+        ASSERT_TRUE(SameVertex(*(DAG->GetMainChainVertex(pick_hash)), rpc_get_ver));
     }
 
     auto re_forks = client->GetForks(); // get forks
-    rpc::GetForksResponse rpc_forks;
+    rpc::MsChainList rpc_forks;
     JsonStringToMessage(StringPiece(*re_forks), &rpc_forks);
     ASSERT_EQ(rpc_forks.chains().size(), 1);
 
     auto re_pc = client->GetPeerChains(); // get peer chains
-    rpc::GetPeerChainsResponse rpc_pc;
+    rpc::ChainList rpc_pc;
     JsonStringToMessage(StringPiece(*re_pc), &rpc_pc);
-    ASSERT_EQ(rpc_pc.peerchains().size(), 1);
+    ASSERT_EQ(rpc_pc.chains().size(), 1);
 
     uint32_t nBlkCached = 0;
     for (size_t i = STORED_HEIGHT; i < HEIGHT; i++) {
