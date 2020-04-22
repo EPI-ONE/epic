@@ -75,13 +75,24 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetLatestMilestone(grpc::ServerCo
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext* context,
                                                             const rpc::HashOrHeight* request,
                                                             rpc::Milestone* response) {
-    const auto chain  = DAG->GetBestChain();
-    const auto msHash = uintS<256>(request->hash());
-    if (!chain->IsMilestone(msHash)) {
-        return grpc::Status::OK;
+    if (request->key_case() == request->kHash) {
+        const auto chain  = DAG->GetBestChain();
+        const auto msHash = uintS<256>(request->hash());
+        if (!chain->IsMilestone(msHash)) {
+            return grpc::Status::OK;
+        }
+        ToRPCMilestone(*chain->GetVertex(msHash), response);
+    } else if (request->key_case() == request->kHeight && request->height() <= DAG->GetBestMilestoneHeight()) {
+        VertexPtr v       = nullptr;
+        auto least_height = DAG->GetBestChain()->GetLeastHeightCached();
+        if (least_height > request->height()) {
+            v = STORE->GetMilestoneAt(request->height());
+        } else {
+            v = DAG->GetBestChain()->GetMilestones()[request->height() - least_height]->GetMilestone();
+        }
+        ToRPCMilestone(*v, response);
     }
 
-    ToRPCMilestone(*chain->GetVertex(msHash), response);
     return grpc::Status::OK;
 }
 
