@@ -92,7 +92,10 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext*
         }
         ToRPCMilestone(*v, response);
     }
+    std::stringstream ss;
 
+    ss << "case=" << request->key_case() << ", hash=" << request->hash() << ", height=" << request->height();
+    response->set_debug_info(ss.str());
     return grpc::Status::OK;
 }
 

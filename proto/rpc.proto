@@ -61,6 +61,7 @@ message Milestone {
     uint64 hashRate = 5;
     string hash = 6;
     uint64 time = 7;
+    string debug_info = 8;
 }
 
 message MilestoneWithBlock {
@@ -129,8 +130,8 @@ message UintMessage {
 
 message HashOrHeight {
     oneof key {
-        string hash = 1;
-        int64 height = 2;
+        int64 height = 1;
+        string hash = 2;
     }
 }
 
