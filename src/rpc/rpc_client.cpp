@@ -121,6 +121,20 @@ op_string RPCClient::GetMilestone(std::string block_hash) {
         request, &response);
 }
 
+std::optional<std::string> RPCClient::GetMilestonesFromHead(std::uint32_t offset, uint32_t size) {
+    MsLocator locator;
+    locator.set_offset_from_head(offset);
+    locator.set_size(size);
+
+    rpc::MilestoneList response;
+    return ProcessResponse(
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
+            return be_stub_->GetMilestonesFromHead(context, request, response);
+        },
+        locator, &response);
+}
+
+
 op_string RPCClient::GetForks() {
     EmptyMessage request;
     rpc::MsChainList response;
@@ -521,26 +535,26 @@ op_string RPCClient::ShowPeer(const std::string& address) {
         request, &response);
 }
 
-op_string RPCClient::Subscribe(const std::string &address, uint8_t sub_type){
+op_string RPCClient::Subscribe(const std::string& address, uint8_t sub_type) {
     SubscribeRequest request;
     request.set_address(address);
     request.set_sub_type(sub_type);
     SubscribeResponse response;
 
     return ProcessResponse(
-        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return commander_stub_->Subscribe(context, request, response);
         },
         request, &response);
 }
 
-void RPCClient::DeleteSubscriber(const std::string &address){
+void RPCClient::DeleteSubscriber(const std::string& address) {
     DelSubscriberRequest request;
     request.set_address(address);
     EmptyMessage response;
 
     ProcessResponse(
-        [&](auto* context, const auto& request, auto* response) -> grpc::Status{
+        [&](auto* context, const auto& request, auto* response) -> grpc::Status {
             return commander_stub_->DelSubscriber(context, request, response);
         },
         request, &response);

@@ -18,6 +18,7 @@ public:
     std::optional<std::string> GetLevelSet(std::string);
     std::optional<std::string> GetLevelSetSize(std::string);
     std::optional<std::string> GetLatestMilestone();
+    std::optional<std::string> GetMilestonesFromHead(std::uint32_t offset, uint32_t size);
     std::optional<std::string> GetVertex(std::string);
     std::optional<std::string> GetMilestone(std::string);
     std::optional<std::string> GetForks();

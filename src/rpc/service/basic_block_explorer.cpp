@@ -88,11 +88,26 @@ grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestone(grpc::ServerContext*
 grpc::Status BasicBlockExplorerRPCServiceImpl::GetMilestonesFromHead(grpc::ServerContext* context,
                                                                      const rpc::MsLocator* request,
                                                                      rpc::MilestoneList* response) {
-    auto head_height = DAG->GetBestMilestoneHeight();
-    if (request->offset_from_head() + request->size() > head_height) {
+    auto head_height       = DAG->GetBestMilestoneHeight();
+    auto start_height      = head_height - request->offset_from_head();
+    auto leastCachedHeight = DAG->GetBestChain()->GetLeastHeightCached();
+    if (start_height - request->size() < 0) {
         return grpc::Status::OK;
     }
+    VertexPtr start = nullptr;
+    if (leastCachedHeight > start_height) {
+        start = STORE->GetMilestoneAt(start_height);
+    } else {
+        start = DAG->GetBestChain()->GetMilestones()[start_height - leastCachedHeight]->GetMilestone();
+    }
 
+    auto ms_hashes  = DAG->TraverseMilestoneBackward(start, request->size());
+    auto milestones = response->mutable_milestones();
+    milestones->Reserve(ms_hashes.size());
+    for (const auto& ms_hash : ms_hashes) {
+        auto vtx = DAG->GetMsVertex(ms_hash);
+        milestones->AddAllocated(ToRPCMilestone(*vtx, nullptr));
+    }
 
     return grpc::Status::OK;
 }

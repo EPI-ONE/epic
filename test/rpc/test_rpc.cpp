@@ -5,11 +5,11 @@
 #include <gtest/gtest.h>
 //#include <gmock/gmock.h>
 
+#include "opcodes.h"
 #include "pubkey.h"
 #include "rpc_client.h"
 #include "rpc_server.h"
 #include "subscription.h"
-#include "opcodes.h"
 #include "test_env.h"
 
 #include <chrono>
@@ -160,11 +160,11 @@ public:
             return false;
         }
 
-        if (std::to_string(ms.chainwork) != rpcMs.chainwork()) {
+        if (ms.GetBlockDifficulty() != rpcMs.blkdiff() || ms.GetMsDifficulty() != rpcMs.msdiff()) {
             return false;
         }
 
-        if (ms.GetBlockDifficulty() != rpcMs.blkdiff() || ms.GetMsDifficulty() != rpcMs.msdiff()) {
+        if (std::to_string(ms.chainwork) != rpcMs.chainwork()) {
             return false;
         }
 
@@ -225,6 +225,22 @@ TEST_F(TestRPCServer, basic_dag_info_query) {
     rpc::Milestone rpc_latest;
     JsonStringToMessage(StringPiece(*re_latest), &rpc_latest);
     ASSERT_TRUE(SameMilstone(*latest_ms->snapshot, rpc_latest));
+
+    // get milestone from block xxx to next yyy milestone
+    constexpr size_t SIZE   = 100;
+    constexpr size_t OFFSET = 200;
+
+    auto re_new_ms = client->GetMilestonesFromHead(OFFSET, SIZE);
+
+    rpc::MilestoneList rpc_new_ms;
+    JsonStringToMessage(StringPiece(*re_new_ms), &rpc_new_ms);
+
+    auto iter = rpc_new_ms.milestones().cbegin();
+    for (size_t i = 1; i <= SIZE; i++) {
+        auto levelset = chain[chain.size() - OFFSET - i];
+        auto hash     = levelset[levelset.size() - 1]->cblock->GetHash();
+        ASSERT_TRUE(SameMilstone(*(DAG->GetMsVertex(hash)->snapshot), *iter++));
+    }
 
     for (const auto& blk : blocks) {
         const auto& pick_hash    = blk->cblock->GetHash();
@@ -392,10 +408,10 @@ TEST_F(TestRPCServer, transaction_and_miner) {
     ASSERT_TRUE(opBalance.has_value());
     ASSERT_TRUE(client->CreateTx({{std::stoi(*opBalance) - 1, *opAddr}}, 1));
 
-    while(WALLET->GetUnspent().size() != 1) {
+    while (WALLET->GetUnspent().size() != 1) {
         std::this_thread::yield();
     }
-    ASSERT_EQ(WALLET->GetUnspent().size() , 1);
+    ASSERT_EQ(WALLET->GetUnspent().size(), 1);
 
     ASSERT_EQ(client->StopMiner().value(), testCode[AnswerCode::MINER_STOP]);
 
@@ -457,7 +473,8 @@ TEST_F(TestRPCServer, stateless_test) {
     tasm::Listing inputListing{tasm::Listing{indata}};
 
     ASSERT_TRUE(client->ValidateAddr(encodedAddr).value());
-    ASSERT_TRUE(client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
+    ASSERT_TRUE(
+        client->VerifyMessage(parseContent(inputListing), parseContent(outputListing), parseOp(outputListing)).value());
 }
 
 TEST_F(TestRPCServer, Subscription) {
