@@ -203,6 +203,9 @@ public:
 
     //! Turn this public key into an uncompressed public key.
     bool Decompress();
+
+    //! Derive BIP32 child pubkey.
+    bool Derive(CPubKey& pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc) const;
 };
 
 std::string EncodeAddress(const CKeyID& addr);

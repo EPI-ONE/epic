@@ -163,8 +163,7 @@ private:
     void SetLastRedempInfo(const uint256& lastRedemHash, const CKeyID& lastRedemAddress);
 
     std::atomic_bool cryptedFlag_ = false;
-    SecureByte master_{};
-    uint256 chaincode_;
+    SecureByte master_;
     MasterInfo masterInfo_;
     Crypter crypter_;
 

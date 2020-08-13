@@ -660,8 +660,7 @@ bool Wallet::GenerateMaster() {
     if (!mne.Generate()) {
         return false;
     }
-    // TODO: add mnemonics printing
-    // mne.PrintToFile(CONFIG->GetWalletPath());
-    std::tie(master_, chaincode_) = mne.GetMasterKeyAndSeed();
+
+    std::tie(master_, std::ignore) = mne.GetMasterKeyAndSeed();
     return true;
 }

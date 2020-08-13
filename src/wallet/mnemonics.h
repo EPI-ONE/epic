@@ -1,17 +1,17 @@
-// Copyright (c) 2019 EPI-ONE Core Developers
+// Copyright (c) 2020 EPI-ONE Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef EPIC_WALLET_MNEMONICS_H
 #define EPIC_WALLET_MNEMONICS_H
 
+#include "extended_key.h"
 #include "secure.h"
 
 #include <array>
 #include <optional>
 #include <vector>
 
-class CKey;
 class uint256;
 
 class WordReader {
@@ -38,6 +38,7 @@ public:
     std::array<std::string, 12> GetMnemonics();
     void PrintToFile(std::string pathstr);
     std::pair<SecureByte, uint256> GetMasterKeyAndSeed();
+    CExtKey GetHDMaster();
 
 private:
     const size_t LENGTH    = 12;
